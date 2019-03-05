@@ -92,22 +92,21 @@ if [[ $MODE == "stop" ]]; then
   if [[ $service == "ui" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
     FINKUIPORT=${FINKUIPORT} docker-compose down
-    exit 1
   else
     SIGNAL=${SIGNAL:-TERM}
     PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
 
     if [ -z "$PIDS" ]; then
       echo "No fink service(s) to stop"
-      exit 1
     else
       echo "Stopping all services..."
       kill -s $SIGNAL $PIDS
     fi
   fi
+  exit 1
 fi
 
-# Run the chosen service
+# Start services
 if [[ $service == "ui" ]]; then
   # Launch the UI
   FINKUIPORT=${FINKUIPORT} docker-compose up -d
