@@ -6,7 +6,7 @@ Fink is a broker infrastructure using Apache Spark Streaming to receive and proc
 
 The design of Fink is driven by three pillars:
 
-* **Simplicity** the broker should be simple enough to be used by a majority of scientists and maintained in real-time. This means the exposed API must be easily understood by anyone, and the code base should be as small as possible to allow easy maintenance and upgrade. 
+* **Simplicity** the broker should be simple enough to be used by a majority of scientists and maintained in real-time. This means the exposed API must be easily understood by anyone, and the code base should be as small as possible to allow easy maintenance and upgrade.
 * **Scalability** the broker's behaviour should be the same regardless the amount of incoming data. This implies the technology used for this is scalable.
 * **Flexibility** the broker structure should allow for easy extension. As data will come, new features will be added, and the broker should be able to incorporate those smoothly. In addition, the broker should be able to connect to a large numbers of external tools and frameworks to maximize its scientific production without redeveloping tools.
 
@@ -14,11 +14,45 @@ Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, an
 
 ## Installation
 
-You need Python 3.5+, and Apache Spark installed for Fink core base to run.
+You need Python 3.5+, docker-compose, and Apache Spark installed.
 
-### Local testing
+### How to use Fink?
 
-*Provide DockerFile.*
+#### Workflow
+
+*How to play with fink*
+
+```bash
+# Launch the UI
+# Go to localhost:5000/index.html
+./fink start ui -c conf/fink.conf
+
+# Start monitoring the stream
+# Enjoy it at localhost:5000/live.html
+./fink start monitoring -c conf/fink.conf &> live.log &
+
+# Start also some filtering and aggregation on the stream
+# Relax at localhost:5000/aggregation.html
+./fink start aggregation -c conf/fink.conf &> agg.log &
+
+# Stop the services
+./fink stop services -c conf/fink.conf
+
+# Stop the ui
+./fink stop ui -c conf/fink.conf
+```
+
+#### Configuration
+
+*How to configure fink*
+
+#### Secured connection
+
+*How to connect Spark to protected Kafka*
+
+### Extension
+
+*How to make your own aggregation filter*
 
 ### Deployment
 
