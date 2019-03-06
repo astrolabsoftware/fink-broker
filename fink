@@ -115,10 +115,15 @@ elif [[ $service == "monitoring" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINKPACKAGES} \
-      bin/monitor.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINKWEBPATH} > live.log
+      ${EXTRA_SPARK_CONFIG} \
+      bin/monitor.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINKWEBPATH}
 elif [[ $service == "aggregation" ]]; then
   # Aggregate the stream of alerts
   echo "Aggregation is coming soon"
+  spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINKPACKAGES} \
+      ${EXTRA_SPARK_CONFIG} \
+      bin/classify.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINKWEBPATH}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
