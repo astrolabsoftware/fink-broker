@@ -24,22 +24,22 @@ You need Python 3.5+, docker-compose, and Apache Spark installed.
 
 ```bash
 # Launch the UI
+./fink start ui
 # Go to localhost:5000/index.html
-./fink start ui -c conf/fink.conf
 
 # Start monitoring the stream
 # Enjoy it at localhost:5000/live.html
-./fink start monitoring -c conf/fink.conf &> live.log &
+./fink start monitoring &> live.log &
 
 # Start also some filtering and aggregation on the stream
 # Relax at localhost:5000/aggregation.html
-./fink start aggregation -c conf/fink.conf &> agg.log &
+./fink start aggregation &> agg.log &
 
 # Stop the services
-./fink stop services -c conf/fink.conf
+./fink stop services
 
 # Stop the ui
-./fink stop ui -c conf/fink.conf
+./fink stop ui
 ```
 
 #### Configuration
