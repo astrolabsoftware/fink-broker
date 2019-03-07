@@ -18,18 +18,17 @@ See http://cdsxmatch.u-strasbg.fr/ for more information.
 """
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
-from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 import argparse
 import json
-import pandas as pd
-import numpy as np
-from typing import Any
 
 from fink_broker import avroUtils
 from fink_broker.sparkUtils import quiet_logs, from_avro
-from fink_broker.classification import cross_match_alerts_raw
+from fink_broker.sparkUtils import writeToCsv
+
+from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.monitoring import monitor_progress_webui
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -53,69 +52,6 @@ def main():
         .builder \
         .appName("classifyStream") \
         .getOrCreate()
-    # from fink_broker.classification import cross_match_alerts_per_batch
-    # from fink_broker.sparkUtils import writeToCsv
-
-    def writeToCsv(batchDF, batchId):
-        """ Write DataFrame data into a CSV file.
-
-        The only supported Output Modes for File Sink is `Append`, but we need the
-        complete table updated and dumped on disk here.
-        Therefore this routine allows us to use CSV file sink with `Complete`
-        output mode.
-
-        TODO: that would be great to generalise this method!
-        Get rid of these hardcoded paths!
-
-        Parameters
-        ----------
-        batchDF: DataFrame
-            Static Spark DataFrame with stream data
-        batchId: int
-            ID of the batch (from 0 to N).
-        """
-        batchDF.select(["type", "count"])\
-            .toPandas()\
-            .to_csv("web/data/simbadtype.csv", index=False)
-        batchDF.unpersist()
-
-    @pandas_udf("string", PandasUDFType.SCALAR)
-    def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
-        """ Query the CDSXmatch service to find identified objects
-        in alerts. The catalog queried is the SIMBAD bibliographical database.
-        We can also use the 10,000+ VizieR tables if needed :-)
-
-        I/O specifically designed for use as `pandas_udf` in `select` or
-        `withColumn` dataframe methods
-
-        Parameters
-        ----------
-        oid: list of str or Spark DataFrame Column of str
-            List containing object ids (custom)
-        ra: list of float or Spark DataFrame Column of float
-            List containing object ra coordinates
-        dec: list of float or Spark DataFrame Column of float
-            List containing object dec coordinates
-
-        Returns
-        ----------
-        out: pandas.Series of string
-            Return a Pandas DataFrame with the type of object found in Simbad.
-            If the object is not found in Simbad, the type is
-            marked as Unknown. In the case several objects match
-            the centroid of the alert, only the closest is returned.
-            If the request Failed (no match at all), return Column of Fail.
-        """
-        matches = cross_match_alerts_raw(id.values, ra.values, dec.values)
-        if len(matches) > 0:
-            # (id, ra, dec, name, type)
-            # return only the type.
-            names = np.transpose(matches)[-1]
-        else:
-            # Tag as Fail if the request failed.
-            names = ["Fail"] * len(id)
-        return pd.Series(names)
-
 
     # Set logs to be quieter
     # Put WARN or INFO for debugging, but you will have to dive into
@@ -134,7 +70,7 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", args.servers) \
         .option("subscribe", args.topic) \
-        .option("startingOffsets", "earliest") \
+        .option("startingOffsets", "latest") \
         .load()
 
     # Get Schema of alerts
@@ -176,8 +112,7 @@ def main():
     # Group data by type and count members
     df_group = df_type.groupBy("type").count()
 
-    # Update the DataFrame every 10 seconds
-    # and write the result in a CSV file (every 10 seconds).
+    # Update the DataFrame every tinterval seconds
     countQuery = df_group\
         .writeStream\
         .outputMode("complete") \
