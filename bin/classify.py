@@ -29,6 +29,7 @@ from typing import Any
 from fink_broker import avroUtils
 from fink_broker.sparkUtils import quiet_logs, from_avro
 from fink_broker.classification import cross_match_alerts_raw
+from fink_broker.monitoring import monitor_progress_webui
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -41,6 +42,9 @@ def main():
     parser.add_argument(
         'finkwebpath', type=str,
         help='Folder to store UI data for display. See conf/fink.conf')
+    parser.add_argument(
+        'tinterval', type=int,
+        help='Time interval between two monitoring. In seconds.')
     args = parser.parse_args()
 
     # Grab the running Spark Session,
@@ -178,8 +182,16 @@ def main():
         .writeStream\
         .outputMode("complete") \
         .foreachBatch(writeToCsv)\
-        .trigger(processingTime='10 seconds') \
+        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
         .start()
+
+    # # Monitor the progress of the stream, and save data for the webUI
+    colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
+    monitor_progress_webui(
+        countQuery,
+        args.tinterval,
+        colnames,
+        args.finkwebpath)
 
     # Keep the Streaming running until something or someone ends it!
     countQuery.awaitTermination()
