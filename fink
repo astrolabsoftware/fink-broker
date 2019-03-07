@@ -13,14 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-message_service="Available services are: monitoring, aggregation"
+message_service="Available services are: ui, monitoring, aggregation"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \t./fink -s <service> -c <conf>\n
-    \tor\n
-    \t./fink --service=<service> --conf=<conf>\n\n
+    \tto start: ./fink start <service> -c <conf>\n
+    \tto stop : ./fink stop  <service> -c <conf>\n\n
 
 To get help: \n
 \t./fink -h or ./fink \n\n
@@ -78,20 +77,19 @@ while [ "$#" -gt 0 ]; do
 done
 
 # Check if the conf file exists
-if [[ ! -f $conf ]]; then
-  echo "'$conf' not found!"
-  echo $message_conf
-  exit 1
+if [[ -f $conf ]]; then
+  echo "Reading custom Fink configuration file from " $conf
+  source $conf
+else
+  echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
+  source ${FINK_HOME}/conf/fink.conf
 fi
-
-# Source the configuration file
-source $conf
 
 # Stop services
 if [[ $MODE == "stop" ]]; then
   if [[ $service == "ui" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
-    FINKUIPORT=${FINKUIPORT} docker-compose down
+    FINK_UI_PORT=${FINK_UI_PORT} docker-compose down
   else
     SIGNAL=${SIGNAL:-TERM}
     PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
@@ -109,21 +107,21 @@ fi
 # Start services
 if [[ $service == "ui" ]]; then
   # Launch the UI
-  FINKUIPORT=${FINKUIPORT} docker-compose up -d
-  echo "UI served at http://localhost:${FINKUIPORT}"
+  FINK_UI_PORT=${FINK_UI_PORT} docker-compose up -d
+  echo "UI served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "monitoring" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINKPACKAGES} \
       ${EXTRA_SPARK_CONFIG} \
-      bin/monitor.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINKWEBPATH}
+      bin/monitor.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_UI_PATH}
 elif [[ $service == "aggregation" ]]; then
   # Aggregate the stream of alerts
   echo "Aggregation is coming soon"
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINKPACKAGES} \
       ${EXTRA_SPARK_CONFIG} \
-      bin/classify.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINKWEBPATH}
+      bin/classify.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_UI_PATH} ${FINK_UI_UPDATE}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
