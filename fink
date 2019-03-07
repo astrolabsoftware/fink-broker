@@ -1,0 +1,129 @@
+#!/bin/bash
+# Copyright 2018 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+message_service="Available services are: ui, monitoring, aggregation"
+message_conf="Typical configuration would be $PWD/conf/fink.conf"
+message_help="""
+Monitor Kafka stream received by Apache Spark\n\n
+Usage:\n
+    \tto start: ./fink start <service> -c <conf>\n
+    \tto stop : ./fink stop  <service> -c <conf>\n\n
+
+To get help: \n
+\t./fink -h or ./fink \n\n
+
+$message_service\n
+$message_conf
+"""
+# Show help if no arguments is given
+if [[ $1 == "" ]]; then
+  echo -e $message_help
+  exit 1
+fi
+
+# Grab the command line arguments
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    "start"|"stop")
+        MODE="$1"
+        if [[ $2 == "" || $2 == "-c" ]]; then
+            echo "$1 requires an argument. ${message_service}" >&2
+            exit 1
+        fi
+        service="$2"
+        shift 2
+        ;;
+    -h)
+        echo -e ${message_help}
+        exit 1
+        ;;
+    -c)
+        if [[ $2 == "" || $2 == "-s" ]]; then
+            echo "$1 requires an argument. ${message_conf}" >&2
+            exit 1
+        fi
+        conf="$2"
+        shift 2
+        ;;
+    --conf=*)
+        conf="${1#*=}"
+        shift 1
+        ;;
+    --conf)
+        echo "$1 requires an argument" >&2
+        exit 1
+        ;;
+    -*)
+        echo "unknown option: $1" >&2
+        exit 1
+        ;;
+    *)
+        echo "unknown argument: $1" >&2
+        exit 1
+        ;;
+  esac
+done
+
+# Check if the conf file exists
+if [[ -f $conf ]]; then
+  echo "Reading custom Fink configuration file from " $conf
+  source $conf
+else
+  echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
+  source ${FINK_HOME}/conf/fink.conf
+fi
+
+# Stop services
+if [[ $MODE == "stop" ]]; then
+  if [[ $service == "ui" ]]; then
+    # PID=$(lsof -t -i :${FINKUIPORT})
+    FINK_UI_PORT=${FINK_UI_PORT} docker-compose down
+  else
+    SIGNAL=${SIGNAL:-TERM}
+    PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
+
+    if [ -z "$PIDS" ]; then
+      echo "No fink service(s) to stop"
+    else
+      echo "Stopping all services..."
+      kill -s $SIGNAL $PIDS
+    fi
+  fi
+  exit 1
+fi
+
+# Start services
+if [[ $service == "ui" ]]; then
+  # Launch the UI
+  FINK_UI_PORT=${FINK_UI_PORT} docker-compose up -d
+  echo "UI served at http://localhost:${FINK_UI_PORT}"
+elif [[ $service == "monitoring" ]]; then
+  # Monitor the stream of alerts
+  spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINKPACKAGES} \
+      ${EXTRA_SPARK_CONFIG} \
+      bin/monitor.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_UI_PATH}
+elif [[ $service == "aggregation" ]]; then
+  # Aggregate the stream of alerts
+  echo "Aggregation is coming soon"
+  spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINKPACKAGES} \
+      ${EXTRA_SPARK_CONFIG} \
+      bin/classify.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_UI_PATH} ${FINK_UI_UPDATE}
+else
+  # In case you give an unknown service
+  echo "unknown service: $service" >&2
+  echo $message_service
+fi
