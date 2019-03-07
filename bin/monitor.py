@@ -20,7 +20,8 @@ from pyspark.sql import SparkSession
 import argparse
 import time
 
-from fink_broker import monitoring
+from fink_broker.sparkUtils import quiet_logs
+from fink_broker.monitoring import monitor_progress_webui
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -42,6 +43,11 @@ def main():
         .appName("monitorStream") \
         .getOrCreate()
 
+    # Set logs to be quieter
+    # Put WARN or INFO for debugging, but you will have to dive into
+    # a sea of millions irrelevant messages for what you typically need...
+    quiet_logs(spark.sparkContext, log_level="ERROR")
+
     # Create a streaming DF from the incoming stream from Kafka
     df = spark \
         .readStream \
@@ -59,23 +65,20 @@ def main():
     countQuery = df \
         .writeStream \
         .queryName("qraw")\
-        .format("memory")\
+        .format("console")\
         .outputMode("update") \
         .start()
 
+    # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
+    monitor_progress_webui(
+        countQuery,
+        2,
+        colnames,
+        args.finkwebpath)
 
-    while True:
-        try:
-            monitoring.save_monitoring(args.finkwebpath, countQuery, colnames)
-        except TypeError:
-            print(
-                """
-                No Data to plot - Retyring....
-                server: {} / topic: {}
-                """.format(args.servers, args.topic))
-            time.sleep(5)
-
+    # Keep the Streaming running until something or someone ends it!
+    countQuery.awaitTermination()
 
 if __name__ == "__main__":
     main()

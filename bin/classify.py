@@ -185,7 +185,7 @@ def main():
         .trigger(processingTime='{} seconds'.format(args.tinterval)) \
         .start()
 
-    # # Monitor the progress of the stream, and save data for the webUI
+    # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
         countQuery,
