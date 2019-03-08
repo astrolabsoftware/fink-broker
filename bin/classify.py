@@ -113,18 +113,27 @@ def main():
     df_group = df_type.groupBy("type").count()
 
     # Update the DataFrame every tinterval seconds
-    countQuery = df_group\
+    countQuery_tmp = df_group\
         .writeStream\
         .outputMode("complete") \
-        .foreachBatch(writeToCsv)\
-        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
-        .start()
+        .foreachBatch(writeToCsv)
+
+    # Fixed interval micro-batches or ASAP
+    if args.tinterval > 0:
+        countQuery = countQuery_tmp\
+            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+            .start()
+        ui_refresh = args.tinterval
+    else:
+        countQuery = countQuery_tmp.start()
+        # Update the UI every 2 seconds to place less load on the browser.
+        ui_refresh = 2
 
     # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
         countQuery,
-        args.tinterval,
+        ui_refresh,
         colnames,
         args.finkwebpath)
 
