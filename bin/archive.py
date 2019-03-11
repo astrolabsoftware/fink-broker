@@ -26,16 +26,13 @@ See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
 
 import argparse
 import json
 
 from fink_broker import avroUtils
 from fink_broker.sparkUtils import quiet_logs, from_avro
-from fink_broker.sparkUtils import writeToCsv
 
-from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.monitoring import monitor_progress_webui
 
 
