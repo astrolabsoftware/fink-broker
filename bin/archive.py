@@ -26,6 +26,7 @@ See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import date_format
 
 import argparse
 import json
@@ -109,13 +110,21 @@ def main():
         ]
     )
 
+    # Partition the data hourly
+    df_partitionedby = df_decoded\
+        .withColumn("year", date_format("timestamp", "yyyy"))\
+        .withColumn("month", date_format("timestamp", "MM"))\
+        .withColumn("day", date_format("timestamp", "dd"))\
+        .withColumn("hour", date_format("timestamp", "hh"))
+
     # Append new rows every `tinterval` seconds
-    countQuery_tmp = df_decoded\
+    countQuery_tmp = df_partitionedby\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
         .option("checkpointLocation", args.checkpointpath) \
-        .option("path", args.outputpath)
+        .option("path", args.outputpath)\
+        .partitionBy("year", "month", "day", "hour")
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
