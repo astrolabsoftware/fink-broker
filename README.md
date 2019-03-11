@@ -26,7 +26,7 @@ add `FINK_HOME=...` in your `~/.bash_profile`.
 
 Fink exposes two main bricks: a robust core infrastructure, and several services.
 
-<p align="center"><img width="200" src="docs/platform_wo_logo.png"/></p>
+<p align="center"><img width="500" src="docs/platform_wo_logo_hor.png"/></p>
 
 *describe me*
 
@@ -42,10 +42,6 @@ Fink exposes two main bricks: a robust core infrastructure, and several services
 # Decode and archive the stream data
 # Monitor it at localhost:5000/live.html
 ./fink start archive &> arch.log &
-
-# Start monitoring the stream
-# Enjoy it at localhost:5000/live.html
-./fink start monitoring &> live.log &
 
 # Start also some filtering and aggregation on the stream
 # Relax at localhost:5000/aggregation.html
