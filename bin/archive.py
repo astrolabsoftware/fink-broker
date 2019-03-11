@@ -13,20 +13,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classify alerts using the xMatch service at CDS.
-See http://cdsxmatch.u-strasbg.fr/ for more information.
+"""Store live stream data on disk.
+The output can be local FS or distributed FS (e.g. HDFS).
+Be careful though to have enough disk space!
+
+For some output sinks where the end-to-end fault-tolerance
+can be guaranteed, you will need to specify the location where the system will
+write all the checkpoint information. This should be a directory
+in an HDFS-compatible fault-tolerant file system.
+
+See also https://spark.apache.org/docs/latest/
+structured-streaming-programming-guide.html#starting-streaming-queries
 """
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import date_format
 
 import argparse
 import json
 
 from fink_broker import avroUtils
 from fink_broker.sparkUtils import quiet_logs, from_avro
-from fink_broker.sparkUtils import writeToCsv
 
-from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.monitoring import monitor_progress_webui
 
 
@@ -38,6 +45,19 @@ def main():
     parser.add_argument(
         'topic', type=str,
         help='Name of Kafka topic stream to read from.')
+    parser.add_argument(
+        'outputpath', type=str,
+        help='Directory on disk for saving live data. See conf/fink.conf.')
+    parser.add_argument(
+        'checkpointpath', type=str,
+        help="""
+        For some output sinks where the end-to-end fault-tolerance
+        can be guaranteed, specify the location where the system will
+        write all the checkpoint information. This should be a directory
+        in an HDFS-compatible fault-tolerant file system.
+        See conf/fink.conf & https://spark.apache.org/docs/latest/
+        structured-streaming-programming-guide.html#starting-streaming-queries
+        """)
     parser.add_argument(
         'finkwebpath', type=str,
         help='Folder to store UI data for display. See conf/fink.conf')
@@ -70,7 +90,7 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", args.servers) \
         .option("subscribe", args.topic) \
-        .option("startingOffsets", "latest") \
+        .option("startingOffsets", "earliest") \
         .load()
 
     # Get Schema of alerts
@@ -90,41 +110,38 @@ def main():
         ]
     )
 
-    # Select only (timestamp, id, ra, dec)
-    df_expanded = df_decoded.select(
-        [
-            df_decoded["timestamp"],
-            df_decoded["decoded.objectId"],
-            df_decoded["decoded.candidate.ra"],
-            df_decoded["decoded.candidate.dec"]
-        ]
-    )
+    # Partition the data hourly
+    df_partitionedby = df_decoded\
+        .withColumn("year", date_format("timestamp", "yyyy"))\
+        .withColumn("month", date_format("timestamp", "MM"))\
+        .withColumn("day", date_format("timestamp", "dd"))\
+        .withColumn("hour", date_format("timestamp", "hh"))
 
-    # for each micro-batch, perform a cross-match with an external catalog,
-    # and return the types of the objects (Star, AGN, Unknown, etc.)
-    df_type = df_expanded.withColumn(
-            "type",
-            cross_match_alerts_per_batch(
-                col("objectId"),
-                col("ra"),
-                col("dec")))
-
-    # Group data by type and count members
-    df_group = df_type.groupBy("type").count()
-
-    # Update the DataFrame every tinterval seconds
-    countQuery = df_group\
+    # Append new rows every `tinterval` seconds
+    countQuery_tmp = df_partitionedby\
         .writeStream\
-        .outputMode("complete") \
-        .foreachBatch(writeToCsv)\
-        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
-        .start()
+        .outputMode("append") \
+        .format("parquet") \
+        .option("checkpointLocation", args.checkpointpath) \
+        .option("path", args.outputpath)\
+        .partitionBy("year", "month", "day", "hour")
+
+    # Fixed interval micro-batches or ASAP
+    if args.tinterval > 0:
+        countQuery = countQuery_tmp\
+            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+            .start()
+        ui_refresh = args.tinterval
+    else:
+        countQuery = countQuery_tmp.start()
+        # Update the UI every 2 seconds to place less load on the browser.
+        ui_refresh = 2
 
     # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
         countQuery,
-        args.tinterval,
+        ui_refresh,
         colnames,
         args.finkwebpath)
 

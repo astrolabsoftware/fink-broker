@@ -14,9 +14,21 @@ Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, an
 
 ## Installation
 
-You need Python 3.5+, docker-compose, and Apache Spark installed.
+You need Python 3.5+, and Apache Spark 2.4 installed.
+
+Having `docker-compose` is a plus for the webUI (python `http.server` used instead).
+
+add `FINK_HOME=...` in your `~/.bash_profile`.
 
 ### How to use Fink?
+
+### Structure
+
+Fink exposes two main bricks: a robust core infrastructure, and several services.
+
+<p align="center"><img width="500" src="docs/platform_wo_logo_hor.png"/></p>
+
+*describe me*
 
 #### Workflow
 
@@ -24,18 +36,18 @@ You need Python 3.5+, docker-compose, and Apache Spark installed.
 
 ```bash
 # Launch the UI
-./fink start ui
 # Go to localhost:5000/index.html
+./fink start ui
 
-# Start monitoring the stream
-# Enjoy it at localhost:5000/live.html
-./fink start monitoring &> live.log &
+# Decode and archive the stream data
+# Monitor it at localhost:5000/live.html
+./fink start archive &> arch.log &
 
 # Start also some filtering and aggregation on the stream
 # Relax at localhost:5000/aggregation.html
 ./fink start aggregation &> agg.log &
 
-# Stop the services
+# Stop the all the services
 ./fink stop services
 
 # Stop the ui
