@@ -16,7 +16,6 @@
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
-import json
 import fastavro
 
 from fink_broker.tester import regular_unit_tests
