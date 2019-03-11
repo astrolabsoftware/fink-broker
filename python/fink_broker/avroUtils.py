@@ -16,17 +16,18 @@
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
+import json
 import fastavro
+
+from fink_broker.tester import regular_unit_tests
 
 __all__ = [
     'writeAvroData',
-    'readAvroData',
     'readSchemaData',
-    'readSchemaFromAvroFile',
-    'decoder']
+    'readSchemaFromAvroFile']
 
 def writeAvroData(json_data: dict, json_schema: dict) -> io._io.BytesIO:
-    """Encode json into Avro format given a schema.
+    """ Encode json into Avro format given a schema.
 
     Parameters
     ----------
@@ -39,31 +40,23 @@ def writeAvroData(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     -------
     `_io.BytesIO`
         Encoded data.
+
+    Examples
+    ----------
+    >>> with open(ztf_alert_sample, mode='rb') as file_data:
+    ...   data = readSchemaData(file_data)
+    ...   # Read the schema
+    ...   schema = data.schema
+    ...   for record in data:
+    ...     bytes = writeAvroData(record, schema)
+    >>> print(type(bytes))
+    <class '_io.BytesIO'>
     """
     bytes_io = io.BytesIO()
     fastavro.schemaless_writer(bytes_io, json_schema, json_data)
     return bytes_io
 
-def readAvroData(bytes_io: io._io.BytesIO, json_schema: dict) -> dict:
-    """Read data and decode with a given Avro schema.
-
-    Parameters
-    ----------
-    bytes_io : `_io.BytesIO`
-        Data to be decoded.
-    json_schema : `dict`
-        The reader Avro schema for decoding data.
-
-    Returns
-    -------
-    `dict`
-        Decoded data.
-    """
-    bytes_io.seek(0)
-    message = fastavro.schemaless_reader(bytes_io, json_schema)
-    return message
-
-def readSchemaData(bytes_io: io._io.BytesIO):
+def readSchemaData(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     """Read data that already has an Avro schema.
 
     Parameters
@@ -73,8 +66,20 @@ def readSchemaData(bytes_io: io._io.BytesIO):
 
     Returns
     -------
-    `dict`
-        Decoded data.
+    `fastavro._read.reader`
+        Iterator over records (`dict`) in an avro file.
+
+    Examples
+    ----------
+    Open an avro file, and read the schema and the records
+    >>> with open(ztf_alert_sample, mode='rb') as file_data:
+    ...   data = readSchemaData(file_data)
+    ...   # Read the schema
+    ...   schema = data.schema
+    ...   # data is an iterator
+    ...   for record in data:
+    ...     print(type(record))
+    <class 'dict'>
     """
     bytes_io.seek(0)
     message = fastavro.reader(bytes_io)
@@ -92,27 +97,24 @@ def readSchemaFromAvroFile(fn: str) -> dict:
     ----------
     schema: dict
         Dictionary (JSON) describing the schema.
+
+    Examples
+    ----------
+    >>> schema = readSchemaFromAvroFile(ztf_alert_sample)
+    >>> print(schema['version'])
+    3.1
     """
     with open(fn, mode='rb') as file_data:
         data = readSchemaData(file_data)
         schema = data.schema
     return schema
 
-def decoder(msg: io._io.BytesIO, alert_schema: dict) -> dict:
-    """ Decode an alert from Kafka (avro format)
 
-    Parameters
-    ----------
-    msg: bytes-like object (`_io.BytesIO`)
-        Message coming from Kafka.
-    alert_schema: dict
-        Dictionary (JSON) containing the schema of the message.
+if __name__ == "__main__":
+    """ Execute the test suite """
+    # Add sample file to globals
+    globs = globals()
+    globs["ztf_alert_sample"] = "../../schemas/template_schema_ZTF.avro"
 
-    Returns
-    ----------
-    alert: dict
-        Dictionary describing the alert.
-    """
-    bytes_io = io.BytesIO(msg)
-    alert = readAvroData(bytes_io, alert_schema)
-    return alert
+    # Run the regular test suite
+    regular_unit_tests(globs)
