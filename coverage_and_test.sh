@@ -18,11 +18,19 @@
 ## Must be launched as ./coverage_and_test.sh
 set -e
 
+export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+export COVERAGE_PROCESS_START="$PWD/.coveragerc"
+
 # Run the test suite on the modules
 for i in python/fink_broker/*.py
 do
-    coverage run -a --source=. $i
+  coverage run --source=. $i
 done
+
+# Combine individual reports
+coverage combine
+
+unset COVERAGE_PROCESS_START
 
 ## Print and store the report if machine related to julien
 ## Otherwise the result is sent to codecov (see .travis.yml)
