@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright 2018 AstroLab Software
+# Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +15,7 @@
 # limitations under the License.
 
 ## Script to launch the python test suite and measure the coverage.
-## Must be launched as ./test_python.sh <SCALA_BINARY_VERSION>
-
+## Must be launched as ./coverage_and_test.sh
 set -e
 
 # Then run the test suite
