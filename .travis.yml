@@ -37,4 +37,4 @@ script:
   - ./coverage_and_test.sh
 
 after_success:
-  coveralls
+  - codecov 
