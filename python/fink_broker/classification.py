@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.functions import pandas_udf, PandasUDFType, col
 from pyspark.sql.types import StringType
 
 import io
@@ -21,6 +21,8 @@ import requests
 import numpy as np
 import pandas as pd
 from typing import Iterator, Generator, Any
+
+from fink_broker.tester import spark_unit_tests
 
 def generate_csv(s: str, lists: list):
     """ Make a string (CSV formatted) given lists of data and header.
@@ -38,6 +40,17 @@ def generate_csv(s: str, lists: list):
     ----------
     s: str
         Updated string with one row per line.
+
+    Examples
+    ----------
+    >>> header = "toto,tata\\n"
+    >>> lists = [[1, 2], ["cat", "dog"]]
+    >>> table = generate_csv(header, lists)
+    >>> print(table)
+    toto,tata
+    1,"cat"
+    2,"dog"
+    <BLANKLINE>
     """
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
@@ -73,6 +86,15 @@ def xmatch(
         Unformatted decoded data returned by the xMatch
     header: list of string
         Unformatted decoded header returned by the xMatch
+
+    Examples
+    ----------
+    >>> ra = [26.8566983, 26.24497]
+    >>> dec = [-26.9677112, -26.7569436]
+    >>> id = ["1", "2"]
+    >>> data, header = xmatch(ra, dec, id, "simbad", 1)
+    >>> 'TYC' in data[0]
+    True
     """
     # Build a catalog of alert in a CSV-like string
     table_header = """ra_in,dec_in,objectId\n"""
@@ -98,74 +120,6 @@ def xmatch(
 
     return data, header
 
-def cross_match_alerts_per_partition(partition: Iterator) -> Generator:
-    """ Query the CDSXmatch service to find identified objects
-    in alerts. The catalog queried is the SIMBAD bibliographical database.
-    We can also use the 10,000+ VizieR tables if needed :-)
-
-    I/O specifically designed for use with `mapPartitions`.
-
-    Parameters
-    ----------
-    part: Iterator
-        Spark partition containing alerts' (ID, ra, dec).
-
-    Returns
-    ----------
-    out: Generator of tuples
-        Tuple with (objectId, ra, dec, name, type).
-        If the object is not found in Simbad, name & type
-        are marked as Unknown. In the case several objects match
-        the centroid of the alert, only the closest is returned.
-    """
-    # Unwrap partition data
-    data = [*partition]
-    oid, ra, dec = np.transpose(data)
-
-    data, header = xmatch(ra, dec, oid, extcatalog="simbad", distMaxArcsec=1)
-
-    # Fields of interest (their indices in the output)
-    if "main_id" not in header:
-        yield []
-    else:
-        main_id = header.index("main_id")
-        main_type = header.index("main_type")
-        ra_ind = header.index("ra_in")
-        dec_ind = header.index("dec_in")
-        oid_ind = header.index("objectId")
-
-        # Get the (ra, dec) of matches
-        radec_out = [
-            (float(np.array(i.split(","))[ra_ind]),
-             float(np.array(i.split(","))[dec_ind])) for i in data]
-
-        # Get the objectId of matches
-        id_out = [np.array(i.split(","))[oid_ind] for i in data]
-
-        # Get the names of matches
-        names = [np.array(i.split(","))[main_id] for i in data]
-
-        # Get the types of matches
-        types = [np.array(i.split(","))[main_type] for i in data]
-
-        # Assign names and types to inputs
-        out = []
-        for ra_in, dec_in, id_in in zip(ra, dec, oid):
-            # cast for picky Spark
-            ra_in, dec_in = float(ra_in), float(dec_in)
-            id_in = str(id_in)
-
-            # Discriminate with the objectID
-            if id_in in id_out:
-                # Return the closest object in case of many (smallest angular distance)
-                index = id_out.index(id_in)
-                out.append((id_in, ra_in, dec_in, str(names[index]), str(types[index])))
-            else:
-                # Mark as unknown if no match
-                out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
-
-        yield out
-
 def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     """ Query the CDSXmatch service to find identified objects
     in alerts. The catalog queried is the SIMBAD bibliographical database.
@@ -187,6 +141,16 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
         If the object is not found in Simbad, name & type
         are marked as Unknown. In the case several objects match
         the centroid of the alert, only the closest is returned.
+
+    Examples
+    ----------
+    >>> ra = [26.8566983, 26.24497]
+    >>> dec = [-26.9677112, -26.7569436]
+    >>> id = ["1", "2"]
+    >>> objects = cross_match_alerts_raw(id, ra, dec)
+    >>> print(objects) # doctest: +NORMALIZE_WHITESPACE
+    [('1', 26.8566983, -26.9677112, 'TYC 6431-115-1', 'Star'),
+     ('2', 26.24497, -26.7569436, 'Unknown', 'Unknown')]
     """
     if len(ra) == 0:
         return []
@@ -261,6 +225,24 @@ def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
         marked as Unknown. In the case several objects match
         the centroid of the alert, only the closest is returned.
         If the request Failed (no match at all), return Column of Fail.
+
+    Examples
+    ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...   [26.8566983, 26.24497],
+    ...   [-26.9677112, -26.7569436],
+    ...   ["1", "2"])).toDF(["ra", "dec", "id"])
+    >>> df_type = df.withColumn(
+    ...   "type",
+    ...   cross_match_alerts_per_batch(col("id"), col("ra"), col("dec")))
+    >>> df_type.show() # doctest: +NORMALIZE_WHITESPACE
+    +----------+-----------+---+-------+
+    |        ra|        dec| id|   type|
+    +----------+-----------+---+-------+
+    |26.8566983|-26.9677112|  1|   Star|
+    |  26.24497|-26.7569436|  2|Unknown|
+    +----------+-----------+---+-------+
+    <BLANKLINE>
     """
     matches = cross_match_alerts_raw(id.values, ra.values, dec.values)
     if len(matches) > 0:
@@ -271,3 +253,10 @@ def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
         # Tag as Fail if the request failed.
         names = ["Fail"] * len(id)
     return pd.Series(names)
+
+
+if __name__ == "__main__":
+    """ Execute the test suite """
+
+    # Run the Spark test suite
+    spark_unit_tests(globals())
