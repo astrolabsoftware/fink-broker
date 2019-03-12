@@ -30,7 +30,7 @@ add `FINK_HOME=...` in your `~/.bash_profile`.
 
 Fink exposes two main bricks: a robust core infrastructure, and several services.
 
-<p align="center"><img width="500" src="docs/platform_wo_logo_hor.png"/></p>
+<p align="center"><img width="600" src="docs/platform_wo_logo_hor.png"/></p>
 
 *describe me*
 
