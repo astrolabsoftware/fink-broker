@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/astrolabsoftware/fink-broker.svg?branch=master)](https://travis-ci.org/astrolabsoftware/fink-broker)
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=astrolabsoftware_fink-broker&metric=alert_status)](https://sonarcloud.io/dashboard?id=astrolabsoftware_fink-broker)
 
 # <p align="left"><img width="150" src="docs/fink_circle.png"/></p>
 

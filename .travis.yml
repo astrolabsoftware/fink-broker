@@ -7,6 +7,10 @@ addons:
   apt:
     packages:
       - axel
+  sonarcloud:
+    organization: "astrolabsoftware_fink-broker" # the key of the org you chose at step #3
+    token:
+      secure: ${SONAR_KEY}
 
 before_install:
   - export PATH=$HOME/.local/bin:$PATH
@@ -23,6 +27,10 @@ install:
   - pip install -r requirements.txt
 
 script:
+  # Scan with sonarqube
+  - sonar-scanner
+
+  # Execute tests and report coverage
   - export FINK_HOME="/home/travis/build/astrolabsoftware/fink-broker"
   - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
   - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
