@@ -27,6 +27,9 @@ def regular_unit_tests(global_args=None, verbose=False):
     >>> globs["toto"] = "myvalue"
     >>> regular_unit_tests(global_args=globs)
     """
+    if global_args is None:
+        global_args = globals()
+
     # Numpy introduced non-backward compatible change from v1.14.
     if np.__version__ >= "1.14.0":
         np.set_printoptions(legacy="1.13")
@@ -59,6 +62,9 @@ def spark_unit_tests(global_args=None, verbose=False):
     >>> globs["toto"] = "myvalue"
     >>> regular_unit_tests(global_args=globs)
     """
+    if global_args is None:
+        global_args = globals()
+
     from pyspark.sql import SparkSession
     from pyspark import SparkConf
 

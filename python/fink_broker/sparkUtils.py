@@ -15,6 +15,10 @@
 from pyspark import SparkContext
 from pyspark.sql.column import Column, _to_java_column
 
+import os
+
+from fink_broker.tester import spark_unit_tests
+
 def from_avro(dfcol, jsonFormatSchema):
     """ Decode the Avro data contained in a DataFrame column into a struct.
 
@@ -36,13 +40,16 @@ def from_avro(dfcol, jsonFormatSchema):
     ----------
     out: Column
         DataFrame Column with decoded Avro data.
+
+    Examples
+    ----------
     """
     sc = SparkContext._active_spark_context
     avro = sc._jvm.org.apache.spark.sql.avro
     f = getattr(getattr(avro, "package$"), "MODULE$").from_avro
     return Column(f(_to_java_column(dfcol), jsonFormatSchema))
 
-def writeToCsv(batchDF, batchId):
+def writeToCsv(batchDF, batchId, test=False):
     """ Write DataFrame data into a CSV file.
 
     The only supported Output Modes for File Sink is `Append`, but we need the
@@ -59,14 +66,25 @@ def writeToCsv(batchDF, batchId):
         Static Spark DataFrame with stream data
     batchId: int
         ID of the batch (from 0 to N).
+
+    Examples
+    ----------
+    >>> rdd = spark.sparkContext.parallelize(zip([1, 2, 3], [4, 5, 6]))
+    >>> df = rdd.toDF(["type", "count"])
+    >>> writeToCsv(df, 0, test=True)
+    >>> os.remove("test.csv")
     """
+    if test:
+        fn = "test.csv"
+    else:
+        fn = "web/data/simbadtype.csv"
     batchDF.select(["type", "count"])\
         .toPandas()\
-        .to_csv("web/data/simbadtype.csv", index=False)
+        .to_csv(fn, index=False)
     batchDF.unpersist()
 
 def quiet_logs(sc, log_level="ERROR"):
-    """ Set the level of log in Spark.
+    """ Set the level of log in Apache Spark.
 
     Parameters
     ----------
@@ -74,6 +92,11 @@ def quiet_logs(sc, log_level="ERROR"):
         The SparkContext for the session
     log_level : String [optional]
         Level of log wanted: INFO, WARN, ERROR, OFF, etc.
+
+    Examples
+    ----------
+    Display only ERROR messages (ignore INFO, WARN, etc.)
+    >>> quiet_logs(spark.sparkContext, "ERROR")
     """
     ## Get the logger
     logger = sc._jvm.org.apache.log4j
@@ -83,3 +106,10 @@ def quiet_logs(sc, log_level="ERROR"):
 
     logger.LogManager.getLogger("org"). setLevel(level)
     logger.LogManager.getLogger("akka").setLevel(level)
+
+
+if __name__ == "__main__":
+    """ Execute the test suite """
+
+    # Run the regular test suite
+    spark_unit_tests(globals())

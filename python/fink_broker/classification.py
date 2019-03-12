@@ -257,9 +257,6 @@ def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
 
 if __name__ == "__main__":
     """ Execute the test suite """
-    # Add sample file to globals
-    globs = globals()
-    globs["ztf_alert_sample"] = "../../schemas/template_schema_ZTF.avro"
 
-    # Run the regular test suite
-    spark_unit_tests(globs)
+    # Run the Spark test suite
+    spark_unit_tests(globals())
