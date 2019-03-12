@@ -35,6 +35,5 @@ script:
   - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
   - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
   - ./coverage_and_test.sh
+  - bash <(curl -s https://codecov.io/bash)
 
-after_success:
-  - codecov 
