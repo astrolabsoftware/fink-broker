@@ -18,9 +18,8 @@
 ## Must be launched as ./coverage_and_test.sh
 set -e
 
-# Then run the test suite
-cd python/fink_broker
-for i in *.py
+# Run the test suite on the modules
+for i in python/fink_broker/*.py
 do
     coverage run -a --source=. $i
 done
