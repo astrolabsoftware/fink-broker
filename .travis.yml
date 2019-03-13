@@ -10,13 +10,13 @@ addons:
   apt:
     packages:
       - axel
-      - oracle-java8-set-default
   sonarcloud:
     organization: "astrolabsoftware"
     token:
       secure: ${SONAR_KEY}
 
 before_install:
+  - source conf/java8_for_xenial.sh
   - export PATH=$HOME/.local/bin:$PATH
 
 install:
