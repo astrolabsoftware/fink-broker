@@ -89,7 +89,7 @@ fi
 if [[ $MODE == "stop" ]]; then
   if [[ $service == "ui" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
-    FINK_UI_PORT=${FINK_UI_PORT} docker-compose down
+    FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f docker-compose-ui.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
     PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
@@ -107,7 +107,7 @@ fi
 # Start services
 if [[ $service == "ui" ]]; then
   # Launch the UI
-  FINK_UI_PORT=${FINK_UI_PORT} docker-compose up -d
+  FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f docker-compose-ui.yml up -d
   echo "UI served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "monitoring" ]]; then
   # Monitor the stream of alerts
