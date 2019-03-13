@@ -49,7 +49,7 @@ def from_avro(dfcol, jsonformatschema):
     f = getattr(getattr(avro, "package$"), "MODULE$").from_avro
     return Column(f(_to_java_column(dfcol), jsonformatschema))
 
-def write_to_csv(batchdf, batchid, test=False):
+def write_to_csv(batchdf, batchid, fn="web/data/simbadtype.csv"):
     """ Write DataFrame data into a CSV file.
 
     The only supported Output Modes for File Sink is `Append`, but we need the
@@ -66,18 +66,16 @@ def write_to_csv(batchdf, batchid, test=False):
         Static Spark DataFrame with stream data
     batchid: int
         ID of the batch.
+    fn: str, optional
+        Filename for storing the output.
 
     Examples
     ----------
     >>> rdd = spark.sparkContext.parallelize(zip([1, 2, 3], [4, 5, 6]))
     >>> df = rdd.toDF(["type", "count"])
-    >>> write_to_csv(df, 0, test=True)
+    >>> write_to_csv(df, 0, fn="test.csv")
     >>> os.remove("test.csv")
     """
-    if test:
-        fn = "test.csv"
-    else:
-        fn = "web/data/simbadtype.csv"
     batchdf.select(["type", "count"])\
         .toPandas()\
         .to_csv(fn, index=False)
