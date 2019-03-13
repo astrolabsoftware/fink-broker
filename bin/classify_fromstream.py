@@ -22,9 +22,9 @@ from pyspark.sql.functions import col
 import argparse
 import json
 
-from fink_broker import avroUtils
+from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
-from fink_broker.sparkUtils import writeToCsv
+from fink_broker.sparkUtils import write_to_csv
 
 from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.monitoring import monitor_progress_webui
@@ -74,7 +74,7 @@ def main():
         .load()
 
     # Get Schema of alerts
-    alert_schema = avroUtils.readSchemaFromAvroFile(
+    alert_schema = readschemafromavrofile(
         "schemas/template_schema_ZTF.avro")
     df_schema = spark.read\
         .format("avro")\
@@ -116,7 +116,7 @@ def main():
     countQuery_tmp = df_group\
         .writeStream\
         .outputMode("complete") \
-        .foreachBatch(writeToCsv)
+        .foreachBatch(write_to_csv)
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:

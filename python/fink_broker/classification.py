@@ -59,7 +59,7 @@ def generate_csv(s: str, lists: list):
 
 def xmatch(
         ra: list, dec: list, id: list,
-        extcatalog: str="simbad", distMaxArcsec: int=1):
+        extcatalog: str="simbad", distmaxarcsec: int=1):
     """ Build a catalog of (ra, dec, id) in a CSV-like string,
     cross-match with `extcatalog`, and decode the output.
 
@@ -76,7 +76,7 @@ def xmatch(
     extcatalog: str
         Name of the catalog to use for the xMatch.
         See http://cdsxmatch.u-strasbg.fr/ for more information.
-    distMaxArcsec: int
+    distmaxarcsec: int
         Radius used for searching match. extcatalog sources lying within
         radius of the center (ra, dec) will be considered as matches.
 
@@ -105,7 +105,7 @@ def xmatch(
          'http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync',
          data={
              'request': 'xmatch',
-             'distMaxArcsec': distMaxArcsec,
+             'distMaxArcsec': distmaxarcsec,
              'selection': 'all',
              'RESPONSEFORMAT': 'csv',
              'cat2': extcatalog,
@@ -155,7 +155,7 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     if len(ra) == 0:
         return []
 
-    data, header = xmatch(ra, dec, oid, extcatalog="simbad", distMaxArcsec=1)
+    data, header = xmatch(ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
 
     # Fields of interest (their indices in the output)
     if "main_id" not in header:
@@ -166,11 +166,6 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
         ra_ind = header.index("ra_in")
         dec_ind = header.index("dec_in")
         oid_ind = header.index("objectId")
-
-        # Get the (ra, dec) of matches
-        radec_out = [
-            (float(np.array(i.split(","))[ra_ind]),
-             float(np.array(i.split(","))[dec_ind])) for i in data]
 
         # Get the objectId of matches
         id_out = [np.array(i.split(","))[oid_ind] for i in data]

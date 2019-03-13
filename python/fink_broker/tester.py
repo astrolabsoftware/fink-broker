@@ -69,7 +69,9 @@ def spark_unit_tests(global_args=None, verbose=False):
     from pyspark import SparkConf
 
     conf = SparkConf()
-    confdic = {"spark.jars.packages": "org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,org.apache.spark:spark-avro_2.11:2.4.0"}
+    confdic = {
+        "spark.jars.packages": "org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,org.apache.spark:spark-avro_2.11:2.4.0",
+        "spark.python.daemon.module": "coverage_daemon"}
     conf.setMaster("local[2]")
     conf.setAppName("test")
     for k, v in confdic.items():

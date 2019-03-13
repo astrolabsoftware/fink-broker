@@ -19,7 +19,7 @@ import os
 
 from fink_broker.tester import spark_unit_tests
 
-def from_avro(dfcol, jsonFormatSchema):
+def from_avro(dfcol, jsonformatschema):
     """ Decode the Avro data contained in a DataFrame column into a struct.
 
     Note:
@@ -33,7 +33,7 @@ def from_avro(dfcol, jsonFormatSchema):
     dfcol: Column
         DataFrame Column with encoded Avro data (binary). Typically this is
         what comes from reading stream from Kafka.
-    jsonFormatSchema: str
+    jsonformatschema: str
         Avro schema in JSON string format.
 
     Returns
@@ -47,9 +47,9 @@ def from_avro(dfcol, jsonFormatSchema):
     sc = SparkContext._active_spark_context
     avro = sc._jvm.org.apache.spark.sql.avro
     f = getattr(getattr(avro, "package$"), "MODULE$").from_avro
-    return Column(f(_to_java_column(dfcol), jsonFormatSchema))
+    return Column(f(_to_java_column(dfcol), jsonformatschema))
 
-def writeToCsv(batchDF, batchId, test=False):
+def write_to_csv(batchdf, batchid, fn="web/data/simbadtype.csv"):
     """ Write DataFrame data into a CSV file.
 
     The only supported Output Modes for File Sink is `Append`, but we need the
@@ -62,26 +62,24 @@ def writeToCsv(batchDF, batchId, test=False):
 
     Parameters
     ----------
-    batchDF: DataFrame
+    batchdf: DataFrame
         Static Spark DataFrame with stream data
-    batchId: int
-        ID of the batch (from 0 to N).
+    batchid: int
+        ID of the batch.
+    fn: str, optional
+        Filename for storing the output.
 
     Examples
     ----------
     >>> rdd = spark.sparkContext.parallelize(zip([1, 2, 3], [4, 5, 6]))
     >>> df = rdd.toDF(["type", "count"])
-    >>> writeToCsv(df, 0, test=True)
+    >>> write_to_csv(df, 0, fn="test.csv")
     >>> os.remove("test.csv")
     """
-    if test:
-        fn = "test.csv"
-    else:
-        fn = "web/data/simbadtype.csv"
-    batchDF.select(["type", "count"])\
+    batchdf.select(["type", "count"])\
         .toPandas()\
         .to_csv(fn, index=False)
-    batchDF.unpersist()
+    batchdf.unpersist()
 
 def quiet_logs(sc, log_level="ERROR"):
     """ Set the level of log in Apache Spark.

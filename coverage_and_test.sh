@@ -18,6 +18,7 @@
 ## Must be launched as ./coverage_and_test.sh
 set -e
 
+# Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="$PWD/.coveragerc"
 
@@ -27,7 +28,7 @@ do
   coverage run --source=. $i
 done
 
-# Combine individual reports
+# Combine individual reports in one
 coverage combine
 
 unset COVERAGE_PROCESS_START
