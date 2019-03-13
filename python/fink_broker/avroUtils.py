@@ -21,11 +21,11 @@ import fastavro
 from fink_broker.tester import regular_unit_tests
 
 __all__ = [
-    'writeAvroData',
-    'readSchemaData',
-    'readSchemaFromAvroFile']
+    'writeavrodata',
+    'readschemadata',
+    'readschemafromavrofile']
 
-def writeAvroData(json_data: dict, json_schema: dict) -> io._io.BytesIO:
+def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     """ Encode json into Avro format given a schema.
 
     Parameters
@@ -43,11 +43,11 @@ def writeAvroData(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     Examples
     ----------
     >>> with open(ztf_alert_sample, mode='rb') as file_data:
-    ...   data = readSchemaData(file_data)
+    ...   data = readschemadata(file_data)
     ...   # Read the schema
     ...   schema = data.schema
     ...   for record in data:
-    ...     bytes = writeAvroData(record, schema)
+    ...     bytes = writeavrodata(record, schema)
     >>> print(type(bytes))
     <class '_io.BytesIO'>
     """
@@ -55,7 +55,7 @@ def writeAvroData(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     fastavro.schemaless_writer(bytes_io, json_schema, json_data)
     return bytes_io
 
-def readSchemaData(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
+def readschemadata(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     """Read data that already has an Avro schema.
 
     Parameters
@@ -72,7 +72,7 @@ def readSchemaData(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     ----------
     Open an avro file, and read the schema and the records
     >>> with open(ztf_alert_sample, mode='rb') as file_data:
-    ...   data = readSchemaData(file_data)
+    ...   data = readschemadata(file_data)
     ...   # Read the schema
     ...   schema = data.schema
     ...   # data is an iterator
@@ -84,7 +84,7 @@ def readSchemaData(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     message = fastavro.reader(bytes_io)
     return message
 
-def readSchemaFromAvroFile(fn: str) -> dict:
+def readschemafromavrofile(fn: str) -> dict:
     """ Reach schema from a binary avro file.
 
     Parameters
@@ -99,12 +99,12 @@ def readSchemaFromAvroFile(fn: str) -> dict:
 
     Examples
     ----------
-    >>> schema = readSchemaFromAvroFile(ztf_alert_sample)
+    >>> schema = readschemafromavrofile(ztf_alert_sample)
     >>> print(schema['version'])
     3.1
     """
     with open(fn, mode='rb') as file_data:
-        data = readSchemaData(file_data)
+        data = readschemadata(file_data)
         schema = data.schema
     return schema
 

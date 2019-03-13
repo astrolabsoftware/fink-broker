@@ -31,7 +31,7 @@ from pyspark.sql.functions import date_format
 import argparse
 import json
 
-from fink_broker import avroUtils
+from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
 
 from fink_broker.monitoring import monitor_progress_webui
@@ -94,7 +94,7 @@ def main():
         .load()
 
     # Get Schema of alerts
-    alert_schema = avroUtils.readSchemaFromAvroFile(
+    alert_schema = readschemafromavrofile(
         "schemas/template_schema_ZTF.avro")
     df_schema = spark.read\
         .format("avro")\
