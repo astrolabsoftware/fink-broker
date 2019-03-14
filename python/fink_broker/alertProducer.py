@@ -23,12 +23,12 @@ from fink_broker.tester import regular_unit_tests
 __all__ = ['AlertProducer', 'delay', 'schedule_delays']
 
 @asyncio.coroutine
-def delay(wait_sec, function, *args):
+def delay(wait_sec, function, *args): # NOSONAR
     """Sleep for a given time before calling a function.
 
     NOTE: we are mixing the use of yield from & return here for good reasons.
     But apparently sonarqube is not happy with it. After thinking, it makes
-    all sense to use both here, hence the NOSONAR keywords below.
+    all sense to use both here, hence the NOSONAR keywords.
 
     Parameters
     ----------
