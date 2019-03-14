@@ -62,7 +62,7 @@ def main():
 
     # Trigger the streaming computation,
     # by defining the sink (memory here) and starting it
-    countQuery = df \
+    countquery = df \
         .writeStream \
         .queryName("qraw")\
         .format("console")\
@@ -72,13 +72,13 @@ def main():
     # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
-        countQuery,
+        countquery,
         2,
         colnames,
         args.finkwebpath)
 
     # Keep the Streaming running until something or someone ends it!
-    countQuery.awaitTermination()
+    countquery.awaitTermination()
 
 if __name__ == "__main__":
     main()

@@ -163,8 +163,6 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     else:
         main_id = header.index("main_id")
         main_type = header.index("main_type")
-        ra_ind = header.index("ra_in")
-        dec_ind = header.index("dec_in")
         oid_ind = header.index("objectId")
 
         # Get the objectId of matches
