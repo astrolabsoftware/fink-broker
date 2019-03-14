@@ -16,8 +16,10 @@ addons:
       secure: ${SONAR_KEY}
 
 before_install:
+  - export FINK_HOME="/home/travis/build/astrolabsoftware/fink-broker"
   - source conf/java8_for_xenial.sh
   - export PATH=$HOME/.local/bin:$PATH
+  - ./fink start simulator
 
 install:
   # Download spark 2.4.0
@@ -26,6 +28,8 @@ install:
   - export SPARK_HOME=`pwd`/spark-2.4.0-bin-hadoop2.7
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
   - echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+  - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
+  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
 
   # Python deps
   - pip install --upgrade pip setuptools wheel
@@ -36,8 +40,6 @@ script:
   - sonar-scanner
 
   # Execute tests and report coverage
-  - export FINK_HOME="/home/travis/build/astrolabsoftware/fink-broker"
-  - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
-  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
+  - ./fink start simulator -c conf/fink.conf.travis
   - ./coverage_and_test.sh
   - bash <(curl -s https://codecov.io/bash)

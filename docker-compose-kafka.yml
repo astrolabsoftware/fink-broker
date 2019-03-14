@@ -25,16 +25,19 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:latest
+    hostname: broker
+    container_name: broker
     depends_on:
       - zookeeper
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:32181
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-      - KAFKA_ADVERTISED_HOST_NAME=localhost
-      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1  # remove for >= 3 brokers
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:${KAFKA_PORT_SIM}
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_DELETE_TOPIC_ENABLE=true
     ports:
       - "9092:9092"
+      - "${KAFKA_PORT_SIM}:29092"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

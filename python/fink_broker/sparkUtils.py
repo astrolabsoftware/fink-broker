@@ -43,6 +43,22 @@ def from_avro(dfcol, jsonformatschema):
 
     Examples
     ----------
+    >>> from fink_broker.avroUtils import readschemafromavrofile
+    >>> import json
+    >>> import time
+
+    >>> df = spark.readStream.format("kafka")\
+.option("kafka.bootstrap.servers", "localhost:29092")\
+.option("subscribe", "ztf-stream-sim")\
+.option("startingOffsets", "earliest").load()
+
+    >>> alert_schema = readschemafromavrofile("schemas/template_schema_ZTF.avro")
+    >>> alert_schema_json = json.dumps(alert_schema)
+
+    >>> df_decoded = df.select(from_avro(df["value"], alert_schema_json).alias("decoded"))
+    >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
+    >>> time.sleep(2)
+    >>> t.stop()
     """
     sc = SparkContext._active_spark_context
     avro = sc._jvm.org.apache.spark.sql.avro
