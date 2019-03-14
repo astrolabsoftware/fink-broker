@@ -62,11 +62,10 @@ def recentprogress(query: StreamingQuery, colnames: list):
     """
     # Force to register timestamp
     if "timestamp" not in colnames:
-        colnames.append(timestamp)
+        colnames.append("timestamp")
 
     # Register fields in a dic
     dicval = {i: [] for i in colnames}
-    timestamp = []
     for c in query.recentProgress:
         if len(c) == 0:
             continue
@@ -81,11 +80,12 @@ def recentprogress(query: StreamingQuery, colnames: list):
     # Build DataFrame from dic
     data = pd.DataFrame(dicval)
 
-    # Set timestamp as index
-    data.set_index('timestamp',inplace=True)
+    if not data.empty:
+        # Set timestamp as index
+        data.set_index('timestamp',inplace=True)
 
-    # Format it as datetime (useful for plot)
-    data.index = pd.to_datetime(data.index)
+        # Format it as datetime (useful for plot)
+        data.index = pd.to_datetime(data.index)
 
     return data
 
