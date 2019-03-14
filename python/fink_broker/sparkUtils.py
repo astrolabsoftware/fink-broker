@@ -31,8 +31,8 @@ def from_avro(dfcol, jsonformatschema):
     Parameters
     ----------
     dfcol: Column
-        DataFrame Column with encoded Avro data (binary). Typically this is
-        what comes from reading stream from Kafka.
+        Streaming DataFrame Column with encoded Avro data (binary).
+        Typically this is what comes from reading stream from Kafka.
     jsonformatschema: str
         Avro schema in JSON string format.
 
@@ -45,19 +45,12 @@ def from_avro(dfcol, jsonformatschema):
     ----------
     >>> from fink_broker.avroUtils import readschemafromavrofile
     >>> import json
-    >>> import time
-
-    >>> df = spark.readStream.format("kafka")\
-.option("kafka.bootstrap.servers", "localhost:29092")\
-.option("subscribe", "ztf-stream-sim")\
-.option("startingOffsets", "earliest").load()
 
     >>> alert_schema = readschemafromavrofile("schemas/template_schema_ZTF.avro")
     >>> alert_schema_json = json.dumps(alert_schema)
 
-    >>> df_decoded = df.select(from_avro(df["value"], alert_schema_json).alias("decoded"))
+    >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
     >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
-    >>> time.sleep(2)
     >>> t.stop()
     """
     sc = SparkContext._active_spark_context
@@ -126,4 +119,4 @@ if __name__ == "__main__":
     """ Execute the test suite """
 
     # Run the regular test suite
-    spark_unit_tests(globals())
+    spark_unit_tests(globals(), withstreaming=True)

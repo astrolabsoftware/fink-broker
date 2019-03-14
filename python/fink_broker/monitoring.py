@@ -20,6 +20,8 @@ import pandas as pd
 
 import time
 
+from fink_broker.tester import spark_unit_tests
+
 def recentrecentProgress(query: StreamingQuery, colnames: list):
     """ Register recent query progresses in a Pandas DataFrame.
 
@@ -39,6 +41,24 @@ def recentrecentProgress(query: StreamingQuery, colnames: list):
     data: pd.DataFrame
         Pandas DataFrame whose columns are colnames, and index
         is the timestamp.
+
+    Examples
+    ----------
+    Start a memory sink from a Streaming dataframe
+    >>> countQuery = dfstream\
+.writeStream\
+.queryName("monitor")\
+.format("memory")\
+.outputMode("update")\
+.start()
+    >>> time.sleep(2)
+
+    Collect fluxes in a Pandas dataframe
+    >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
+    >>> pandas_df = recentrecentProgress(countQuery, colnames)
+
+    Stop the sink
+    >>> countQuery.stop()
     """
     # Force to register timestamp
     if "timestamp" not in colnames:
@@ -80,15 +100,33 @@ def save_monitoring(path: str, query: StreamingQuery, colnames: list):
         Streaming query to monitor
     colnames: list of str
         Fields of the query.recentProgress to be registered
+
+    Examples
+    ----------
+    Start a memory sink from a Streaming dataframe
+    >>> countQuery = dfstream\
+.writeStream\
+.queryName("monitor")\
+.format("memory")\
+.outputMode("update")\
+.start()
+    >>> time.sleep(2)
+
+    Collect rates in a Pandas dataframe
+    >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
+    >>> out = save_monitoring(".", countQuery, colnames)
+
+    Stop the sink
+    >>> countQuery.stop()
     """
     dfp = recentrecentProgress(query, colnames)
     if dfp.empty:
-        return True
+        return False
     dfp.to_csv(os.path.join(path, "live.csv"))
 
 def monitor_progress_webui(
         countQuery: StreamingQuery, tinterval: int,
-        colnames: list, outpath: str):
+        colnames: list, outpath: str, test=False):
     """ Simple listener to Spark structured streaming.
 
     Pyspark does not allow to asynchronously monitor queries
@@ -106,6 +144,25 @@ def monitor_progress_webui(
         Fields of the query.recentProgress to be registered
     outpath: str
         Path to the folder where to save the progress data.
+
+
+    Examples
+    ----------
+    Start a memory sink from a Streaming dataframe
+    >>> countQuery = dfstream\
+.writeStream\
+.queryName("monitor")\
+.format("memory")\
+.outputMode("update")\
+.start()
+    >>> time.sleep(2)
+
+    Collect rates in a Pandas dataframe
+    >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
+    >>> monitor_progress_webui(countQuery, 1, colnames, ".", True)
+
+    Stop the sink
+    >>> countQuery.stop()
     """
     t = threading.Timer(
         tinterval,
@@ -119,3 +176,13 @@ def monitor_progress_webui(
 
     # Monitor the progress of the stream, and save data for the webUI
     save_monitoring(outpath, countQuery, colnames)
+
+    if test:
+        t.cancel()
+
+
+if __name__ == "__main__":
+    """ Execute the test suite """
+
+    # Run the regular test suite
+    spark_unit_tests(globals(), withstreaming=True)

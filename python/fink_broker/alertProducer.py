@@ -18,6 +18,8 @@ import asyncio
 
 from fink_broker import avroUtils
 
+from fink_broker.tester import regular_unit_tests
+
 __all__ = ['AlertProducer', 'delay', 'schedule_delays']
 
 @asyncio.coroutine
@@ -29,6 +31,14 @@ def delay(wait_sec, function, *args):
         Time in seconds to sleep before calling `function`.
     function
         Function to return after sleeping.
+
+    Returns
+    ----------
+    out: Any
+        The output of the user-defined `function(*args)`
+
+    Examples
+    ----------
     """
     yield from asyncio.sleep(wait_sec)
     return function(*args)
@@ -37,6 +47,7 @@ def delay(wait_sec, function, *args):
 @asyncio.coroutine
 def schedule_delays(eventloop, function, argslist, interval=39):
     """Schedule delayed calls of functions at a repeating interval.
+
     Parameters
     ----------
     eventloop
@@ -47,12 +58,23 @@ def schedule_delays(eventloop, function, argslist, interval=39):
         List of inputs for function to loop over.
     interval
         Time in seconds between calls.
+
+    Examples
+    ----------
+    >>> def return_num(num: int) -> int:
+    ...   return num
+
+    >>> loop = asyncio.get_event_loop()
+    >>> g = asyncio.ensure_future(schedule_delays(loop, return_num, (14,15), 1))
+    >>> loop.run_forever()
+    Alert sent: 1
+    Alert sent: 2
     """
     counter = 1
     for arg in argslist:
         wait_time = interval - (time.time() % interval)
         yield from asyncio.ensure_future(delay(wait_time, function, arg))
-        print('visits finished: {} \t time: {}'.format(counter, time.time()))
+        print('Alert sent: {}'.format(counter))
         counter += 1
     eventloop.stop()
 
@@ -68,12 +90,27 @@ class AlertProducer(object):
         Shemas will be combined in one. Default is None.
     **kwargs
         Keyword arguments for configuring confluent_kafka.Producer().
+
+    Examples
+    ----------
+    Define the properties of the producer. Here there should be a local Kafka
+    cluster running, with port 29092.
+    >>> conf = {'bootstrap.servers': 'localhost:29092'}
+    >>> streamProducer = AlertProducer(
+    ...   "test-topic", schema_files=None, **conf)
+
+    Open a file on disk, and send its data via the producer.
+    >>> fn = "schemas/template_schema_ZTF.avro"
+    >>> with open(fn, mode='rb') as file_data:
+    ...   data = avroUtils.readschemadata(file_data)
+    ...   schema = data.schema
+    ...   for record in data:
+    ...     streamProducer.send(record, alert_schema=schema, encode=True)
+    >>> g = streamProducer.flush()
     """
     def __init__(self, topic: str, schema_files: list=None, **kwargs):
         self.producer = confluent_kafka.Producer(**kwargs)
         self.topic = topic
-        # if schema_files is not None:
-        #     self.alert_schema = avroUtils.combineSchemas(schema_files)
 
     def send(self, data: dict, alert_schema: dict=None, encode: bool=False):
         """Sends a message to Kafka stream.
@@ -109,3 +146,13 @@ class AlertProducer(object):
         """ Publish message to the Kafka cluster.
         """
         return self.producer.flush()
+
+
+if __name__ == "__main__":
+    """ Execute the test suite """
+    # Add sample file to globals
+    globs = globals()
+    globs["ztf_alert_sample"] = "schemas/template_schema_ZTF.avro"
+
+    # Run the regular test suite
+    regular_unit_tests(globs)

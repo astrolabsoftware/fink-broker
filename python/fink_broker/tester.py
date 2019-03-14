@@ -36,7 +36,7 @@ def regular_unit_tests(global_args=None, verbose=False):
 
     doctest.testmod(globs=global_args, verbose=verbose)
 
-def spark_unit_tests(global_args=None, verbose=False):
+def spark_unit_tests(global_args=None, verbose=False, withstreaming=False):
     """ Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
@@ -83,6 +83,13 @@ def spark_unit_tests(global_args=None, verbose=False):
         .getOrCreate()
 
     global_args["spark"] = spark
+
+    if withstreaming:
+        dfstream = spark.readStream.format("kafka")\
+            .option("kafka.bootstrap.servers", "localhost:29092")\
+            .option("subscribe", "ztf-stream-sim")\
+            .option("startingOffsets", "earliest").load()
+        global_args["dfstream"] = dfstream
 
     # Numpy introduced non-backward compatible change from v1.14.
     if np.__version__ >= "1.14.0":
