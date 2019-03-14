@@ -35,10 +35,11 @@ install:
   - pip install -r requirements.txt
 
 script:
-  # Scan with sonarqube
-  - sonar-scanner
-
   # Execute tests and report coverage
   - ./fink start simulator -c conf/fink.conf.travis
   - ./coverage_and_test.sh
   - bash <(curl -s https://codecov.io/bash)
+
+  # Scan with sonarqube
+  - coverage xml -i
+  - sonar-scanner
