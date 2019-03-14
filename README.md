@@ -16,60 +16,6 @@ The design of Fink is driven by three pillars:
 
 Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically its [streaming module](http://spark.apache.org/streaming/). The language chosen for the API is Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
 
-## Installation
+## Documentation
 
-You need Python 3.5+, and Apache Spark 2.4 installed.
-
-Having `docker-compose` is a plus for the webUI (python `http.server` used instead).
-
-add `FINK_HOME=...` in your `~/.bash_profile`.
-
-### How to use Fink?
-
-### Structure
-
-Fink exposes two main bricks: a robust core infrastructure, and several services.
-
-<p align="center"><img width="600" src="docs/platform_wo_logo_hor.png"/></p>
-
-*describe me*
-
-#### Workflow
-
-*How to play with fink*
-
-```bash
-# Launch the UI
-# Go to localhost:5000/index.html
-./fink start ui
-
-# Decode and archive the stream data
-# Monitor it at localhost:5000/live.html
-./fink start archive &> arch.log &
-
-# Start also some filtering and aggregation on the stream
-# Relax at localhost:5000/aggregation.html
-./fink start aggregation &> agg.log &
-
-# Stop the all the services
-./fink stop services
-
-# Stop the ui
-./fink stop ui
-```
-
-#### Configuration
-
-*How to configure fink*
-
-#### Secured connection
-
-*How to connect Spark to protected Kafka*
-
-### Extension
-
-*How to make your own aggregation filter*
-
-### Deployment
-
-*Use Apache Spark cluster and launcher scripts.*
+Fink's documentation (WIP) is hosted [here](fink-broker.rtfd.io).
