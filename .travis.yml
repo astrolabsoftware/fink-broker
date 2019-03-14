@@ -19,7 +19,6 @@ before_install:
   - export FINK_HOME="/home/travis/build/astrolabsoftware/fink-broker"
   - source conf/java8_for_xenial.sh
   - export PATH=$HOME/.local/bin:$PATH
-  - ./fink start simulator
 
 install:
   # Download spark 2.4.0
