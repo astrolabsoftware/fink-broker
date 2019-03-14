@@ -25,6 +25,11 @@ __all__ = ['AlertProducer', 'delay', 'schedule_delays']
 @asyncio.coroutine
 def delay(wait_sec, function, *args):
     """Sleep for a given time before calling a function.
+
+    NOTE: we are mixing the use of yield from & return here for good reasons.
+    But apparently sonarqube is not happy with it. After thinking, it makes
+    all sense to use both here, hence the NOSONAR keywords below.
+
     Parameters
     ----------
     wait_sec
@@ -40,9 +45,8 @@ def delay(wait_sec, function, *args):
     Examples
     ----------
     """
-    yield from asyncio.sleep(wait_sec)
-    return function(*args)
-
+    yield from asyncio.sleep(wait_sec) # NOSONAR
+    return function(*args) # NOSONAR
 
 @asyncio.coroutine
 def schedule_delays(eventloop, function, argslist, interval=39):
