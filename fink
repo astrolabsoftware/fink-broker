@@ -13,13 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-message_service="Available services are: ui, monitoring, aggregation"
+message_service="Available services are: ui, archive, monitoring, aggregation"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \tto start: ./fink start <service> -c <conf>\n
-    \tto stop : ./fink stop  <service> -c <conf>\n\n
+    \tto start: ./fink start <service> [-c <conf>] [--simulator]\n
+    \tto stop : ./fink stop  <service> [-c <conf>]\n\n
 
 To get help: \n
 \t./fink -h or ./fink \n\n
@@ -65,6 +65,10 @@ while [ "$#" -gt 0 ]; do
         echo "$1 requires an argument" >&2
         exit 1
         ;;
+    --simulator)
+        SIM_ONLY=true
+        shift 1
+        ;;
     -*)
         echo "unknown option: $1" >&2
         exit 1
@@ -83,6 +87,11 @@ if [[ -f $conf ]]; then
 else
   echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
   source ${FINK_HOME}/conf/fink.conf
+fi
+
+if [[ "$SIM_ONLY" = true ]] ; then
+  KAFKA_IPPORT=$KAFKA_IPPORT_SIM
+  KAFKA_TOPIC=$KAFKA_TOPIC_SIM
 fi
 
 # Stop services
