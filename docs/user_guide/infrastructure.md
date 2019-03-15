@@ -33,7 +33,7 @@ Concerning the first 3 points, benchmarks and resources sizing are under work. F
 ./fink start archive > archiving.log &
 ```
 
-Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](/user_guide/configuration/).
+Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](user_guide/configuration/).
 
 There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [webUI](/user_guide/webui/). This is automatically done when you start the `archive` service. Just launch the Fink UI and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
 
