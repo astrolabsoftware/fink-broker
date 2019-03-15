@@ -35,7 +35,7 @@ Concerning the first 3 points, benchmarks and resources sizing are under work. F
 
 Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
 
-There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [webUI](/user_guide/webui/). This is automatically done when you start the `archive` service. Just launch the Fink UI and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
+There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [webUI](webui.md). This is automatically done when you start the `archive` service. Just launch the Fink UI and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
 
 ```bash
 ./fink start ui
@@ -55,15 +55,13 @@ Note this will stop all Fink services running.
 
 ![Screenshot](../img/monitoring.png)
 
-Fink must operate at different timescales. But all timescales must be treated differently, and by different services. Given the crazy rate of alerts, it seems insane to live monitor each alert individually. So on short timescale, it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink.
+Fink provides built-in services, described in [Available Services](available-services.md). They operate at different timescales, and with various objectives:
 
-We provide some built-in services in Fink, operating at different levels:
+- Operating from the stream or from the database
+- Real time or post-processing of alerts.
+- Urgent decision to take (observation plan).
 
-- Early classification: Perform the cross-match between incoming alert position and external catalogs to start classifying the object type. Short timescale.
-- Outlier detection: WIP. Short timescale.
-- Light-curve inspection: WIP. Long timescale.
-
-Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](/user_guide/webui/), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts, just launch:
+Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](webui.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
 
 ```bash
 ./fink start classify > classify.log &
@@ -71,8 +69,7 @@ Each service is Spark job on the database - either batch or streaming, or both (
 
 and go to `http://localhost:5000/classification.html`
 
-
-Note you can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](/user_guide/adding-new-service/) for more information.
+Note you can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
 
 ### AstroLabNet
 
@@ -98,4 +95,4 @@ This will set up the simulator and send a stream of alerts. Then test a service 
 ./fink start <service> --simulator
 ```
 
-See [Simulator](/user_guide/simulator/) for more information.
+See [Simulator](simulator.md) for more information.

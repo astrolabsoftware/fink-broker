@@ -55,7 +55,7 @@ org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
 org.apache.spark:spark-avro_2.11:2.4.0
 ```
 
-As described in [Infrastructure](/user_guide/infrastructure/), data streams are processed as a series of small batch jobs. You can specify the time interval between two triggers (second), i.e. the timing of streaming data processing. If `0`, the query will be executed in micro-batch mode, where micro-batches will be generated as soon as the previous micro-batch has completed processing. Note that this timing is also used for updating data for the webUI.
+As described in [Infrastructure](infrastructure.md), data streams are processed as a series of small batch jobs. You can specify the time interval between two triggers (second), i.e. the timing of streaming data processing. If `0`, the query will be executed in micro-batch mode, where micro-batches will be generated as soon as the previous micro-batch has completed processing. Note that this timing is also used for updating data for the webUI.
 ```
 FINK_TRIGGER_UPDATE=2
 ```
