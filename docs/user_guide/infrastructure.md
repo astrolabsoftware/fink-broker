@@ -2,7 +2,7 @@
 
 Fink exposes two main bricks: a robust core infrastructure, and several services.
 
-![Screenshot](/platform_wo_logo_hor.png)
+![Screenshot](../img/platform_wo_logo_hor.png)
 
 ## Spark Structured streaming
 
@@ -13,7 +13,7 @@ The idea behind it is to process data streams as a series of small batch jobs, c
 
 If we had all our jobs reading from the upstream Kafka cluster, we would consume too much resources, and place high load on it. Hence the first service of Fink is to archive the incoming streams, as fast as possible. We start with one Spark Structured Streaming job reading and decoding Avro events from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. Then multi-modal analytics take place and several other batch and streaming jobs query this table to process further the data, and other reports via interactive jobs, redirecting outputs to the webUI.
 
-![Screenshot](/archiving.png)
+![Screenshot](../img/archiving.png)
 
 We currently operates the conversion from Avro to Parquet for two reasons:
 
@@ -53,7 +53,7 @@ Note this will stop all Fink services running.
 
 ### Services & dashboards
 
-![Screenshot](/monitoring.png)
+![Screenshot](../img/monitoring.png)
 
 Fink must operate at different timescales. But all timescales must be treated differently, and by different services. Given the crazy rate of alerts, it seems insane to live monitor each alert individually. So on short timescale, it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink.
 
@@ -80,7 +80,7 @@ WIP.
 
 ### Streaming out
 
-![Screenshot](/img/streaming.png)
+![Screenshot](../img/streaming.png)
 
 WIP
 
