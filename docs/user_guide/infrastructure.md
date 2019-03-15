@@ -55,22 +55,19 @@ Note this will stop all Fink services running.
 
 ![Screenshot](../img/monitoring.png)
 
-Fink must operate at different timescales. But all timescales must be treated differently, and by different services. Given the crazy rate of alerts, it seems insane to live monitor each alert individually. So on short timescale, it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink.
+Fink provides built-in services, described in [Available Services](available-services.md). They operate at different timescales, and with various objectives:
 
-We provide some built-in services in Fink, operating at different levels:
+- Operating from the stream or from the database
+- Real time or post-processing of alerts.
+- Urgent decision to take (observation plan).
 
-- Early classification: Perform the cross-match between incoming alert position and external catalogs to start classifying the object type. Short timescale.
-- Outlier detection: WIP. Short timescale.
-- Light-curve inspection: WIP. Long timescale.
-
-Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](webui.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts, just launch:
+Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](webui.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
 
 ```bash
 ./fink start classify > classify.log &
 ```
 
 and go to `http://localhost:5000/classification.html`
-
 
 Note you can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
 
