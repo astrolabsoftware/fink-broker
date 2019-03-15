@@ -5,21 +5,20 @@
     <link rel="stylesheet" type="text/css" href="css/finkstyle.css">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Live stream visualisation">
-    <meta name="keywords" content="streaming">
+    <meta name="description" content="Alerts visualisation">
+    <meta name="keywords" content="">
     <meta name="author" content="JulienPeloton">
     <meta charset="utf-8">
 
-    <!-- Load scripts -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="https://code.highcharts.com/modules/data.js"></script>
+    <script src="https://code.highcharts.com/highcharts-more.js"></script>
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
     <!-- <script src="https://code.highcharts.com/themes/grid-light.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/dark-blue.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/gray.js"></script> -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
   </head>
 
   <!-- Main start -->
@@ -27,38 +26,18 @@
     <!-- Navigation bar -->
     <div class="topnav">
       <a href="/index.html">Fink</a>
-      <a class="active" href="/live.html">Live</a>
+      <a href="/live.html">Live</a>
       <a href="/alerts.html">Alerts</a>
-      <a href="/classification.html">Classification</a>
+      <a class="active" href="/classification.html">Classification</a>
       <a href="/skymap.html">Sky map</a>
       <a href="/about.html">About</a>
     </div>
-    <!-- <button id="switch">Switch Theme</button> -->
 
-    <!-- Buttons to customize the live stream
-    Outputs will be used by the javascript script. -->
-    <div id="container_live" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
-    <div class="ld-row">
-      <label class="ld-label">
-        Enable Polling
-      </label>
-      <input type="checkbox" checked="checked" id="enablePolling"/>
-    </div>
-    <div class="ld-row">
-      <label class="ld-label">
-        Polling Time (Seconds)
-      </label>
-      <input class="ld-time-input" type="number" value="2" id="pollingTime"/>
-    </div>
-    <div class="ld-row">
-      <label class="ld-label">
-        CSV URL
-      </label>
-      <input class="ld-url-input" type="text" id="fetchURL"/>
-    </div>
-
-    <!-- Script that generates the live stream -->
-    <script src="js/live.js"></script>
+    <div id="container_bar"></div>
+    <script src="js/bar.js"></script>
+    <!-- <button id="plain">Plain</button>
+    <button id="inverted">Inverted</button>
+    <button id="polar">Polar</button> -->
 
     <!-- Footer -->
     <div id="footer" class="container text-center">

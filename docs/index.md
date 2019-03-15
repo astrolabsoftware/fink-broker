@@ -32,7 +32,7 @@ Finally, define `FINK_HOME` and add the path to the fink modules in your `.bash_
 
 ```bash
 # in ~/.bash_profile
-export FINK_HOME=/path/to/fink
+export FINK_HOME=/path/to/fink-broker
 export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
 ```
 
