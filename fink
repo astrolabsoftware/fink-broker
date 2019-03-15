@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
+
 message_service="Available services are: ui, archive, monitoring, aggregation"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
