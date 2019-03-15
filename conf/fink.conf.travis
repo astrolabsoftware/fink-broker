@@ -13,17 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
-# WEB UI
-# Where the web data will be posted and retrieved by the UI.
-# For small files, you can keep this location.
-# If you plan on having large files, change to a better suited location.
-FINK_UI_PATH=${PWD}/web/data
-
-# The UI will listen on this port
-FINK_UI_PORT=5000
-
-######################################
-# STREAM HANDLING
+# Infrastructure
 # Kafka producer stream location
 KAFKA_IPPORT="134.158.74.95:24499"
 KAFKA_TOPIC="ztf-stream-os"
@@ -33,6 +23,13 @@ SPARK_MASTER="local[*]"
 
 # Should be Spark options actually (to allow cluster resources!)
 EXTRA_SPARK_CONFIG=""
+
+# These are the Maven Coordinates of dependencies for Fink
+# Change the version according to your Spark version.
+FINK_PACKAGES=\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
+org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
+org.apache.spark:spark-avro_2.11:2.4.0
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
@@ -51,6 +48,16 @@ FINK_ALERT_PATH=${PWD}/archive/alerts_store
 FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
 
 ######################################
+# WebUI
+# Where the web data will be posted and retrieved by the UI.
+# For small files, you can keep this location.
+# If you plan on having large files, change to a better suited location.
+FINK_UI_PATH=${PWD}/web/data
+
+# The UI will listen on this port
+FINK_UI_PORT=5000
+
+######################################
 # Simulator
 # Simulate a fake stream, and access it locally
 # Kafka producer stream location:
@@ -60,14 +67,5 @@ KAFKA_PORT_SIM=29092
 # Time between 2 alerts (second)
 TIME_INTERVAL=0.1
 
-# Maximum number of alerts to send
+# Total number of alerts to send
 POOLSIZE=100
-
-######################################
-# DEPENDENCIES
-# These are the Maven Coordinates of dependencies for Fink
-# Change the version according to your Spark version.
-FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
-org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
-org.apache.spark:spark-avro_2.11:2.4.0
