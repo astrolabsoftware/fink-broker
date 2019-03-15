@@ -80,7 +80,7 @@ WIP.
 
 ### Streaming out
 
-![Screenshot](/streaming.png)
+![Screenshot](/img/streaming.png)
 
 WIP
 
