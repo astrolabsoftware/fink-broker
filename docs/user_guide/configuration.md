@@ -6,7 +6,7 @@ Fink's configuration is done via a configuration file typically stored in `conf/
 There are 3 main categories:
 
 - Infrastructure (Kafka & Spark)
-- WebUI
+- Dashboard
 - Simulator
 
 The configuration file is called each time you call fink. By default, fink takes the one under `conf/fink.conf`, but you can also specify it manually:
@@ -55,7 +55,7 @@ org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
 org.apache.spark:spark-avro_2.11:2.4.0
 ```
 
-As described in [Infrastructure](infrastructure.md), data streams are processed as a series of small batch jobs. You can specify the time interval between two triggers (second), i.e. the timing of streaming data processing. If `0`, the query will be executed in micro-batch mode, where micro-batches will be generated as soon as the previous micro-batch has completed processing. Note that this timing is also used for updating data for the webUI.
+As described in [Infrastructure](infrastructure.md), data streams are processed as a series of small batch jobs. You can specify the time interval between two triggers (second), i.e. the timing of streaming data processing. If `0`, the query will be executed in micro-batch mode, where micro-batches will be generated as soon as the previous micro-batch has completed processing. Note that this timing is also used for updating data for the dashboard.
 ```
 FINK_TRIGGER_UPDATE=2
 ```
@@ -67,15 +67,15 @@ FINK_ALERT_PATH=${PWD}/archive/alerts_store
 FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
 ```
 
-## Configuring the webUI
+## Configuring the dashboard
 
-Where the web data will be posted and retrieved by the UI.
+Where the web data will be posted and retrieved by the dashboard.
 For small files, you can keep this location. If you plan on having large files, change to a better suited location.
 ```
 FINK_UI_PATH=${PWD}/web/data
 ```
 
-Port to access the webUI:
+Port to access the dashboard:
 ```
 FINK_UI_PORT=5000
 ```

@@ -36,17 +36,17 @@ export FINK_HOME=/path/to/fink-broker
 export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
 ```
 
-Both the [webUI](user_guide/webui.md) and the [simulator](user_guide/simulator.md) rely on docker-compose.
+Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/simulator.md) rely on docker-compose.
 
 
 ## Getting started
 
 In order to test the repo, we will simulate a stream of alert, and monitor it
-via the webUI. Start the webUI, and go to `http://localhost:5000`:
+via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
-./fink start ui
+./fink start dashboard
 # Creating fink-broker_website_1 ... done
-# UI served at http://localhost:5000
+# Dashboard served at http://localhost:5000
 ```
 
 Connect the monitoring service to the stream:
@@ -58,12 +58,12 @@ Send a small burst of alerts:
 ```bash
 ./fink start simulator
 ```
-Now go to `http://localhost:5000/live.html` and see the alerts coming! The webUI
+Now go to `http://localhost:5000/live.html` and see the alerts coming! The dashboard
 should refresh automatically, but do it manually in case it does not work.
 Finally stop monitoring and shut down the UI simply using:
 ```bash
 ./fink stop monitoring
-./fink stop ui
+./fink stop dashboard
 ```
 
 To get help about `fink`, just type:
@@ -78,6 +78,6 @@ Usage:
 To get help:
 ./fink -h or ./fink
 
-Available services are: ui, archive, monitoring, aggregation
+Available services are: dashboard, archive, monitoring, aggregation
 Typical configuration would be $FINK_HOME/conf/fink.conf
 ```
