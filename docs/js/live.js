@@ -29,7 +29,7 @@ function createChart() {
           }
         },
         data: {
-            csvURL: window.location.origin + '/data/live.csv',
+            csvURL: window.location.origin + '../data/live.csv',
             enablePolling: true,
             dataRefreshRate: 1
         }

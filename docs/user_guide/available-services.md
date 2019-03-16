@@ -42,7 +42,7 @@ To use this service, just execute:
 Again, this will query the stream directly - so be careful!
 
 <div id="container_live"></div>
-<script src="/js/live.js"></script>
+<script src="../js/live.js"></script>
 
 ## Early classification
 
@@ -57,7 +57,7 @@ and go to `http://localhost:5000/classification.html`
 <!-- ![Screenshot](../img/xmatch_service.png) -->
 
 <div id="container_bar"></div>
-<script src="/js/bar.js"></script>
+<script src="../js/bar.js"></script>
 
 ## Outlier detection (WIP)
 Short timescale.

@@ -30,7 +30,7 @@ var chart = Highcharts.chart('container_bar', {
         text: 'Example on ZTF stream'
     },
     data: {
-        csvURL: window.location.origin + '/data/simbadtype.csv',
+        csvURL: window.location.origin + '../data/simbadtype.csv',
         enablePolling: true,
         dataRefreshRate: 1
     },
