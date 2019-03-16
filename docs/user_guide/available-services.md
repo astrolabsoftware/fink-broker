@@ -8,7 +8,7 @@ Fink provides built-in services operating at different levels:
 
 Given the crazy rate of alerts, it seems insane to live monitor each alert individually, and on short timescales it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink. Each service is a Spark job on the database, but the archive service that operates directly on the stream.
 
-Each Spark job is either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](webui.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
+Each Spark job is either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
 
 ```bash
 ./fink start classify > classify.log &

@@ -36,7 +36,7 @@ org.apache.spark:spark-avro_2.11:2.4.0
 # If 0, the query will be executed in micro-batch mode,
 # where micro-batches will be generated as soon as the previous
 # micro-batch has completed processing.
-# Note that this timing is also used for updating the webUI.
+# Note that this timing is also used for updating the dashboard.
 FINK_TRIGGER_UPDATE=2
 
 # Path on disk to save live data. Paths must exist.
@@ -48,7 +48,7 @@ FINK_ALERT_PATH=${PWD}/archive/alerts_store
 FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
 
 ######################################
-# WebUI
+# Dashboard
 # Where the web data will be posted and retrieved by the UI.
 # For small files, you can keep this location.
 # If you plan on having large files, change to a better suited location.

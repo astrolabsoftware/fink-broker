@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: ui, archive, monitoring, aggregation"
+message_service="Available services are: dashboard, archive, monitoring, aggregation"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
@@ -98,7 +98,7 @@ fi
 
 # Stop services
 if [[ $MODE == "stop" ]]; then
-  if [[ $service == "ui" ]]; then
+  if [[ $service == "dashboard" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
     FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f docker-compose-ui.yml down
   elif [[ $service == "simulator" ]]; then
@@ -118,10 +118,10 @@ if [[ $MODE == "stop" ]]; then
 fi
 
 # Start services
-if [[ $service == "ui" ]]; then
+if [[ $service == "dashboard" ]]; then
   # Launch the UI
   FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f docker-compose-ui.yml up -d
-  echo "UI served at http://localhost:${FINK_UI_PORT}"
+  echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "simulator" ]]; then
   # Launch the simulator - kafka & zookeeper
   KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -f docker-compose-kafka.yml up -d

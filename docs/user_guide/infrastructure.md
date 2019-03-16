@@ -11,7 +11,7 @@ The idea behind it is to process data streams as a series of small batch jobs, c
 
 ## Database
 
-If we had all our jobs reading from the upstream Kafka cluster, we would consume too much resources, and place high load on it. Hence the first service of Fink is to archive the incoming streams, as fast as possible. We start with one Spark Structured Streaming job reading and decoding Avro events from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. Then multi-modal analytics take place and several other batch and streaming jobs query this table to process further the data, and other reports via interactive jobs, redirecting outputs to the webUI.
+If we had all our jobs reading from the upstream Kafka cluster, we would consume too much resources, and place high load on it. Hence the first service of Fink is to archive the incoming streams, as fast as possible. We start with one Spark Structured Streaming job reading and decoding Avro events from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. Then multi-modal analytics take place and several other batch and streaming jobs query this table to process further the data, and other reports via interactive jobs, redirecting outputs to the dashboard.
 
 ![Screenshot](../img/archiving.png)
 
@@ -35,10 +35,10 @@ Concerning the first 3 points, benchmarks and resources sizing are under work. F
 
 Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
 
-There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [webUI](webui.md). This is automatically done when you start the `archive` service. Just launch the Fink UI and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
+There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `archive` service. Just launch the Fink dashboard and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
 
 ```bash
-./fink start ui
+./fink start dashboard
 ```
 
 You can stop the archiving at anytime using:
@@ -61,7 +61,7 @@ Fink provides built-in services, described in [Available Services](available-ser
 - Real time or post-processing of alerts.
 - Urgent decision to take (observation plan).
 
-Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [webUI](webui.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
+Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. For example, if you want to start classifying the alerts from the database, just launch:
 
 ```bash
 ./fink start classify > classify.log &
