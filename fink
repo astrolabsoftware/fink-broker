@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, archive, monitoring, aggregation"
+message_service="Available services are: dashboard, archive, monitoring, classify"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
@@ -135,7 +135,7 @@ elif [[ $service == "monitoring" ]]; then
       ${EXTRA_SPARK_CONFIG} \
       bin/monitor_fromstream.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} \
       ${FINK_UI_PATH}
-elif [[ $service == "aggregation" ]]; then
+elif [[ $service == "classify" ]]; then
   # Aggregate the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINK_PACKAGES} \
