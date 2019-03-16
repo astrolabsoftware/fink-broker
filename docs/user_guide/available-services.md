@@ -46,7 +46,11 @@ Again, this will query the stream directly - so be careful!
 
 ## Early classification
 
-This service operates from the database and connects to external database such as the CDS Strasbourg, and perform real-time classification for known objects based on incoming alert positions on sky. The idea is to classify the alerts into 2 big classes: known objects vs unknown objects. And for known objects, we want to retrieve known information such as the name and type of the object. It is a standard problem of cross-match, but in real-time! In order to not rely on hard-coded catalogs, we will connect to remote databases, and query them with the data in our alerts (ra/dec-based). Fink uses the CDS [X-Match](http://cdsxmatch.u-strasbg.fr/) service, and the SIMBAD bibliographical database (updated each day). To start classifying the alerts from the database, just launch:
+This service operates from the database and connects to external database such as the CDS Strasbourg, and perform real-time classification for known objects based on incoming alert positions on sky. The idea is to classify the alerts into 2 big classes: known objects vs unknown objects. And for known objects, we want to retrieve known information such as the name and type of the object.
+
+It is a standard problem of cross-match, but in real-time! In order to not rely on hard-coded catalogs, Fink connects to remote databases, and query them with the data in our alerts (ra/dec-based). Fink uses the CDS [X-Match](http://cdsxmatch.u-strasbg.fr/) service, and the SIMBAD bibliographical database (updated every day). It requires a bit of tweaking so avoid overcrowding the CDS servers with too many requests. The idea is to send a list of alerts at once. The list is generated inside each micro-batch.
+
+To start classifying the alerts from the database, just launch:
 
 ```bash
 ./fink start classify > classify.log &
@@ -54,10 +58,10 @@ This service operates from the database and connects to external database such a
 
 and go to `http://localhost:5000/classification.html`
 
-<!-- ![Screenshot](../img/xmatch_service.png) -->
-
 <div id="container_bar"></div>
 <script src="https://fink-broker.readthedocs.io/en/latest/js/bar.js"></script>
+
+For description of types, see [here](http://cds.u-strasbg.fr/cgi-bin/Otype?X).
 
 ## Outlier detection (WIP)
 Short timescale.
