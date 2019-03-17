@@ -37,4 +37,4 @@ Then you can click on the different services, and see data live! Here is a scree
 
 ## Extending the dashboard
 
-Ideally all services should be linked to the dashboard, and new services should include a part that output summary data to be plotted. Contact us if you would like to add your service to the dashboard, or if you already connected it and you want to share the code with us!
+Ideally all services should be linked to the dashboard, and new services should include a part that outputs summary data to be plotted. Contact us if you would like to add your service to the dashboard, or if you already connected it and you want to share the code with the community!
