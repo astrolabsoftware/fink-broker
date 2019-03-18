@@ -86,13 +86,17 @@ To get help about `fink`, just type:
 ```shell
 ./fink
 Monitor Kafka stream received by Apache Spark
-Usage:
-    to start: ./fink start <service> [-c <conf>] [--simulator]
-    to stop : ./fink stop  <service> [-c <conf>]
 
-To get help:
-./fink -h or ./fink
+ Usage:
+ 	to start: ./fink start <service> [-h] [-c <conf>] [--simulator]
+ 	to stop : ./fink stop <service> [-h] [-c <conf>]
 
-Available services are: dashboard, archive, monitoring, classify
-Typical configuration would be $FINK_HOME/conf/fink.conf
+ To get this help:
+ 	./fink
+
+ To get help for a service:
+ 	./fink start <service> -h
+
+ Available services are: dashboard, archive, monitoring, classify
+ Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```

@@ -67,7 +67,7 @@ Monitor Kafka stream received by Apache Spark
  	to stop : ./fink stop <service> [-h] [-c <conf>]
 
  To get this help:
- 	./fink -h or ./fink
+ 	./fink
 
  To get help for a service:
  	./fink start <service> -h
