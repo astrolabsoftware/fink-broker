@@ -63,12 +63,12 @@ and go to `http://localhost:5000/classification.html`
 
 For description of types, see [here](http://cds.u-strasbg.fr/cgi-bin/Otype?X).
 
+## Alert tracker (WIP)
+
+Display on full sky map alert informations. Use Aladin. WIP.
+
 ## Outlier detection (WIP)
 Short timescale.
 
 ## Light-curve inspection (WIP)
 Long timescale.
-
-## Streaming out
-
-![Screenshot](../img/streaming.png)
