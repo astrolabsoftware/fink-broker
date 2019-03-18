@@ -43,16 +43,16 @@ FINK_TRIGGER_UPDATE=2
 # They can be in local FS (files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
-FINK_ALERT_PATH=${PWD}/archive/alerts_store
+FINK_ALERT_PATH=${FINK_HOME}/archive/alerts_store
 
-FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
+FINK_ALERT_CHECKPOINT=${FINK_HOME}/archive/alerts_checkpoint
 
 ######################################
 # Dashboard
 # Where the web data will be posted and retrieved by the UI.
 # For small files, you can keep this location.
 # If you plan on having large files, change to a better suited location.
-FINK_UI_PATH=${PWD}/web/data
+FINK_UI_PATH=${FINK_HOME}/web/data
 
 # The UI will listen on this port
 FINK_UI_PORT=5000
