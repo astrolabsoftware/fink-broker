@@ -43,7 +43,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Finally, define `FINK_HOME` and add the path to the fink modules in your `.bash_profile`:
+Finally, define `FINK_HOME` and add the path to the Fink modules in your `.bash_profile`:
 
 ```bash
 # in ~/.bash_profile
@@ -93,6 +93,6 @@ Usage:
 To get help:
 ./fink -h or ./fink
 
-Available services are: dashboard, archive, monitoring, aggregation
+Available services are: dashboard, archive, monitoring, classify
 Typical configuration would be $FINK_HOME/conf/fink.conf
 ```
