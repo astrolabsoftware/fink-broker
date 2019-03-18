@@ -27,13 +27,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'servers', type=str,
-        help='Hostname or IP and port of Kafka broker producing stream.')
+        help='Hostname or IP and port of Kafka broker producing stream. [KAFKA_IPPORT]')
     parser.add_argument(
         'topic', type=str,
-        help='Name of Kafka topic stream to read from.')
+        help='Name of Kafka topic stream to read from. [KAFKA_TOPIC]')
     parser.add_argument(
         'finkwebpath', type=str,
-        help='Folder to store UI data for display. See conf/fink.conf')
+        help='Folder to store UI data for display. [FINK_UI_PATH]')
     args = parser.parse_args()
 
     # Grab the running Spark Session,

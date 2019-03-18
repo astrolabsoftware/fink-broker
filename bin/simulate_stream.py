@@ -26,16 +26,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'broker', type=str,
-        help='Hostname or IP and port of Kafka broker.')
+        help='Hostname or IP and port of Kafka broker. [KAFKA_IPPORT_SIM]')
     parser.add_argument(
         'topic', type=str,
-        help='Name of Kafka topic stream to push to.')
+        help='Name of Kafka topic stream to push to. [KAFKA_TOPIC_SIM]')
+    parser.add_argument(
+        'datapath', type=str,
+        help='Folder containing alerts to be published. [FINK_DATA_SIM]')
     parser.add_argument(
         'tinterval', type=float,
-        help='Interval between two alerts (second)')
+        help='Interval between two alerts (second). [TIME_INTERVAL]')
     parser.add_argument(
         'poolsize', type=int,
-        help='Maximum number of alerts to send')
+        help="""
+Maximum number of alerts to send. If the poolsize is
+bigger than the number of alerts in `datapath`, then we replicate
+the alerts. [POOLSIZE]
+""")
     args = parser.parse_args()
 
     # Configure producer connection to Kafka broker

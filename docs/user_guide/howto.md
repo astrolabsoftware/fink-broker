@@ -102,6 +102,31 @@ Just redirect the output and escape:
 ./fink start <service> > service.log &
 ```
 
+### How do I get help on a service?
+
+You easily get help on a service using:
+
+```bash
+./fink start <service_name> -h
+```
+
+This will also tells you which configuration parameters are used, e.g.
+
+```bash
+./fink start monitoring -h
+usage: monitor_fromstream.py [-h] servers topic finkwebpath
+
+Monitor Kafka stream received by Spark
+
+positional arguments:
+  servers      Hostname or IP and port of Kafka broker producing stream.
+               [KAFKA_IPPORT]
+  topic        Name of Kafka topic stream to read from. [KAFKA_TOPIC]
+  finkwebpath  Folder to store UI data for display. [FINK_UI_PATH]
+
+optional arguments:
+  -h, --help   show this help message and exit
+```
 
 ### Spark's verbosity is overwhelming my logs!
 

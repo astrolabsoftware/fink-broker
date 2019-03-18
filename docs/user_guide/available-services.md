@@ -22,7 +22,13 @@ Each Spark job is either batch or streaming, or both (multi-modal analytics). Al
 ./fink start <service_name> > output.log &
 ```
 
-For convenience, we redirect the console output to a log file, and escape. You can also use tools like `nohup`. To stop services, simply use:
+For convenience, we redirect the console output to a log file, and escape. You can also use tools like `nohup`. You easily get help on a service using:
+
+```bash
+./fink start <service_name> -h
+```
+
+This will also tells you which configuration parameters are used. To stop services, simply use:
 
 ```bash
 ./fink stop services
