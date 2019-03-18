@@ -20,11 +20,14 @@ message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \tto start: ./fink start <service> [-c <conf>] [--simulator]\n
-    \tto stop : ./fink stop  <service> [-c <conf>]\n\n
+    \tto start: ./fink start <service> [-h] [-c <conf>] [--simulator]\n
+    \tto stop : ./fink stop  <service> [-h] [-c <conf>]\n\n
 
-To get help: \n
+To get this help: \n
 \t./fink -h or ./fink \n\n
+
+To get help for a service: \n
+\t./fink start <service> -h\n\n
 
 $message_service\n
 $message_conf
