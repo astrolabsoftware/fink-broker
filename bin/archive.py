@@ -46,6 +46,9 @@ def main():
         'topic', type=str,
         help='Name of Kafka topic stream to read from. [KAFKA_TOPIC]')
     parser.add_argument(
+        'schema', type=str,
+        help='Schema to decode the alert. Should be avro file. [FINK_ALERT_SCHEMA]')
+    parser.add_argument(
         'outputpath', type=str,
         help='Directory on disk for saving live data. [FINK_ALERT_PATH]')
     parser.add_argument(
@@ -95,11 +98,10 @@ def main():
         .load()
 
     # Get Schema of alerts
-    alert_schema = readschemafromavrofile(
-        "schemas/template_schema_ZTF.avro")
+    alert_schema = readschemafromavrofile(args.schema)
     df_schema = spark.read\
         .format("avro")\
-        .load("schemas/template_schema_ZTF.avro")\
+        .load(args.schema)\
         .schema
     alert_schema_json = json.dumps(alert_schema)
 

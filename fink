@@ -144,14 +144,14 @@ elif [[ $service == "classify" ]]; then
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINK_PACKAGES} \
       ${EXTRA_SPARK_CONFIG} \
-      bin/classify_fromstream.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} \
+      bin/classify_fromstream.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
       ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${HELP_ON_SERVICE}
 elif [[ $service == "archive" ]]; then
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
       --packages ${FINK_PACKAGES} \
       ${EXTRA_SPARK_CONFIG} \
-      bin/archive.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} \
+      bin/archive.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
       ${FINK_ALERT_PATH} ${FINK_ALERT_CHECKPOINT} \
       ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${HELP_ON_SERVICE}
 else
