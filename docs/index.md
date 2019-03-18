@@ -16,16 +16,16 @@ The design of Fink is driven by three pillars:
 
 We want Fink to be able to _filter, aggregate, enrich, consume_ incoming Kafka topics (stream of alerts) or otherwise _transform_ into new topics for further consumption or follow-up processing. Following LSST [LDM-612](https://github.com/lsst/LDM-612), Fink's ultimate objectives are (no specific order):
 
-1. redistributing alert packets
-2. filtering alerts
-3. cross-correlating alerts with other static catalogs or alert stream
-4. classifying events scientifically
-5. providing user interfaces to the data
-6. coordinating scientific activity among collaborators
-7. triggering followup observing
-8. for users with appropriate data rights, facilitating followup queries and/or user-generated processing within the corresponding Data Access Center
-9. managing annotation & citation as followup observations are made
-10. collecting classification and other information gathered by the scientific community
+* redistributing alert packets
+* filtering alerts
+* cross-correlating alerts with other static catalogs or alert stream
+* classifying events scientifically
+* providing user interfaces to the data
+* coordinating scientific activity among collaborators
+* triggering followup observing
+* for users with appropriate data rights, facilitating followup queries and/or user-generated processing within the corresponding Data Access Center
+* managing annotation & citation as followup observations are made
+* collecting classification and other information gathered by the scientific community
 
 ## Installation
 
