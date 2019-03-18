@@ -60,6 +60,12 @@ As described in [Infrastructure](infrastructure.md), data streams are processed 
 FINK_TRIGGER_UPDATE=2
 ```
 
+You also need to provide the schema to decode the alert. To make it simple,
+Fink takes one alert as the reference:
+```bash
+FINK_ALERT_SCHEMA=${FINK_HOME}/schemas/template_schema_ZTF.avro
+```
+
 Finally, you need to provide location on disk to save the incoming alerts.
 They can be in local FS (`files:///path/`) or in distributed FS (e.g. `hdfs:///path/`). Be careful though to have enough disk space!
 ```
@@ -89,7 +95,13 @@ KAFKA_TOPIC_SIM="ztf-stream-sim"
 KAFKA_PORT_SIM=29092
 ```
 
-The time in between two alerts are sent:
+The simulator generates the stream from alerts stored on disk. You need to
+provide the folder containing such alerts:
+```
+FINK_DATA_SIM=${FINK_HOME}/datasim
+```
+
+The time in between two alerts:
 ```
 # Time between 2 alerts (second)
 TIME_INTERVAL=0.1
