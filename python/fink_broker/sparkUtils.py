@@ -46,7 +46,7 @@ def from_avro(dfcol, jsonformatschema):
     >>> from fink_broker.avroUtils import readschemafromavrofile
     >>> import json
 
-    >>> alert_schema = readschemafromavrofile("schemas/template_schema_ZTF.avro")
+    >>> alert_schema = readschemafromavrofile(ztf_alert_sample)
     >>> alert_schema_json = json.dumps(alert_schema)
 
     >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
@@ -118,5 +118,10 @@ def quiet_logs(sc, log_level="ERROR"):
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
+    globs = globals()
+    root = os.environ['FINK_HOME']
+    globs["ztf_alert_sample"] = os.path.join(
+        root, "schemas/template_schema_ZTF.avro")
+
     # Run the Spark test suite
-    spark_unit_tests(globals(), withstreaming=True)
+    spark_unit_tests(globs, withstreaming=True)

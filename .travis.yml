@@ -40,7 +40,7 @@ install:
 script:
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
-  - ./coverage_and_test.sh
+  - fink_test
   - bash <(curl -s https://codecov.io/bash)
 
   # Scan with sonarqube

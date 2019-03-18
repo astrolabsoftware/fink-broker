@@ -16,6 +16,7 @@
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
+import os
 import fastavro
 
 from fink_broker.tester import regular_unit_tests
@@ -113,7 +114,9 @@ if __name__ == "__main__":
     """ Execute the test suite """
     # Add sample file to globals
     globs = globals()
-    globs["ztf_alert_sample"] = "schemas/template_schema_ZTF.avro"
+    root = os.environ['FINK_HOME']
+    globs["ztf_alert_sample"] = os.path.join(
+        root, "schemas/template_schema_ZTF.avro")
 
     # Run the regular test suite
     regular_unit_tests(globs)

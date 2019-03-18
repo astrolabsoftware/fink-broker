@@ -14,6 +14,7 @@
 # limitations under the License.
 import confluent_kafka
 import time
+import os
 import asyncio
 
 from fink_broker import avroUtils
@@ -104,8 +105,7 @@ class AlertProducer(object):
     ...   "test-topic", schema_files=None, **conf)
 
     Open a file on disk, and send its data via the producer.
-    >>> fn = "schemas/template_schema_ZTF.avro"
-    >>> with open(fn, mode='rb') as file_data:
+    >>> with open(ztf_alert_sample, mode='rb') as file_data:
     ...   data = avroUtils.readschemadata(file_data)
     ...   schema = data.schema
     ...   for record in data:
@@ -156,7 +156,9 @@ if __name__ == "__main__":
     """ Execute the test suite """
     # Add sample file to globals
     globs = globals()
-    globs["ztf_alert_sample"] = "schemas/template_schema_ZTF.avro"
+    root = os.environ['FINK_HOME']
+    globs["ztf_alert_sample"] = os.path.join(
+        root, "schemas/template_schema_ZTF.avro")
 
     # Run the regular test suite
     regular_unit_tests(globs)
