@@ -49,6 +49,16 @@ FINK_UI_PORT=5000
 
 ## Services
 
+### How do I test the broker?
+
+Just execute the test suite:
+
+```
+fink_test
+```
+
+You should see plenty of verbose logs from Apache Spark at screen (and yet we have shut most of them!), and finally the coverage.
+
 ### How do I start a service?
 
 You can start a service by its name (assuming it is available):
