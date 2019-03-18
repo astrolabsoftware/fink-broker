@@ -20,6 +20,6 @@ services:
   website:
     image: httpd:2.4-alpine
     volumes:
-      - ./web:/usr/local/apache2/htdocs/
+      - ${FINK_HOME}/web:/usr/local/apache2/htdocs/
     ports:
       - ${FINK_UI_PORT}:80

@@ -23,7 +23,7 @@ The archiving part is crucial, and must respect a number of criteria:
 Concerning the first 3 points, benchmarks and resources sizing are under study. For the last point, the main Parquet database is stored in HDFS, and data are partitioned hourly (`YYYY/MM/dd/hh`). We plan on having multiple copies of the data. To launch the archiving service, just use:
 
 ```bash
-./fink start archive > archiving.log &
+fink start archive > archiving.log &
 ```
 
 Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
@@ -33,13 +33,13 @@ Just make sure you attached the `archive` service to disks with large enough spa
 There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark (2.4) to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `archive` service. Just launch the Fink dashboard and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
 
 ```bash
-./fink start dashboard
+fink start dashboard
 ```
 
 You can stop the archiving at anytime using:
 
 ```bash
-./fink stop archive
+fink stop archive
 ```
 
 Note this will stop all Fink services running.

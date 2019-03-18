@@ -16,8 +16,7 @@ The test suite must take into account that Fink is using distributing computing 
 We provide a script to execute the test suite and report coverage of Fink code base:
 
 ```bash
-cd $FINK_HOME
-./coverage_and_test.sh
+fink_test
 ```
 
 You should see plenty of verbose logs from Apache Spark at screen (and yet we have shut most of them!), `DeprecationWarning` that we need to handle quickly, and eventually failures will be printed out (success is silent) like:
@@ -104,8 +103,8 @@ Streams can be used also in tests (as shown above). just make sure you started t
 
 ```bash
 # Publish few alerts at topic `zt-stream-sim`
-./fink start simulator -c conf/fink.conf.travis
-./coverage_and_test.sh
+fink start simulator -c conf/fink.conf.travis
+fink_test
 ```
 
 Note the Kafka parameters for the test suite are currently harcoded in the code:

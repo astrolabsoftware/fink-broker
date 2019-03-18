@@ -43,12 +43,13 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Finally, define `FINK_HOME` and add the path to the Fink modules in your `.bash_profile` (assuming you are using `bash`...):
+Finally, define `FINK_HOME` and add the path to the Fink binaries and modules in your `.bash_profile` (assuming you are using `bash`...):
 
 ```bash
 # in ~/.bash_profile
 export FINK_HOME=/path/to/fink-broker
 export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
+export PATH=$FINK_HOME/bin:$PATH
 ```
 
 Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/simulator.md) rely on docker-compose.
@@ -56,46 +57,52 @@ Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/sim
 
 ## Getting started
 
-Let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
+First make sure the test suite is running fine. Just execute:
+
+```bash
+fink_test
+```
+
+You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
 via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
-./fink start dashboard
+fink start dashboard
 # Creating fink-broker_website_1 ... done
 # Dashboard served at http://localhost:5000
 ```
 
 Connect the monitoring service to the stream:
 ```bash
-./fink start monitoring --simulator > live.log &
+fink start monitoring --simulator > live.log &
 ```
 
 Send a small burst of alerts:
 ```bash
-./fink start simulator
+fink start simulator
 ```
 Now go to `http://localhost:5000/live.html` and see the alerts coming! The dashboard
 should refresh automatically, but do it manually in case it does not work.
 Finally stop monitoring and shut down the UI simply using:
 ```bash
-./fink stop monitoring
-./fink stop dashboard
+fink stop monitoring
+fink stop dashboard
 ```
 
 To get help about `fink`, just type:
 
 ```shell
-./fink
+fink
 Monitor Kafka stream received by Apache Spark
 
  Usage:
- 	to start: ./fink start <service> [-h] [-c <conf>] [--simulator]
- 	to stop : ./fink stop <service> [-h] [-c <conf>]
+ 	to start: fink start <service> [-h] [-c <conf>] [--simulator]
+ 	to stop : fink stop <service> [-h] [-c <conf>]
 
  To get this help:
- 	./fink
+ 	fink
 
  To get help for a service:
- 	./fink start <service> -h
+ 	fink start <service> -h
 
  Available services are: dashboard, archive, monitoring, classify
  Typical configuration would be ${FINK_HOME}/conf/fink.conf

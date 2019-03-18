@@ -41,13 +41,13 @@ Full frontend for post-processing. WIP.
 In Fink, we want also to test our services before deploying them full-scale. We provide a simple stream simulator based on a dockerized Kafka & Zookeeper cluster:
 
 ```bash
-./fink start simulator
+fink start simulator
 ```
 
 This will set up the simulator and send a stream of alerts. Then test a service in simulation mode by specifying `--simulator`:
 
 ```bash
-./fink start <service> --simulator
+fink start <service> --simulator
 ```
 
 See [Simulator](simulator.md) for more information.

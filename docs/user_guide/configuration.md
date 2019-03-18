@@ -12,7 +12,7 @@ There are 3 main categories:
 The configuration file is called each time you call fink. By default, fink takes the one under `conf/fink.conf`, but you can also specify it manually:
 
 ```bash
-./fink start <service> -c /path/to/myconf.conf
+fink start <service> -c /path/to/myconf.conf
 ```
 
 ## Configuring Apache Kafka & Apache Spark
