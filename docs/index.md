@@ -43,7 +43,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Finally, define `FINK_HOME` and add the path to the Fink modules in your `.bash_profile`:
+Finally, define `FINK_HOME` and add the path to the Fink modules in your `.bash_profile` (assuming you are using `bash`...):
 
 ```bash
 # in ~/.bash_profile
