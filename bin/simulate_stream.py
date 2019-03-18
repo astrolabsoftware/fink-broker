@@ -16,6 +16,7 @@
 """Simulate batches of alerts coming from ZTF.
 """
 import argparse
+import os
 import glob
 import time
 import asyncio
@@ -51,15 +52,27 @@ the alerts. [POOLSIZE]
         args.topic, schema_files=None, **conf)
 
     # Scan for avro files
-    root = "./schemas"
+    root = args.datapath
 
-    # Fake we have a pool of 10,000 alerts
-    files = ["schemas/template_schema_ZTF.avro"] * args.poolsize
+    # Grab data stored on disk
+    files = glob.glob(os.path.join(root, "*.avro"))
 
-    def send_visit(f):
+    # Replicate alerts if necessary
+    if len(files) < args.poolsize:
+        nreplication = args.poolsize // len(files) + 1
+        files = files * nreplication
+
+    def send_visit(fn):
+        """ Send alert for publication in Kafka
+
+        Parameters
+        ----------
+        fn: str
+            Filename containing the alert (avro file)
+        """
         print('Alert sent - time: ', time.time())
         # Load alert contents
-        with open(f, mode='rb') as file_data:
+        with open(fn, mode='rb') as file_data:
             # Read the data
             data = avroUtils.readschemadata(file_data)
 
@@ -82,7 +95,7 @@ the alerts. [POOLSIZE]
         alertProducer.schedule_delays(
             loop,
             send_visit,
-            files,
+            files[:args.poolsize],
             interval=args.tinterval))
     loop.run_forever()
     loop.close()

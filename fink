@@ -129,7 +129,6 @@ elif [[ $service == "simulator" ]]; then
   # Launch the simulator - kafka & zookeeper
   KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -f docker-compose-kafka.yml up -d
 
-  FINK_DATA_SIM=${FINK_HOME}/datasim
   python bin/simulate_stream.py \
     ${KAFKA_IPPORT_SIM} ${KAFKA_TOPIC_SIM} ${FINK_DATA_SIM}\
     ${TIME_INTERVAL} ${POOLSIZE} ${HELP_ON_SERVICE}
