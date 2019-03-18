@@ -23,7 +23,7 @@ As of now, the dashboard is written in pure html and javascript, and it is mainl
 The dashboard is served using docker-compose, and use the port 5000 (you can change the port in the [Configuration](configuration.md)). Make sure you have the latest version of docker-compose (working as of early 2019). To start the dashboard, execute:
 ```bash
 fink start dashboard
-# Creating fink-broker_website_1 ... done
+# Creating dashboardnet_website_1 ... done
 # Dashboard served at http://localhost:5000
 ```
 

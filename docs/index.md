@@ -67,7 +67,7 @@ You should see plenty of Spark logs (and yet we have shut most of them!), but no
 via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
 fink start dashboard
-# Creating fink-broker_website_1 ... done
+# Creating dashboardnet_website_1 ... done
 # Dashboard served at http://localhost:5000
 ```
 

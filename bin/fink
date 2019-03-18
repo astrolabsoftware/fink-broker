@@ -103,9 +103,9 @@ fi
 if [[ $MODE == "stop" ]]; then
   if [[ $service == "dashboard" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
-    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f ${FINK_HOME}/docker-compose-ui.yml down
+    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
   elif [[ $service == "simulator" ]]; then
-    KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -f ${FINK_HOME}/docker-compose-kafka.yml down
+    KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
     PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
@@ -123,11 +123,11 @@ fi
 # Start services
 if [[ $service == "dashboard" ]]; then
   # Launch the UI
-  FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -f ${FINK_HOME}/docker-compose-ui.yml up -d
+  FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
   echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "simulator" ]]; then
   # Launch the simulator - kafka & zookeeper
-  KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -f ${FINK_HOME}/docker-compose-kafka.yml up -d
+  KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml up -d
 
   python ${FINK_HOME}/bin/simulate_stream.py \
     ${KAFKA_IPPORT_SIM} ${KAFKA_TOPIC_SIM} ${FINK_DATA_SIM}\
