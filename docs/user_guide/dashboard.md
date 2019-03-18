@@ -35,6 +35,15 @@ Then you can click on the different services, and see data live! Here is a scree
 
 ![Screenshot](../img/live_screenshot.png)
 
+Note that in the configuration file you can specify the folder hosting data for the dashboard:
+
+```bash
+# Default
+FINK_UI_PATH=${FINK_HOME}/web/data
+```
+
+Note that since the dashboard is served using docker-compose, we mount (and keep it synchronised) by default the `$FINK_HOME/web` folder, containing `data`. Therefore if you choose a folder outside `web`, make sure it is mounted inside the docker container (see `docker-compose-ui.yml`).
+
 ## Extending the dashboard
 
 Ideally all services are linked to the dashboard, and new services should include a part that outputs summary data to be plotted. Contact us if you would like to add your service to the dashboard, or if you already connected it and you want to share the code with the community!
