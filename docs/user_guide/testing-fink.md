@@ -104,7 +104,7 @@ Streams can be used also in tests (as shown above). just make sure you started t
 
 ```bash
 # Publish few alerts at topic `zt-stream-sim`
-./fink start simulator -c conf/fink.conf.travis
+fink start simulator -c conf/fink.conf.travis
 ./coverage_and_test.sh
 ```
 

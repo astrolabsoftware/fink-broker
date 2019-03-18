@@ -19,19 +19,19 @@ Given the crazy rate of alerts, it seems insane to live monitor each alert indiv
 Each Spark job is either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. To start a service, just execute:
 
 ```bash
-./fink start <service_name> > output.log &
+fink start <service_name> > output.log &
 ```
 
 For convenience, we redirect the console output to a log file, and escape. You can also use tools like `nohup`. You easily get help on a service using:
 
 ```bash
-./fink start <service_name> -h
+fink start <service_name> -h
 ```
 
 This will also tells you which configuration parameters are used. To stop services, simply use:
 
 ```bash
-./fink stop services
+fink stop services
 ```
 
 Note this will stop all Fink services running (this will change in the future to stop services individually). You can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
@@ -43,7 +43,7 @@ The monitoring of the stream is typically done with the archiving service. But f
 To use this service, just execute:
 
 ```bash
-./fink start monitoring > live.log &
+fink start monitoring > live.log &
 ```
 Again, this will query the stream directly - so be careful!
 
@@ -59,7 +59,7 @@ It is a standard problem of cross-match, but in real-time! In order to not rely 
 To start classifying the alerts from the database, just launch:
 
 ```bash
-./fink start classify > classify.log &
+fink start classify > classify.log &
 ```
 
 and go to `http://localhost:5000/classification.html`
