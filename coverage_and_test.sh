@@ -33,17 +33,20 @@ coverage combine
 
 unset COVERAGE_PROCESS_START
 
+coverage report
+coverage html
+
 ## Print and store the report if machine related to julien
 ## Otherwise the result is sent to codecov (see .travis.yml)
-isLocal=`whoami`
-if [[ $isLocal = *"julien"* ]]
-then
-  coverage report
-
-  echo " " >> cov.txt
-  echo $(date) >> cov.txt
-  coverage report >> cov.txt
-
-  coverage html
-  cd ../
-fi
+# isLocal=`whoami`
+# if [[ $isLocal = *"julien"* ]]
+# then
+#   coverage report
+#
+#   echo " " >> cov.txt
+#   echo $(date) >> cov.txt
+#   coverage report >> cov.txt
+#
+#   coverage html
+#   cd ../
+# fi
