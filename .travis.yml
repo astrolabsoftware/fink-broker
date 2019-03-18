@@ -19,7 +19,7 @@ before_install:
   - export FINK_HOME="/home/travis/build/astrolabsoftware/fink-broker"
   # Install Java 8 for Xenial
   - source conf/java8_for_xenial.sh
-  - export PATH=$HOME/.local/bin:$PATH
+  - export PATH=$HOME/.local/bin:${FINK_HOME}/bin:$PATH
   # Download data used for the test suite
   - cd datasim; ./download_ztf_alert_data.sh; cd ..
 
@@ -39,7 +39,7 @@ install:
 
 script:
   # Execute tests and report coverage
-  - ./fink start simulator -c conf/fink.conf.travis
+  - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - ./coverage_and_test.sh
   - bash <(curl -s https://codecov.io/bash)
 
