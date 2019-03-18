@@ -182,7 +182,7 @@ def monitor_progress_webui(
 
 
 if __name__ == "__main__":
-    """ Execute the test suite """
+    """ Execute the test suite with SparkSession initialised """
 
-    # Run the regular test suite
+    # Run the Spark test suite
     spark_unit_tests(globals(), withstreaming=True)

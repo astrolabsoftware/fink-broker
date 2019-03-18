@@ -249,7 +249,7 @@ def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
 
 
 if __name__ == "__main__":
-    """ Execute the test suite """
+    """ Execute the test suite with SparkSession initialised """
 
     # Run the Spark test suite
     spark_unit_tests(globals())
