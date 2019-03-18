@@ -21,7 +21,7 @@ before_install:
   - source conf/java8_for_xenial.sh
   - export PATH=$HOME/.local/bin:$PATH
   # Download data used for the test suite
-  - cd datasim; ./download_ztf_alert_data.sh
+  - cd datasim; ./download_ztf_alert_data.sh; cd ..
 
 install:
   # Download spark 2.4.0
