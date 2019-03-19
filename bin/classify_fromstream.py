@@ -21,6 +21,7 @@ from pyspark.sql.functions import col
 
 import argparse
 import json
+import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
@@ -47,6 +48,11 @@ def main():
     parser.add_argument(
         'tinterval', type=int,
         help='Time interval between two monitoring. In seconds. [FINK_TRIGGER_UPDATE]')
+    parser.add_argument(
+        'exit_after', type=int, default=None,
+        help=""" Stop the service after `exit_after` seconds.
+        This primarily for use on Travis, to stop service after some time.
+        Use that with `fink start service --exit_after <time>`. Default is None. """)
     args = parser.parse_args()
 
     # Grab the running Spark Session,
@@ -115,32 +121,37 @@ def main():
     df_group = df_type.groupBy("type").count()
 
     # Update the DataFrame every tinterval seconds
-    countQuery_tmp = df_group\
+    countquery_tmp = df_group\
         .writeStream\
         .outputMode("complete") \
         .foreachBatch(write_to_csv)
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
-        countQuery = countQuery_tmp\
+        countquery = countquery_tmp\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
         ui_refresh = args.tinterval
     else:
-        countQuery = countQuery_tmp.start()
+        countquery = countquery_tmp.start()
         # Update the UI every 2 seconds to place less load on the browser.
         ui_refresh = 2
 
     # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
-        countQuery,
+        countquery,
         ui_refresh,
         colnames,
         args.finkwebpath)
 
     # Keep the Streaming running until something or someone ends it!
-    countQuery.awaitTermination()
+    if args.exit_after is not None:
+        time.sleep(args.exit_after)
+        countquery.stop()
+        print("Exiting the classify service normally...")
+    else:
+        countquery.awaitTermination()
 
 
 if __name__ == "__main__":

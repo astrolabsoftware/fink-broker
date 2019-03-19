@@ -34,6 +34,11 @@ def main():
     parser.add_argument(
         'finkwebpath', type=str,
         help='Folder to store UI data for display. [FINK_UI_PATH]')
+    parser.add_argument(
+        'exit_after', type=int, default=None,
+        help=""" Stop the service after `exit_after` seconds.
+        This primarily for use on Travis, to stop service after some time.
+        Use that with `fink start service --exit_after <time>`. Default is None. """)
     args = parser.parse_args()
 
     # Grab the running Spark Session,
@@ -78,7 +83,12 @@ def main():
         args.finkwebpath)
 
     # Keep the Streaming running until something or someone ends it!
-    countquery.awaitTermination()
+    if args.exit_after is not None:
+        time.sleep(args.exit_after)
+        countquery.stop()
+        print("Exiting the monitoring service normally...")
+    else:
+        countquery.awaitTermination()
 
 if __name__ == "__main__":
     main()
