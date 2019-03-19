@@ -60,10 +60,10 @@ Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/sim
 First make sure the test suite is running fine. Just execute:
 
 ```bash
-fink_test
+fink_test [--without-integration] [-h]
 ```
 
-You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
+You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. You can disable integration tests by specifying the argument `--without-integration`. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
 via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
 fink start dashboard
