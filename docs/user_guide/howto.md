@@ -186,6 +186,32 @@ fink start <service> -c /path/my/custom_conf.conf
 
 we recommend to not edit directly `conf/fink.conf`, but rather edit a copy of it.
 
+## Apache Kafka
+
+### How do I connect to a secured Kafka cluster?
+
+First, you need to create a file (let's call it `jaas.conf`) with your username and password (assuming PLAINTEXT):
+
+```java
+// In jaas.conf
+KafkaClient {
+      org.apache.kafka.common.security.plain.PlainLoginModule required
+       username="your_user_name_or_api_key"
+        password="your_pwd";
+ };
+```
+
+Then in the configuration file (assuming the `jaas.conf` is in the current directory), adds:
+
+```bash
+# in conf/myconf.conf
+EXTRA_SPARK_CONFIG='<your config> --files jaas.conf
+--driver-java-options "-Djava.security.auth.login.config=./jaas.conf"
+--conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=./jaas.conf"'
+```
+
+You will find such a file in the folder `${FINK_HOME}/conf`
+
 ## Troubleshooting
 
 ### Failed to construct kafka consumer
