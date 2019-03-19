@@ -16,6 +16,15 @@
 ## Script to launch the python test suite and measure the coverage.
 ## Must be launched as fink_test
 set -e
+message_help="""
+Run the test suite of Fink\n\n
+Usage:\n
+    \tfink_test [--without-integration] [-h]\n\n
+
+By default, both unit tests and integration tests will be run.\n
+You can disable the integration tests by specifying --without-integration.\n
+Use -h to display this help.
+"""
 
 # Grab the command line arguments
 NO_INTEGRATION=false
@@ -24,6 +33,10 @@ while [ "$#" -gt 0 ]; do
     --without-integration)
         NO_INTEGRATION=true
         shift 1
+        ;;
+    -h)
+        echo -e $message_help
+        exit
         ;;
   esac
 done

@@ -16,10 +16,18 @@ The test suite must take into account that Fink is using distributing computing 
 We provide a script to execute the test suite and report coverage of Fink code base:
 
 ```bash
-fink_test
+fink_test [--without-integration] [-h]
+Run the test suite of Fink
+
+ Usage:
+ 	fink_test [--without-integration] [-h]
+
+ By default, both unit tests and integration tests will be run.
+ You can disable the integration tests by specifying --without-integration.
+ Use -h to display this help.
 ```
 
-You should see plenty of verbose logs from Apache Spark at screen (and yet we have shut most of them!), `DeprecationWarning` that we need to handle quickly, and eventually failures will be printed out (success is silent) like:
+Both unit tests and integration tests will be run. You can disable the integration tests by specifying `--without-integration`. Then you should see plenty of verbose logs from Apache Spark at screen (and yet we have shut most of them!), `DeprecationWarning` that we need to handle at some point, and eventually failures will be printed out (success is silent) like:
 
 ```bash
 **********************************************************************
@@ -37,16 +45,20 @@ If no failures, hooray, the code passes the test suite! Which obviously does not
 ```bash
 Name                                   Stmts   Miss  Cover
 ----------------------------------------------------------
+bin/archive.py                            45      3    93%
+bin/classify_fromstream.py                47      3    94%
+bin/monitor_fromstream.py                 27      1    96%
+bin/simulate_stream.py                    41      3    93%
 python/__init__.py                         0      0   100%
 python/fink_broker/__init__.py             0      0   100%
-python/fink_broker/alertProducer.py       37      3    92%
-python/fink_broker/avroUtils.py           22      0   100%
+python/fink_broker/alertProducer.py       39      3    92%
+python/fink_broker/avroUtils.py           24      0   100%
 python/fink_broker/classification.py      51      3    94%
-python/fink_broker/monitoring.py          37     11    70%
-python/fink_broker/sparkUtils.py          19      0   100%
+python/fink_broker/monitoring.py          37      2    95%
+python/fink_broker/sparkUtils.py          22      0   100%
 python/fink_broker/tester.py              27      2    93%
 ----------------------------------------------------------
-TOTAL                                    193     19    90%
+TOTAL                                    360     20    94%
 ```
 
 ## Template for adding unit tests
