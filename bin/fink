@@ -123,12 +123,23 @@ fi
 # Start services
 if [[ $service == "dashboard" ]]; then
   # Launch the UI
-  FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
+  is_docker=`which docker-compose`
+  if [[ -f $is_docker ]]; then
+    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
+  else
+    echo "docker-compose not found, using python -m http.server"
+    echo "This is a workaround and work only from the repo root."
+    python -m http.server ${FINK_UI_PORT}
+  fi
   echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "simulator" ]]; then
   # Launch the simulator - kafka & zookeeper
-  KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml up -d
-
+  is_docker=`which docker-compose`
+  if [[ -f $is_docker ]]; then
+    KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml up -d
+  else
+    echo "docker-compose not found"
+  fi
   python ${FINK_HOME}/bin/simulate_stream.py \
     ${KAFKA_IPPORT_SIM} ${KAFKA_TOPIC_SIM} ${FINK_DATA_SIM}\
     ${TIME_INTERVAL} ${POOLSIZE} ${HELP_ON_SERVICE}
