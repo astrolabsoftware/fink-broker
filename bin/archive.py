@@ -70,7 +70,7 @@ def main():
         'tinterval', type=int,
         help='Time interval between two monitoring. In seconds. [FINK_TRIGGER_UPDATE]')
     parser.add_argument(
-        'exit_after', type=int, default=None,
+        '-exit_after', type=int, default=None,
         help=""" Stop the service after `exit_after` seconds.
         This primarily for use on Travis, to stop service after some time.
         Use that with `fink start service --exit_after <time>`. Default is None. """)
