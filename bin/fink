@@ -127,7 +127,7 @@ fi
 # Start services
 if [[ $service == "dashboard" ]]; then
   # Launch the UI
-  is_docker=`which docker-compose`
+  is_docker=`command -v docker-compose`
   if [[ -f $is_docker ]]; then
     FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
   else
@@ -138,7 +138,7 @@ if [[ $service == "dashboard" ]]; then
   echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
 elif [[ $service == "simulator" ]]; then
   # Launch the simulator - kafka & zookeeper
-  is_docker=`which docker-compose`
+  is_docker=`command -v docker-compose`
   if [[ -f $is_docker ]]; then
     KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml up -d
   else
