@@ -86,7 +86,7 @@ def main():
     alert_schema = readschemafromavrofile(args.schema)
     df_schema = spark.read\
         .format("avro")\
-        .load(args.schema)\
+        .load("files://" + args.schema)\
         .schema
     alert_schema_json = json.dumps(alert_schema)
 

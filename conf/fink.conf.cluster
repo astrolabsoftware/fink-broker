@@ -1,0 +1,79 @@
+# Copyright 2018 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+######################################
+# Infrastructure
+# Kafka producer stream location
+KAFKA_IPPORT="134.158.74.95:24499"
+KAFKA_TOPIC="ztf-stream-os"
+
+# Apache Spark mode
+SPARK_MASTER="spark://134.158.75.222:7077"
+
+# Should be Spark options actually (to allow cluster resources!)
+EXTRA_SPARK_CONFIG="--driver-memory 4g --executor-memory 30g --executor-cores 17 --total-executor-cores 51"
+
+# These are the Maven Coordinates of dependencies for Fink
+# Change the version according to your Spark version.
+FINK_PACKAGES=\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
+org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
+org.apache.spark:spark-avro_2.11:2.4.0
+
+# Time interval between 2 trigger updates (second)
+# i.e. the timing of streaming data processing.
+# If 0, the query will be executed in micro-batch mode,
+# where micro-batches will be generated as soon as the previous
+# micro-batch has completed processing.
+# Note that this timing is also used for updating the dashboard.
+FINK_TRIGGER_UPDATE=2
+
+# Alert schema
+# Full path to schema to decode the alerts
+FINK_ALERT_SCHEMA="${FINK_HOME}/schemas/template_schema_ZTF.avro"
+
+# Path on disk to save live data. Paths must exist.
+# They can be in local FS (files:///path/) or
+# in distributed FS (e.g. hdfs:///path/).
+# Be careful though to have enough disk space!
+FINK_ALERT_PATH="hdfs://134.158.75.222:8020//user/julien.peloton/archive/alerts_store"
+
+FINK_ALERT_CHECKPOINT="hdfs://134.158.75.222:8020//user/julien.peloton/archive/alerts_checkpoint"
+
+######################################
+# Dashboard
+# Where the web data will be posted and retrieved by the UI.
+# For small files, you can keep this location.
+# If you plan on having large files, change to a better suited location.
+FINK_UI_PATH=${FINK_HOME}/web/data
+
+# The UI will listen on this port
+FINK_UI_PORT=24500
+
+######################################
+# Simulator
+# Simulate a fake stream, and access it locally
+# Kafka producer stream location:
+KAFKA_PORT_SIM=29092
+KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
+KAFKA_TOPIC_SIM="ztf-stream-sim"
+
+# Where the data for sims is
+FINK_DATA_SIM=${FINK_HOME}/datasim
+
+# Time between 2 alerts (second)
+TIME_INTERVAL=0.1
+
+# Total number of alerts to send
+POOLSIZE=100
