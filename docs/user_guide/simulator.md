@@ -1,7 +1,8 @@
 # Fink simulator
 
-For testing purposes, Fink includes a service to simulate incoming streams. The service is provided through docker-compose, and include Kafka and Zookeeper clusters.
-The simulator generates the stream from alerts stored on disk. We provide a script to download a subset of ZTF alerts that will be used to generate streams:
+For testing purposes, Fink includes a service to simulate incoming streams. With this stream simulator part, you can easily develop applications locally and deploy at scale only when you are ready!
+
+The service is provided through docker-compose, and include Kafka and Zookeeper clusters. The simulator generates the stream from alerts stored on disk. We provide a script to download a subset of ZTF alerts that will be used to generate streams:
 
 ```bash
 cd ${FINK_HOME}/datasim
@@ -35,4 +36,4 @@ For example for demo purposing, you can easily start the monitoring service on t
 fink start monitoring --simulator > live_sim.log &
 ```
 
-and watch the stream at [http://localhost:5000/live.html](http://localhost:5000/live.html) (change the port with the one in your configuration).
+and watch the stream at [http://localhost:5000/live.html](http://localhost:5000/live.html) (change the port with the one in your configuration file).

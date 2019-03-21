@@ -12,6 +12,8 @@ In addition to [archiving](database.md) the streams, Fink provides built-in serv
 - Real time or post-processing of alerts.
 - Urgent decision to take (observation plan).
 
+and you can connect your favourite code to the database, getting data access within seconds of publication (see below)!
+
 ![Screenshot](../img/monitoring.png)
 
 Given the crazy rate of alerts, it seems insane to live monitor each alert individually, and on short timescales it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink. Each service is typically a Spark job on the database (to avoid putting too high load on the alert sender), but the archive service that operates directly on the stream.
@@ -73,8 +75,6 @@ For description of types, see [here](http://cds.u-strasbg.fr/cgi-bin/Otype?X).
 
 Display on full sky map alert informations. Use Aladin. WIP.
 
-## Outlier detection (WIP)
-Short timescale.
+## Your code goes here!
 
-## Light-curve inspection (WIP)
-Long timescale.
+Thanks to Fink modularity you can easily come with your ideas and codes, and connect to Fink database! You can either run your code live, or in batch, or interactively (via Jupyter notebook). If you would like to use Fink for your analysis, feel free to contact us with your science proposal, we would be happy to help in the integration!

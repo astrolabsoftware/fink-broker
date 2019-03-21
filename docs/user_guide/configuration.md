@@ -31,6 +31,13 @@ KAFKA_TOPIC="mytopic"
 ```
 Note it can be `topic1,topic2,etc`, or a pattern `topic.*`.
 
+Finally specify from which offset you want to start pulling data. Options are:
+latest (only new data), earliest (connect from the oldest
+offset available), or a json string (see [here](https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html) for detailed information).
+```
+KAFKA_STARTING_OFFSET="latest"
+```
+
 ### Apache Spark
 
 Assuming you have installed Apache Spark on a cluster, you need to specify the running mode:
@@ -69,8 +76,8 @@ FINK_ALERT_SCHEMA=${FINK_HOME}/schemas/template_schema_ZTF.avro
 Finally, you need to provide location on disk to save the incoming alerts.
 They can be in local FS (`files:///path/`) or in distributed FS (e.g. `hdfs:///path/`). Be careful though to have enough disk space!
 ```
-FINK_ALERT_PATH=${PWD}/archive/alerts_store
-FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
+FINK_ALERT_PATH=${FINK_HOME}/archive/alerts_store
+FINK_ALERT_CHECKPOINT=${FINK_HOME}/archive/alerts_checkpoint
 ```
 
 ## Configuring the dashboard
@@ -78,7 +85,7 @@ FINK_ALERT_CHECKPOINT=${PWD}/archive/alerts_checkpoint
 Where the web data will be posted and retrieved by the dashboard.
 For small files, you can keep this location. If you plan on having large files, change to a better suited location.
 ```
-FINK_UI_PATH=${PWD}/web/data
+FINK_UI_PATH=${FINK_HOME}/web/data
 ```
 
 Port to access the dashboard:

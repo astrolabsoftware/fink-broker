@@ -4,7 +4,7 @@
 
 # <p align="left"><img width="150" src="docs/fink_circle.png"/></p>
 
-Fink is a broker infrastructure using Apache Spark Streaming to receive and process alerts issued from telescopes all over the world.
+Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
 
 ## Rationale
 

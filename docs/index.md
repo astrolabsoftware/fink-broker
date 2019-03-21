@@ -2,9 +2,9 @@
 
 ## Overview
 
-Fink is a broker infrastructure using Apache Spark Streaming to receive and process alerts issued from telescopes all over the world. Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically its [streaming module](http://spark.apache.org/streaming/). The core of Fink is written in Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
+Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world. Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically its [streaming module](http://spark.apache.org/streaming/). The core of Fink is written in Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
 
-Fink's goal is twofold: providing a robust infrastructure and state-of-the-art streaming services to LSST scientists, and enabling other science cases in a big data context. Fink implements the concept of services, that is independent modules connecting to the same shared infrastructure to process the data.
+Fink's goal is twofold: providing a robust infrastructure and state-of-the-art streaming services to LSST scientists, and enabling other science cases in a big data context. Fink decouples resources needed for listening to the stream (online, critical), and resources used for services: scalable, robust, and modular!
 
 ## Rationale
 

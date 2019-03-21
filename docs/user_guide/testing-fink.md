@@ -119,16 +119,13 @@ fink start simulator -c conf/fink.conf.travis
 fink_test
 ```
 
-Note the Kafka parameters for the test suite are currently harcoded in the code:
+Note the configuration file `conf/fink.conf.travis` is currently used by default for running the test suite.
 
-```python
-# in python/fink_broker/tester.py
+```bash
+# in fink_test
 ...
-if withstreaming:
-  dfstream = spark.readStream.format("kafka")\
-    .option("kafka.bootstrap.servers", "localhost:29092")\
-    .option("subscribe", "ztf-stream-sim")\
-    .option("startingOffsets", "earliest").load()
-  global_args["dfstream"] = dfstream
+source $FINK_HOME/conf/fink.conf.travis
 ...
 ```
+
+We will allow any configuration file in a future release.
