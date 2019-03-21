@@ -66,8 +66,8 @@ fi
 coverage run --source=${FINK_HOME} \
     --rcfile ${FINK_HOME}/.coveragerc \
     ${FINK_HOME}/bin/simulate_stream.py \
-      ${KAFKA_IPPORT_SIM} ${KAFKA_TOPIC_SIM} ${FINK_DATA_SIM} \
-      ${TIME_INTERVAL} ${POOLSIZE}
+      -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM} \
+      -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 
 # Run the test suite on the modules
 for i in ${FINK_HOME}/python/fink_broker/*.py

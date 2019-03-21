@@ -23,6 +23,8 @@ import argparse
 import json
 import time
 
+from fink_broker.parser import getargs
+
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
 from fink_broker.sparkUtils import write_to_csv
@@ -34,34 +36,11 @@ from fink_broker.monitoring import monitor_progress_webui
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'servers', type=str,
-        help='Hostname or IP and port of Kafka broker producing stream. [KAFKA_IPPORT]')
-    parser.add_argument(
-        'topic', type=str,
-        help='Name of Kafka topic stream to read from. [KAFKA_TOPIC]')
-    parser.add_argument(
-        'schema', type=str,
-        help='Schema to decode the alert. Should be avro file. [FINK_ALERT_SCHEMA]')
-    parser.add_argument(
-        'startingoffsets', type=str,
-        help='From which offset you want to start pulling data. [KAFKA_STARTING_OFFSET]')
-    parser.add_argument(
-        'finkwebpath', type=str,
-        help='Folder to store UI data for display. [FINK_UI_PATH]')
-    parser.add_argument(
-        'tinterval', type=int,
-        help='Time interval between two monitoring. In seconds. [FINK_TRIGGER_UPDATE]')
-    parser.add_argument(
-        '-exit_after', type=int, default=None,
-        help=""" Stop the service after `exit_after` seconds.
-        This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`. Default is None. """)
-    args = parser.parse_args()
+    args = getargs(parser)
 
     # Initialise Spark session
     init_sparksession(
-        name="archivingStream", shuffle_partitions=2, log_level="ERROR")
+        name="classifyStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_with_kafka(

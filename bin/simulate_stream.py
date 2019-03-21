@@ -23,31 +23,14 @@ import asyncio
 from fink_broker import alertProducer
 from fink_broker import avroUtils
 
+from fink_broker.parser import getargs
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'broker', type=str,
-        help='Hostname or IP and port of Kafka broker. [KAFKA_IPPORT_SIM]')
-    parser.add_argument(
-        'topic', type=str,
-        help='Name of Kafka topic stream to push to. [KAFKA_TOPIC_SIM]')
-    parser.add_argument(
-        'datapath', type=str,
-        help='Folder containing alerts to be published. [FINK_DATA_SIM]')
-    parser.add_argument(
-        'tinterval', type=float,
-        help='Interval between two alerts (second). [TIME_INTERVAL]')
-    parser.add_argument(
-        'poolsize', type=int,
-        help="""
-Maximum number of alerts to send. If the poolsize is
-bigger than the number of alerts in `datapath`, then we replicate
-the alerts. [POOLSIZE]
-""")
-    args = parser.parse_args()
+    args = getargs(parser)
 
     # Configure producer connection to Kafka broker
-    conf = {'bootstrap.servers': args.broker}
+    conf = {'bootstrap.servers': args.servers}
     streamProducer = alertProducer.AlertProducer(
         args.topic, schema_files=None, **conf)
 
@@ -96,7 +79,7 @@ the alerts. [POOLSIZE]
             loop,
             send_visit,
             files[:args.poolsize],
-            interval=args.tinterval))
+            interval=args.tinterval_kafka))
     loop.run_forever()
     loop.close()
 
