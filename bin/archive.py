@@ -70,7 +70,7 @@ def main():
         .withColumn("year", date_format("timestamp", "yyyy"))\
         .withColumn("month", date_format("timestamp", "MM"))\
         .withColumn("day", date_format("timestamp", "dd"))\
-        .withColumn("hour", date_format("timestamp", "hh"))
+        .withColumn("hour", date_format("timestamp", "HH"))
 
     # Append new rows every `tinterval` seconds
     countquery_tmp = df_partitionedby\
