@@ -1,3 +1,4 @@
+import os
 import doctest
 import numpy as np
 
@@ -70,7 +71,7 @@ def spark_unit_tests(global_args=None, verbose=False, withstreaming=False):
 
     conf = SparkConf()
     confdic = {
-        "spark.jars.packages": "org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,org.apache.spark:spark-avro_2.11:2.4.0",
+        "spark.jars.packages": os.environ["FINK_PACKAGES"],
         "spark.python.daemon.module": "coverage_daemon"}
     conf.setMaster("local[2]")
     conf.setAppName("test")
@@ -86,8 +87,8 @@ def spark_unit_tests(global_args=None, verbose=False, withstreaming=False):
 
     if withstreaming:
         dfstream = spark.readStream.format("kafka")\
-            .option("kafka.bootstrap.servers", "localhost:29092")\
-            .option("subscribe", "ztf-stream-sim")\
+            .option("kafka.bootstrap.servers", os.environ["KAFKA_IPPORT_SIM"])\
+            .option("subscribe", os.environ["KAFKA_TOPIC_SIM"])\
             .option("startingOffsets", "earliest").load()
         global_args["dfstream"] = dfstream
 
