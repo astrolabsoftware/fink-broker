@@ -46,7 +46,7 @@ def from_avro(dfcol, jsonformatschema):
 
     Examples
     ----------
-    >>> alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> _, _, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
 
     >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
     >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
@@ -218,6 +218,8 @@ def get_schemas_from_avro(avro_path: str):
 
     Returns
     ----------
+    df_schema: pyspark.sql.types.StructType
+        Avro DataFrame schema
     alert_schema: dict
         Schema of the alert as a dictionary (DataFrame Style)
     alert_schema_json: str
@@ -225,7 +227,10 @@ def get_schemas_from_avro(avro_path: str):
 
     Examples
     ----------
-    >>> alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> print(type(df_schema))
+    <class 'pyspark.sql.types.StructType'>
+
     >>> print(type(alert_schema))
     <class 'dict'>
 
@@ -245,7 +250,7 @@ def get_schemas_from_avro(avro_path: str):
         .schema
     alert_schema_json = json.dumps(alert_schema)
 
-    return alert_schema, alert_schema_json
+    return df_schema, alert_schema, alert_schema_json
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

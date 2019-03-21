@@ -31,7 +31,7 @@ def main():
 
     # Configure producer connection to Kafka broker
     conf = {'bootstrap.servers': args.servers}
-    streamProducer = alertProducer.AlertProducer(
+    streamproducer = alertProducer.AlertProducer(
         args.topic, schema_files=None, **conf)
 
     # Scan for avro files
@@ -66,12 +66,12 @@ def main():
             alert_count = 0
             for record in data:
                 if alert_count < 10000:
-                    streamProducer.send(
+                    streamproducer.send(
                         record, alert_schema=schema, encode=True)
                     alert_count += 1
                 else:
                     break
-        streamProducer.flush()
+        streamproducer.flush()
 
     loop = asyncio.get_event_loop()
     asyncio.ensure_future(
