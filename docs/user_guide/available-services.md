@@ -73,8 +73,6 @@ For description of types, see [here](http://cds.u-strasbg.fr/cgi-bin/Otype?X).
 
 Display on full sky map alert informations. Use Aladin. WIP.
 
-## Outlier detection (WIP)
-Short timescale.
+## Your code goes here!
 
-## Light-curve inspection (WIP)
-Long timescale.
+Thanks to Fink modularity you can easily come with your ideas and codes, and connect to Fink database! You can either run your code live, or in batch, or interactively (via Jupyter notebook). If you would like to use Fink for your analysis, feel free to contact us with your science proposal, we would be happy to help in the integration!

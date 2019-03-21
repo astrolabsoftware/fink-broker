@@ -1,6 +1,6 @@
 # Infrastructure
 
-Fink exposes two main bricks: a robust core infrastructure, and several services.
+Fink decouples resources needed for listening to the stream (online, critical), and resources used for services: scalable, robust, and modular!
 
 ![Screenshot](../img/platform_wo_logo_hor.png)
 
@@ -11,7 +11,7 @@ The idea behind it is to process data streams as a series of small batch jobs, c
 
 ## Database
 
-We start with one Spark Structured Streaming job reading and decoding Avro events sent from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. The archiving part is crucial, and must respect a number of criteria:
+The most critical part in a context of big data is to capture as fast as possible the stream, and store information efficiently and reliably. We start with one Spark Structured Streaming job reading and decoding Avro events sent from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. The archiving part is crucial, and must pass a number of stress tests:
 
 - The archiving must be done as quickly as possible.
 - The archiving must resist to bursts of alerts.
@@ -30,7 +30,7 @@ Fink provides built-in services, described in [Available Services](available-ser
 - Real time or post-processing of alerts.
 - Urgent decision to take (observation plan).
 
-Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. Note you can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
+Each service is Spark job on the database - either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. Note you can easily define your own service in Fink (i.e. your favourite ML code!), and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
 
 ### AstroLabNet
 
