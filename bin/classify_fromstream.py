@@ -48,7 +48,7 @@ def main():
         startingoffsets=args.startingoffsets, failondataloss=False)
 
     # Get Schema of alerts
-    alert_schema, alert_schema_json = get_schemas_from_avro(args.schema)
+    _, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
     df_decoded = df.select(
