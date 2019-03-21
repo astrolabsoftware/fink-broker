@@ -8,25 +8,25 @@ If we had all our jobs reading from the upstream Kafka cluster, we would consume
 
 ## Database structure
 
-We currently operates the conversion from Avro (alerts) to Parquet (database) for two reasons:
+We currently operates the conversion from Avro (alerts) to Parquet (database) for mainly two reasons:
 
 - Parquet is a built-in output sinks in Structured Streaming, not Avro. We can use a custom sink for Avro, but as Parquet is better integrated with the Spark ecosystem at this point, we stick to it for the moment.
 - Other services (post-processing) integrates better with Parquet for the moment. Only the streaming out part would need re-conversion to Avro (Kafka style).
 
-The archiving part is crucial, and must respect a number of criteria:
+The archiving part is crucial, and must pass a number of stress tests (not exhaustive!):
 
-- The archiving must be done as quickly as possible.
-- The archiving must resist to bursts of alerts.
-- In case of several days of shut down, the archiving must be able to archive late data while ingesting new data.
-- The database must be fault-tolerant, and must allow fast concurrent access.
+- What happens if we lose some machines hosting the broker?
+- What happens if there is a broker shutdown?
+- What happens if there are sudden bursts of alerts?
+- What happens if LSST starts to send alerts at a crazy sustained rate?
 
-Concerning the first 3 points, benchmarks and resources sizing are under study. For the last point, the main Parquet database is stored in HDFS, and data are partitioned hourly (`YYYY/MM/dd/hh`). We plan on having multiple copies of the data. To launch the archiving service, just use:
+Extensive benchmarks and resources sizing are under study. The main Parquet database is stored in HDFS (fault-tolerant), and data are partitioned hourly (`YYYY/MM/dd/hh`). We plan on having multiple copies of the data. To launch the archiving service, just use:
 
 ```bash
 fink start archive > archiving.log &
 ```
 
-Just make sure you attached the `archive` service to disks with large enough space! To define the location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
+Just make sure you attached the `archive` service to disks with large enough space! Note we perform a data compression (snappy). The compression factor will depend on the triggering time and incoming packet size, but is typically a factor of 10. To define the archiving location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
 
 ## Monitoring the data transfer
 

@@ -13,7 +13,7 @@ The idea behind it is to process data streams as a series of small batch jobs, c
 
 The most critical part in a context of big data is to capture as fast as possible the stream, and store information efficiently and reliably. We start with one Spark Structured Streaming job reading and decoding Avro events sent from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. The archiving part is crucial, and must pass a number of stress tests:
 
-- The archiving must be done as quickly as possible.
+- The archiving must be done as quickly as possible (within seconds).
 - The archiving must resist to bursts of alerts.
 - In case of several days of shut down, the archiving must be able to archive late data while ingesting new data.
 - The database must be fault-tolerant, and must allow fast concurrent access.

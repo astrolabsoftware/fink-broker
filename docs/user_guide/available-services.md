@@ -12,6 +12,8 @@ In addition to [archiving](database.md) the streams, Fink provides built-in serv
 - Real time or post-processing of alerts.
 - Urgent decision to take (observation plan).
 
+and you can connect your favourite code to the database, getting data access within seconds of publication (see below)!
+
 ![Screenshot](../img/monitoring.png)
 
 Given the crazy rate of alerts, it seems insane to live monitor each alert individually, and on short timescales it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink. Each service is typically a Spark job on the database (to avoid putting too high load on the alert sender), but the archive service that operates directly on the stream.
