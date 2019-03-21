@@ -39,6 +39,9 @@ install:
   - pip install -r requirements.txt
 
 script:
+  # For sonar to run correctly
+  - git fetch --unshallow --quiet
+  
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - fink_test
