@@ -18,6 +18,11 @@
 KAFKA_IPPORT="134.158.74.95:24499"
 KAFKA_TOPIC="ztf-stream-os"
 
+# From which offset you want to start pulling data. Options are:
+# latest (only new data), earliest (connect from the oldest
+# offset available), or a number (see Spark Kafka integration).
+KAFKA_STARTING_OFFSET="earliest"
+
 # Apache Spark mode
 SPARK_MASTER="spark://134.158.75.222:7077"
 

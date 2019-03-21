@@ -20,50 +20,25 @@ from pyspark.sql import SparkSession
 import argparse
 import time
 
+from fink_broker.parser import getargs
+
 from fink_broker.sparkUtils import quiet_logs
+from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+
 from fink_broker.monitoring import monitor_progress_webui
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'servers', type=str,
-        help='Hostname or IP and port of Kafka broker producing stream. [KAFKA_IPPORT]')
-    parser.add_argument(
-        'topic', type=str,
-        help='Name of Kafka topic stream to read from. [KAFKA_TOPIC]')
-    parser.add_argument(
-        'finkwebpath', type=str,
-        help='Folder to store UI data for display. [FINK_UI_PATH]')
-    parser.add_argument(
-        '-exit_after', type=int, default=None,
-        help=""" Stop the service after `exit_after` seconds.
-        This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`. Default is None. """)
-    args = parser.parse_args()
+    args = getargs(parser)
 
-    # Grab the running Spark Session,
-    # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .appName("monitorStream") \
-        .getOrCreate()
+    # Initialise Spark session
+    init_sparksession(
+        name="monitoringStream", shuffle_partitions=2, log_level="ERROR")
 
-    # Set logs to be quieter
-    # Put WARN or INFO for debugging, but you will have to dive into
-    # a sea of millions irrelevant messages for what you typically need...
-    quiet_logs(spark.sparkContext, log_level="ERROR")
-
-    # Create a streaming DF from the incoming stream from Kafka
-    df = spark \
-        .readStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", args.servers) \
-        .option("subscribe", args.topic) \
-        .option("startingOffsets", "latest") \
-        .load()
-
-    # keep the size of shuffles small
-    spark.conf.set("spark.sql.shuffle.partitions", "2")
+    # Create a streaming dataframe pointing to a Kafka stream
+    df = connect_with_kafka(
+        servers=args.servers, topic=args.topic,
+        startingoffsets=args.startingoffsets, failondataloss=False)
 
     # Trigger the streaming computation,
     # by defining the sink (memory here) and starting it

@@ -149,31 +149,35 @@ elif [[ $service == "simulator" ]]; then
     exit
   fi
   python ${FINK_HOME}/bin/simulate_stream.py \
-    ${KAFKA_IPPORT_SIM} ${KAFKA_TOPIC_SIM} ${FINK_DATA_SIM}\
-    ${TIME_INTERVAL} ${POOLSIZE} ${HELP_ON_SERVICE}
+    -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM}\
+    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
 elif [[ $service == "monitoring" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/monitor_fromstream.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} \
-    ${FINK_UI_PATH} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/monitor_fromstream.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    -startingoffsets ${KAFKA_STARTING_OFFSET} -finkwebpath ${FINK_UI_PATH} \
+    ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "classify" ]]; then
   # Aggregate the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/classify_fromstream.py ${KAFKA_IPPORT} \
-    ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
-    ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/classify_fromstream.py -servers ${KAFKA_IPPORT} \
+    -topic ${KAFKA_TOPIC} -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
+    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
+    ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "archive" ]]; then
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/archive.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
-    ${FINK_ALERT_PATH} ${FINK_ALERT_CHECKPOINT} \
-    ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/archive.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
+    -outputpath ${FINK_ALERT_PATH} -checkpointpath ${FINK_ALERT_CHECKPOINT} \
+    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
+    ${EXIT_AFTER} ${HELP_ON_SERVICE}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

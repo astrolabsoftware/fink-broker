@@ -32,84 +32,30 @@ import argparse
 import json
 import time
 
+from fink_broker.parser import getargs
+
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
+from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+from fink_broker.sparkUtils import get_schemas_from_avro
 
 from fink_broker.monitoring import monitor_progress_webui
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'servers', type=str,
-        help='Hostname or IP and port of Kafka broker producing stream. [KAFKA_IPPORT]')
-    parser.add_argument(
-        'topic', type=str,
-        help='Name of Kafka topic stream to read from. [KAFKA_TOPIC]')
-    parser.add_argument(
-        'schema', type=str,
-        help='Schema to decode the alert. Should be avro file. [FINK_ALERT_SCHEMA]')
-    parser.add_argument(
-        'outputpath', type=str,
-        help='Directory on disk for saving live data. [FINK_ALERT_PATH]')
-    parser.add_argument(
-        'checkpointpath', type=str,
-        help="""
-        For some output sinks where the end-to-end fault-tolerance
-        can be guaranteed, specify the location where the system will
-        write all the checkpoint information. This should be a directory
-        in an HDFS-compatible fault-tolerant file system.
-        See conf/fink.conf & https://spark.apache.org/docs/latest/
-        structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT]
-        """)
-    parser.add_argument(
-        'finkwebpath', type=str,
-        help='Folder to store UI data for display. [FINK_UI_PATH]')
-    parser.add_argument(
-        'tinterval', type=int,
-        help='Time interval between two monitoring. In seconds. [FINK_TRIGGER_UPDATE]')
-    parser.add_argument(
-        '-exit_after', type=int, default=None,
-        help=""" Stop the service after `exit_after` seconds.
-        This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`. Default is None. """)
-    args = parser.parse_args()
+    args = getargs(parser)
 
-    # Grab the running Spark Session,
-    # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .appName("classifyStream") \
-        .getOrCreate()
+    # Initialise Spark session
+    init_sparksession(
+        name="archivingStream", shuffle_partitions=2, log_level="ERROR")
 
-    # Set logs to be quieter
-    # Put WARN or INFO for debugging, but you will have to dive into
-    # a sea of millions irrelevant messages for what you typically need...
-    quiet_logs(spark.sparkContext, log_level="ERROR")
-    spark.conf.set("spark.streaming.kafka.consumer.cache.enabled", "false")
-
-    # Keep the size of shuffles small
-    spark.conf.set("spark.sql.shuffle.partitions", "2")
-
-    # Create a DF from the incoming stream from Kafka
-    # Note that <kafka.bootstrap.servers> and <subscribe>
-    # must correspond to arguments of the LSST alert system.
-    df = spark \
-        .readStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", args.servers) \
-        .option("subscribe", args.topic) \
-        .option("startingOffsets", "earliest") \
-        .load()
+    # Create a streaming dataframe pointing to a Kafka stream
+    df = connect_with_kafka(
+        servers=args.servers, topic=args.topic,
+        startingoffsets=args.startingoffsets, failondataloss=False)
 
     # Get Schema of alerts
-    alert_schema = readschemafromavrofile(args.schema)
-    df_schema = spark.read\
-        .format("avro")\
-        .load("file://" + args.schema)\
-        .schema
-    alert_schema_json = json.dumps(alert_schema)
+    alert_schema, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
     df_decoded = df.select(
