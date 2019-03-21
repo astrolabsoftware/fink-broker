@@ -157,14 +157,14 @@ elif [[ $service == "monitoring" ]]; then
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/monitor_fromstream.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} \
-    ${FINK_UI_PATH} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${KAFKA_STARTING_OFFSET} ${FINK_UI_PATH} ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "classify" ]]; then
   # Aggregate the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/classify_fromstream.py ${KAFKA_IPPORT} \
-    ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
+    ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} ${KAFKA_STARTING_OFFSET} \
     ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "archive" ]]; then
   # Store the stream of alerts
@@ -172,7 +172,7 @@ elif [[ $service == "archive" ]]; then
     --packages ${FINK_PACKAGES} \
     ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/archive.py ${KAFKA_IPPORT} ${KAFKA_TOPIC} ${FINK_ALERT_SCHEMA} \
-    ${FINK_ALERT_PATH} ${FINK_ALERT_CHECKPOINT} \
+    ${KAFKA_STARTING_OFFSET} ${FINK_ALERT_PATH} ${FINK_ALERT_CHECKPOINT} \
     ${FINK_UI_PATH} ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER} ${HELP_ON_SERVICE}
 else
   # In case you give an unknown service

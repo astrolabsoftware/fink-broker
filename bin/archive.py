@@ -34,9 +34,9 @@ import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
+from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
 
 from fink_broker.monitoring import monitor_progress_webui
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -49,6 +49,9 @@ def main():
     parser.add_argument(
         'schema', type=str,
         help='Schema to decode the alert. Should be avro file. [FINK_ALERT_SCHEMA]')
+    parser.add_argument(
+        'startingoffsets', type=str,
+        help='From which offset you want to start pulling data. [KAFKA_STARTING_OFFSET]')
     parser.add_argument(
         'outputpath', type=str,
         help='Directory on disk for saving live data. [FINK_ALERT_PATH]')
@@ -76,32 +79,14 @@ def main():
         Use that with `fink start service --exit_after <time>`. Default is None. """)
     args = parser.parse_args()
 
-    # Grab the running Spark Session,
-    # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .appName("classifyStream") \
-        .getOrCreate()
+    # Initialise Spark session
+    spark = init_sparksession(
+        name="archivingStream", shuffle_partitions=2, log_level="ERROR")
 
-    # Set logs to be quieter
-    # Put WARN or INFO for debugging, but you will have to dive into
-    # a sea of millions irrelevant messages for what you typically need...
-    quiet_logs(spark.sparkContext, log_level="ERROR")
-    spark.conf.set("spark.streaming.kafka.consumer.cache.enabled", "false")
-
-    # Keep the size of shuffles small
-    spark.conf.set("spark.sql.shuffle.partitions", "2")
-
-    # Create a DF from the incoming stream from Kafka
-    # Note that <kafka.bootstrap.servers> and <subscribe>
-    # must correspond to arguments of the LSST alert system.
-    df = spark \
-        .readStream \
-        .format("kafka") \
-        .option("kafka.bootstrap.servers", args.servers) \
-        .option("subscribe", args.topic) \
-        .option("startingOffsets", "earliest") \
-        .load()
+    # Create a streaming dataframe pointing to a Kafka stream
+    df = connect_with_kafka(
+        servers=args.servers, topic=args.topic,
+        startingoffsets=args.startingoffsets, failondataloss=False)
 
     # Get Schema of alerts
     alert_schema = readschemafromavrofile(args.schema)

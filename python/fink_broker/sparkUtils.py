@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark import SparkContext
+from pyspark.sql import SparkSession
 from pyspark.sql.column import Column, _to_java_column
 
 import os
@@ -113,6 +114,101 @@ def quiet_logs(sc, log_level="ERROR"):
 
     logger.LogManager.getLogger("org"). setLevel(level)
     logger.LogManager.getLogger("akka").setLevel(level)
+
+def init_sparksession(name: str="my-streaming-app", shuffle_partitions: int=2,
+        log_level: str="ERROR"):
+    """ Initialise SparkSession, and set some configuration parameters
+
+    Parameters
+    ----------
+    name: str
+        Name for the Spark Application.
+    shuffle_partitions: int, optional
+        Number of partition to use when shuffling data.
+        Typically better to keep the size of shuffles small. Default is 2.
+    log_level: str, optional
+        Level of verbosity for the Spark logger.
+        Put WARN or INFO for debugging, but you will have to dive into
+        a sea of millions irrelevant messages for what you typically need...
+        Default is ERROR.
+
+    Returns
+    ----------
+    spark: SparkSession
+        Spark Session initialised.
+
+    Examples
+    ----------
+    >>> spark_tmp = init_sparksession()
+    >>> conf = spark_tmp.sparkContext.getConf().getAll()
+    >>> name = [i[1] for i in conf if i[0] == "spark.app.name"][0]
+    >>> print(name)
+    my-streaming-app
+    """
+    # Grab the running Spark Session,
+    # otherwise create it.
+    spark = SparkSession \
+        .builder \
+        .appName(name) \
+        .getOrCreate()
+
+    # Set logs to be quieter
+    # Put WARN or INFO for debugging, but you will have to dive into
+    # a sea of millions irrelevant messages for what you typically need...
+    quiet_logs(spark.sparkContext, log_level=log_level)
+
+    # keep the size of shuffles small
+    spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
+
+    return spark
+
+def connect_with_kafka(servers: str, topic: str,
+        startingoffsets: str="latest", failondataloss: bool=False):
+    """ Initialise SparkSession, and set default Kafka parameters
+
+    Parameters
+    ----------
+    servers: str
+        kafka.bootstrap.servers as a comma-separated IP:PORT.
+    topic: str
+        Comma separated Kafka topic names.
+    startingoffsets: str, optional
+        From which offset you want to start pulling data. Options are:
+        latest (only new data), earliest (connect from the oldest
+        offset available), or a number (see Spark Kafka integration).
+        Default is latest.
+    failondataloss: bool, optional
+        If True, Spark streaming job will fail if it is asking for data offsets
+        that do not exist anymore in Kafka (because they have been deleted after
+        exceeding a retention period for example). Default is False.
+
+    Returns
+    ----------
+    df: Streaming DataFrame
+        Streaming DataFrame connected to Kafka stream
+
+    Examples
+    ----------
+    >>> dfstream_tmp = connect_with_kafka("localhost:29092", "ztf-stream-sim")
+    >>> dfstream_tmp.isStreaming
+    True
+    """
+    # Grab the running Spark Session
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    # Create a streaming DF from the incoming stream from Kafka
+    df = spark \
+        .readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", servers) \
+        .option("subscribe", topic) \
+        .option("startingOffsets", startingoffsets) \
+        .option('failOnDataLoss', failondataloss)\
+        .load()
+
+    return df
 
 
 if __name__ == "__main__":
