@@ -17,7 +17,9 @@ from pyspark.sql import SparkSession
 from pyspark.sql.column import Column, _to_java_column
 
 import os
+import json
 
+from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.tester import spark_unit_tests
 
 def from_avro(dfcol, jsonformatschema):
@@ -44,11 +46,7 @@ def from_avro(dfcol, jsonformatschema):
 
     Examples
     ----------
-    >>> from fink_broker.avroUtils import readschemafromavrofile
-    >>> import json
-
-    >>> alert_schema = readschemafromavrofile(ztf_alert_sample)
-    >>> alert_schema_json = json.dumps(alert_schema)
+    >>> alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
 
     >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
     >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
@@ -210,6 +208,44 @@ def connect_with_kafka(servers: str, topic: str,
 
     return df
 
+def get_schemas_from_avro(avro_path: str):
+    """ Build schemas from an avro file (DataFrame & JSON compatibility)
+
+    Parameters
+    ----------
+    avro_path: str
+        Path to avro file from which schema will be extracted
+
+    Returns
+    ----------
+    alert_schema: dict
+        Schema of the alert as a dictionary (DataFrame Style)
+    alert_schema_json: str
+        Schema of the alert as a string (JSON style)
+
+    Examples
+    ----------
+    >>> alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> print(type(alert_schema))
+    <class 'dict'>
+
+    >>> print(type(alert_schema_json))
+    <class 'str'>
+    """
+    # Grab the running Spark Session
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    # Get Schema of alerts
+    alert_schema = readschemafromavrofile(avro_path)
+    df_schema = spark.read\
+        .format("avro")\
+        .load("file://" + avro_path)\
+        .schema
+    alert_schema_json = json.dumps(alert_schema)
+
+    return alert_schema, alert_schema_json
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

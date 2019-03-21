@@ -47,7 +47,7 @@ def main():
     args = parser.parse_args()
 
     # Initialise Spark session
-    spark = init_sparksession(
+    init_sparksession(
         name="archivingStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream

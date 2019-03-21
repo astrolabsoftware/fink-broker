@@ -27,6 +27,7 @@ from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import quiet_logs, from_avro
 from fink_broker.sparkUtils import write_to_csv
 from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+from fink_broker.sparkUtils import get_schemas_from_avro
 
 from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.monitoring import monitor_progress_webui
@@ -59,7 +60,7 @@ def main():
     args = parser.parse_args()
 
     # Initialise Spark session
-    spark = init_sparksession(
+    init_sparksession(
         name="archivingStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream
@@ -68,12 +69,7 @@ def main():
         startingoffsets=args.startingoffsets, failondataloss=False)
 
     # Get Schema of alerts
-    alert_schema = readschemafromavrofile(args.schema)
-    df_schema = spark.read\
-        .format("avro")\
-        .load("file://" + args.schema)\
-        .schema
-    alert_schema_json = json.dumps(alert_schema)
+    alert_schema, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
     df_decoded = df.select(
