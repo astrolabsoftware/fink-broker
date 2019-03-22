@@ -47,6 +47,18 @@ In the configuration `conf/fink.conf`, change the line:
 FINK_UI_PORT=5000
 ```
 
+### How to redirect ports to access the dashboard from a cluster?
+
+You might need to redirect the port to get access to the dashboard:
+
+```
+# Assuming the port for the dashboard will be FINK_UI_PORT
+ssh -L $FINK_UI_PORT:clustername:$FINK_UI_PORT username@clustername
+# connection...
+fink start dashboard
+# Follow the URL (local redirection)
+```
+
 ## Services
 
 ### How do I test the broker?
