@@ -50,6 +50,14 @@ while [ "$#" -gt 0 ]; do
         service="$2"
         shift 2
         ;;
+    "show")
+        nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
+        echo "$nservice Fink services running: "
+        ps aux | head -1
+        ps aux | grep -i 'fink start' | grep -v grep
+        echo "Use fink stop <service_name> to stop."
+        exit
+        ;;
     -h)
         HELP_ON_SERVICE="-h"
         shift 1
