@@ -61,6 +61,7 @@ def main():
     df_decoded = df.select(
         [
             "timestamp",
+            "topic",
             from_avro(df["value"], alert_schema_json).alias("decoded")
         ]
     )
@@ -79,7 +80,7 @@ def main():
         .format("parquet") \
         .option("checkpointLocation", args.checkpointpath) \
         .option("path", args.outputpath)\
-        .partitionBy("year", "month", "day", "hour")
+        .partitionBy("topic", "year", "month", "day", "hour")
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
