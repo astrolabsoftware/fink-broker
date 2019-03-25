@@ -195,6 +195,20 @@ optional arguments:
                         we replicate the alerts. Default is 5. [POOLSIZE]
 ```
 Note that not all of them are in used in all services (but they all share the same parser).
+
+### How do I see how many services are running?
+
+You can easily see the running services by using:
+
+```bash
+fink show
+1 Fink service(s) running:
+USER               PID  %CPU %MEM      VSZ    RSS   TT  STAT STARTED      TIME COMMAND
+julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start monitor --simulator
+Use <fink stop service_name> to stop a service.
+Use <fink start dashboard> to start the dashboard or check its status.
+```
+
 ### Spark's verbosity is overwhelming my logs!
 
 Yes... By default Apache Spark outputs many many things - good for debug, but awful in production. In Fink we provide a utils to deal with Spark logs in your service:
