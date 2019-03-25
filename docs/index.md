@@ -73,7 +73,7 @@ fink start dashboard
 
 Connect the monitoring service to the stream:
 ```bash
-fink start monitoring --simulator > live.log &
+fink start monitor --simulator > live.log &
 ```
 
 Send a small burst of alerts:
@@ -84,7 +84,7 @@ Now go to `http://localhost:5000/live.html` and see the alerts coming! The dashb
 should refresh automatically, but do it manually in case it does not work.
 Finally stop monitoring and shut down the UI simply using:
 ```bash
-fink stop monitoring
+fink stop monitor
 fink stop dashboard
 ```
 
@@ -104,6 +104,6 @@ Monitor Kafka stream received by Apache Spark
  To get help for a service:
  	fink start <service> -h
 
- Available services are: dashboard, archive, monitoring, classify
+ Available services are: dashboard, archive, monitor, classify
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
