@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, archive, monitoring, classify"
+message_service="Available services are: dashboard, archive, monitor, classify"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
@@ -49,6 +49,15 @@ while [ "$#" -gt 0 ]; do
         fi
         service="$2"
         shift 2
+        ;;
+    "show")
+        nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
+        echo "$nservice Fink service(s) running: "
+        ps aux | head -1
+        ps aux | grep -i 'fink start' | grep -v grep
+        echo "Use <fink stop service_name> to stop a service."
+        echo "Use <fink start dashboard> to start the dashboard or check its status."
+        exit
         ;;
     -h)
         HELP_ON_SERVICE="-h"
@@ -112,12 +121,12 @@ if [[ $MODE == "stop" ]]; then
     KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
-    PIDS=$(ps ax | grep -i 'fink' | grep -v grep | awk '{print $1}')
+    PIDS=$(ps ax | grep -i 'fink' | grep $service | awk '{print $1}')
 
     if [ -z "$PIDS" ]; then
-      echo "No fink service(s) to stop"
+      echo "No fink $service service to stop"
     else
-      echo "Stopping all services..."
+      echo "Stopping $service..."
       kill -s $SIGNAL $PIDS
     fi
   fi
@@ -151,7 +160,7 @@ elif [[ $service == "simulator" ]]; then
   python ${FINK_HOME}/bin/simulate_stream.py \
     -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM}\
     -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
-elif [[ $service == "monitoring" ]]; then
+elif [[ $service == "monitor" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \

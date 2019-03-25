@@ -45,7 +45,7 @@ The monitoring of the stream is typically done with the archiving service. But f
 To use this service, just execute:
 
 ```bash
-fink start monitoring > live.log &
+fink start monitor > live.log &
 ```
 Again, this will query the stream directly - so be careful!
 
