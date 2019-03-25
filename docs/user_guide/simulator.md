@@ -33,7 +33,7 @@ fink start <service> --simulator
 For example for demo purposing, you can easily start the monitoring service on the simulated stream with:
 
 ```bash
-fink start monitoring --simulator > live_sim.log &
+fink start monitor --simulator > live_sim.log &
 ```
 
 and watch the stream at [http://localhost:5000/live.html](http://localhost:5000/live.html) (change the port with the one in your configuration file).

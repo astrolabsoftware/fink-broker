@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,7 +79,7 @@ done
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
-  fink start monitoring --exit_after 5 --simulator
+  fink start monitor --exit_after 5 --simulator
   fink start archive --exit_after 30 --simulator
   fink start classify --exit_after 30 --simulator
   fink start dashboard

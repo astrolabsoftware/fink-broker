@@ -95,7 +95,7 @@ Monitor Kafka stream received by Apache Spark
  To get help for a service:
  	fink start <service> -h
 
- Available services are: dashboard, archive, monitoring, classify
+ Available services are: dashboard, archive, monitor, classify
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
 
@@ -137,22 +137,76 @@ You easily get help on a service using:
 fink start <service_name> -h
 ```
 
-This will also tells you which configuration parameters are used, e.g.
+This will also tells you which configuration parameters can be used, e.g.
 
-```bash
-fink start monitoring -h
-usage: monitor_fromstream.py [-h] servers topic finkwebpath
+```shell
+fink start monitor -h
+usage: monitor_fromstream.py [-h] [-servers SERVERS] [-topic TOPIC]
+                             [-schema SCHEMA]
+                             [-startingoffsets STARTINGOFFSETS]
+                             [-outputpath OUTPUTPATH]
+                             [-checkpointpath CHECKPOINTPATH]
+                             [-finkwebpath FINKWEBPATH] [-tinterval TINTERVAL]
+                             [-tinterval_kafka TINTERVAL_KAFKA]
+                             [-exit_after EXIT_AFTER] [-datapath DATAPATH]
+                             [-poolsize POOLSIZE]
 
 Monitor Kafka stream received by Spark
 
-positional arguments:
-  servers      Hostname or IP and port of Kafka broker producing stream.
-               [KAFKA_IPPORT]
-  topic        Name of Kafka topic stream to read from. [KAFKA_TOPIC]
-  finkwebpath  Folder to store UI data for display. [FINK_UI_PATH]
-
 optional arguments:
-  -h, --help   show this help message and exit
+  -h, --help            show this help message and exit
+  -servers SERVERS      Hostname or IP and port of Kafka broker producing
+                        stream. [KAFKA_IPPORT/KAFKA_IPPORT_SIM]
+  -topic TOPIC          Name of Kafka topic stream to read from.
+                        [KAFKA_TOPIC/KAFKA_TOPIC_SIM]
+  -schema SCHEMA        Schema to decode the alert. Should be avro file.
+                        [FINK_ALERT_SCHEMA]
+  -startingoffsets STARTINGOFFSETS
+                        From which offset you want to start pulling data.
+                        [KAFKA_STARTING_OFFSET]
+  -outputpath OUTPUTPATH
+                        Directory on disk for saving live data.
+                        [FINK_ALERT_PATH]
+  -checkpointpath CHECKPOINTPATH
+                        For some output sinks where the end-to-end fault-
+                        tolerance can be guaranteed, specify the location
+                        where the system will write all the checkpoint
+                        information. This should be a directory in an HDFS-
+                        compatible fault-tolerant file system. See
+                        conf/fink.conf & https://spark.apache.org/docs/latest/
+                        structured-streaming-programming-guide.html#starting-
+                        streaming-queries [FINK_ALERT_CHECKPOINT]
+  -finkwebpath FINKWEBPATH
+                        Folder to store UI data for display. [FINK_UI_PATH]
+  -tinterval TINTERVAL  Time interval between two monitoring. In seconds.
+                        [FINK_TRIGGER_UPDATE]
+  -tinterval_kafka TINTERVAL_KAFKA
+                        Time interval between two messages are published. In
+                        seconds. [TIME_INTERVAL]
+  -exit_after EXIT_AFTER
+                        Stop the service after `exit_after` seconds. This
+                        primarily for use on Travis, to stop service after
+                        some time. Use that with `fink start service
+                        --exit_after <time>`. Default is None.
+  -datapath DATAPATH    Folder containing alerts to be published by Kafka.
+                        [FINK_DATA_SIM]
+  -poolsize POOLSIZE    Maximum number of alerts to send. If the poolsize is
+                        bigger than the number of alerts in `datapath`, then
+                        we replicate the alerts. Default is 5. [POOLSIZE]
+```
+Note that not all of them are in used in all services (but they all share the same parser).
+
+### How do I see how many services are running?
+
+You can easily see the running services by using:
+
+```bash
+fink show
+1 Fink service(s) running:
+USER               PID  %CPU %MEM      VSZ    RSS   TT  STAT STARTED      TIME COMMAND
+julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start monitor --simulator
+Use <fink stop service_name> to stop a service.
+Use <fink start dashboard> to start the dashboard or check its status.
 ```
 
 ### Spark's verbosity is overwhelming my logs!
@@ -243,4 +297,5 @@ You forgot to set `FINK_HOME`. The best is to add the path to Fink in your `.bas
 # in ~/.bash_profile
 export FINK_HOME=/path/to/fink-broker
 export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
+export PATH=$FINK_HOME/bin:$PATH
 ```
