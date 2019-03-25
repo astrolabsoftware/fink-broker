@@ -54,7 +54,7 @@ while [ "$#" -gt 0 ]; do
         nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
         echo "$nservice Fink service(s) running: "
         ps aux | head -1
-        ps aux | grep -i 'fink start' | grep -v grep
+        ps aux | grep -i 'fink start' | grep -v grep &
         echo "Use <fink stop service_name> to stop a service."
         echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
