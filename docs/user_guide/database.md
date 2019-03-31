@@ -20,13 +20,28 @@ The archiving part is crucial, and must pass a number of stress tests (not exhau
 - What happens if there are sudden bursts of alerts?
 - What happens if LSST starts to send alerts at a crazy sustained rate?
 
-Extensive benchmarks and resources sizing are under study. The main Parquet database is stored in HDFS (fault-tolerant), and data are partitioned hourly (`YYYY/MM/dd/hh`). We plan on having multiple copies of the data. To launch the archiving service, just use:
+Extensive benchmarks and resources sizing are under study. The main Parquet database is stored in HDFS (fault-tolerant), and data are partitioned hourly by topic name (`topic/YYYY/MM/dd/hh`). To launch the archiving service, just use:
 
 ```bash
 fink start archive > archiving.log &
 ```
 
-Just make sure you attached the `archive` service to disks with large enough space! Note we perform a data compression (snappy). The compression factor will depend on the triggering time and incoming packet size, but is typically a factor of 10. To define the archiving location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
+Just make sure you attached the `archive` service to disks with large enough space! After the first alerts come, you will have something like:
+
+```bash
+# in $FINK_ALERT_PATH
+_spark_metadata\
+topic=ztf-stream-sim\
+  year=2019\
+    month=03\
+      day=25\
+        hour=09\
+          part-00000-de57de35-7a77-49f3-af89-d7cbb4a6cd0c.c000.snappy.parquet
+          ...
+```
+
+
+Note we perform a data compression (snappy). The compression factor will depend on the triggering time and incoming packet size, but is typically a factor of 1.5. To define the archiving location, see `conf/fink.conf`, or follow steps in [Configuration](configuration.md).
 
 ## Monitoring the data transfer
 
