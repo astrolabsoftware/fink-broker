@@ -15,8 +15,8 @@
 ######################################
 # Infrastructure
 # Kafka producer stream location
-KAFKA_IPPORT="134.158.74.95:24499"
-KAFKA_TOPIC="ztf-stream-os"
+KAFKA_IPPORT=""
+KAFKA_TOPIC=""
 
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
@@ -24,7 +24,7 @@ KAFKA_TOPIC="ztf-stream-os"
 KAFKA_STARTING_OFFSET="earliest"
 
 # Apache Spark mode
-SPARK_MASTER="spark://134.158.75.222:7077"
+SPARK_MASTER=""
 
 # Should be Spark options actually (cluster resources, ...)
 EXTRA_SPARK_CONFIG="--driver-memory 4g --executor-memory 30g --executor-cores 17 --total-executor-cores 51"
@@ -52,12 +52,12 @@ FINK_TRIGGER_UPDATE=2
 FINK_ALERT_SCHEMA="${FINK_HOME}/schemas/template_schema_ZTF.avro"
 
 # Path on disk to save live data. Paths must exist.
-# They can be in local FS (files:///path/) or
+# They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
-FINK_ALERT_PATH="hdfs://134.158.75.222:8020//user/julien.peloton/archive/alerts_store"
+FINK_ALERT_PATH=""
 
-FINK_ALERT_CHECKPOINT="hdfs://134.158.75.222:8020//user/julien.peloton/archive/alerts_checkpoint"
+FINK_ALERT_CHECKPOINT=""
 
 ######################################
 # Dashboard
