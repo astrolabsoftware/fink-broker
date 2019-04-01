@@ -26,8 +26,11 @@ KAFKA_STARTING_OFFSET="earliest"
 # Apache Spark mode
 SPARK_MASTER="spark://134.158.75.222:7077"
 
-# Should be Spark options actually (to allow cluster resources!)
+# Should be Spark options actually (cluster resources, ...)
 EXTRA_SPARK_CONFIG="--driver-memory 4g --executor-memory 30g --executor-cores 17 --total-executor-cores 51"
+
+# Should be Kafka secured options actually (to allow connection to Kafka)
+SECURED_KAFKA_CONFIG=''
 
 # These are the Maven Coordinates of dependencies for Fink
 # Change the version according to your Spark version.

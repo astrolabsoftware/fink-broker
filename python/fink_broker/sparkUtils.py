@@ -196,12 +196,23 @@ def connect_with_kafka(servers: str, topic: str,
         .builder \
         .getOrCreate()
 
+    conf = spark.sparkContext.getConf().getAll()
+
     # Create a streaming DF from the incoming stream from Kafka
     df = spark \
         .readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", servers) \
-        .option("subscribe", topic) \
+        .option("kafka.bootstrap.servers", servers)
+
+    # Naive check for secure connection - this can be improved...
+    to_secure = sum(
+        ["-Djava.security.auth.login.config=" in i[1] for i in conf])
+    if to_secure > 0:
+        # Here again we can improve this...
+        df = df.option("kafka.sasl.mechanism", "PLAIN") \
+            .option("kafka.security.protocol", 'SASL_SSL')
+
+    df = df.option("subscribe", topic) \
         .option("startingOffsets", startingoffsets) \
         .option('failOnDataLoss', failondataloss)\
         .load()
