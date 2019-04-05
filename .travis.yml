@@ -25,9 +25,10 @@ before_install:
 
 install:
   # Download spark 2.4.0
-  - "[ -f spark ] || mkdir spark && cd spark && axel http://www-us.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-hadoop2.7.tgz && cd .."
-  - tar -xf ./spark/spark-2.4.0-bin-hadoop2.7.tgz
-  - export SPARK_HOME=`pwd`/spark-2.4.0-bin-hadoop2.7
+  - export SPARK_VERSION=2.4.1
+  - "[ -f spark ] || mkdir spark && cd spark && axel http://www-us.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && cd .."
+  - tar -xf ./spark/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz
+  - export SPARK_HOME=`pwd`/spark-${SPARK_VERSION}-bin-hadoop2.7
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
   - echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
   - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
@@ -41,7 +42,7 @@ install:
 script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
-  
+
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - fink_test
