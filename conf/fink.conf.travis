@@ -34,10 +34,14 @@ SECURED_KAFKA_CONFIG=''
 
 # These are the Maven Coordinates of dependencies for Fink
 # Change the version according to your Spark version.
+# NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
 org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
 org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
-org.apache.spark:spark-avro_2.11:2.4.0
+org.apache.spark:spark-avro_2.11:2.4.0,\
+org.apache.hbase:hbase-client:2.1.4,\
+org.apache.hbase:hbase-common:2.1.4,\
+org.apache.hbase:hbase-mapreduce:2.1.4
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
@@ -58,6 +62,9 @@ FINK_ALERT_SCHEMA=${FINK_HOME}/schemas/template_schema_ZTF.avro
 FINK_ALERT_PATH=${FINK_HOME}/archive/alerts_store
 
 FINK_ALERT_CHECKPOINT=${FINK_HOME}/archive/alerts_checkpoint
+
+# Database type: parquet or hbase
+FINK_DATABASE_FORMAT="parquet"
 
 ######################################
 # Dashboard
