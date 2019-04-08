@@ -25,7 +25,7 @@ before_install:
 
 install:
   # Download spark 2.4.0
-  - "[ -f spark ] || mkdir spark && cd spark && axel http://www-us.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-hadoop2.7.tgz && cd .."
+  - "[ -f spark ] || mkdir spark && cd spark && axel http://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-hadoop2.7.tgz && cd .."
   - tar -xf ./spark/spark-2.4.0-bin-hadoop2.7.tgz
   - export SPARK_HOME=`pwd`/spark-2.4.0-bin-hadoop2.7
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
@@ -41,7 +41,7 @@ install:
 script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
-  
+
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - fink_test
