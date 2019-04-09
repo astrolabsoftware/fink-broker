@@ -3,10 +3,9 @@ language: python
 dist: xenial
 
 # Check against N & N-1 Spark versions
-matrix:
-  include:
-    - env: SPARK_VERSION=2.4.0
-    - env: SPARK_VERSION=2.4.1
+env:
+  - SPARK_VERSION=2.4.0
+  - SPARK_VERSION=2.4.1
 
 python:
   - "3.6"
