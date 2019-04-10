@@ -53,5 +53,8 @@ script:
   - bash <(curl -s https://codecov.io/bash)
 
   # Scan with sonarqube
+  - echo "sonar.pullrequest.branch=${TRAVIS_PULL_REQUEST_BRANCH}" > ${FINK_HOME}/sonar-project.properties
+  - echo "sonar.pullrequest.key=${TRAVIS_PULL_REQUEST}" > ${FINK_HOME}/sonar-project.properties
+  - echo "sonar.pullrequest.base=master" > ${FINK_HOME}/sonar-project.properties
   - coverage xml -i
   - sonar-scanner
