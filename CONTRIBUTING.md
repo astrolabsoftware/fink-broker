@@ -22,6 +22,15 @@ In general, we appreciate the "fork-and-pull" Git workflow.
 
 NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
+## Branch naming
+
+Using some form of convention to define the name of a branch for your PR is always a good idea. We do not have strong preference. For reference, here are some conventions:
+
+- Relating to a particular issue: `issue/issue-number/few-word-description`
+- Relating to a particular user: `u/your-username/few-word-description`
+
+Feel free to pick up one or another!
+
 ## Code style
 
 Make sure the new code to be introduced is documented and has been tested.
