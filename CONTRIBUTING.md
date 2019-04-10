@@ -1,6 +1,5 @@
 # Contributing to Fink
 
-
 To start, it helps to announce what you are working on ahead of time to
 confirm that it is an acceptable contribution. To do this open an issue/PR or send
 an email to peloton at lal dot in2p3 dot fr.
