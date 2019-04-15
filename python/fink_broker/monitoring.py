@@ -89,13 +89,18 @@ def recentprogress(query: StreamingQuery, colnames: list):
 
     return data
 
-def save_monitoring(path: str, query: StreamingQuery, colnames: list):
+def save_monitoring(
+    path: str, outputname: str,
+    query: StreamingQuery, colnames: list):
     """ Save stream progress locally (driver) into disk (CSV).
 
     Parameters
     ----------
     path: str
-        Folder where to save the data. Filename will be /<path>/live.csv.
+        Folder where to save the data.
+    outputname: str
+        Name of the file containing monitoring data. If it does not exist,
+        it will be created. Data format is CSV.
     query: StreamingQuery
         Streaming query to monitor
     colnames: list of str
@@ -114,7 +119,7 @@ def save_monitoring(path: str, query: StreamingQuery, colnames: list):
 
     Collect rates in a Pandas dataframe
     >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    >>> out = save_monitoring(".", countquery, colnames)
+    >>> out = save_monitoring(".", "test.csv", countquery, colnames)
 
     Stop the sink
     >>> countquery.stop()
@@ -122,12 +127,14 @@ def save_monitoring(path: str, query: StreamingQuery, colnames: list):
     dfp = recentprogress(query, colnames)
     if dfp.empty:
         return False
-    dfp.to_csv(os.path.join(path, "live.csv"))
+    dfp.to_csv(os.path.join(path, outputname))
 
 def monitor_progress_webui(
         countquery: StreamingQuery, tinterval: int,
-        colnames: list, outpath: str, test=False):
+        colnames: list, outpath: str, outputname:str, test: bool=False):
     """ Simple listener to Spark structured streaming.
+
+    Data is saved at outpath/outputname.
 
     Pyspark does not allow to asynchronously monitor queries
     associated with a SparkSession by attaching a StreamingQueryListener,
@@ -144,6 +151,11 @@ def monitor_progress_webui(
         Fields of the query.recentProgress to be registered
     outpath: str
         Path to the folder where to save the progress data.
+    outputname: str
+        Name of the file containing monitoring data. If it does not exist,
+        it will be created. Data format is CSV.
+    test: bool, optional
+        Set to True for canceling the daemon after its call. default is False.
 
 
     Examples
@@ -159,7 +171,7 @@ def monitor_progress_webui(
 
     Collect rates in a Pandas dataframe
     >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    >>> monitor_progress_webui(countquery, 1, colnames, ".", True)
+    >>> monitor_progress_webui(countquery, 1, colnames, ".", "test.csv", True)
 
     Stop the sink
     >>> countquery.stop()
@@ -167,7 +179,7 @@ def monitor_progress_webui(
     t = threading.Timer(
         tinterval,
         monitor_progress_webui,
-        args=(countquery, tinterval, colnames, outpath)
+        args=(countquery, tinterval, colnames, outpath, outputname)
     )
 
     # Start it as a daemon
@@ -175,7 +187,7 @@ def monitor_progress_webui(
     t.start()
 
     # Monitor the progress of the stream, and save data for the webUI
-    save_monitoring(outpath, countquery, colnames)
+    save_monitoring(outpath, outputname, countquery, colnames)
 
     if test:
         t.cancel()
