@@ -1,4 +1,4 @@
-var defaultData = window.location.origin + '/data/live.csv'
+var defaultData = window.location.origin + '/data/history.csv'
 var urlInput = document.getElementById('fetchURL');
 var horizontalMarker = document.getElementById('horizontalMarker');
 
@@ -84,6 +84,9 @@ function createChart() {
             fontWeight: 'bold'
         },
       selected: 5 // all
+    },
+    xAxis: {
+      ordinal: false
     },
       data: {
           csvURL: urlInput.value
