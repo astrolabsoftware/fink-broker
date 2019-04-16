@@ -31,7 +31,7 @@ and go to [http://localhost:5000](http://localhost:5000):
 
 ![Screenshot](../img/dashboard.png)
 
-Then you can click on the different services, and see data live! Here is a screenshot of what you would see when archiving the stream:
+Then you can click on the different [services](available-services.md), and see data live! Here is a screenshot of what you would see when archiving the stream:
 
 ![Screenshot](../img/live_screenshot.png)
 
