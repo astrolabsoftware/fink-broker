@@ -1,10 +1,10 @@
 # Available Fink services
 
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-<script src="https://code.highcharts.com/highcharts.js"></script>
-<script src="https://code.highcharts.com/modules/data.js"></script>
-<script src="https://code.highcharts.com/highcharts-more.js"></script>
-<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/stock/modules/data.js"></script>
 
 In addition to [archiving](database.md) the streams, Fink provides built-in services operating at different levels:
 
@@ -53,12 +53,6 @@ Again, this will query the stream directly - so be careful!
 <script src="https://fink-broker.readthedocs.io/en/latest/js/live.js"></script>
 
 Note that you also browse history data at any point, using the History tab:
-
-<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
-<script src="https://code.highcharts.com/stock/highstock.js"></script>
-<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
-<script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
-<script src="https://code.highcharts.com/stock/modules/data.js"></script>
 
 <div id="container_hist"></div>
 <script src="https://fink-broker.readthedocs.io/en/latest/js/hist.js"></script>
