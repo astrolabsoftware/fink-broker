@@ -52,6 +52,11 @@ Again, this will query the stream directly - so be careful!
 <div id="container_live"></div>
 <script src="https://fink-broker.readthedocs.io/en/latest/js/live.js"></script>
 
+Note that you also browse history data at any point, using the History tab:s
+
+<div id="container_hist"></div>
+<script src="https://fink-broker.readthedocs.io/en/latest/js/hist.js"></script>
+
 ## Early classification
 
 This service operates from the database and connects to external database such as the CDS Strasbourg, and perform real-time classification for known objects based on incoming alert positions on sky. The idea is to classify the alerts into 2 big classes: known objects vs unknown objects. And for known objects, we want to retrieve known information such as the name and type of the object.
