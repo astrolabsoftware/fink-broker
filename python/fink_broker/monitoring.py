@@ -22,7 +22,7 @@ import time
 
 from fink_broker.tester import spark_unit_tests
 
-def recentprogress(query: StreamingQuery, colnames: list):
+def recentprogress(query: StreamingQuery, colnames: list, mode: str):
     """ Register recent query progresses in a Pandas DataFrame.
 
     It turns out that Structured Streaming cannot be monitored as Streaming
@@ -35,6 +35,11 @@ def recentprogress(query: StreamingQuery, colnames: list):
         StreamingQuery query.
     colnames: list of str
         Fields of the query.recentProgress to be registered
+    mode: str
+        `live` or `history`. Live mode means we will query the recent updates,
+        but erase past monitoring measurements. History mode means we will query
+        only the last measurement every so often, but append it in a
+        permanent log file.
 
     Returns
     ----------
@@ -55,7 +60,7 @@ def recentprogress(query: StreamingQuery, colnames: list):
 
     Collect fluxes in a Pandas dataframe
     >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    >>> pandas_df = recentprogress(countquery, colnames)
+    >>> pandas_df = recentprogress(countquery, colnames, "live")
 
     Stop the sink
     >>> countquery.stop()
@@ -66,7 +71,16 @@ def recentprogress(query: StreamingQuery, colnames: list):
 
     # Register fields in a dic
     dicval = {i: [] for i in colnames}
-    for c in query.recentProgress:
+
+    # Grab recent history or just the last update
+    if mode == "live":
+        querydata = query.recentProgress
+    elif mode == "history":
+        if query.lastProgress is None:
+            querydata = []
+        else:
+            querydata = [query.lastProgress]
+    for c in querydata:
         if len(c) == 0:
             continue
         try:
@@ -89,17 +103,28 @@ def recentprogress(query: StreamingQuery, colnames: list):
 
     return data
 
-def save_monitoring(path: str, query: StreamingQuery, colnames: list):
+def save_monitoring(
+    path: str, outputname: str,
+    query: StreamingQuery, colnames: list, mode: str):
     """ Save stream progress locally (driver) into disk (CSV).
 
     Parameters
     ----------
     path: str
-        Folder where to save the data. Filename will be /<path>/live.csv.
+        Folder where to save the data.
+    outputname: str
+        Name of the output file containing monitoring data.
+        If it does not exist, it will be created. Data format is CSV.
     query: StreamingQuery
         Streaming query to monitor
     colnames: list of str
         Fields of the query.recentProgress to be registered
+    mode: str
+        `live` or `history`. Live mode means we will query the recent updates,
+        but erase past monitoring measurements. History mode means we will query
+        only the last measurement every so often, but append it in a
+        permanent log file.
+
 
     Examples
     ----------
@@ -114,20 +139,35 @@ def save_monitoring(path: str, query: StreamingQuery, colnames: list):
 
     Collect rates in a Pandas dataframe
     >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    >>> out = save_monitoring(".", countquery, colnames)
+    >>> out = save_monitoring(".", "test.csv", countquery, colnames, "history")
 
     Stop the sink
     >>> countquery.stop()
     """
-    dfp = recentprogress(query, colnames)
+    dfp = recentprogress(query, colnames, mode)
     if dfp.empty:
         return False
-    dfp.to_csv(os.path.join(path, "live.csv"))
+
+    # Live is erased each time, while history is updated
+    if mode == "live":
+        write_mode = "w"
+    elif mode == "history":
+        write_mode = "a"
+
+    outfn = os.path.join(path, outputname)
+
+    if os.path.isfile(outfn) and mode == "history":
+        dfp.to_csv(outfn, mode=write_mode, float_format="%.1f",header=False)
+    else:
+        dfp.to_csv(outfn, mode=write_mode, float_format="%.1f")
 
 def monitor_progress_webui(
         countquery: StreamingQuery, tinterval: int,
-        colnames: list, outpath: str, test=False):
+        colnames: list, outpath: str, outputname:str,
+        mode: str, test: bool=False):
     """ Simple listener to Spark structured streaming.
+
+    Data is saved at outpath/outputname.
 
     Pyspark does not allow to asynchronously monitor queries
     associated with a SparkSession by attaching a StreamingQueryListener,
@@ -144,6 +184,16 @@ def monitor_progress_webui(
         Fields of the query.recentProgress to be registered
     outpath: str
         Path to the folder where to save the progress data.
+    outputname: str
+        Name of the file containing monitoring data. If it does not exist,
+        it will be created. Data format is CSV.
+    mode: str
+        `live` or `history`. Live mode means we will query the recent updates,
+        but erase past monitoring measurements. History mode means we will query
+        only the last measurement every so often, but append it in a
+        permanent log file.
+    test: bool, optional
+        Set to True for canceling the daemon after its call. default is False.
 
 
     Examples
@@ -159,7 +209,8 @@ def monitor_progress_webui(
 
     Collect rates in a Pandas dataframe
     >>> colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    >>> monitor_progress_webui(countquery, 1, colnames, ".", True)
+    >>> monitor_progress_webui(
+    ...     countquery, 1, colnames, ".", "test.csv", "live", True)
 
     Stop the sink
     >>> countquery.stop()
@@ -167,7 +218,7 @@ def monitor_progress_webui(
     t = threading.Timer(
         tinterval,
         monitor_progress_webui,
-        args=(countquery, tinterval, colnames, outpath)
+        args=(countquery, tinterval, colnames, outpath, outputname, mode, test)
     )
 
     # Start it as a daemon
@@ -175,7 +226,7 @@ def monitor_progress_webui(
     t.start()
 
     # Monitor the progress of the stream, and save data for the webUI
-    save_monitoring(outpath, countquery, colnames)
+    save_monitoring(outpath, outputname, countquery, colnames, mode)
 
     if test:
         t.cancel()

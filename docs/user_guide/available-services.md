@@ -36,7 +36,7 @@ This will also tells you which configuration parameters are used. To stop servic
 fink stop services
 ```
 
-Note this will stop all Fink services running (this will change in the future to stop services individually). You can easily define your own service in Fink, and connect it to the alert database. See [Adding a new service](adding-new-service.md) for more information.
+Note this will stop all Fink services running (this will change in the future to stop services individually). You can easily define your own service in Fink, and connect it to the alert database.
 
 ## Monitoring
 
@@ -51,6 +51,11 @@ Again, this will query the stream directly - so be careful!
 
 <div id="container_live"></div>
 <script src="https://fink-broker.readthedocs.io/en/latest/js/live.js"></script>
+
+Note that you also browse history data at any point, using the History tab:
+
+<div id="container_hist"></div>
+<script src="https://fink-broker.readthedocs.io/en/latest/js/hist.js"></script>
 
 ## Early classification
 

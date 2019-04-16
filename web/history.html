@@ -11,10 +11,11 @@
     <meta charset="utf-8">
 
     <!-- Load scripts -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="https://code.highcharts.com/modules/data.js"></script>
-    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/data.js"></script>
     <!-- <script src="https://code.highcharts.com/themes/grid-light.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/dark-blue.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/gray.js"></script> -->
@@ -27,8 +28,8 @@
     <!-- Navigation bar -->
     <div class="topnav">
       <a href="/index.html">Fink</a>
-      <a class="active" href="/live.html">Live</a>
-      <a href="/history.html">History</a>
+      <a href="/live.html">Live</a>
+      <a class="active" href="/history.html">History</a>
       <a href="/skymap.html">Sky map</a>
       <a href="/about.html">About</a>
     </div>
@@ -36,18 +37,15 @@
 
     <!-- Buttons to customize the live stream
     Outputs will be used by the javascript script. -->
-    <div id="container_live" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <div id="container_hist" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+    <!-- Buttons to customize the live stream
+    Outputs will be used by the javascript script. -->
     <div class="ld-row">
       <label class="ld-label">
-        Enable Polling
+        Rate marker (row/s)
       </label>
-      <input type="checkbox" checked="checked" id="enablePolling"/>
-    </div>
-    <div class="ld-row">
-      <label class="ld-label">
-        Polling Time (Seconds)
-      </label>
-      <input class="ld-time-input" type="number" value="2" id="pollingTime"/>
+      <input class="ld-time-input" type="number" value="30" id="horizontalMarker"/>
     </div>
     <div class="ld-row">
       <label class="ld-label">
@@ -57,7 +55,7 @@
     </div>
 
     <!-- Script that generates the live stream -->
-    <script src="js/live.js"></script>
+    <script src="js/hist.js"></script>
 
     <!-- Footer -->
     <div id="footer" class="container text-center">
