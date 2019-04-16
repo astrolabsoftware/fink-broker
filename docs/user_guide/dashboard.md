@@ -31,9 +31,13 @@ and go to [http://localhost:5000](http://localhost:5000):
 
 ![Screenshot](../img/dashboard.png)
 
-Then you can click on the different [services](available-services.md), and see data live! Here is a screenshot of what you would see when archiving the stream:
+Then you can click on the different [services](available-services.md), and see data live! Here is a screenshot of the live stream when archiving the stream:
 
 ![Screenshot](../img/live_screenshot.png)
+
+And here is a screenshot of the history monitoring data stream:
+
+![Screenshot](../img/history_screenshot.png)
 
 Note that in the configuration file you can specify the folder hosting data for the dashboard:
 
