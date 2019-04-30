@@ -83,6 +83,10 @@ while [ "$#" -gt 0 ]; do
         SIM_ONLY=true
         shift 1
         ;;
+    --version)
+        python3 -c "import fink_broker; print(fink_broker.__version__)"
+        exit
+        ;;
     --exit_after)
         EXIT_AFTER="-exit_after $2"
         shift 2
