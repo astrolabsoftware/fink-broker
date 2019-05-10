@@ -5,7 +5,7 @@
 # Latest News
 
 * Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker! Stay tuned for more.
-* Fink has been selected to the Google Summer of Code 2019! Congratulation to @cAbhi15 who will work on the project this year!
+* Fink has been selected to the Google Summer of Code 2019! Congratulation to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year!
 
 # Fink
 
