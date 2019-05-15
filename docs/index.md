@@ -29,7 +29,25 @@ We want Fink to be able to _filter, aggregate, enrich, consume_ incoming Kafka t
 
 ## Installation
 
-You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed. Clone the repository:
+You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed. 
+Define `SPARK_HOME`  as per your Spark installation (typically, `/usr/local/spark`) and add the path to the Spark binaries in `.bash_profile`:
+
+```bash
+# in ~/.bash_profile
+# as per your spark installation directory (eg. /usr/local/spark)
+export SPARK_HOME=/usr/local/spark
+export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
+export PYTHONPATH=${SPARKLIB}:$PYTHONPATH
+export PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
+```
+Then execute the following (to ensure working of coverage module) :
+
+```bash
+echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+```
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/astrolabsoftware/fink-broker.git
@@ -57,7 +75,15 @@ Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/sim
 
 ## Getting started
 
-First make sure the test suite is running fine. Just execute:
+Before running the test suite download the ZTF data for simulation. Go to the datasim directory and execute the download script:
+
+```bash
+cd datasim
+./download_ztf_alert_data.sh
+cd ..
+```
+
+Now, make sure the test suite is running fine. Just execute:
 
 ```bash
 fink_test [--without-integration] [-h]
