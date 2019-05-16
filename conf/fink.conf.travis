@@ -21,7 +21,7 @@ KAFKA_TOPIC=""
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
 # offset available), or a number (see Spark Kafka integration).
-KAFKA_STARTING_OFFSET="latest"
+KAFKA_STARTING_OFFSET="earliest"
 
 # Apache Spark mode
 SPARK_MASTER="local[*]"

@@ -79,10 +79,10 @@ done
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
-  fink start monitor --exit_after 5 --simulator
-  fink start archive --exit_after 30 --simulator
-  fink start classify --exit_after 30 --simulator
-  fink start dashboard
+  fink start monitor --exit_after 30 --simulator -c conf/fink.conf.travis
+  fink start archive --exit_after 30 --simulator -c conf/fink.conf.travis
+  fink start classify --exit_after 30 --simulator -c conf/fink.conf.travis
+  fink start dashboard -c conf/fink.conf.travis
 fi
 
 # Combine individual reports in one

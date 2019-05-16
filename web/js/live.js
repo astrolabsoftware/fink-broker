@@ -21,6 +21,9 @@ function createChart() {
             csvURL: urlInput.value,
             enablePolling: pollingCheckbox.checked === true,
             dataRefreshRate: parseInt(pollingInput.value, 10)
+        },
+        tooltip: {
+          valueDecimals: 1
         }
     });
 

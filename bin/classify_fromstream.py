@@ -103,7 +103,7 @@ def main():
         countquery,
         ui_refresh,
         colnames,
-        args.finkwebpath)
+        args.finkwebpath, "live.csv", "live")
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
