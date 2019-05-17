@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,9 @@
 # limitations under the License.
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
+from pyspark.sql.types import StructType
 
 import os
 import json
@@ -22,7 +24,7 @@ import json
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.tester import spark_unit_tests
 
-def from_avro(dfcol, jsonformatschema):
+def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
     """ Decode the Avro data contained in a DataFrame column into a struct.
 
     Note:
@@ -48,8 +50,10 @@ def from_avro(dfcol, jsonformatschema):
     ----------
     >>> _, _, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
 
-    >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
-    >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
+    >>> df_decoded = dfstream.select(
+    ...   from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
+    >>> query = df_decoded.writeStream.queryName("qraw").format("memory")
+    >>> t = query.outputMode("update").start()
     >>> t.stop()
     """
     sc = SparkContext._active_spark_context
@@ -57,7 +61,8 @@ def from_avro(dfcol, jsonformatschema):
     f = getattr(getattr(avro, "package$"), "MODULE$").from_avro
     return Column(f(_to_java_column(dfcol), jsonformatschema))
 
-def write_to_csv(batchdf, batchid, fn="web/data/simbadtype.csv"):
+def write_to_csv(
+        batchdf: DataFrame, batchid: int, fn: str = "web/data/simbadtype.csv"):
     """ Write DataFrame data into a CSV file.
 
     The only supported Output Modes for File Sink is `Append`, but we need the
@@ -89,7 +94,7 @@ def write_to_csv(batchdf, batchid, fn="web/data/simbadtype.csv"):
         .to_csv(fn, index=False)
     batchdf.unpersist()
 
-def quiet_logs(sc, log_level="ERROR"):
+def quiet_logs(sc: SparkContext, log_level: str = "ERROR"):
     """ Set the level of log in Apache Spark.
 
     Parameters
@@ -104,17 +109,18 @@ def quiet_logs(sc, log_level="ERROR"):
     Display only ERROR messages (ignore INFO, WARN, etc.)
     >>> quiet_logs(spark.sparkContext, "ERROR")
     """
-    ## Get the logger
+    # Get the logger
     logger = sc._jvm.org.apache.log4j
 
-    ## Set the level
+    # Set the level
     level = getattr(logger.Level, log_level, "INFO")
 
     logger.LogManager.getLogger("org"). setLevel(level)
     logger.LogManager.getLogger("akka").setLevel(level)
 
-def init_sparksession(name: str="my-streaming-app", shuffle_partitions: int=2,
-        log_level: str="ERROR"):
+def init_sparksession(
+        name: str = "my-streaming-app", shuffle_partitions: int = 2,
+        log_level: str = "ERROR") -> SparkSession:
     """ Initialise SparkSession, and set some configuration parameters
 
     Parameters
@@ -160,8 +166,10 @@ def init_sparksession(name: str="my-streaming-app", shuffle_partitions: int=2,
 
     return spark
 
-def connect_with_kafka(servers: str, topic: str,
-        startingoffsets: str="latest", failondataloss: bool=False):
+def connect_with_kafka(
+        servers: str, topic: str,
+        startingoffsets: str = "latest",
+        failondataloss: bool = False) -> DataFrame:
     """ Initialise SparkSession, and set default Kafka parameters
 
     Parameters
@@ -219,7 +227,8 @@ def connect_with_kafka(servers: str, topic: str,
 
     return df
 
-def get_schemas_from_avro(avro_path: str):
+def get_schemas_from_avro(
+        avro_path: str) -> (StructType, dict, str):
     """ Build schemas from an avro file (DataFrame & JSON compatibility)
 
     Parameters
@@ -238,7 +247,8 @@ def get_schemas_from_avro(avro_path: str):
 
     Examples
     ----------
-    >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(
+    ...   ztf_alert_sample)
     >>> print(type(df_schema))
     <class 'pyspark.sql.types.StructType'>
 
@@ -262,6 +272,7 @@ def get_schemas_from_avro(avro_path: str):
     alert_schema_json = json.dumps(alert_schema)
 
     return df_schema, alert_schema, alert_schema_json
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

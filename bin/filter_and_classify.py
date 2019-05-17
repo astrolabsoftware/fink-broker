@@ -16,9 +16,9 @@
 """Update the science database from the raw database alert data.
 
 Step 1: Connect to the raw database
-Step 2: filter alerts based on instrumental or environmental criteria.
+Step 2: Filter alerts based on instrumental or environmental criteria.
 Step 3: Classify alerts using the xMatch service at CDS.
-Step 4: push alert data into the science database (TBD)
+Step 4: Push alert data into the science database (TBD)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
@@ -72,9 +72,6 @@ def main():
         .option("path", args.outputpath + "/*") \
         .option("latestFirst", True) \
         .load()
-
-    # Just compute yield - in practice you would just use filter
-    # to get performance.
 
     # Apply filters and keep only good alerts
     df_filt = df.withColumn(
