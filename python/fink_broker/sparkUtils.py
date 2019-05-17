@@ -16,6 +16,7 @@ from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
+from pyspark.sql.types import StructType
 
 import os
 import json
@@ -227,7 +228,7 @@ def connect_with_kafka(
     return df
 
 def get_schemas_from_avro(
-        avro_path: str) -> (pyspark.sql.types.StructType, dict, str):
+        avro_path: str) -> (StructType, dict, str):
     """ Build schemas from an avro file (DataFrame & JSON compatibility)
 
     Parameters
