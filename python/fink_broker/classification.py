@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ import csv
 import requests
 import numpy as np
 import pandas as pd
-from typing import Iterator, Generator, Any
+from typing import Any
 
 from fink_broker.tester import spark_unit_tests
 
@@ -60,7 +60,7 @@ def generate_csv(s: str, lists: list):
 
 def xmatch(
         ra: list, dec: list, id: list,
-        extcatalog: str="simbad", distmaxarcsec: int=1):
+        extcatalog: str = "simbad", distmaxarcsec: int = 1):
     """ Build a catalog of (ra, dec, id) in a CSV-like string,
     cross-match with `extcatalog`, and decode the output.
 

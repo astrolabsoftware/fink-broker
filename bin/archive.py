@@ -34,8 +34,7 @@ import time
 
 from fink_broker.parser import getargs
 
-from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.sparkUtils import quiet_logs, from_avro
+from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 

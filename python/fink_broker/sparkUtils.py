@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,8 +48,10 @@ def from_avro(dfcol, jsonformatschema):
     ----------
     >>> _, _, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
 
-    >>> df_decoded = dfstream.select(from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
-    >>> t = df_decoded.writeStream.queryName("qraw").format("memory").outputMode("update").start()
+    >>> df_decoded = dfstream.select(
+    ...   from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
+    >>> query = df_decoded.writeStream.queryName("qraw").format("memory")
+    >>> t = query.outputMode("update").start()
     >>> t.stop()
     """
     sc = SparkContext._active_spark_context
@@ -104,17 +106,18 @@ def quiet_logs(sc, log_level="ERROR"):
     Display only ERROR messages (ignore INFO, WARN, etc.)
     >>> quiet_logs(spark.sparkContext, "ERROR")
     """
-    ## Get the logger
+    # Get the logger
     logger = sc._jvm.org.apache.log4j
 
-    ## Set the level
+    # Set the level
     level = getattr(logger.Level, log_level, "INFO")
 
     logger.LogManager.getLogger("org"). setLevel(level)
     logger.LogManager.getLogger("akka").setLevel(level)
 
-def init_sparksession(name: str="my-streaming-app", shuffle_partitions: int=2,
-        log_level: str="ERROR"):
+def init_sparksession(
+        name: str = "my-streaming-app", shuffle_partitions: int = 2,
+        log_level: str = "ERROR"):
     """ Initialise SparkSession, and set some configuration parameters
 
     Parameters
@@ -160,8 +163,9 @@ def init_sparksession(name: str="my-streaming-app", shuffle_partitions: int=2,
 
     return spark
 
-def connect_with_kafka(servers: str, topic: str,
-        startingoffsets: str="latest", failondataloss: bool=False):
+def connect_with_kafka(
+        servers: str, topic: str,
+        startingoffsets: str = "latest", failondataloss: bool = False):
     """ Initialise SparkSession, and set default Kafka parameters
 
     Parameters
@@ -238,7 +242,8 @@ def get_schemas_from_avro(avro_path: str):
 
     Examples
     ----------
-    >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(
+    ...   ztf_alert_sample)
     >>> print(type(df_schema))
     <class 'pyspark.sql.types.StructType'>
 
@@ -262,6 +267,7 @@ def get_schemas_from_avro(avro_path: str):
     alert_schema_json = json.dumps(alert_schema)
 
     return df_schema, alert_schema, alert_schema_json
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

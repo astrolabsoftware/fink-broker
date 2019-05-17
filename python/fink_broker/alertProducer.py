@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Maria Patterson, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -112,11 +112,11 @@ class AlertProducer(object):
     ...     streamProducer.send(record, alert_schema=schema, encode=True)
     >>> g = streamProducer.flush()
     """
-    def __init__(self, topic: str, schema_files: list=None, **kwargs):
+    def __init__(self, topic: str, schema_files: list = None, **kwargs):
         self.producer = confluent_kafka.Producer(**kwargs)
         self.topic = topic
 
-    def send(self, data: dict, alert_schema: dict=None, encode: bool=False):
+    def send(self, data: dict, alert_schema: dict = None, encode: bool = False):
         """Sends a message to Kafka stream.
 
         You can choose to encode or not the message (using avro).

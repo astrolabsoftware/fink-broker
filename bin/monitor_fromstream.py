@@ -22,7 +22,6 @@ import time
 
 from fink_broker.parser import getargs
 
-from fink_broker.sparkUtils import quiet_logs
 from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
 
 from fink_broker.monitoring import monitor_progress_webui

@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,7 +96,7 @@ def recentprogress(query: StreamingQuery, colnames: list, mode: str):
 
     if not data.empty:
         # Set timestamp as index
-        data.set_index('timestamp',inplace=True)
+        data.set_index('timestamp', inplace=True)
 
         # Format it as datetime (useful for plot)
         data.index = pd.to_datetime(data.index)
@@ -104,8 +104,8 @@ def recentprogress(query: StreamingQuery, colnames: list, mode: str):
     return data
 
 def save_monitoring(
-    path: str, outputname: str,
-    query: StreamingQuery, colnames: list, mode: str):
+        path: str, outputname: str, query: StreamingQuery,
+        colnames: list, mode: str):
     """ Save stream progress locally (driver) into disk (CSV).
 
     Parameters
@@ -157,14 +157,14 @@ def save_monitoring(
     outfn = os.path.join(path, outputname)
 
     if os.path.isfile(outfn) and mode == "history":
-        dfp.to_csv(outfn, mode=write_mode, float_format="%.1f",header=False)
+        dfp.to_csv(outfn, mode=write_mode, float_format="%.1f", header=False)
     else:
         dfp.to_csv(outfn, mode=write_mode, float_format="%.1f")
 
 def monitor_progress_webui(
         countquery: StreamingQuery, tinterval: int,
-        colnames: list, outpath: str, outputname:str,
-        mode: str, test: bool=False):
+        colnames: list, outpath: str, outputname: str,
+        mode: str, test: bool = False):
     """ Simple listener to Spark structured streaming.
 
     Data is saved at outpath/outputname.

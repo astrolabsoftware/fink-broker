@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,19 +37,32 @@ def getargs(parser):
     """
     parser.add_argument(
         '-servers', type=str, default='',
-        help='Hostname or IP and port of Kafka broker producing stream. [KAFKA_IPPORT/KAFKA_IPPORT_SIM]')
+        help="""
+        Hostname or IP and port of Kafka broker producing stream.
+        [KAFKA_IPPORT/KAFKA_IPPORT_SIM]
+        """)
     parser.add_argument(
         '-topic', type=str, default='',
-        help='Name of Kafka topic stream to read from. [KAFKA_TOPIC/KAFKA_TOPIC_SIM]')
+        help="""
+        Name of Kafka topic stream to read from.
+        [KAFKA_TOPIC/KAFKA_TOPIC_SIM]
+        """)
     parser.add_argument(
         '-schema', type=str, default='',
-        help='Schema to decode the alert. Should be avro file. [FINK_ALERT_SCHEMA]')
+        help="""
+        Schema to decode the alert. Should be avro file.
+        [FINK_ALERT_SCHEMA]""")
     parser.add_argument(
         '-startingoffsets', type=str, default='',
-        help='From which offset you want to start pulling data. [KAFKA_STARTING_OFFSET]')
+        help="""From which offset you want to start pulling data.
+        [KAFKA_STARTING_OFFSET]
+        """)
     parser.add_argument(
         '-outputpath', type=str, default='',
-        help='Directory on disk for saving live data. [FINK_ALERT_PATH]')
+        help="""
+        Directory on disk for saving live data.
+        [FINK_ALERT_PATH]
+        """)
     parser.add_argument(
         '-checkpointpath', type=str, default='',
         help="""
@@ -63,28 +76,43 @@ def getargs(parser):
         """)
     parser.add_argument(
         '-finkwebpath', type=str, default='',
-        help='Folder to store UI data for display. [FINK_UI_PATH]')
+        help="""
+        Folder to store UI data for display.
+        [FINK_UI_PATH]
+        """)
     parser.add_argument(
         '-tinterval', type=int, default=0,
-        help='Time interval between two monitoring. In seconds. [FINK_TRIGGER_UPDATE]')
+        help="""
+        Time interval between two monitoring. In seconds.
+        [FINK_TRIGGER_UPDATE]
+        """)
     parser.add_argument(
         '-tinterval_kafka', type=float, default=0.0,
-        help='Time interval between two messages are published. In seconds. [TIME_INTERVAL]')
+        help="""
+        Time interval between two messages are published. In seconds.
+        [TIME_INTERVAL]
+        """)
     parser.add_argument(
         '-exit_after', type=int, default=None,
-        help=""" Stop the service after `exit_after` seconds.
+        help="""
+        Stop the service after `exit_after` seconds.
         This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`. Default is None. """)
+        Use that with `fink start service --exit_after <time>`. Default is None.
+        """)
     parser.add_argument(
         '-datapath', type=str, default='',
-        help='Folder containing alerts to be published by Kafka. [FINK_DATA_SIM]')
+        help="""
+        Folder containing alerts to be published by Kafka.
+        [FINK_DATA_SIM]
+        """)
     parser.add_argument(
         '-poolsize', type=int, default=5,
         help="""
-Maximum number of alerts to send. If the poolsize is
-bigger than the number of alerts in `datapath`, then we replicate
-the alerts. Default is 5. [POOLSIZE]
-""")
+        Maximum number of alerts to send. If the poolsize is
+        bigger than the number of alerts in `datapath`, then we replicate
+        the alerts. Default is 5.
+        [POOLSIZE]
+        """)
     args = parser.parse_args(None)
     return args
 
