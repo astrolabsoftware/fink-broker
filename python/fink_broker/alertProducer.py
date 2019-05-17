@@ -17,14 +17,15 @@ import time
 import os
 import asyncio
 
-from fink_broker import avroUtils
+from typing import Any
 
+from fink_broker import avroUtils
 from fink_broker.tester import regular_unit_tests
 
 __all__ = ['AlertProducer', 'delay', 'schedule_delays']
 
 @asyncio.coroutine
-def delay(wait_sec, function, *args): # NOSONAR
+def delay(wait_sec: float, function: function, *args) -> Any: # NOSONAR
     """Sleep for a given time before calling a function.
 
     NOTE: we are mixing the use of yield from & return here for good reasons.
@@ -33,9 +34,9 @@ def delay(wait_sec, function, *args): # NOSONAR
 
     Parameters
     ----------
-    wait_sec
+    wait_sec: float
         Time in seconds to sleep before calling `function`.
-    function
+    function: function
         Function to return after sleeping.
 
     Returns
@@ -50,18 +51,20 @@ def delay(wait_sec, function, *args): # NOSONAR
     return function(*args) # NOSONAR
 
 @asyncio.coroutine
-def schedule_delays(eventloop, function, argslist, interval=39):
+def schedule_delays(
+        eventloop: asyncio.unix_events._UnixSelectorEventLoop,
+        function: function, argslist: list, interval: int = 39.0):
     """Schedule delayed calls of functions at a repeating interval.
 
     Parameters
     ----------
-    eventloop
+    eventloop: asyncio.unix_events._UnixSelectorEventLoop
         Event loop returned by asyncio.get_event_loop().
-    function
+    function: function
         Function to be scheduled.
-    argslist
+    argslist: list
         List of inputs for function to loop over.
-    interval
+    interval: float
         Time in seconds between calls.
 
     Examples

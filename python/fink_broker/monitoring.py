@@ -22,7 +22,8 @@ import time
 
 from fink_broker.tester import spark_unit_tests
 
-def recentprogress(query: StreamingQuery, colnames: list, mode: str):
+def recentprogress(
+        query: StreamingQuery, colnames: list, mode: str) -> pd.DataFrame:
     """ Register recent query progresses in a Pandas DataFrame.
 
     It turns out that Structured Streaming cannot be monitored as Streaming

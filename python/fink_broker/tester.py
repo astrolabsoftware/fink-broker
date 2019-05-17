@@ -16,7 +16,7 @@ import os
 import doctest
 import numpy as np
 
-def regular_unit_tests(global_args=None, verbose=False):
+def regular_unit_tests(global_args: dict = None, verbose: bool = False):
     """ Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
@@ -51,7 +51,9 @@ def regular_unit_tests(global_args=None, verbose=False):
 
     doctest.testmod(globs=global_args, verbose=verbose)
 
-def spark_unit_tests(global_args=None, verbose=False, withstreaming=False):
+def spark_unit_tests(
+        global_args: dict = None, verbose: bool = False,
+        withstreaming: bool = False):
     """ Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:

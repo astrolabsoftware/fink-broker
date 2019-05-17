@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.tester import regular_unit_tests
+import argparse
 
-def getargs(parser):
+def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
     """ Parse command line arguments for fink services
 
     Parameters

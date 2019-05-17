@@ -25,7 +25,7 @@ from typing import Any
 from fink_broker.tester import spark_unit_tests
 
 
-def generate_csv(s: str, lists: list):
+def generate_csv(s: str, lists: list) -> str:
     """ Make a string (CSV formatted) given lists of data and header.
 
     Parameters
@@ -60,7 +60,7 @@ def generate_csv(s: str, lists: list):
 
 def xmatch(
         ra: list, dec: list, id: list,
-        extcatalog: str = "simbad", distmaxarcsec: int = 1):
+        extcatalog: str = "simbad", distmaxarcsec: int = 1) -> (list, list):
     """ Build a catalog of (ra, dec, id) in a CSV-like string,
     cross-match with `extcatalog`, and decode the output.
 
