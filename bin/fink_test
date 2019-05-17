@@ -82,6 +82,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start monitor --exit_after 30 --simulator -c conf/fink.conf.travis
   fink start archive --exit_after 30 --simulator -c conf/fink.conf.travis
   fink start classify --exit_after 30 --simulator -c conf/fink.conf.travis
+  fink start filter --exit_after 30 --simulator -c conf/fink.conf.travis
   fink start dashboard -c conf/fink.conf.travis
 fi
 
