@@ -11,6 +11,13 @@ The test suite must take into account that Fink is using distributing computing 
 - test the code in a distributed environment, and report code coverage on *all* players (driver and executors). This is achieved by running Spark inside all tests, and generating code coverage in headless mode using daemons to ensure full coverage.
 - manipulate streams while testing the code. This is achieved using the [simulator](simulator.md) service.
 
+## Configuration
+
+To enable proper parallel execution of tests, that is coverage on both the driver and executors sides, you need to activate the coverage_daemon library ships with Spark. In a terminal, just execute:
+```bash
+echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+```
+
 ## How to run the test suite
 
 We provide a script to execute the test suite and report coverage of Fink code base:
