@@ -35,7 +35,7 @@ import time
 from fink_broker.parser import getargs
 
 from fink_broker.sparkUtils import from_avro
-from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 
 from fink_broker.monitoring import monitor_progress_webui
@@ -49,7 +49,7 @@ def main():
         name="archivingStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream
-    df = connect_with_kafka(
+    df = connect_to_kafka(
         servers=args.servers, topic=args.topic,
         startingoffsets=args.startingoffsets, failondataloss=False)
 

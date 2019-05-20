@@ -29,6 +29,7 @@ import argparse
 import time
 
 from fink_broker.sparkUtils import init_sparksession
+from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
 
@@ -48,19 +49,10 @@ def main():
 
     # Grab the running Spark Session,
     # otherwise create it.
-    spark = init_sparksession(
+    init_sparksession(
         name="filteringStream", shuffle_partitions=2, log_level="ERROR")
 
-    # Create a DF from the database
-    userschema = spark.read.format("parquet").load(args.outputpath).schema
-    df = spark \
-        .readStream \
-        .format("parquet") \
-        .schema(userschema) \
-        .option("basePath", args.outputpath) \
-        .option("path", args.outputpath + "/*") \
-        .option("latestFirst", True) \
-        .load()
+    df = connect_to_raw_database(args.outputpath, args.outputpath + "/*", True)
 
     # Apply filters and keep only good alerts
     df_filt = df.withColumn(

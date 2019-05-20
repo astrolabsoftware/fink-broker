@@ -166,7 +166,7 @@ def init_sparksession(
 
     return spark
 
-def connect_with_kafka(
+def connect_to_kafka(
         servers: str, topic: str,
         startingoffsets: str = "latest",
         failondataloss: bool = False) -> DataFrame:
@@ -195,7 +195,7 @@ def connect_with_kafka(
 
     Examples
     ----------
-    >>> dfstream_tmp = connect_with_kafka("localhost:29092", "ztf-stream-sim")
+    >>> dfstream_tmp = connect_to_kafka("localhost:29092", "ztf-stream-sim")
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -223,6 +223,50 @@ def connect_with_kafka(
     df = df.option("subscribe", topic) \
         .option("startingOffsets", startingoffsets) \
         .option('failOnDataLoss', failondataloss)\
+        .load()
+
+    return df
+
+def connect_to_raw_database(
+        basepath: str, path: str, latestfirst: bool) -> DataFrame:
+    """ Initialise SparkSession, and connect to the raw database (Parquet)
+
+    Parameters
+    ----------
+    basepath: str
+        The base path that partition discovery should start with.
+    path: str
+        The path to the data (typically as basepath with a glob at the end).
+    latestfirst: bool
+        whether to process the latest new files first,
+        useful when there is a large backlog of files
+
+    Returns
+    ----------
+    df: Streaming DataFrame
+        Streaming DataFrame connected to the database
+
+    Examples
+    ----------
+    >>> dfstream_tmp = connect_to_raw_database(
+    ...   "archive/alerts_store", "archive/alerts_store/*", True)
+    >>> dfstream_tmp.isStreaming
+    True
+    """
+    # Grab the running Spark Session
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    # Create a DF from the database
+    userschema = spark.read.format("parquet").load(basepath).schema
+    df = spark \
+        .readStream \
+        .format("parquet") \
+        .schema(userschema) \
+        .option("basePath", basepath) \
+        .option("path", path) \
+        .option("latestFirst", latestfirst) \
         .load()
 
     return df
