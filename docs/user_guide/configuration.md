@@ -31,13 +31,20 @@ KAFKA_TOPIC="mytopic"
 ```
 Note it can be `topic1,topic2,etc`, or a pattern `topic.*`.
 
-Finally specify from which offset you want to start pulling data. Options are:
+You can specify from which offset you want to start pulling data. Options are:
 latest (only new data), earliest (connect from the oldest
 offset available), or a json string (see [here](https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html) for detailed information).
 ```
 KAFKA_STARTING_OFFSET="latest"
 ```
 
+Finally if you need to connect to a secured Kafka cluster, enter your credentials in the `jaas.conf` file, and pass them using:
+```
+# Should be Kafka secured options actually (to allow connection to Kafka)
+SECURED_KAFKA_CONFIG='--files jaas.conf --driver-java-options
+"-Djava.security.auth.login.config=./jaas.conf" --conf
+"spark.executor.extraJavaOptions=-Djava.security.auth.login.config=./jaas.conf"'
+```
 ### Apache Spark
 
 Assuming you have installed Apache Spark on a cluster, you need to specify the running mode:
@@ -97,9 +104,9 @@ FINK_UI_PORT=5000
 
 The idea is to simulate a fake stream via Kafka inside docker, and access it locally from outside docker. You can set the port and the name of the topic:
 ```
-KAFKA_IPPORT_SIM="localhost:29092"
-KAFKA_TOPIC_SIM="ztf-stream-sim"
 KAFKA_PORT_SIM=29092
+KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
+KAFKA_TOPIC_SIM="ztf-stream-sim"
 ```
 
 The simulator generates the stream from alerts stored on disk. You need to
