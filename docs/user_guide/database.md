@@ -2,11 +2,18 @@
 
 ## Why archiving first?
 
-If we had all our jobs reading from the upstream Kafka cluster, we would consume too much resources, and place high load on Kafka. Hence the first service of Fink is to archive the incoming streams, as fast as possible. We start with one Spark Structured Streaming job reading and decoding Avro events from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS. Then multi-modal analytics take place and several other batch and streaming jobs query this table to process further the data, and other reports via interactive jobs, redirecting outputs to the dashboard.
+If we had all our jobs reading from the upstream Kafka cluster, we would consume too much resources, and place high load on Kafka. Hence the first service of Fink is to archive the incoming streams, as fast as possible. We start with one Spark Structured Streaming job reading and decoding Avro events from telescopes, and writing them to partitioned Parquet tables in distributed file systems such as HDFS (Raw database). Then multi-modal analytics take place and several other batch and streaming jobs query this table to process further the data, and push relevant alert data into an HBase table (Science database).
 
-![Screenshot](../img/archiving.png)
+Why two different technologies instead of one? Long story short:
 
-## Database structure
+- Parquet is good for data scanning (processing)
+- HBase is good for data lookup (querying)
+
+In addition, HBase is schemaless (schema is stored with the record, not the table) allowing easily the user to update alert data with new labels as they come.
+
+![Screenshot](../img/datastore_strategy.svg)
+
+## Raw database structure
 
 We currently operates the conversion from Avro (alerts) to Parquet (database) for mainly two reasons:
 
@@ -45,7 +52,7 @@ Note we perform a data compression (snappy). The compression factor will depend 
 
 ## Monitoring the data transfer
 
-There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark (2.4) to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `archive` service. Just launch the Fink dashboard and go to `http://localhost:5000/live.html` to see the incoming rate and consumption (archiving) rate:
+There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark (2.4) to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `archive` service. Just launch the Fink dashboard and go to [live](http://localhost:5000/live.html) or [history](http://localhost:5000/history.html) to see the incoming rate and consumption (archiving) rate:
 
 ```bash
 fink start dashboard
@@ -58,3 +65,7 @@ fink stop archive
 ```
 
 Note this will stop all Fink services running.
+
+## Science database structure
+
+The Raw database does not contain added values from the broker. Instead, filtering services and some user programs will connect to the raw one to select only relevant alerts and push them into an HBase table. Then user programs will performn a periodic cleaning of "irrelevant" data and enrichment of "relevant" data with tags/annotations from user analyses: in the end DB size smaller than the raw one. The HBase table will also contain additional alert attributes from outside (not coming from Alerts, but created or derived).
