@@ -27,7 +27,7 @@ from fink_broker.parser import getargs
 
 from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import write_to_csv
-from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 
 from fink_broker.classification import cross_match_alerts_per_batch
@@ -42,7 +42,7 @@ def main():
         name="classifyStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream
-    df = connect_with_kafka(
+    df = connect_to_kafka(
         servers=args.servers, topic=args.topic,
         startingoffsets=args.startingoffsets, failondataloss=False)
 
