@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,11 +20,12 @@ import csv
 import requests
 import numpy as np
 import pandas as pd
-from typing import Iterator, Generator, Any
+from typing import Any
 
 from fink_broker.tester import spark_unit_tests
 
-def generate_csv(s: str, lists: list):
+
+def generate_csv(s: str, lists: list) -> str:
     """ Make a string (CSV formatted) given lists of data and header.
 
     Parameters
@@ -59,7 +60,7 @@ def generate_csv(s: str, lists: list):
 
 def xmatch(
         ra: list, dec: list, id: list,
-        extcatalog: str="simbad", distmaxarcsec: int=1):
+        extcatalog: str = "simbad", distmaxarcsec: int = 1) -> (list, list):
     """ Build a catalog of (ra, dec, id) in a CSV-like string,
     cross-match with `extcatalog`, and decode the output.
 
@@ -102,16 +103,16 @@ def xmatch(
 
     # Send the request!
     r = requests.post(
-         'http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync',
-         data={
-             'request': 'xmatch',
-             'distMaxArcsec': distmaxarcsec,
-             'selection': 'all',
-             'RESPONSEFORMAT': 'csv',
-             'cat2': extcatalog,
-             'colRA1': 'ra_in',
-             'colDec1': 'dec_in'},
-         files={'cat1': table})
+        'http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync',
+        data={
+            'request': 'xmatch',
+            'distMaxArcsec': distmaxarcsec,
+            'selection': 'all',
+            'RESPONSEFORMAT': 'csv',
+            'cat2': extcatalog,
+            'colRA1': 'ra_in',
+            'colDec1': 'dec_in'},
+        files={'cat1': table})
 
     # Decode the message, and split line by line
     # First line is header - last is empty
@@ -183,9 +184,12 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
 
             # Discriminate with the objectID
             if id_in in id_out:
-                # Return the closest object in case of many (smallest angular distance)
+                # Return the closest object in case of many
+                # (smallest angular distance)
                 index = id_out.index(id_in)
-                out.append((id_in, ra_in, dec_in, str(names[index]), str(types[index])))
+                out.append((
+                    id_in, ra_in, dec_in,
+                    str(names[index]), str(types[index])))
             else:
                 # Mark as unknown if no match
                 out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
