@@ -1,8 +1,22 @@
+# Copyright 2019 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import doctest
 import numpy as np
 
-def regular_unit_tests(global_args=None, verbose=False):
+def regular_unit_tests(global_args: dict = None, verbose: bool = False):
     """ Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
@@ -37,7 +51,9 @@ def regular_unit_tests(global_args=None, verbose=False):
 
     doctest.testmod(globs=global_args, verbose=verbose)
 
-def spark_unit_tests(global_args=None, verbose=False, withstreaming=False):
+def spark_unit_tests(
+        global_args: dict = None, verbose: bool = False,
+        withstreaming: bool = False):
     """ Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:

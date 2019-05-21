@@ -52,9 +52,9 @@ while [ "$#" -gt 0 ]; do
         ;;
     "show")
         nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
-        echo "$nservice Fink service(s) running: "
+        echo -e "$nservice Fink service(s) running: "
         ps aux | head -1
-        ps aux | grep -i 'fink start' | grep -v grep &
+        ps aux | grep -i 'fink start' | grep -v grep
         echo "Use <fink stop service_name> to stop a service."
         echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
@@ -205,6 +205,13 @@ elif [[ $service == "archive" ]]; then
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
     -outputpath ${FINK_ALERT_PATH} -checkpointpath ${FINK_ALERT_CHECKPOINT} \
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
+    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+elif [[ $service == "filter" ]]; then
+  # Store the stream of alerts
+  spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} \
+    ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
+    ${FINK_HOME}/bin/filter_and_classify.py ${FINK_ALERT_PATH} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
 else
   # In case you give an unknown service

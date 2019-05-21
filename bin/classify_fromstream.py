@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2018 AstroLab Software
+# Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,10 +25,9 @@ import time
 
 from fink_broker.parser import getargs
 
-from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.sparkUtils import quiet_logs, from_avro
+from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import write_to_csv
-from fink_broker.sparkUtils import init_sparksession, connect_with_kafka
+from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 
 from fink_broker.classification import cross_match_alerts_per_batch
@@ -43,7 +42,7 @@ def main():
         name="classifyStream", shuffle_partitions=2, log_level="ERROR")
 
     # Create a streaming dataframe pointing to a Kafka stream
-    df = connect_with_kafka(
+    df = connect_to_kafka(
         servers=args.servers, topic=args.topic,
         startingoffsets=args.startingoffsets, failondataloss=False)
 
@@ -71,11 +70,13 @@ def main():
     # for each micro-batch, perform a cross-match with an external catalog,
     # and return the types of the objects (Star, AGN, Unknown, etc.)
     df_type = df_expanded.withColumn(
-            "type",
-            cross_match_alerts_per_batch(
-                col("objectId"),
-                col("ra"),
-                col("dec")))
+        "type",
+        cross_match_alerts_per_batch(
+            col("objectId"),
+            col("ra"),
+            col("dec")
+        )
+    )
 
     # Group data by type and count members
     df_group = df_type.groupBy("type").count()
