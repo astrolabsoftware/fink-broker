@@ -69,6 +69,9 @@ coverage run --source=${FINK_HOME} \
       -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM} \
       -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 
+# Build the raw database
+fink start archive --exit_after 30 --simulator -c conf/fink.conf.travis
+
 # Run the test suite on the modules
 for i in ${FINK_HOME}/python/fink_broker/*.py
 do
@@ -79,11 +82,10 @@ done
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
+  fink start dashboard -c conf/fink.conf.travis
   fink start monitor --exit_after 30 --simulator -c conf/fink.conf.travis
-  fink start archive --exit_after 30 --simulator -c conf/fink.conf.travis
   fink start classify --exit_after 30 --simulator -c conf/fink.conf.travis
   fink start filter --exit_after 30 --simulator -c conf/fink.conf.travis
-  fink start dashboard -c conf/fink.conf.travis
 fi
 
 # Combine individual reports in one
