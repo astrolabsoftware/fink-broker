@@ -26,32 +26,27 @@ from pyspark.sql.functions import col
 
 import argparse
 import time
+import json
 
+from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
+from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'outputpath', type=str,
-        help='Directory on disk for saving live data. [FINK_ALERT_PATH]')
-    parser.add_argument(
-        '-exit_after', type=int, default=None,
-        help=""" Stop the service after `exit_after` seconds.
-        This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`.
-        Default is None. """)
-    args = parser.parse_args()
+    args = getargs(parser)
 
     # Grab the running Spark Session,
     # otherwise create it.
     init_sparksession(
-        name="filteringStream", shuffle_partitions=2, log_level="ERROR")
+        name="buildSciDB", shuffle_partitions=2, log_level="ERROR")
 
-    df = connect_to_raw_database(args.outputpath, args.outputpath + "/*", True)
+    df = connect_to_raw_database(
+        args.rawdatapath, args.rawdatapath + "/*", True)
 
     # Apply filters and keep only good alerts
     df_filt = df.withColumn(
@@ -72,7 +67,8 @@ def main():
             col("decoded.candidate.ra"),
             col("decoded.candidate.dec")
         )
-    ).select("decoded.*", "timestamp", "simbadType")
+    ).selectExpr(
+        "decoded.*", "cast(timestamp as string) as timestamp", "simbadType")
 
     df_hbase = flattenstruct(df_type, "candidate")
     df_hbase = flattenstruct(df_hbase, "cutoutScience")
@@ -80,11 +76,20 @@ def main():
     df_hbase = flattenstruct(df_hbase, "cutoutDifference")
     df_hbase = explodearrayofstruct(df_hbase, "prv_candidates")
 
-    # Print the result on the screen.
+    catalog = construct_hbase_catalog_from_flatten_schema(
+        df_hbase.schema, "test_catalog", "objectId")
+
+
+    with open('catalog.json', 'w') as json_file:
+        json.dump(catalog, json_file)
+
+    # Push alert to the science database
     countquery = df_hbase\
         .writeStream\
-        .outputMode("update") \
-        .format("console").start()
+        .outputMode("append") \
+        .format("HBase.HBaseStreamSinkProvider") \
+        .option("hbase.catalog", catalog)\
+        .option("checkpointLocation", args.checkpointpath_sci).start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

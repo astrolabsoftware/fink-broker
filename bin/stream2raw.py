@@ -77,8 +77,8 @@ def main():
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
-        .option("checkpointLocation", args.checkpointpath) \
-        .option("path", args.outputpath)\
+        .option("checkpointLocation", args.checkpointpath_raw) \
+        .option("path", args.rawdatapath)\
         .partitionBy("topic", "year", "month", "day", "hour")
 
     # Fixed interval micro-batches or ASAP

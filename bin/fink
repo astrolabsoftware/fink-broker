@@ -15,22 +15,25 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, archive, monitor, classify"
+message_service="Available services are: dashboard, stream2raw, raw2science"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Monitor Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \tto start: ./fink start <service> [-h] [-c <conf>] [--simulator]\n
-    \tto stop : ./fink stop  <service> [-h] [-c <conf>]\n\n
+    \tto start: fink start <service> [-h] [-c <conf>] [--simulator]\n
+    \tto stop : fink stop  <service> [-h] [-c <conf>]\n\n
 
 To get this help: \n
-\t./fink \n\n
+\tfink \n\n
 
 To get help for a service: \n
-\t./fink start <service> -h\n\n
+\tfink start <service> -h\n\n
 
 $message_service\n
-$message_conf
+$message_conf\n\n
+
+To see the running processes: \n
+\tfink show \n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -162,44 +165,27 @@ elif [[ $service == "simulator" ]]; then
     exit
   fi
   python3 ${FINK_HOME}/bin/simulate_stream.py \
-    -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM}\
+    -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
     -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
-elif [[ $service == "monitor" ]]; then
-  # Monitor the stream of alerts
-  spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} \
-    ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/monitor_fromstream.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
-    -startingoffsets ${KAFKA_STARTING_OFFSET} -finkwebpath ${FINK_UI_PATH} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
-elif [[ $service == "classify" ]]; then
-  # Aggregate the stream of alerts
-  spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} \
-    ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/classify_fromstream.py -servers ${KAFKA_IPPORT} \
-    -topic ${KAFKA_TOPIC} -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
-    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
-elif [[ $service == "archive" ]]; then
+elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/archive.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    ${FINK_HOME}/bin/stream2raw.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
-    -outputpath ${FINK_ALERT_PATH} -checkpointpath ${FINK_ALERT_CHECKPOINT} \
+    -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
-elif [[ $service == "filter" ]]; then
+elif [[ $service == "raw2science" ]]; then
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/filter_and_classify.py ${FINK_ALERT_PATH} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/raw2science.py -rawdatapath ${FINK_ALERT_PATH} \
+    -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} ${EXIT_AFTER} ${HELP_ON_SERVICE}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
