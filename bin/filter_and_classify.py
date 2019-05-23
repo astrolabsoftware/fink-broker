@@ -22,7 +22,6 @@ Step 4: Push alert data into the science database (TBD)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
 import argparse
@@ -32,6 +31,7 @@ from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
+from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -74,8 +74,14 @@ def main():
         )
     ).select("decoded.*", "timestamp", "simbadType")
 
+    df_hbase = flattenstruct(df_type, "candidate")
+    df_hbase = flattenstruct(df_hbase, "cutoutScience")
+    df_hbase = flattenstruct(df_hbase, "cutoutTemplate")
+    df_hbase = flattenstruct(df_hbase, "cutoutDifference")
+    df_hbase = explodearrayofstruct(df_hbase, "prv_candidates")
+
     # Print the result on the screen.
-    countquery = df_type\
+    countquery = df_hbase\
         .writeStream\
         .outputMode("update") \
         .format("console").start()
