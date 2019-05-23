@@ -33,7 +33,6 @@ from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -67,13 +66,13 @@ def main():
     # for good alerts, perform a cross-match with SIMBAD,
     # and return the types of the objects (Star, AGN, Unknown, etc.)
     df_type = df_filt.withColumn(
-        "type",
+        "simbadType",
         cross_match_alerts_per_batch(
             col("decoded.objectId"),
             col("decoded.candidate.ra"),
             col("decoded.candidate.dec")
         )
-    )
+    ).select("decoded.*", "timestamp", "simbadType")
 
     # Print the result on the screen.
     countquery = df_type\

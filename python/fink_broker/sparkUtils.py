@@ -166,6 +166,27 @@ def init_sparksession(
 
     return spark
 
+def get_spark_context() -> SparkContext:
+    """
+    Return the current SparkContext.
+    Raise a RuntimeError if spark hasn't been initialized.
+
+    Returns
+    ---------
+    sparkContext : SparkContext instance
+        The active sparkContext
+
+    Examples
+    ---------
+    >>> pysc = get_spark_context()
+    >>> print(type(pysc))
+    <class 'pyspark.context.SparkContext'>
+    """
+    if SparkContext._active_spark_context:
+        return SparkContext._active_spark_context
+    else:
+        raise RuntimeError("SparkContext must be initialized")
+
 def connect_to_kafka(
         servers: str, topic: str,
         startingoffsets: str = "latest",
