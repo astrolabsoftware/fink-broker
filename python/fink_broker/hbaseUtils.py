@@ -126,18 +126,27 @@ def construct_hbase_catalog_from_flatten_schema(
     """).format(catalogname, rowkey)
 
     for column in schema_columns:
+        # Last entry should not have comma (malformed json)
+        if schema_columns.index(column) != len(schema_columns) - 1:
+            sep = ","
+        else:
+            sep = ""
+
         # Deal with array
         if type(column["type"]) == dict:
-            column["type"] = column["type"]["type"]
+            column["type"] = "string" # column["type"]["type"]
+
+        if type(column["type"]) == 'timestamp':
+            column["type"] = "string" # column["type"]["type"]
 
         if column["name"] == rowkey:
             catalog += """
-            '{}': {{'cf': 'rowkey', 'col': '{}', 'type': '{}'}},
-            """.format(column["name"], column["name"], column["type"])
+            '{}': {{'cf': 'rowkey', 'col': '{}', 'type': '{}'}}{}
+            """.format(column["name"], column["name"], column["type"], sep)
         else:
             catalog += """
-            '{}': {{'cf': 'i', 'col': '{}', 'type': '{}'}},
-            """.format(column["name"], column["name"], column["type"])
+            '{}': {{'cf': 'i', 'col': '{}', 'type': '{}'}}{}
+            """.format(column["name"], column["name"], column["type"], sep)
     catalog += """
         }
     }
@@ -248,10 +257,10 @@ def explodearrayofstruct(df: DataFrame, columnname: str) -> DataFrame:
     >>> "prv_candidates_ra" in df_flat.schema.fieldNames()
     True
 
-    # Each new column contains array element
+    # Each new column contains array element cast to string
     >>> s_flat = df_flat.schema
     >>> typeOf = {i.name: i.dataType.typeName() for  i in s_flat.fields}
-    >>> typeOf['prv_candidates_ra'] == 'array'
+    >>> typeOf['prv_candidates_ra'] == 'string'
     True
     """
     sc = get_spark_context()
