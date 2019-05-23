@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import doctest
 import numpy as np
 
@@ -49,7 +50,7 @@ def regular_unit_tests(global_args: dict = None, verbose: bool = False):
     if np.__version__ >= "1.14.0":
         np.set_printoptions(legacy="1.13")
 
-    doctest.testmod(globs=global_args, verbose=verbose)
+    sys.exit(doctest.testmod(globs=global_args, verbose=verbose)[0])
 
 def spark_unit_tests(
         global_args: dict = None, verbose: bool = False,
@@ -88,6 +89,7 @@ def spark_unit_tests(
     conf = SparkConf()
     confdic = {
         "spark.jars.packages": os.environ["FINK_PACKAGES"],
+        "spark.jars": os.environ["FINK_JARS"],
         "spark.python.daemon.module": "coverage_daemon"}
     conf.setMaster("local[2]")
     conf.setAppName("test")
@@ -112,4 +114,4 @@ def spark_unit_tests(
     if np.__version__ >= "1.14.0":
         np.set_printoptions(legacy="1.13")
 
-    doctest.testmod(globs=global_args, verbose=verbose)
+    sys.exit(doctest.testmod(globs=global_args, verbose=verbose)[0])

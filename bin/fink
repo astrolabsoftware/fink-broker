@@ -182,6 +182,7 @@ elif [[ $service == "classify" ]]; then
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "archive" ]]; then
+
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
@@ -195,6 +196,7 @@ elif [[ $service == "filter" ]]; then
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
+    --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/filter_and_classify.py ${FINK_ALERT_PATH} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
