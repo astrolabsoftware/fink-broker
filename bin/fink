@@ -128,6 +128,19 @@ if [[ $MODE == "stop" ]]; then
     KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
+
+    # Kill instance of HBase connector running if needed
+    if [[ $service == "raw2science" ]]; then
+      PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
+
+      if [ -z "$PIDS" ]; then
+        echo "No fink $service service to stop"
+      else
+        echo "Stopping $service (HBase connection)..."
+        kill -s $SIGNAL $PIDS
+      fi
+    fi
+
     PIDS=$(ps ax | grep -i 'fink' | grep $service | awk '{print $1}')
 
     if [ -z "$PIDS" ]; then
