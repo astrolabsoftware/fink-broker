@@ -44,6 +44,7 @@ done
 # Source configuration file for tests
 source $FINK_HOME/conf/fink.conf.travis
 export FINK_PACKAGES=$FINK_PACKAGES
+export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 export KAFKA_TOPIC_SIM=$KAFKA_TOPIC_SIM
 echo "Reading test configuration from $FINK_HOME/conf/fink.conf.travis"
@@ -93,6 +94,7 @@ coverage combine
 
 unset COVERAGE_PROCESS_START
 unset FINK_PACKAGES
+unset FINK_JARS
 unset KAFKA_IPPORT_SIM
 unset KAFKA_TOPIC_SIM
 

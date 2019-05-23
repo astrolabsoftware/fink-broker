@@ -43,6 +43,10 @@ org.apache.hbase:hbase-client:2.1.4,\
 org.apache.hbase:hbase-common:2.1.4,\
 org.apache.hbase:hbase-mapreduce:2.1.4
 
+# Other dependencies (incl. Scala part of Fink)
+FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,\
+${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar
+
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
 # If 0, the query will be executed in micro-batch mode,
@@ -62,9 +66,6 @@ FINK_ALERT_SCHEMA=${FINK_HOME}/schemas/template_schema_ZTF.avro
 FINK_ALERT_PATH=${FINK_HOME}/archive/alerts_store
 
 FINK_ALERT_CHECKPOINT=${FINK_HOME}/archive/alerts_checkpoint
-
-# Database type: parquet or hbase
-FINK_DATABASE_FORMAT="parquet"
 
 ######################################
 # Dashboard

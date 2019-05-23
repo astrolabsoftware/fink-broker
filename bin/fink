@@ -183,25 +183,11 @@ elif [[ $service == "classify" ]]; then
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "archive" ]]; then
 
-  # Database format
-  if [[ $FINK_DATABASE_FORMAT == "parquet" ]]; then
-    PYSCRIPT=${FINK_HOME}/bin/archive.py
-  elif [[ $FINK_DATABASE_FORMAT == "hbase" ]]; then
-    # TODO: remove harcoded path!
-    # NOTE: Must include the jar of shc as there is no released version
-    # compatible with spark 2.4.
-    PYSCRIPT="--jars ${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar ${FINK_HOME}/bin/archive_hbase.py"
-  else
-    echo "FINK_DATABASE_FORMAT=$FINK_DATABASE_FORMAT is not recognized."
-    echo "Choose between parquet and hbase."
-    exit
-  fi
-
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${PYSCRIPT} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    ${FINK_HOME}/bin/archive.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets ${KAFKA_STARTING_OFFSET} \
     -outputpath ${FINK_ALERT_PATH} -checkpointpath ${FINK_ALERT_CHECKPOINT} \
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
@@ -210,6 +196,7 @@ elif [[ $service == "filter" ]]; then
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
+    --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/filter_and_classify.py ${FINK_ALERT_PATH} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
