@@ -198,7 +198,8 @@ elif [[ $service == "raw2science" ]]; then
     --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/raw2science.py -rawdatapath ${FINK_ALERT_PATH} \
-    -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
+    -science_db_name ${SCIENCE_DB_NAME} ${EXIT_AFTER} ${HELP_ON_SERVICE}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
