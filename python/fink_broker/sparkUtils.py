@@ -343,13 +343,6 @@ def a_new_function_not_tested():
     i_am_constant = 3
     i_am_constant = 3
 
-    i_am_constant = 3
-    i_am_constant = 3
-    i_am_constant = 3
-
-    i_am_constant = 3
-    i_am_constant = 3
-    i_am_constant = 3
     return i_am_constant
 
 
