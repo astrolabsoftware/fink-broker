@@ -338,13 +338,6 @@ def get_schemas_from_avro(
 
     return df_schema, alert_schema, alert_schema_json
 
-def a_new_function_not_tested():
-    i_am_constant = 3
-    i_am_constant = 3
-    i_am_constant = 3
-
-    return i_am_constant
-
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
