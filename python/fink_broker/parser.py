@@ -54,8 +54,9 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Schema to decode the alert. Should be avro file.
         [FINK_ALERT_SCHEMA]""")
     parser.add_argument(
-        '-startingoffsets', type=str, default='',
-        help="""From which offset you want to start pulling data.
+        '-startingoffsets_stream', type=str, default='',
+        help="""From which stream offset you want to start pulling data when
+        building the raw database: latest, earliest, or custom.
         [KAFKA_STARTING_OFFSET]
         """)
     parser.add_argument(

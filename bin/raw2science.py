@@ -45,8 +45,14 @@ def main():
     init_sparksession(
         name="buildSciDB", shuffle_partitions=2, log_level="ERROR")
 
+    # FIXME!
+    if "travis" in args.science_db_name:
+        latesfirst = False
+    else:
+        latesfirst = True
+
     df = connect_to_raw_database(
-        args.rawdatapath, args.rawdatapath + "/*", True)
+        args.rawdatapath, args.rawdatapath + "/*", latesfirst)
 
     # Apply filters and keep only good alerts
     df_filt = df.withColumn(
