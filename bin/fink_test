@@ -110,22 +110,17 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start dashboard -c $conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --simulator -c $conf > stream2science.log &
+  fink start stream2raw --exit_after 50 --simulator -c $conf > stream2science.log &
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science -c $conf > raw2science.log &
+  fink start raw2science --exit_after 50 -c $conf > raw2science.log &
 
   # wait a bit for the service to start
   sleep 20
 
   # Fire a stream
   fink start simulator -c $conf
-
-  sleep 20
-
-  # Stop the services
-  fink stop raw2science
-  fink stop stream2raw
+  sleep 40
 fi
 
 # Combine individual reports in one
