@@ -77,19 +77,27 @@ def main():
     df_hbase = explodearrayofstruct(df_hbase, "prv_candidates")
 
     catalog = construct_hbase_catalog_from_flatten_schema(
-        df_hbase.schema, "test_catalog", "objectId")
-
+        df_hbase.schema, args.science_db_name, "objectId")
 
     with open('catalog.json', 'w') as json_file:
         json.dump(catalog, json_file)
 
     # Push alert to the science database
+    options = {
+        "hbase.catalog": catalog,
+        "checkpointLocation": args.checkpointpath_sci
+    }
+
+    # If the table does not exist, one needs to specify
+    # the number of zones to use (must be greater than 3).
+    if "travis" in args.science_db_name:
+        options["hbase.newTable"] = 5
+
     countquery = df_hbase\
         .writeStream\
         .outputMode("append") \
         .format("HBase.HBaseStreamSinkProvider") \
-        .option("hbase.catalog", catalog)\
-        .option("checkpointLocation", args.checkpointpath_sci).start()
+        .options(**options).start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

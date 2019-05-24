@@ -13,19 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -e
 
-# Allow Java 8 on xenial
+HBASE_VERSION=2.1.4
 
-# show current JAVA_HOME and java version
-echo "JAVA_HOME: $JAVA_HOME"
+wget http://www-us.apache.org/dist/hbase/${HBASE_VERSION}/hbase-${HBASE_VERSION}-bin.tar.gz
+tar -zxvf hbase-${HBASE_VERSION}-bin.tar.gz
+rm hbase-${HBASE_VERSION}-bin.tar.gz
 
-# install Java 8
-sudo add-apt-repository -y ppa:openjdk-r/ppa
-sudo apt-get -qq update
-sudo apt-get install -y openjdk-8-jdk --no-install-recommends
-sudo update-java-alternatives -s java-1.8.0-openjdk-amd64
+cp conf/hbase-site.xml hbase-${HBASE_VERSION}/conf/
 
-# change JAVA_HOME to Java 8
-export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
-
-echo "JAVA_HOME: $JAVA_HOME"
+hbase-${HBASE_VERSION}/bin/start-hbase.sh

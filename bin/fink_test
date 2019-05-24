@@ -108,7 +108,7 @@ done
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start dashboard -c $conf
-  fink start raw2science --exit_after 30 --simulator -c $conf
+  fink start raw2science --exit_after 30 -c $conf
 fi
 
 # Combine individual reports in one
