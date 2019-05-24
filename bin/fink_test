@@ -19,10 +19,11 @@ set -e
 message_help="""
 Run the test suite of Fink\n\n
 Usage:\n
-    \tfink_test [--without-integration] [-h]\n\n
+    \tfink_test [--without-integration] [-h] [-c <conf>]\n\n
 
 By default, both unit tests and integration tests will be run.\n
 You can disable the integration tests by specifying --without-integration.\n
+You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.travis) will be used.\n
 Use -h to display this help.
 """
 
@@ -38,16 +39,39 @@ while [ "$#" -gt 0 ]; do
         echo -e $message_help
         exit
         ;;
+    -c)
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument" >&2
+          exit 1
+        fi
+        conf="$2"
+        shift 2
+        ;;
+    --conf=*)
+        conf="${1#*=}"
+        shift 1
+        ;;
+    --conf)
+        echo "$1 requires an argument" >&2
+        exit 1
+        ;;
   esac
 done
 
 # Source configuration file for tests
-source $FINK_HOME/conf/fink.conf.travis
+if [[ -f $conf ]]; then
+  echo "Reading custom test configuration file from " $conf
+else
+  conf=${FINK_HOME}/conf/fink.conf.travis
+  echo "Reading the default test configuration file from " $conf
+fi
+
+source $conf
+
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 export KAFKA_TOPIC_SIM=$KAFKA_TOPIC_SIM
-echo "Reading test configuration from $FINK_HOME/conf/fink.conf.travis"
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -71,7 +95,7 @@ coverage run --source=${FINK_HOME} \
       -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 
 # Build the raw database
-fink start stream2raw --exit_after 30 --simulator -c conf/fink.conf.travis
+fink start stream2raw --exit_after 30 --simulator -c $conf
 
 # Run the test suite on the modules
 for i in ${FINK_HOME}/python/fink_broker/*.py
@@ -83,8 +107,8 @@ done
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
-  fink start dashboard -c conf/fink.conf.travis
-  fink start raw2science --exit_after 30 --simulator -c conf/fink.conf.travis
+  fink start dashboard -c $conf
+  fink start raw2science --exit_after 30 --simulator -c $conf
 fi
 
 # Combine individual reports in one
