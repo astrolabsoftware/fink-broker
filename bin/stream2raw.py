@@ -114,7 +114,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        print("Exiting the archiving service normally...")
+        print("Exiting the stream2raw service normally...")
     else:
         countquery.awaitTermination()
 
