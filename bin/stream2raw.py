@@ -51,7 +51,7 @@ def main():
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
         servers=args.servers, topic=args.topic,
-        startingoffsets=args.startingoffsets, failondataloss=False)
+        startingoffsets=args.startingoffsets_stream, failondataloss=False)
 
     # Get Schema of alerts
     _, _, alert_schema_json = get_schemas_from_avro(args.schema)
@@ -77,8 +77,8 @@ def main():
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
-        .option("checkpointLocation", args.checkpointpath) \
-        .option("path", args.outputpath)\
+        .option("checkpointLocation", args.checkpointpath_raw) \
+        .option("path", args.rawdatapath)\
         .partitionBy("topic", "year", "month", "day", "hour")
 
     # Fixed interval micro-batches or ASAP
@@ -114,7 +114,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        print("Exiting the archiving service normally...")
+        print("Exiting the stream2raw service normally...")
     else:
         countquery.awaitTermination()
 

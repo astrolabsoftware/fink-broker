@@ -25,12 +25,12 @@ before_install:
   # Install Java 8 for Xenial
   - source conf/java8_for_xenial.sh
   - export PATH=$HOME/.local/bin:${FINK_HOME}/bin:$PATH
-  # Download data used for the test suite
-  # - cd datasim; ./download_ztf_alert_data.sh; cd ..
+  # Install HBase
+  - source conf/install_hbase.sh
 
 install:
   # Download spark
-  - "[ -f spark ] || mkdir spark && cd spark && axel http://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && cd .."
+  - "[ -f spark ] || mkdir spark && cd spark && axel --quiet http://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz && cd .."
   - tar -xf ./spark/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz
   - export SPARK_HOME=`pwd`/spark-${SPARK_VERSION}-bin-hadoop2.7
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf

@@ -101,27 +101,11 @@ object catalogUtils {
       .select(s"${columnName}.*")
       .schema
       .fieldNames
-      .map(name => s"${columnName}." + name + s" as ${columnName}_" + name)
+      .map(name => s"CAST(${columnName}." + name + s" as string) as ${columnName}_" + name)
 
     // Include all other columns in the final dataframe
     val allColNames = "*" +: colnames
 
     df.selectExpr(allColNames: _*).drop(s"$columnName")
-  }
-
-  def flattenSchema(schema: StructType, prefix: String = null) : Array[Column] = {
-    schema.fields.flatMap(f => {
-      val colName = if (prefix == null) f.name else (prefix + "." + f.name)
-
-      f.dataType match {
-        case st: StructType => flattenSchema(st, colName)
-        case _ => Array(col(colName))
-      }
-    })
-  }
-
-  def flattenDataFrame(df: DataFrame) : DataFrame = {
-    val s = flattenSchema(df.schema) ++ flattenSchema(df.selectExpr("explode(prv_candidates) as prv_candidates").schema) ++ Array(col("*"))
-    df.select(s: _*).drop("candidate").drop("prv_candidates")
   }
 }

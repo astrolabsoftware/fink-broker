@@ -54,26 +54,42 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Schema to decode the alert. Should be avro file.
         [FINK_ALERT_SCHEMA]""")
     parser.add_argument(
-        '-startingoffsets', type=str, default='',
-        help="""From which offset you want to start pulling data.
+        '-startingoffsets_stream', type=str, default='',
+        help="""From which stream offset you want to start pulling data when
+        building the raw database: latest, earliest, or custom.
         [KAFKA_STARTING_OFFSET]
         """)
     parser.add_argument(
-        '-outputpath', type=str, default='',
+        '-rawdatapath', type=str, default='',
         help="""
-        Directory on disk for saving live data.
+        Directory on disk for saving raw alert data.
         [FINK_ALERT_PATH]
         """)
     parser.add_argument(
-        '-checkpointpath', type=str, default='',
+        '-checkpointpath_raw', type=str, default='',
         help="""
-        For some output sinks where the end-to-end fault-tolerance
-        can be guaranteed, specify the location where the system will
-        write all the checkpoint information. This should be a directory
-        in an HDFS-compatible fault-tolerant file system.
+        The location where the system will write all the checkpoint information
+        for the raw datable. This shoul be a directory in an HDFS-compatible
+        fault-tolerant file system.
         See conf/fink.conf & https://spark.apache.org/docs/latest/
         structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT]
+        [FINK_ALERT_CHECKPOINT_RAW]
+        """)
+    parser.add_argument(
+        '-checkpointpath_sci', type=str, default='',
+        help="""
+        The location where the system will write all the checkpoint information
+        for the science datable. This should be a directory in an
+        HDFS-compatible fault-tolerant file system.
+        See conf/fink.conf & https://spark.apache.org/docs/latest/
+        structured-streaming-programming-guide.html#starting-streaming-queries
+        [FINK_ALERT_CHECKPOINT_SCI]
+        """)
+    parser.add_argument(
+        '-science_db_name', type=str, default='',
+        help="""
+        The name of the HBase table
+        [SCIENCE_DB_NAME]
         """)
     parser.add_argument(
         '-finkwebpath', type=str, default='',
@@ -101,9 +117,9 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Use that with `fink start service --exit_after <time>`. Default is None.
         """)
     parser.add_argument(
-        '-datapath', type=str, default='',
+        '-datasimpath', type=str, default='',
         help="""
-        Folder containing alerts to be published by Kafka.
+        Folder containing simulated alerts to be published by Kafka.
         [FINK_DATA_SIM]
         """)
     parser.add_argument(

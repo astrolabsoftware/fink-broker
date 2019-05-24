@@ -35,7 +35,7 @@ def main():
         args.topic, schema_files=None, **conf)
 
     # Scan for avro files
-    root = args.datapath
+    root = args.datasimpath
 
     # Grab data stored on disk
     files = glob.glob(os.path.join(root, "*.avro"))

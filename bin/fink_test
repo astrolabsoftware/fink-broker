@@ -91,11 +91,11 @@ fi
 coverage run --source=${FINK_HOME} \
     --rcfile ${FINK_HOME}/.coveragerc \
     ${FINK_HOME}/bin/simulate_stream.py \
-      -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datapath ${FINK_DATA_SIM} \
+      -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM} \
       -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 
 # Build the raw database
-fink start archive --exit_after 30 --simulator -c $conf
+fink start stream2raw --exit_after 30 --simulator -c $conf
 
 # Run the test suite on the modules
 for i in ${FINK_HOME}/python/fink_broker/*.py
@@ -108,9 +108,15 @@ done
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start dashboard -c $conf
-  fink start monitor --exit_after 30 --simulator -c $conf
-  fink start classify --exit_after 30 --simulator -c $conf
-  fink start filter --exit_after 30 --simulator -c $conf
+
+  # Fire a stream
+  fink start simulator -c $conf
+
+  # Connect the service to build the raw database from the stream
+  fink start stream2raw --exit_after 50 --simulator -c $conf
+
+  # Connect the service to build the science database from the raw one
+  fink start raw2science --exit_after 50 -c $conf
 fi
 
 # Combine individual reports in one
