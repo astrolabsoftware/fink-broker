@@ -4,7 +4,33 @@ This section gathers Fink's common questions and commands.
 
 ## How to get Fink?
 
-Fink is not yet distributed via standard channels such as pip or conda. we plan on doing it soon, but for the moment you need to clone the repo:
+You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed.
+Define `SPARK_HOME`  as per your Spark installation (typically, `/usr/local/spark`) and add the path to the Spark binaries in `.bash_profile`:
+
+```bash
+# in ~/.bash_profile
+# as per your spark installation directory (eg. /usr/local/spark)
+export SPARK_HOME=/usr/local/spark
+export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
+export PYTHONPATH=${SPARKLIB}:$PYTHONPATH
+export PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
+```
+Then execute the following (to ensure working of coverage module) :
+
+```bash
+echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" >> ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
+```
+
+Set the path to HBase
+```bash
+# in ~/.bash_profile
+# as per your spark installation directory (eg. /usr/local/hbase)
+export HBASE_HOME=/usr/local/hbase
+export PATH=$PATH:$HBASE_HOME/bin
+```
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/astrolabsoftware/fink-broker.git
@@ -18,7 +44,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Finally, define `FINK_HOME` and add the path to the Fink binaries and modules in your `.bash_profile`:
+Finally, define `FINK_HOME` and add the path to the Fink binaries and modules in your `.bash_profile` (assuming you are using `bash`...):
 
 ```bash
 # in ~/.bash_profile
@@ -26,6 +52,8 @@ export FINK_HOME=/path/to/fink-broker
 export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
 export PATH=$FINK_HOME/bin:$PATH
 ```
+
+Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/simulator.md) rely on docker-compose, and the [science database](user_guide/database.md) relies on HBase.
 
 ## Dashboard
 
@@ -83,7 +111,7 @@ If you want to know which services are available:
 
 ```bash
 fink
-Monitor Kafka stream received by Apache Spark
+Handle Kafka stream received by Apache Spark
 
  Usage:
  	to start: fink start <service> [-h] [-c <conf>] [--simulator]
@@ -95,7 +123,10 @@ Monitor Kafka stream received by Apache Spark
  To get help for a service:
  	fink start <service> -h
 
- Available services are: dashboard, archive, monitor, classify
+ To see the running processes:
+  fink show
+
+ Available services are: dashboard, checkstream, stream2raw, raw2science
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
 
@@ -140,18 +171,25 @@ fink start <service_name> -h
 This will also tells you which configuration parameters can be used, e.g.
 
 ```shell
-fink start monitor -h
-usage: monitor_fromstream.py [-h] [-servers SERVERS] [-topic TOPIC]
-                             [-schema SCHEMA]
-                             [-startingoffsets STARTINGOFFSETS]
-                             [-outputpath OUTPUTPATH]
-                             [-checkpointpath CHECKPOINTPATH]
-                             [-finkwebpath FINKWEBPATH] [-tinterval TINTERVAL]
-                             [-tinterval_kafka TINTERVAL_KAFKA]
-                             [-exit_after EXIT_AFTER] [-datapath DATAPATH]
-                             [-poolsize POOLSIZE]
+fink start stream2raw -h
+usage: stream2raw.py [-h] [-servers SERVERS] [-topic TOPIC] [-schema SCHEMA]
+                     [-startingoffsets_stream STARTINGOFFSETS_STREAM]
+                     [-rawdatapath RAWDATAPATH]
+                     [-checkpointpath_raw CHECKPOINTPATH_RAW]
+                     [-checkpointpath_sci CHECKPOINTPATH_SCI]
+                     [-science_db_name SCIENCE_DB_NAME]
+                     [-finkwebpath FINKWEBPATH] [-tinterval TINTERVAL]
+                     [-tinterval_kafka TINTERVAL_KAFKA]
+                     [-exit_after EXIT_AFTER] [-datasimpath DATASIMPATH]
+                     [-poolsize POOLSIZE]
 
-Monitor Kafka stream received by Spark
+Store live stream data on disk. The output can be local FS or distributed FS
+(e.g. HDFS). Be careful though to have enough disk space! For some output
+sinks where the end-to-end fault-tolerance can be guaranteed, you will need to
+specify the location where the system will write all the checkpoint
+information. This should be a directory in an HDFS-compatible fault-tolerant
+file system. See also https://spark.apache.org/docs/latest/ structured-
+streaming-programming-guide.html#starting-streaming-queries
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -161,21 +199,31 @@ optional arguments:
                         [KAFKA_TOPIC/KAFKA_TOPIC_SIM]
   -schema SCHEMA        Schema to decode the alert. Should be avro file.
                         [FINK_ALERT_SCHEMA]
-  -startingoffsets STARTINGOFFSETS
-                        From which offset you want to start pulling data.
-                        [KAFKA_STARTING_OFFSET]
-  -outputpath OUTPUTPATH
-                        Directory on disk for saving live data.
+  -startingoffsets_stream STARTINGOFFSETS_STREAM
+                        From which stream offset you want to start pulling
+                        data when building the raw database: latest, earliest,
+                        or custom. [KAFKA_STARTING_OFFSET]
+  -rawdatapath RAWDATAPATH
+                        Directory on disk for saving raw alert data.
                         [FINK_ALERT_PATH]
-  -checkpointpath CHECKPOINTPATH
-                        For some output sinks where the end-to-end fault-
-                        tolerance can be guaranteed, specify the location
-                        where the system will write all the checkpoint
-                        information. This should be a directory in an HDFS-
-                        compatible fault-tolerant file system. See
-                        conf/fink.conf & https://spark.apache.org/docs/latest/
-                        structured-streaming-programming-guide.html#starting-
-                        streaming-queries [FINK_ALERT_CHECKPOINT]
+  -checkpointpath_raw CHECKPOINTPATH_RAW
+                        The location where the system will write all the
+                        checkpoint information for the raw datable. This shoul
+                        be a directory in an HDFS-compatible fault-tolerant
+                        file system. See conf/fink.conf &
+                        https://spark.apache.org/docs/latest/ structured-
+                        streaming-programming-guide.html#starting-streaming-
+                        queries [FINK_ALERT_CHECKPOINT_RAW]
+  -checkpointpath_sci CHECKPOINTPATH_SCI
+                        The location where the system will write all the
+                        checkpoint information for the science datable. This
+                        should be a directory in an HDFS-compatible fault-
+                        tolerant file system. See conf/fink.conf &
+                        https://spark.apache.org/docs/latest/ structured-
+                        streaming-programming-guide.html#starting-streaming-
+                        queries [FINK_ALERT_CHECKPOINT_SCI]
+  -science_db_name SCIENCE_DB_NAME
+                        The name of the HBase table [SCIENCE_DB_NAME]
   -finkwebpath FINKWEBPATH
                         Folder to store UI data for display. [FINK_UI_PATH]
   -tinterval TINTERVAL  Time interval between two monitoring. In seconds.
@@ -188,13 +236,13 @@ optional arguments:
                         primarily for use on Travis, to stop service after
                         some time. Use that with `fink start service
                         --exit_after <time>`. Default is None.
-  -datapath DATAPATH    Folder containing alerts to be published by Kafka.
-                        [FINK_DATA_SIM]
+  -datasimpath DATASIMPATH
+                        Folder containing simulated alerts to be published by
+                        Kafka. [FINK_DATA_SIM]
   -poolsize POOLSIZE    Maximum number of alerts to send. If the poolsize is
                         bigger than the number of alerts in `datapath`, then
                         we replicate the alerts. Default is 5. [POOLSIZE]
 ```
-Note that not all of them are in used in all services (but they all share the same parser).
 
 ### How do I see how many services are running?
 
@@ -204,7 +252,7 @@ You can easily see the running services by using:
 fink show
 1 Fink service(s) running:
 USER               PID  %CPU %MEM      VSZ    RSS   TT  STAT STARTED      TIME COMMAND
-julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start monitor --simulator
+julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start checkstream --simulator
 Use <fink stop service_name> to stop a service.
 Use <fink start dashboard> to start the dashboard or check its status.
 ```
@@ -271,7 +319,7 @@ Then in the configuration file (assuming the `jaas.conf` is in the current direc
 
 ```bash
 # in conf/myconf.conf
-EXTRA_SPARK_CONFIG='<your config> --files jaas.conf
+SECURED_KAFKA_CONFIG='--files jaas.conf
 --driver-java-options "-Djava.security.auth.login.config=./jaas.conf"
 --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=./jaas.conf"'
 ```
@@ -286,7 +334,7 @@ This usually means there is no Kafka producer running at the `KAFKA_IPPORT` you 
 
 ### The simulator is publishing alerts, but I do not see anything on the service side.
 
-Make sure you use correctly the same `KAFKA_IPPORT_SIM` and `KAFKA_TOPIC_SIM` in both sides (simulator and service).
+Make sure you use correctly the same `KAFKA_IPPORT_SIM` and `KAFKA_TOPIC_SIM` on both sides (simulator and service).
 
 
 ### fink: line 91: /conf/fink.conf: No such file or directory

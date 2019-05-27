@@ -47,6 +47,14 @@ echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" >> ${SPARK_HOME}/conf/spark-defa
 echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
 ```
 
+Set the path to HBase
+```bash
+# in ~/.bash_profile
+# as per your spark installation directory (eg. /usr/local/hbase)
+export HBASE_HOME=/usr/local/hbase
+export PATH=$PATH:$HBASE_HOME/bin
+```
+
 Clone the repository:
 
 ```bash
