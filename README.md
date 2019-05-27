@@ -23,4 +23,4 @@ Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, an
 
 ## Documentation
 
-Fink's documentation (WIP) is hosted [here](https://fink-broker.rtfd.io).
+Fink's documentation is hosted [here](https://fink-broker.rtfd.io).

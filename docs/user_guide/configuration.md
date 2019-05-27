@@ -69,6 +69,15 @@ org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
 org.apache.spark:spark-avro_2.11:2.4.0
 ```
 
+In addition to packages, you can specify external libraries as jars:
+```
+# These two are shipped with the code
+FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,\
+${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar
+```
+
+Note that part of Fink is written in Scala, and you need to specify the jars (under `libs/`). If you make change to the code, do not forget to re-compile the source.
+
 As described in [Infrastructure](infrastructure.md), data streams are processed as a series of small batch jobs. You can specify the time interval between two triggers (second), i.e. the timing of streaming data processing. If `0`, the query will be executed in micro-batch mode, where micro-batches will be generated as soon as the previous micro-batch has completed processing. Note that this timing is also used for updating data for the dashboard.
 ```
 FINK_TRIGGER_UPDATE=2
@@ -80,11 +89,18 @@ Fink takes one alert as the reference:
 FINK_ALERT_SCHEMA=${FINK_HOME}/schemas/template_schema_ZTF.avro
 ```
 
-Finally, you need to provide location on disk to save the incoming alerts.
+Finally, you need to provide location on disk to save the incoming alerts and checkpoints.
 They can be in local FS (`files:///path/`) or in distributed FS (e.g. `hdfs:///path/`). Be careful though to have enough disk space!
 ```
 FINK_ALERT_PATH=${FINK_HOME}/archive/alerts_store
-FINK_ALERT_CHECKPOINT=${FINK_HOME}/archive/alerts_checkpoint
+FINK_ALERT_CHECKPOINT_RAW=${FINK_HOME}/archive/alerts_raw_checkpoint
+FINK_ALERT_CHECKPOINT_SCI=${FINK_HOME}/archive/alerts_sci_checkpoint
+```
+
+Do not forget to give a name to your HBase science table:
+```
+# The name of the HBase table
+SCIENCE_DB_NAME="test_catalog"
 ```
 
 ## Configuring the dashboard

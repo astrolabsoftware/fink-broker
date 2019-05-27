@@ -16,7 +16,7 @@ and you can connect your favourite code to the database, getting data access wit
 
 ![Screenshot](../img/monitoring.png)
 
-Given the crazy rate of alerts, it seems insane to live monitor each alert individually, and on short timescales it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink. Each service is typically a Spark job on the database (to avoid putting too high load on the alert sender), but the archive service that operates directly on the stream.
+Given the crazy rate of alerts, it seems insane to live monitor each alert individually, and on short timescales it makes more sense to focus on some physically motivated statistics on the stream, target potential outliers, and highlight problems. On longer timescales, we want of course also to be able to access, inspect, and process each alert received by Fink. Each service is typically a Spark job on the database (to avoid putting too high load on the alert sender), but the `stream2raw` service that operates directly on the stream.
 
 Each Spark job is either batch or streaming, or both (multi-modal analytics). All services are linked to the [dashboard](dashboard.md), and you can easily follow live and interactively the outputs. To start a service, just execute:
 
@@ -45,7 +45,7 @@ The monitoring of the stream is typically done with the archiving service. But f
 To use this service, just execute:
 
 ```bash
-fink start monitor > live.log &
+fink start checkstream > live.log &
 ```
 Again, this will query the stream directly - so be careful!
 
@@ -63,16 +63,58 @@ This service operates from the database and connects to external database such a
 
 It is a standard problem of cross-match, but in real-time! In order to not rely on hard-coded catalogs, Fink connects to remote databases, and query them with the data in our alerts (ra/dec-based). Fink uses the CDS [X-Match](http://cdsxmatch.u-strasbg.fr/) service, and the SIMBAD bibliographical database (updated every day). It requires a bit of tweaking so avoid overcrowding the CDS servers with too many requests. The idea is to send a list of alerts at once. The list is generated inside each micro-batch.
 
-To start classifying the alerts from the database, just launch:
+The early classification is part of the `raw2science` service:
 
 ```bash
-fink start classify > classify.log &
+fink start raw2science > raw2science.log &
 ```
 
-and go to `http://localhost:5000/classification.html`
+Then to retrieve the type of alert, open a pyspark shell for example:
+
+```bash
+# Start HBase service
+/path/to/hbase/start-hbase.sh
+
+# Launch a pyspark shell with fink dependencies loaded
+source conf/fink.conf
+PYSPARK_DRIVER_PYTHON=ipython pyspark --jars $FINK_JARS --packages
+```
+
+and type:
+
+```python
+from fink_broker.sparkUtils import init_sparksession
+import json
+
+# Grab the running Spark Session,
+# otherwise create it.
+spark = init_sparksession(
+  name="readingScienceDB", shuffle_partitions=2, log_level="ERROR")
+
+# File containing the HBase catalog - it is generated when you
+# run the raw2science service.
+with open('catalog.json') as f:
+    catalog = json.load(f)
+
+catalog_dic = json.loads(catalog)
+
+df = spark.read.option("catalog", catalog)\
+  .format("org.apache.spark.sql.execution.datasources.hbase")\
+  .load()
+
+print("Number of entries in {}: ".format(
+  catalog_dic["table"]["name"]), df.count())
+
+df_of_types = df.groupBy("simbadType").count()
+
+# Display the number of entries per astronomical objects found:
+df_of_types.show()
+```
+
+<!-- and go to `http://localhost:5000/classification.html`
 
 <div id="container_bar"></div>
-<script src="https://fink-broker.readthedocs.io/en/latest/js/bar.js"></script>
+<script src="https://fink-broker.readthedocs.io/en/latest/js/bar.js"></script> -->
 
 For description of types, see [here](http://cds.u-strasbg.fr/cgi-bin/Otype?X).
 

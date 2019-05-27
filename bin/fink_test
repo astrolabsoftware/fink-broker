@@ -112,6 +112,9 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Fire a stream
   fink start simulator -c $conf
 
+  # Check the stream is there
+  fink start checkstream --exit_after 30 --simulator -c $conf
+
   # Connect the service to build the raw database from the stream
   fink start stream2raw --exit_after 50 --simulator -c $conf
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world. Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically its [streaming module](http://spark.apache.org/streaming/). The core of Fink is written in Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
+Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world. Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically it uses the [Structured Streaming processing engine](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html). The language chosen for the API is Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
 
 Fink's goal is twofold: providing a robust infrastructure and state-of-the-art streaming services to LSST scientists, and enabling other science cases in a big data context. Fink decouples resources needed for listening to the stream (online, critical), and resources used for services: scalable, robust, and modular!
 
@@ -29,7 +29,7 @@ We want Fink to be able to _filter, aggregate, enrich, consume_ incoming Kafka t
 
 ## Installation
 
-You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed. 
+You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed.
 Define `SPARK_HOME`  as per your Spark installation (typically, `/usr/local/spark`) and add the path to the Spark binaries in `.bash_profile`:
 
 ```bash
@@ -43,8 +43,16 @@ export PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
 Then execute the following (to ensure working of coverage module) :
 
 ```bash
-echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
-echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" >> ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
+```
+
+Set the path to HBase
+```bash
+# in ~/.bash_profile
+# as per your spark installation directory (eg. /usr/local/hbase)
+export HBASE_HOME=/usr/local/hbase
+export PATH=$PATH:$HBASE_HOME/bin
 ```
 
 Clone the repository:
@@ -75,7 +83,7 @@ Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/sim
 
 ## Getting started
 
-Before running the test suite download the ZTF data for simulation. Go to the datasim directory and execute the download script:
+The repository contains some alerts from the ZTF experiment required for the test suite in the folder `datasim`. If you need to download more alerts data, go to the datasim directory and execute the download script:
 
 ```bash
 cd datasim
@@ -83,14 +91,13 @@ cd datasim
 cd ..
 ```
 
-Now, make sure the test suite is running fine. Just execute:
+Make sure the test suite is running fine. Just execute:
 
 ```bash
 fink_test [--without-integration] [-h]
 ```
 
-You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. You can disable integration tests by specifying the argument `--without-integration`. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
-via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
+You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. You can disable integration tests by specifying the argument `--without-integration`. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
 fink start dashboard
 # Creating dashboardnet_website_1 ... done
@@ -99,7 +106,7 @@ fink start dashboard
 
 Connect the monitoring service to the stream:
 ```bash
-fink start monitor --simulator > live.log &
+fink start checkstream --simulator > live.log &
 ```
 
 Send a small burst of alerts:
@@ -115,14 +122,14 @@ You can easily see the running services by using:
 fink show
 1 Fink service(s) running:
 USER               PID  %CPU %MEM      VSZ    RSS   TT  STAT STARTED      TIME COMMAND
-julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start monitor --simulator
+julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start checkstream --simulator
 Use <fink stop service_name> to stop a service.
 Use <fink start dashboard> to start the dashboard or check its status.
 ```
 
 Finally stop monitoring and shut down the UI simply using:
 ```bash
-fink stop monitor
+fink stop checkstream
 fink stop dashboard
 ```
 
@@ -130,7 +137,7 @@ To get help about `fink`, just type:
 
 ```shell
 fink
-Monitor Kafka stream received by Apache Spark
+Handle Kafka stream received by Apache Spark
 
  Usage:
  	to start: fink start <service> [-h] [-c <conf>] [--simulator]
@@ -142,6 +149,9 @@ Monitor Kafka stream received by Apache Spark
  To get help for a service:
  	fink start <service> -h
 
- Available services are: dashboard, archive, monitor, classify
+ To see the running processes:
+  fink show
+
+ Available services are: dashboard, checkstream, stream2raw, raw2science
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
