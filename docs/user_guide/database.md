@@ -1,4 +1,4 @@
-# Database
+# Databases
 
 ## Why archiving first?
 
@@ -68,4 +68,36 @@ Note this will stop all Fink services running.
 
 ## Science database structure
 
-The Raw database does not contain added values from the broker. Instead, filtering services and some user programs will connect to the raw one to select only relevant alerts and push them into an HBase table. Then user programs will performn a periodic cleaning of "irrelevant" data and enrichment of "relevant" data with tags/annotations from user analyses: in the end DB size smaller than the raw one. The HBase table will also contain additional alert attributes from outside (not coming from Alerts, but created or derived).
+The Raw database does not contain added values from the broker. Instead, filtering services and some user programs will connect to the raw one to select only relevant alerts and push them into an HBase table. Then user programs will perform a periodic cleaning of "irrelevant" data and enrichment of "relevant" data with tags/annotations from user analyses: in the end DB size smaller than the raw one. The HBase table will also contain additional alert attributes from outside (not coming from Alerts, but created or derived).
+
+# Using HBase with Spark Structured Streaming
+
+## A custom HBase sink provider
+
+As of Spark version 2.4.x, there is no HBase sink provider for Structured Streaming jobs. Hence we developed a simple one, and include the code source in the Fink repository (see [here](https://github.com/astrolabsoftware/fink-broker/tree/master/src/main/scala/org/apache/spark/sql/execution/datasources/hbase)).
+
+## How to use the Scala module?
+
+Fink is primarily written in Python, but the HBase sink provider is in Scala (for compatibility and performance reasons). We release the compiled sources with Fink unde the `libs` folder, but in case you need to modify or extend the source, you would have to recompile it. You can easily do it using `sbt` for example:
+
+```bash
+# Using Scala 2.11.8
+sbt ++2.11.8 package
+```
+
+see the `build.sbt` for dependencies. Note that we plan on releasing the jar on Maven some time soon. Once compiled and included in the dependencies, the Apache Spark DataSource module is automatically extended with the new HBase sink, and you can use it in all Spark APIs.
+
+You can also easily access any Scala part from the Python:
+
+```python
+# From a python module or shell
+from fink_broker.sparkUtils import get_spark_context
+
+# Get the spark context
+sc = get_spark_context()
+
+# Enter inside the JVM and grab the Scala part of interest
+obj = sc._jvm.com.astrolabsoftware.fink_broker.#whateverInscala
+
+...
+```
