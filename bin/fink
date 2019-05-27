@@ -15,10 +15,10 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, stream2raw, raw2science"
+message_service="Available services are: dashboard, checkstream, stream2raw, raw2science"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
-Monitor Kafka stream received by Apache Spark\n\n
+Handle Kafka stream received by Apache Spark\n\n
 Usage:\n
     \tto start: fink start <service> [-h] [-c <conf>] [--simulator]\n
     \tto stop : fink stop  <service> [-h] [-c <conf>]\n\n
@@ -180,6 +180,14 @@ elif [[ $service == "simulator" ]]; then
   python3 ${FINK_HOME}/bin/simulate_stream.py \
     -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
     -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
+elif [[ $service == "checkstream" ]]; then
+  # Monitor the stream of alerts
+  spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} \
+    ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
+    ${FINK_HOME}/bin/checkstream.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    -startingoffsets_stream ${KAFKA_STARTING_OFFSET} -finkwebpath ${FINK_UI_PATH} \
+    ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts

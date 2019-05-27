@@ -75,7 +75,7 @@ Both the [dashboard](user_guide/dashboard.md) and the [simulator](user_guide/sim
 
 ## Getting started
 
-Before running the test suite download the ZTF data for simulation. Go to the datasim directory and execute the download script:
+The repository contains some alerts from the ZTF experiment required for the test suite in the folder `datasim`. If you need to download more alerts data, go to the datasim directory and execute the download script:
 
 ```bash
 cd datasim
@@ -83,14 +83,13 @@ cd datasim
 cd ..
 ```
 
-Now, make sure the test suite is running fine. Just execute:
+Make sure the test suite is running fine. Just execute:
 
 ```bash
 fink_test [--without-integration] [-h]
 ```
 
-You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. You can disable integration tests by specifying the argument `--without-integration`. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it
-via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
+You should see plenty of Spark logs (and yet we have shut most of them!), but no failures hopefully! Success is silent, and the coverage is printed on screen at the end. You can disable integration tests by specifying the argument `--without-integration`. Then let's test some functionalities of Fink by simulating a stream of alert, and monitoring it via the dashboard. Start the dashboard, and go to `http://localhost:5000`:
 ```bash
 fink start dashboard
 # Creating dashboardnet_website_1 ... done
@@ -99,7 +98,7 @@ fink start dashboard
 
 Connect the monitoring service to the stream:
 ```bash
-fink start monitor --simulator > live.log &
+fink start checkstream --simulator > live.log &
 ```
 
 Send a small burst of alerts:
@@ -115,14 +114,14 @@ You can easily see the running services by using:
 fink show
 1 Fink service(s) running:
 USER               PID  %CPU %MEM      VSZ    RSS   TT  STAT STARTED      TIME COMMAND
-julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start monitor --simulator
+julien           61200   0.0  0.0  4277816   1232 s001  S     8:20am   0:00.01 /bin/bash /path/to/fink start checkstream --simulator
 Use <fink stop service_name> to stop a service.
 Use <fink start dashboard> to start the dashboard or check its status.
 ```
 
 Finally stop monitoring and shut down the UI simply using:
 ```bash
-fink stop monitor
+fink stop checkstream
 fink stop dashboard
 ```
 
@@ -130,7 +129,7 @@ To get help about `fink`, just type:
 
 ```shell
 fink
-Monitor Kafka stream received by Apache Spark
+Handle Kafka stream received by Apache Spark
 
  Usage:
  	to start: fink start <service> [-h] [-c <conf>] [--simulator]
@@ -142,6 +141,9 @@ Monitor Kafka stream received by Apache Spark
  To get help for a service:
  	fink start <service> -h
 
- Available services are: dashboard, archive, monitor, classify
+ To see the running processes:
+  fink show
+
+ Available services are: dashboard, checkstream, stream2raw, raw2science
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
