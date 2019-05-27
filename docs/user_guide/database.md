@@ -30,10 +30,10 @@ The archiving part is crucial, and must pass a number of stress tests (not exhau
 Extensive benchmarks and resources sizing are under study. The main Parquet database is stored in HDFS (fault-tolerant), and data are partitioned hourly by topic name (`topic/YYYY/MM/dd/hh`). To launch the archiving service, just use:
 
 ```bash
-fink start archive > archiving.log &
+fink start stream2raw > stream2raw.log &
 ```
 
-Just make sure you attached the `archive` service to disks with large enough space! After the first alerts come, you will have something like:
+Just make sure you attached the `stream2raw` service to disks with large enough space! After the first alerts come, you will have something like:
 
 ```bash
 # in $FINK_ALERT_PATH
@@ -52,7 +52,7 @@ Note we perform a data compression (snappy). The compression factor will depend 
 
 ## Monitoring the data transfer
 
-There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark (2.4) to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `archive` service. Just launch the Fink dashboard and go to [live](http://localhost:5000/live.html) or [history](http://localhost:5000/history.html) to see the incoming rate and consumption (archiving) rate:
+There is a monitoring service attached to the database construction. Unfortunately at the time of writing, there is no built-in listeners in pyspark (2.4) to monitor structured streaming queries. So we had to develop custom tools, and redirect information in the Fink [dashboard](dashboard.md). This is automatically done when you start the `stream2raw` service. Just launch the Fink dashboard and go to [live](http://localhost:5000/live.html) or [history](http://localhost:5000/history.html) to see the incoming rate and consumption (archiving) rate:
 
 ```bash
 fink start dashboard
@@ -61,14 +61,24 @@ fink start dashboard
 You can stop the archiving at anytime using:
 
 ```bash
-fink stop archive
+fink stop stream2raw
 ```
 
 Note this will stop all Fink services running.
 
 ## Science database structure
 
-The Raw database does not contain added values from the broker. Instead, filtering services and some user programs will connect to the raw one to select only relevant alerts and push them into an HBase table. Then user programs will perform a periodic cleaning of "irrelevant" data and enrichment of "relevant" data with tags/annotations from user analyses: in the end DB size smaller than the raw one. The HBase table will also contain additional alert attributes from outside (not coming from Alerts, but created or derived).
+The Raw database does not contain added values from the broker. Instead, filtering services and some user programs will connect to the raw one to select only relevant alerts and push them into an HBase table. Then user programs will perform a periodic cleaning of "irrelevant" data and enrichment of "relevant" data with tags/annotations from user analyses: in the end DB size smaller than the raw one. The HBase table will also contain additional alert attributes from outside (not coming from Alerts, but created or derived). To start building the science database, just execute:
+
+```bash
+fink start raw2science
+```
+
+Note that you will need [Apache HBase](https://hbase.apache.org/) installed, and the HBase sink provider for Spark Structured Streaming (see below). You can stop the service at anytime using:
+
+```bash
+fink stop raw2science
+```
 
 # Using HBase with Spark Structured Streaming
 
@@ -96,7 +106,7 @@ from fink_broker.sparkUtils import get_spark_context
 # Get the spark context
 sc = get_spark_context()
 
-# Enter inside the JVM and grab the Scala part of interest
+# Enter inside the JVM and grab the Fink Scala part of interest
 obj = sc._jvm.com.astrolabsoftware.fink_broker.#whateverInscala
 
 ...
