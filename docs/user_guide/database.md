@@ -80,13 +80,13 @@ Note that you will need [Apache HBase](https://hbase.apache.org/) installed, and
 fink stop raw2science
 ```
 
-# Using HBase with Spark Structured Streaming
+## Using HBase with Spark Structured Streaming
 
-## A custom HBase sink provider
+### A custom HBase sink provider
 
 As of Spark version 2.4.x, there is no HBase sink provider for Structured Streaming jobs. Hence we developed a simple one, and include the code source in the Fink repository (see [here](https://github.com/astrolabsoftware/fink-broker/tree/master/src/main/scala/org/apache/spark/sql/execution/datasources/hbase)).
 
-## How to use the Scala module?
+### How to use the Scala module?
 
 Fink is primarily written in Python, but the HBase sink provider is in Scala (for compatibility and performance reasons). We release the compiled sources with Fink unde the `libs` folder, but in case you need to modify or extend the source, you would have to recompile it. You can easily do it using `sbt` for example:
 

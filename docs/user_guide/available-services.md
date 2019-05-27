@@ -77,7 +77,7 @@ Then to retrieve the type of alert, open a pyspark shell for example:
 
 # Launch a pyspark shell with fink dependencies loaded
 source conf/fink.conf
-PYSPARK_DRIVER_PYTHON=ipython pyspark --jars $FINK_JARS --packages
+PYSPARK_DRIVER_PYTHON=ipython pyspark --jars $FINK_JARS --packages $FINK_PACKAGES
 ```
 
 and type:
