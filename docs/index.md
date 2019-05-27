@@ -29,7 +29,7 @@ We want Fink to be able to _filter, aggregate, enrich, consume_ incoming Kafka t
 
 ## Installation
 
-You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed. 
+You need Python 3.6+, Apache Spark 2.4+, and docker-compose (latest) installed.
 Define `SPARK_HOME`  as per your Spark installation (typically, `/usr/local/spark`) and add the path to the Spark binaries in `.bash_profile`:
 
 ```bash
@@ -43,8 +43,8 @@ export PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
 Then execute the following (to ensure working of coverage module) :
 
 ```bash
-echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
-echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" >> ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
 ```
 
 Clone the repository:
