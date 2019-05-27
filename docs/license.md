@@ -1,7 +1,7 @@
 ## Fink license (Apache License, Version 2.0)
 
 ```
-Copyright 2018 AstroLab Software
+Copyright 2019 AstroLab Software
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
