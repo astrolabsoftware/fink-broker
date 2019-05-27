@@ -15,7 +15,7 @@ The test suite must take into account that Fink is using distributing computing 
 
 To enable proper parallel execution of tests, that is coverage on both the driver and executors sides, you need to activate the coverage_daemon library ships with Spark. In a terminal, just execute:
 ```bash
-echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
+echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
 ```
 
 ## How to run the test suite
@@ -31,6 +31,7 @@ Run the test suite of Fink
 
  By default, both unit tests and integration tests will be run.
  You can disable the integration tests by specifying --without-integration.
+ You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.travis) will be used.
  Use -h to display this help.
 ```
 
