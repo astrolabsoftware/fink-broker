@@ -25,7 +25,7 @@ echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-de
 Set the path to HBase
 ```bash
 # in ~/.bash_profile
-# as per your spark installation directory (eg. /usr/local/hbase)
+# as per your hbase installation directory (eg. /usr/local/hbase)
 export HBASE_HOME=/usr/local/hbase
 export PATH=$PATH:$HBASE_HOME/bin
 ```
