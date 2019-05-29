@@ -136,4 +136,4 @@ source $FINK_HOME/conf/fink.conf.travis
 ...
 ```
 
-We will allow any configuration file in a future release.
+A custom configuration file can be given as an argument `fink_test -c /path/to/custom.conf`
