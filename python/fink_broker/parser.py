@@ -92,6 +92,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [SCIENCE_DB_NAME]
         """)
     parser.add_argument(
+        '-science_db_catalog', type=str, default='',
+        help="""
+        The path of HBase catalog
+        [SCIENCE_DB_CATALOG]
+        """)
+    parser.add_argument(
         '-finkwebpath', type=str, default='',
         help="""
         Folder to store UI data for display.
