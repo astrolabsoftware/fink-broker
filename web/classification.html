@@ -15,6 +15,7 @@
     <script src="https://code.highcharts.com/modules/data.js"></script>
     <script src="https://code.highcharts.com/highcharts-more.js"></script>
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/funnel.js"></script>
     <!-- <script src="https://code.highcharts.com/themes/grid-light.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/dark-blue.js"></script> -->
     <!-- <script src="https://code.highcharts.com/themes/gray.js"></script> -->
@@ -33,11 +34,14 @@
       <a href="/about.html">About</a>
     </div>
 
+    <div id="projection">
+      <button onClick="choose('plain')">Plain</button>
+      <button onClick="choose('polar')">Polar</button>
+      <!-- <button onClick="choose('pyramid')">Pyramid</button> -->
+    </div>
     <div id="container_bar"></div>
     <script src="js/bar.js"></script>
-    <!-- <button id="plain">Plain</button>
-    <button id="inverted">Inverted</button>
-    <button id="polar">Polar</button> -->
+
 
     <!-- Footer -->
     <div id="footer" class="container text-center">
