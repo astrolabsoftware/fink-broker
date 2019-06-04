@@ -280,7 +280,11 @@ def connect_to_raw_database(
         .getOrCreate()
 
     # Create a DF from the database
-    userschema = spark.read.format("parquet").load(path).schema
+    userschema = spark\
+            .read\
+            .parquet(basepath)\
+            .schema
+
     df = spark \
         .readStream \
         .format("parquet") \

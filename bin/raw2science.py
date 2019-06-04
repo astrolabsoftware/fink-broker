@@ -22,6 +22,7 @@ Step 4: Push alert data into the science database (TBD)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
+from pyspark.sql import DataFrame
 from pyspark.sql.functions import col
 
 import argparse
@@ -88,22 +89,38 @@ def main():
     with open('catalog.json', 'w') as json_file:
         json.dump(catalog, json_file)
 
-    # Push alert to the science database
-    options = {
-        "hbase.catalog": catalog,
-        "checkpointLocation": args.checkpointpath_sci
-    }
+    def write_to_hbase(df: DataFrame, epochid: int):
+        """Write data into HBase.
 
-    # If the table does not exist, one needs to specify
-    # the number of zones to use (must be greater than 3).
-    if "travis" in args.science_db_name:
-        options["hbase.newTable"] = 5
+        The purpose of this function is to write data to HBase using
+        Structured Streaming tools such as foreachBatch.
+
+        Parameters
+        ----------
+        df : DataFrame
+            Input micro-batch DataFrame.
+        epochid : int
+            ID of the micro-batch
+
+        Examples
+        --------
+        >>>
+
+        """
+        # If the table does not exist, one needs to specify
+        # the number of zones to use (must be greater than 3).
+        # TODO: remove this harcoded parameter.
+        df.write\
+            .options(catalog=catalog, newtable=5)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .save()
 
     countquery = df_hbase\
         .writeStream\
-        .outputMode("append") \
-        .format("HBase.HBaseStreamSinkProvider") \
-        .options(**options).start()
+        .outputMode("append")\
+        .option("checkpointLocation", args.checkpointpath_sci)\
+        .foreachBatch(write_to_hbase)\
+        .start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
