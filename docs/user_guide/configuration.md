@@ -64,9 +64,9 @@ Note that while Apache Avro is supported natively since Spark 2.4, you still nee
 # These are the Maven Coordinates of dependencies for Fink
 # Change the version according to your Spark version.
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
-org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
-org.apache.spark:spark-avro_2.11:2.4.0
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.1,\
+org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.1,\
+org.apache.spark:spark-avro_2.11:2.4.1
 ```
 
 In addition to packages, you can specify external libraries as jars:
