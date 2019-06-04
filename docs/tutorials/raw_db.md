@@ -83,7 +83,7 @@ PYSPARK_DRIVER_PYTHON=ipython pyspark --jars $FINK_JARS --packages $FINK_PACKAGE
 and type:
 
 ```python
-# Or you put in FINK_ALERT_PATH
+# Change with what you put in FINK_ALERT_PATH
 datapath = "archive/alerts_store"
 
 df = spark.read\
