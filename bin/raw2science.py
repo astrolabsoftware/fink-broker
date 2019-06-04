@@ -32,6 +32,7 @@ import json
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
+from fink_broker.sparkUtils import write_to_csv
 from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
@@ -43,7 +44,7 @@ def main():
 
     # Grab the running Spark Session,
     # otherwise create it.
-    init_sparksession(
+    spark = init_sparksession(
         name="buildSciDB", shuffle_partitions=2, log_level="ERROR")
 
     # FIXME!
@@ -86,10 +87,12 @@ def main():
     catalog = construct_hbase_catalog_from_flatten_schema(
         df_hbase.schema, args.science_db_name, "objectId")
 
+    # Save the catalog on disk for later usage
     with open('catalog.json', 'w') as json_file:
         json.dump(catalog, json_file)
 
-    def write_to_hbase(df: DataFrame, epochid: int):
+    def write_to_hbase_and_monitor(
+            df: DataFrame, epochid: int, hbcatalog: str):
         """Write data into HBase.
 
         The purpose of this function is to write data to HBase using
@@ -101,34 +104,45 @@ def main():
             Input micro-batch DataFrame.
         epochid : int
             ID of the micro-batch
-
-        Examples
-        --------
-        >>>
+        hbcatalog : str
+            HBase catalog describing the data
 
         """
         # If the table does not exist, one needs to specify
         # the number of zones to use (must be greater than 3).
         # TODO: remove this harcoded parameter.
         df.write\
-            .options(catalog=catalog, newtable=5)\
+            .options(catalog=hbcatalog, newtable=5)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 
+    # Query to push data into HBase
     countquery = df_hbase\
         .writeStream\
         .outputMode("append")\
         .option("checkpointLocation", args.checkpointpath_sci)\
-        .foreachBatch(write_to_hbase)\
+        .foreachBatch(lambda x, y: write_to_hbase_and_monitor(x, y, catalog))\
+        .start()
+
+    # Query to group objects by type according to SIMBAD
+    # Do it every 30 seconds
+    df_group = df_type.groupBy("simbadType").count()
+    groupquery = df_group\
+        .writeStream\
+        .outputMode("complete") \
+        .foreachBatch(write_to_csv)\
+        .trigger(processingTime='30 seconds'.format(args.tinterval))\
         .start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
+        groupquery.stop()
         print("Exiting the raw2science service normally...")
     else:
-        countquery.awaitTermination()
+        # Wait for the end of queries
+        spark.streams.awaitAnyTermination()
 
 
 if __name__ == "__main__":
