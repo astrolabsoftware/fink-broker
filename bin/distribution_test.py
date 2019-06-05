@@ -58,6 +58,7 @@ def main():
 
     print("\nPrint first three rows\n")
     df.show(3)
+    df.select(col("struct.*")).show(1)
 
 if __name__ == "__main__":
     main()
