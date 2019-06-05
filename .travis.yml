@@ -27,6 +27,8 @@ before_install:
   - export PATH=$HOME/.local/bin:${FINK_HOME}/bin:$PATH
   # Install HBase
   - source conf/install_hbase.sh
+  # Install Kafka
+  - source conf/install_kafka.sh
 
 install:
   # Download spark
@@ -47,6 +49,10 @@ script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
 
+  # Start Kafka Server and create a test topic
+  - fink_kafka start
+  - fink_kafka --create-topic distribution_test
+  
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - fink_test
