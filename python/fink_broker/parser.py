@@ -136,6 +136,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         the alerts. Default is 5.
         [POOLSIZE]
         """)
+    parser.add_argument(
+        '-distribution_schema', type=str, default='',
+        help="""
+        The path where the avro schema for alert distribution is stored
+        [DISTRIBUTION_SCHEMA]
+        """)
     args = parser.parse_args(None)
     return args
 
