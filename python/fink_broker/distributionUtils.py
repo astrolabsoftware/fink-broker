@@ -19,9 +19,10 @@ import glob
 import shutil
 
 from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.sparkUtils import to_avro, from_avro
+from fink_broker.sparkUtils import get_spark_context, to_avro, from_avro
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, col
+from fink_broker.tester import spark_unit_tests
 
 def get_kafka_df(df : DataFrame, schema_path : str) -> DataFrame:
     """Create and return a df to pubish to Kafka
@@ -47,16 +48,12 @@ def get_kafka_df(df : DataFrame, schema_path : str) -> DataFrame:
     schema_path: str
         Path where to store the avro schema required for decoding the
         Kafka messages.
-
-    Examples
     ----------
 
     """
     # Create a StructType column in the df for distribution.
     # The contents and schema of the df can change over time with
     # changing requirements of Alert redistribution
-    # df = df.selectExpr("objectId", "simbadType")
-
     df_struct = df.select(struct(df.columns).alias("struct"))
 
     # Convert into avro
@@ -98,6 +95,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     partition: int
     offset: long
     timestamp: long
+    timestampType: integer
 
     The value column contains the structured data of the alert encoded into
     avro(binary). This routine creates a Spark DataFrame with a decoded StructType
@@ -112,7 +110,42 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 
     Examples
     ----------
-
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
+    ...     [697251923115015002, 697251921215010004],
+    ...     [20.393772, 20.4233877],
+    ...     [-25.4669463, -27.0588511],
+    ...     ["Star", "Unknown"])).toDF(["objectId", "candid", "candidate_ra", "candidate_dec", "simbadType"])
+    >>> df.show()
+    +------------+------------------+------------+-------------+----------+
+    |    objectId|            candid|candidate_ra|candidate_dec|simbadType|
+    +------------+------------------+------------+-------------+----------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|      Star|
+    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|   Unknown|
+    +------------+------------------+------------+-------------+----------+
+    <BLANKLINE>
+    >>> temp_schema = os.path.join(os.environ["PWD"] + "temp_schema")
+    >>> df_kafka = get_kafka_df(df, temp_schema)
+    >>> # Decode the avro df
+    >>> df_decoded = decode_kafka_df(df_kafka, temp_schema)
+    >>> df_decoded.printSchema()
+    root
+     |-- struct: struct (nullable = true)
+     |    |-- objectId: string (nullable = true)
+     |    |-- candid: long (nullable = true)
+     |    |-- candidate_ra: double (nullable = true)
+     |    |-- candidate_dec: double (nullable = true)
+     |    |-- simbadType: string (nullable = true)
+    <BLANKLINE>
+    >>> df_decoded.select(col("struct.*")).show()
+    +------------+------------------+------------+-------------+----------+
+    |    objectId|            candid|candidate_ra|candidate_dec|simbadType|
+    +------------+------------------+------------+-------------+----------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|      Star|
+    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|   Unknown|
+    +------------+------------------+------------+-------------+----------+
+    <BLANKLINE>
+    >>> os.remove(temp_schema)
     """
     # Read the avro schema
     with open(schema_path) as f:
@@ -122,3 +155,9 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     df = df_kafka.select(from_avro("value", avro_schema).alias("struct"))
 
     return df
+
+if __name__ == "__main__":
+    """ Execute the test suite with SparkSession initialised """
+
+    # Run the Spark test suite
+    spark_unit_tests(globals())
