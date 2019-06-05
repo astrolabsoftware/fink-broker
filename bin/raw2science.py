@@ -87,13 +87,8 @@ def main():
     catalog = construct_hbase_catalog_from_flatten_schema(
         df_hbase.schema, args.science_db_name, "objectId")
 
-<<<<<<< HEAD
     science_db_catalog = args.science_db_catalog
     with open(science_db_catalog, 'w') as json_file:
-=======
-    # Save the catalog on disk for later usage
-    with open('catalog.json', 'w') as json_file:
->>>>>>> master
         json.dump(catalog, json_file)
 
     def write_to_hbase_and_monitor(
