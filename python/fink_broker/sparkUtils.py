@@ -116,7 +116,8 @@ def write_to_csv(
     Parameters
     ----------
     batchdf: DataFrame
-        Static Spark DataFrame with stream data
+        Static Spark DataFrame with stream data. Expect 2 columns
+        with variable names and their count.
     batchid: int
         ID of the batch.
     fn: str, optional
@@ -129,7 +130,7 @@ def write_to_csv(
     >>> write_to_csv(df, 0, fn="test.csv")
     >>> os.remove("test.csv")
     """
-    batchdf.select(["type", "count"])\
+    batchdf\
         .toPandas()\
         .to_csv(fn, index=False)
     batchdf.unpersist()
@@ -320,7 +321,11 @@ def connect_to_raw_database(
         .getOrCreate()
 
     # Create a DF from the database
-    userschema = spark.read.format("parquet").load(path).schema
+    userschema = spark\
+            .read\
+            .parquet(basepath)\
+            .schema
+
     df = spark \
         .readStream \
         .format("parquet") \

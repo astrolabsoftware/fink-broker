@@ -1,4 +1,4 @@
-var defaultData = window.location.origin + '/data/live.csv'
+var defaultData = window.location.origin + '/data/live_raw.csv'
 var urlInput = document.getElementById('fetchURL');
 var pollingCheckbox = document.getElementById('enablePolling');
 var pollingInput = document.getElementById('pollingTime');

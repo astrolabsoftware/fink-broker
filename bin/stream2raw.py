@@ -99,7 +99,7 @@ def main():
         ui_refresh,
         colnames,
         args.finkwebpath,
-        "live.csv",
+        "live_raw.csv",
         "live")
 
     monitor_progress_webui(
