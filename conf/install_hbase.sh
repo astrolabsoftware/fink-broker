@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-HBASE_VERSION=2.1.4
+HBASE_VERSION=2.1.5
 
 wget http://www-us.apache.org/dist/hbase/${HBASE_VERSION}/hbase-${HBASE_VERSION}-bin.tar.gz
 tar -zxvf hbase-${HBASE_VERSION}-bin.tar.gz
