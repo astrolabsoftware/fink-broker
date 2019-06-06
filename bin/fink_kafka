@@ -36,15 +36,38 @@ fi
 
 case "$1" in
   "start")
-      # Start the Zookeeper
-      ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-      sleep 3
+      # Try to Start the Zookeeper with 3 attempts
+      i=0
+      ZK_PID=""
+      while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
+        # Start the Zookeeper
+        ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
+        sleep 3
+        ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
+        i=$[$i+1]
+        # echo "zk attempt" $i
+        # echo "ZK_PID" $ZK_PID
+      done
 
-      # Start Kafka brokers
-      ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/kafka.server.properties > /dev/null 2>&1 &
-      sleep 2
+      # Try to start the Kafka server with 3 attempts
+      j=0
+      KAFKA_PID=""
+      while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
+        # Start the Kafka Server(Brokers)
+        ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/kafka.server.properties > /dev/null 2>&1 &
+        sleep 3
+        KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
+        j=$[$j+1]
+        # echo "Kafka attempt" $j
+        # echo "KAFKA_PID" $KAFKA_PID
+      done
 
-      echo "Kafka Server started"
+      if [ -n "$ZK_PID" ] && [ -n "$KAFKA_PID" ]
+      then
+        echo "Kafka Server started successfully"
+      else
+        echo "Starting Kafka Server failed"
+      fi
       ;;
   "stop")
       # Stop Kafka brokers
