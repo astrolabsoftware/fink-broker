@@ -15,10 +15,8 @@
 # limitations under the License.
 set -e
 
-KAFKA_VERSION=2.2.0
 
-wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz
-tar -xvzf kafka_2.12-${KAFKA_VERSION}.tgz
-rm kafka_2.12-${KAFKA_VERSION}.tgz
-
-export KAFKA_HOME=$( pwd )/kafka_2.12-${KAFKA_VERSION}
+wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
+mkdir -p kafka
+tar -xzf kafka.tgz -C kafka --strip-components 1
+rm kafka.tgz
