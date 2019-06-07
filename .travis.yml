@@ -40,7 +40,6 @@ install:
   - export PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 
   # Download and Install Kafka
-  - export KAFKA_VERSION=2.2.0
   - source conf/install_kafka.sh
   - export KAFKA_HOME=$( pwd )/kafka
 
