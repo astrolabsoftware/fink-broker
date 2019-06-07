@@ -1,5 +1,5 @@
 #!/bin/bash
-#
+# Copyright 2019 AstroLab Software
 # Author: Abhishek Chauhan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 set -e
-
 
 wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
 mkdir -p kafka

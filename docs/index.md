@@ -152,6 +152,6 @@ Handle Kafka stream received by Apache Spark
  To see the running processes:
   fink show
 
- Available services are: dashboard, checkstream, stream2raw, raw2science
+ Available services are: dashboard, checkstream, stream2raw, raw2science, distribution
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```
