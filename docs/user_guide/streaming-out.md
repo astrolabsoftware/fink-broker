@@ -13,7 +13,7 @@ The two major components of Fink's distribution system are:
 The Kafka Cluster consists of one or more Kafka broker(s) and a Zookeeper server that monitors and manages the Kafka brokers.
 It is important to note that the Kafka Cluster for Redistribution of alerts is different from the one used in [simulator](simulator.md).
 <br>
-You will need [Apache Kafka](https://kafka.apache.org/) 2.2+ installed. Define `KAFKA_HOME` as per your installation in your ~/.bash_profile.
+You will need [Apache Kafka](https://kafka.apache.org/) 2.2+ installed. You can run the install script at `conf/install_kafka.sh`. Once installed, define `KAFKA_HOME` as per your installation in your ~/.bash_profile.
 
 ```bash
 # in ~/.bash_profile
@@ -25,20 +25,23 @@ We provide a script `fink_kafka` to efficiently manage the Kafka Cluster for Red
 services:
 
 ```bash
-Manage Finks Kafka Server for Alert Distribution
- USAGE:
+Manage Finks Kafka Server for Alert Distribution 
 
- 	 start
- 		 Starts a Zookeeper and a Kafka Server
+ Usage:
+ 	fink_kafka [option]
 
- 	 stop
- 		 Stops a running Kafka and Zookeeper Server
+ Option:
+ 	start
+ 		Starts Zookeeper Server and a Kafka Cluster
 
- 	 -h, --help
- 		 To view this help message
+ 	stop
+ 		Stops the running Kafka Cluster and Zookeeper Server
 
- 	 --create-topic <TOPIC>
- 		 Creates a topic named <TOPIC> if it does not already exist
+ 	-h, --help
+ 		To view this help message
+
+ 	--create-topic <TOPIC>
+ 		Creates a topic named <TOPIC> if it does not already exist
 ```
 
 ## Spark process
