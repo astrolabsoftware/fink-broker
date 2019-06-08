@@ -24,7 +24,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, col
 from fink_broker.tester import spark_unit_tests
 
-def get_kafka_df(df : DataFrame, schema_path : str) -> DataFrame:
+def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -49,7 +49,6 @@ def get_kafka_df(df : DataFrame, schema_path : str) -> DataFrame:
         Path where to store the avro schema required for decoding the
         Kafka messages.
     ----------
-
     """
     # Create a StructType column in the df for distribution.
     # The contents and schema of the df can change over time with
@@ -84,6 +83,7 @@ def get_kafka_df(df : DataFrame, schema_path : str) -> DataFrame:
         shutil.rmtree(path_for_avro)
 
     return df_kafka
+
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
@@ -155,6 +155,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     df = df_kafka.select(from_avro("value", avro_schema).alias("struct"))
 
     return df
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

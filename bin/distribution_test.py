@@ -30,12 +30,12 @@ from fink_broker.distributionUtils import decode_kafka_df
 from pyspark.sql.functions import col
 
 def main():
-    parser = argparse.ArgumentParser(description = __doc__)
+    parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     # Get or create a Spark Session
     spark = init_sparksession(
-        name = "consume_distribution", shuffle_partitions = 2, log_level = "ERROR")
+        name="distribution_test", shuffle_partitions=2, log_level="ERROR")
 
     # Topic to read from
     topic = "distribution_test"
@@ -52,13 +52,13 @@ def main():
     # Decode df_kafka into a Spark DataFrame with StructType column
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
-
     print("\nprinting the schema of the decoded df\n")
     df.printSchema()
 
     print("\nPrint first three rows\n")
     df.show(3)
     df.select(col("struct.*")).show(1)
+
 
 if __name__ == "__main__":
     main()
