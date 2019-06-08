@@ -93,10 +93,10 @@ def to_avro(dfcol: Column) -> Column:
     ...             {"name" : "col2", "type" : "string"}
     ...     ]
     ... }'''
-    >>> df = spark.range(5)\
-    ...     .select(struct("id", col("id")\
-    ...     .cast("string").alias("id2"))\
-    ...     .alias("struct"))
+    >>> df = spark.range(5)
+    >>> df = df.select(struct("id",\
+                 col("id").cast("string").alias("id2"))\
+                 .alias("struct"))
     >>> avro_df = df.select(to_avro(col("struct")).alias("avro"))
     """
     sc = SparkContext._active_spark_context

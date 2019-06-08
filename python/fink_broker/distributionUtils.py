@@ -55,15 +55,33 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     # changing requirements of Alert redistribution
     df_struct = df.select(struct(df.columns).alias("struct"))
 
-    # Convert into avro
+    # Convert into avro and save the schema
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
+    save_avro_schema(df, schema_path)
 
-    # Store the avro schema if it doesn't already exist
-    # NOTE:
-    #   Ensure to delete the avro schema at schema_path whenever the structure
-    #   of the df read from science db or the contents to be distribution needs
-    #   to be changed.
+    return df_kafka
 
+
+def save_avro_schema(df: DataFrame, schema_path: str):
+    """Writes the avro schema to a file at schema_path
+
+    This routine checks if an avro schema file exist at the given path
+    and creates one if it doesn't.
+
+    To automatically change the schema with changing requirements, ensure to
+    delete the schema file at the given path whenever the structure of DF
+    read from science db or the contents to be distributed are changed.
+
+    Parameters
+    ----------
+    df: DataFrame
+        A Spark DataFrame
+    schema_path: str
+        Path where to store the avro schema
+    ----------
+    """
+
+    # Check if the file exists
     if not os.path.isfile(schema_path):
         # Store the df as an avro file
         path_for_avro = os.path.join(os.environ["PWD"], "flatten_hbase.avro")
@@ -81,8 +99,6 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)
-
-    return df_kafka
 
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
