@@ -92,6 +92,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [SCIENCE_DB_NAME]
         """)
     parser.add_argument(
+        '-science_db_catalog', type=str, default='',
+        help="""
+        The path of HBase catalog
+        [SCIENCE_DB_CATALOG]
+        """)
+    parser.add_argument(
         '-finkwebpath', type=str, default='',
         help="""
         Folder to store UI data for display.
@@ -129,6 +135,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         bigger than the number of alerts in `datapath`, then we replicate
         the alerts. Default is 5.
         [POOLSIZE]
+        """)
+    parser.add_argument(
+        '-distribution_schema', type=str, default='',
+        help="""
+        The path where the avro schema for alert distribution is stored
+        [DISTRIBUTION_SCHEMA]
         """)
     args = parser.parse_args(None)
     return args

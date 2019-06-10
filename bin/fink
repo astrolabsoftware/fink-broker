@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, checkstream, stream2raw, raw2science"
+message_service="Available services are: dashboard, checkstream, stream2raw, raw2science, distribution"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
@@ -207,7 +207,21 @@ elif [[ $service == "raw2science" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/raw2science.py -rawdatapath ${FINK_ALERT_PATH} \
     -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
-    -science_db_name ${SCIENCE_DB_NAME} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -science_db_name ${SCIENCE_DB_NAME} \
+    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+elif [[ $service == "distribution" ]]; then
+  # Start the Spark Producer
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} \
+  ${FINK_HOME}/bin/distribute.py -science_db_catalog ${SCIENCE_DB_CATALOG} \
+  -distribution_schema ${DISTRIBUTION_SCHEMA}
+elif [[ $service == "distribution_test" ]]; then
+  # Start a spark consumer to test the distribution
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} \
+  ${FINK_HOME}/bin/distribution_test.py -distribution_schema ${DISTRIBUTION_SCHEMA}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

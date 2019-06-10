@@ -39,6 +39,10 @@ install:
   - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
   - export PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 
+  # Download and Install Kafka
+  - source conf/install_kafka.sh
+  - export KAFKA_HOME=$( pwd )/kafka
+
   # Python deps
   - pip install --upgrade pip setuptools wheel
   - pip install -r requirements.txt
@@ -46,6 +50,10 @@ install:
 script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
+
+  # Start Kafka Server and create a test topic
+  - fink_kafka start
+  - fink_kafka --create-topic distribution_test
 
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
