@@ -36,7 +36,7 @@ install:
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
   - echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
   - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
-  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
+  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:$PYTHONPATH"
   - export PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 
   # Download and Install Kafka

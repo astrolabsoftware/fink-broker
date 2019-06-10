@@ -98,7 +98,7 @@ coverage run --source=${FINK_HOME} \
 fink start stream2raw --exit_after 30 --simulator -c $conf
 
 # Run the test suite on the modules
-for i in ${FINK_HOME}/python/fink_broker/*.py
+for i in ${FINK_HOME}/fink_broker/*.py
 do
   coverage run \
     --source=${FINK_HOME} \
