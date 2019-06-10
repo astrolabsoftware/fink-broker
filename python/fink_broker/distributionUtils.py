@@ -48,6 +48,10 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     schema_path: str
         Path where to store the avro schema required for decoding the
         Kafka messages.
+    Returns
+    ----------
+    df: DataFrame
+        A Spark DataFrame with an avro(binary) encoded Column named "value"
     ----------
     """
     # Create a StructType column in the df for distribution.
@@ -123,6 +127,12 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
         A Spark DataFrame created after reading the Kafka Source
     schema_path: str
         Path where the avro schema to decode the Kafka message is stored
+
+    Returns
+    ----------
+    df: DataFrame
+        A Spark DataFrame with a StructType Column with decoded data of
+        the avro(binary) column named "value"
 
     Examples
     ----------
