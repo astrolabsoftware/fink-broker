@@ -71,8 +71,8 @@ org.apache.spark:spark-avro_2.11:2.4.1
 
 In addition to packages, you can specify external libraries as jars:
 ```
-# These two are shipped with the code
-FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,\
+# These two are shipped with the code - use the latest version
+FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.2.0.jar,\
 ${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar
 ```
 
