@@ -200,7 +200,15 @@ elif [[ $service == "stream2raw" ]]; then
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
     ${EXIT_AFTER} ${HELP_ON_SERVICE}
 elif [[ $service == "raw2science" ]]; then
-  export SPARK_CLASSPATH=${HBASE_XML_CONF}
+
+  # For use on cluster, the HBase configuration file is actually mandatory.
+  if [[ -f ${HBASE_XML_CONF} ]]; then
+    export SPARK_CLASSPATH=${HBASE_XML_CONF}
+  else
+    echo "[WARN] HBase configuration file cannot be found at" ${HBASE_XML_CONF}
+    HBASE_XML_CONF=
+  fi
+
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
