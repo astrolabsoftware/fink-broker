@@ -73,6 +73,10 @@ FINK_ALERT_CHECKPOINT_SCI=${FINK_HOME}/archive/alerts_sci_checkpoint
 SCIENCE_DB_NAME="test_travis"
 SCIENCE_DB_CATALOG=${FINK_HOME}/catalog.json
 
+# HBase configuration file - must be under ${SPARK_HOME}/conf
+# You can find an example in ${FINK_HOME}/conf
+HBASE_XML_CONF=${SPARK_HOME}/conf/hbase-site.xml
+
 ######################################
 # Dashboard
 # Where the web data will be posted and retrieved by the UI.

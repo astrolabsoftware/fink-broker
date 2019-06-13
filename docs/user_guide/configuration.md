@@ -103,6 +103,15 @@ Do not forget to give a name to your HBase science table:
 SCIENCE_DB_NAME="test_catalog"
 ```
 
+And link to the HBase XML configuration file of your cluster. The file must be
+located in the `conf` folder of the Spark installation:
+
+```
+# HBase configuration file - must be under ${SPARK_HOME}/conf
+# You can find an example in ${FINK_HOME}/conf
+HBASE_XML_CONF=${SPARK_HOME}/conf/hbase-site.xml
+```
+
 ## Configuring the dashboard
 
 Where the web data will be posted and retrieved by the dashboard.
