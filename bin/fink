@@ -206,7 +206,8 @@ elif [[ $service == "raw2science" ]]; then
     export SPARK_CLASSPATH=${HBASE_XML_CONF}
   else
     echo "[WARN] HBase configuration file cannot be found at" ${HBASE_XML_CONF}
-    HBASE_XML_CONF=
+    echo "[WARN] Default HBase file will be used " ${FINK_HOME}/conf/hbase-site.xml
+    HBASE_XML_CONF=${FINK_HOME}/conf/hbase-site.xml
   fi
 
   # Store the stream of alerts
