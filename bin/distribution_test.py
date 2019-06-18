@@ -23,6 +23,7 @@ Consume the distributed alerts from the Kafka Server.
 """
 
 import argparse
+import time
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
@@ -42,22 +43,32 @@ def main():
 
     # Read from the Kafka topic
     df_kafka = spark \
-        .read \
+        .readStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", "localhost:9093") \
-        .option("value.deserializer", "ByteArrayDeserializer") \
         .option("subscribe", topic) \
         .load()
 
     # Decode df_kafka into a Spark DataFrame with StructType column
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
-    print("\nprinting the schema of the decoded df\n")
-    df.printSchema()
+    # Print to console
+    cols = ["objectId", "candid", "candidate_ra", "candidate_dec", "simbadType"]
+    cols = ["struct." + c for c in cols]
+    df = df.select(cols)
 
-    print("\nPrint first three rows\n")
-    df.show(3)
-    df.select(col("struct.*")).show(1)
+    print("\nReading Fink OutStream\n")
+    debug_query = df.writeStream\
+                    .format("console")\
+                    .trigger(processingTime='2 seconds')\
+                    .start()
+
+    # Keep the Streaming running for some time
+    if args.exit_after is not None:
+        time.sleep(args.exit_after)
+        debug_query.stop()
+    else:
+        debug_query.awaitTermination()
 
 
 if __name__ == "__main__":

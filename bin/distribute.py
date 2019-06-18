@@ -23,10 +23,14 @@
 
 import argparse
 import json
+import time
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df
+from pyspark.sql.functions import lit
+from pyspark.sql import DataFrame
+from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -41,23 +45,71 @@ def main():
     with open(science_db_catalog) as f:
         catalog = json.load(f)
 
-    # Read the HBase and create a DataFrame
-    df = spark.read.option("catalog", catalog)\
-        .format("org.apache.spark.sql.execution.datasources.hbase")\
-        .load()
+    # Start the Distribution Service
+    min_timestamp = 100     # some starting timestamp
 
-    # Get the DataFrame for publishing to Kafka (avro serialized)
-    df_kafka = get_kafka_df(df, args.distribution_schema)
+    # Run distribution for (args.exit_after) seconds
+    if args.exit_after is not None:
+        t_end = time.time() + args.exit_after
+        exit_after = True
+    else:
+        exit_after = False
 
-    # Publish to a test topic (Ensure that the topic exists on the Kafka Server)
-    topic = "distribution_test"
+    while(not exit_after or time.time() < t_end):
+        max_timestamp = int(round(time.time()*1000)) # time in ms
 
-    df_kafka\
-        .write\
-        .format("kafka")\
-        .option("kafka.bootstrap.servers", "localhost:9093")\
-        .option("topic", topic)\
-        .save()
+        # Read Hbase within timestamp range
+        df = spark.read\
+                  .option("catalog", catalog)\
+                  .option("minStamp", min_timestamp)\
+                  .option("maxStamp", max_timestamp)\
+                  .format("org.apache.spark.sql.execution.datasources.hbase")\
+                  .load()
+
+        # Filter out records that have been distributed
+        df = df.filter("status!='distributed'")
+
+        # Get the DataFrame for publishing to Kafka (avro serialized)
+        df_kafka = get_kafka_df(df, args.distribution_schema)
+
+        # Publish Kafka topic(s) (Ensure that the topic(s) exist on the Kafka Server)
+        df_kafka\
+            .write\
+            .format("kafka")\
+            .option("kafka.bootstrap.servers", "localhost:9093")\
+            .option("topic", "distribution_test")\
+            .save()
+
+        # Update the status column in Hbase
+        update_status_in_hbase(df, args.science_db_name)
+
+        # update min_timestamp for next iteration
+        min_timestamp = max_timestamp
+
+        # Wait for some time before another loop
+        time.sleep(1)
+
+
+def update_status_in_hbase(df: DataFrame, science_db_name: str):
+    """update the status column in Hbase
+
+    Parameters
+    ----------
+    df: DataFrame
+        A Spark DataFrame created after reading the science database (HBase)
+    science_db_name: str
+        Name of the science db
+    ----------
+    """
+    df = df.select("objectId", "status")
+    df = df.withColumn("status", lit("distributed"))
+
+    update_catalog = construct_hbase_catalog_from_flatten_schema(df.schema,\
+                    science_db_name, "objectId")
+    df.write\
+      .option("catalog", update_catalog)\
+      .format("org.apache.spark.sql.execution.datasources.hbase")\
+      .save()
 
 
 if __name__ == "__main__":

@@ -54,9 +54,15 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
         A Spark DataFrame with an avro(binary) encoded Column named "value"
     ----------
     """
+    # Remove the status column before distribution
+    cols = df.columns
+    if "status" in cols:
+        cols.remove("status")
+
+    df = df.select(cols)
+
     # Create a StructType column in the df for distribution.
-    # The contents and schema of the df can change over time with
-    # changing requirements of Alert redistribution
+    # The contents and schema of the df can change over time
     df_struct = df.select(struct(df.columns).alias("struct"))
 
     # Convert into avro and save the schema

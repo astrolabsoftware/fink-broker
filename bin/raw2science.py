@@ -37,6 +37,7 @@ from fink_broker.filters import keep_alert_based_on
 from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
+from pyspark.sql.functions import lit
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -84,6 +85,10 @@ def main():
     df_hbase = flattenstruct(df_hbase, "cutoutDifference")
     df_hbase = explodearrayofstruct(df_hbase, "prv_candidates")
 
+    # Create a status column for distribution
+    df_hbase = df_hbase.withColumn("status", lit("dbUpdate"))
+
+    # Save the catalog on disk for later usage
     catalog = construct_hbase_catalog_from_flatten_schema(
         df_hbase.schema, args.science_db_name, "objectId")
 
