@@ -56,6 +56,9 @@ def main():
         exit_after = False
 
     while(not exit_after or time.time() < t_end):
+        """Keep scanning the HBase for new records in a loop
+        """
+        # Scan the HBase till current time
         max_timestamp = int(round(time.time() * 1000)) # time in ms
 
         # Read Hbase within timestamp range
