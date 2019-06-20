@@ -56,7 +56,7 @@ def main():
         exit_after = False
 
     while(not exit_after or time.time() < t_end):
-        max_timestamp = int(round(time.time()*1000)) # time in ms
+        max_timestamp = int(round(time.time() * 1000)) # time in ms
 
         # Read Hbase within timestamp range
         df = spark.read\
