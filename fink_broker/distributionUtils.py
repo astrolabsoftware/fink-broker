@@ -21,8 +21,9 @@ import shutil
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import get_spark_context, to_avro, from_avro
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import struct, col
+from pyspark.sql.functions import struct, col, lit
 from fink_broker.tester import spark_unit_tests
+from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
 def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     """Create and return a df to pubish to Kafka
@@ -187,6 +188,31 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     df = df_kafka.select(from_avro("value", avro_schema).alias("struct"))
 
     return df
+
+
+def update_status_in_hbase(
+        df: DataFrame, database_name: str, rowkey: str):
+    """update the status column in Hbase
+
+    Parameters
+    ----------
+    df: DataFrame
+        A Spark DataFrame created after reading the database (HBase)
+    database_name: str
+        Name of the database
+    rowkey: str
+        Name of the rowkey in the HBase catalog
+    ----------
+    """
+    df = df.select(rowkey, "status")
+    df = df.withColumn("status", lit("distributed"))
+
+    update_catalog = construct_hbase_catalog_from_flatten_schema(df.schema,\
+                    database_name, rowkey)
+    df.write\
+      .option("catalog", update_catalog)\
+      .format("org.apache.spark.sql.execution.datasources.hbase")\
+      .save()
 
 
 if __name__ == "__main__":
