@@ -28,6 +28,7 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
+from fink_broker.distributionUtils import get_distribution_offset
 from pyspark.sql import DataFrame
 
 def main():
@@ -44,8 +45,12 @@ def main():
         catalog = json.load(f)
 
     # Define variables
-    min_timestamp = 100     # some starting timestamp
+    min_timestamp = 100     # set a default
     t_end = 1577836799      # some default value
+
+    # get distribution offset
+    min_timestamp = get_distribution_offset(
+                        args.checkpointpath_dist, args.startingOffset_dist)
 
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
@@ -84,7 +89,8 @@ def main():
             .save()
 
         # Update the status column in Hbase
-        update_status_in_hbase(df, args.science_db_name, "objectId")
+        update_status_in_hbase(df, args.science_db_name, "objectId",
+                args.checkpointpath_dist, max_timestamp)
 
         # update min_timestamp for next iteration
         min_timestamp = max_timestamp

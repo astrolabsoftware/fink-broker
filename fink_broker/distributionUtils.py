@@ -17,6 +17,7 @@ import json
 import os
 import glob
 import shutil
+import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import get_spark_context, to_avro, from_avro
@@ -191,7 +192,8 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 
 
 def update_status_in_hbase(
-        df: DataFrame, database_name: str, rowkey: str):
+        df: DataFrame, database_name: str, rowkey: str,
+        offsetFile: str, timestamp: int):
     """update the status column in Hbase
 
     Parameters
@@ -202,6 +204,10 @@ def update_status_in_hbase(
         Name of the database
     rowkey: str
         Name of the rowkey in the HBase catalog
+    offsetFile: str
+        the path of offset file for distribution
+    timestamp: int
+        timestamp till which science db has been scanned and distributed
     ----------
     """
     df = df.select(rowkey, "status")
@@ -213,6 +219,92 @@ def update_status_in_hbase(
       .option("catalog", update_catalog)\
       .format("org.apache.spark.sql.execution.datasources.hbase")\
       .save()
+
+    # write offset(timestamp) to file
+    with open(offsetFile, 'w') as f:
+        string = "distributed till, {}".format(timestamp)
+        f.write(string)
+
+
+def get_distribution_offset(
+        offsetFile: str, startingOffset_dist: str = "latest") -> int:
+    """Read and return distribution offset from file
+
+    Parameters
+    ----------
+    offsetFile: str
+        the path of offset file for distribution
+
+    startingOffset_dist: str, optional
+        Offset(timestamp) from where to start the distribution. Options are
+        latest (read timestamp from file), earliest (from the beginning of time),
+        timestamp (custom timestamp input by user)
+
+    Returns
+    ----------
+    timestamp: int
+        a timestamp (typical unix timestamp: time in ms since epoch)
+
+    Examples
+    ----------
+    # set a test timestamp
+    >>> test_t = int(round(time.time() * 1000))
+
+    # write to a file
+    >>> with open('dist.offset.test', 'w') as f:
+    ...     string = "distributed till, {}".format(test_t)
+    ...     f.write(string)
+    ...
+    31
+
+    # test 1 (wrong file name)
+    >>> min_timestamp = get_distribution_offset("invalidFile", "latest")
+    >>> min_timestamp
+    100
+
+    # test 2 (given earliest)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", "earliest")
+    >>> min_timestamp
+    100
+
+    # test 3 (given latest)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", "latest")
+    >>> min_timestamp == test_t
+    True
+
+    # test 4 (no offset given)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test")
+    >>> min_timestamp == test_t
+    True
+
+    # test 5 (custom timestamp given)
+    >>> custom_t = int(round(time.time() * 1000))
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", custom_t)
+    >>> min_timestamp == custom_t
+    True
+
+    # Delete offset file
+    >>> os.remove('dist.offset.test')
+
+    """
+    # if the offset file doesn't exist or is empty
+    if not os.path.isfile(offsetFile) or os.path.getsize(offsetFile) <= 0:
+        # set a default
+        min_timestamp = 100
+    else:
+        if startingOffset_dist == "latest":
+            with open(offsetFile, 'r') as f:
+                line = f.readlines()[-1]
+                min_timestamp = int(line.split(", ")[-1])
+
+        elif startingOffset_dist == "earliest":
+            # set timestamp to beginning of time
+            min_timestamp = 100
+        else:
+            # user given timestamp
+            min_timestamp = int(startingOffset_dist)
+
+    return min_timestamp
 
 
 if __name__ == "__main__":
