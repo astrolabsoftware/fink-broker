@@ -28,6 +28,8 @@ Option:\n
     \t\tTo view this help message \n\n
   \t--create-topic <TOPIC> \n
     \t\tCreates a topic named <TOPIC> if it does not already exist \n\n
+  \t--list-topics \n
+    \t\tLists all the topics \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -96,6 +98,11 @@ case "$1" in
       --topic $TOPIC \
       --zookeeper "localhost:2182"  >&1
       # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
+      ;;
+  "--list-topics")
+      ${KAFKA_HOME}/bin/kafka-topics.sh \
+      --list \
+      --zookeeper "localhost:2182" >&1
       ;;
   "-h"|"--help")
       echo -e $message_help
