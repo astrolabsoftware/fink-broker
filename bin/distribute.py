@@ -24,11 +24,12 @@
 import argparse
 import json
 import time
+import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
-from fink_broker.distributionUtils import get_distribution_offset
+from fink_broker.distributionUtils import get_distribution_offset, get_filtered_df
 from pyspark.sql import DataFrame
 
 def main():
@@ -47,6 +48,7 @@ def main():
     # Define variables
     min_timestamp = 100     # set a default
     t_end = 1577836799      # some default value
+    rules_xml = os.path.abspath(os.path.join(os.environ['FINK_HOME'], 'conf/distribution-rules.xml'))
 
     # get distribution offset
     min_timestamp = get_distribution_offset(
@@ -76,6 +78,9 @@ def main():
 
         # Filter out records that have been distributed
         df = df.filter("status!='distributed'")
+
+        # Apply additional filters
+        df = get_filtered_df(df, rules_xml)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)

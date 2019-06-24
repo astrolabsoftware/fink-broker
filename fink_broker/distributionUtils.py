@@ -26,6 +26,9 @@ from pyspark.sql.functions import struct, col, lit
 from fink_broker.tester import spark_unit_tests
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
+import xml.etree.ElementTree as ET
+from typing import Tuple
+
 def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
@@ -194,7 +197,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 def update_status_in_hbase(
         df: DataFrame, database_name: str, rowkey: str,
         offsetFile: str, timestamp: int):
-    """update the status column in Hbase
+    """Update the status column in Hbase
 
     Parameters
     ----------
@@ -305,6 +308,195 @@ def get_distribution_offset(
             min_timestamp = int(startingOffset_dist)
 
     return min_timestamp
+
+
+def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]:
+    """Parse an xml file with rules for filtering
+
+    Parameters
+    ----------
+    rules_xml: str
+        Path to the xml file
+
+    df_cols: list
+        List of all the columns in original DataFrame
+
+    Returns
+    ----------
+    cols_to_distribute: list
+        List of all the columns to keep for distribution
+
+    rules_list: list
+        List with rules to apply on columns to filter the DataFrame before
+        alert distribution
+
+    Examples
+    ----------
+    """
+    # parse the xml and make an element tree
+    tree = ET.parse(rules_xml)
+    root = tree.getroot()
+
+    #------------------------------------------------------#
+
+    # create a list of columns to select
+    cols_to_select = []
+
+    # check if the tree has a select element
+    if not ET.iselement(root[0]):
+        print("Invalid rules: Select not found")
+        return
+
+    # iterate the 'select' element in the xml tree
+    for elem in root[0]:
+        # get the attributes' dictionary
+        attrib = elem.attrib
+
+        # if subcolumn is not given
+        if 'subcol' not in attrib:
+
+            # if no subcol exist i.e top-level namespace, select it
+            if attrib['name'] in df_cols:
+                cols_to_select.append(attrib['name'])
+
+            # else select all sub-columns
+            else:
+                sub = attrib['name'] + "_"
+                cols = [s for s in df_cols if sub in s]
+                cols_to_select.extend(cols)
+
+        # when subcolumn is given
+        elif 'subcol' in attrib:
+            # add the col to select list
+            col = attrib['name'] + "_" + attrib['subcol']
+            if col in df_cols:
+                cols_to_select.append(col)
+            else:
+                print("Error in Select: invalid column: {}".format(col))
+                return
+
+    # remove duplicates
+    cols_to_select = list(dict.fromkeys(cols_to_select))
+
+    #------------------------------------------------------#
+
+    # create a list of columns to drop
+    cols_to_drop = []
+
+    # check if the tree has a 'drop' element
+    if ET.iselement(root[1]):
+        # iterate the 'drop' element in the xml tree
+        for elem in root[1]:
+            # get the attributes' dictionary
+            attrib = elem.attrib
+
+            # if subcolumn is not given
+            if 'subcol' not in attrib:
+
+                # if no subcol exist i.e top-level namespace
+                if attrib['name'] in df_cols:
+                    cols_to_drop.append(attrib['name'])
+
+                # else select all sub-columns
+                else:
+                    sub = attrib['name'] + "_"
+                    cols = [s for s in df_cols if sub in s]
+                    cols_to_drop.extend(cols)
+
+            # when subcolumn is given
+            elif 'subcol' in attrib:
+                # add the col to select list
+                col = attrib['name'] + "_" + attrib['subcol']
+                if col in df_cols:
+                    cols_to_drop.append(col)
+                else:
+                    print("Error in Drop: invalid column: {}".format(col))
+                    return
+
+        # remove duplicates
+        cols_to_drop = list(dict.fromkeys(cols_to_drop))
+
+    #------------------------------------------------------#
+
+    # obtain columns to distribute
+    cols_to_distribute = [e for e in cols_to_select if e not in cols_to_drop]
+
+    #------------------------------------------------------#
+
+    # Create a filtering rules' list
+    rules_list = []
+
+    # check if the tree has a 'filter' element
+    if ET.iselement(root[2]):
+        # iterate the 'filter' element and create a list of rules
+        for elem in root[2]:
+            # get the attributes' dictionary
+            attrib = elem.attrib
+
+            # if subcolumn is not given
+            if 'subcol' not in attrib:
+
+                # check if the col exist in top-level namespace
+                if attrib['name'] in cols_to_distribute:
+                    # create a rule string and append to list
+                    rule = attrib['name'] + attrib['operator'] + attrib['value']
+                    rules_list.append(rule)
+                else:
+                    print("can not apply rule to the column {}".format(attrib['name']))
+
+            # when subcolumn is given
+            elif 'subcol' in attrib:
+                # check for valid column
+                col = attrib['name'] + "_" + attrib['subcol']
+                if col in cols_to_distribute:
+                    # create a rule string and append to list
+                    rule = col + attrib['operator'] + attrib['value']
+                    rules_list.append(rule)
+                else:
+                    print("Error in Filter: invalid column: {}".format(col))
+                    return
+
+        # remove duplicate rules
+        rules_list = list(dict.fromkeys(rules_list))
+
+    #------------------------------------------------------#
+    return cols_to_distribute, rules_list
+
+
+def get_filtered_df(df: DataFrame, rules_xml: str) -> DataFrame:
+    """Filter the DataFrame before distribution
+
+    Parameters
+    ----------
+    df: DataFrame
+        A spark DataFrame which is to be filtered
+
+    rules_xml: str
+        Path of the xml file defining rules for filtering the DataFrame
+
+    Returns
+    ----------
+    df: DataFrame
+        A filtered DataFrame
+
+    Examples
+    ----------
+    """
+    # Get all the columns in the DataFrame
+    df_cols = df.columns
+
+    # Parse the xml file
+    cols_to_distribute, rules_list = parse_distribution_rules(rules_xml, df_cols)
+
+    # Obtain the Filtered DataFrame:
+    # Select cols to distribute
+    df_filtered = df.select(cols_to_distribute)
+
+    # Apply filters
+    for rule in rules_list:
+        df_filtered = df_filtered.filter(rule)
+
+    return df_filtered
 
 
 if __name__ == "__main__":

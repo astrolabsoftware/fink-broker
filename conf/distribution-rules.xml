@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+
+<!-- distribution.dtd -->
+<!DOCTYPE distribution-rules [
+  <!ELEMENT distribution-rules (select, drop?, filter?) >
+  <!ELEMENT select (column+) >
+  <!ELEMENT drop (column*) >
+  <!ELEMENT filter (column*) >
+  <!ELEMENT column (#PCDATA)>
+  <!ATTLIST column name CDATA #REQUIRED
+                   subcol CDATA #IMPLIED
+                   operator CDATA #IMPLIED
+                   value CDATA #IMPLIED >
+]>
+
+<!-- Guide to writing rules for distribution:
+  The sturcture of this xml document can be understood by the
+  Document Type Definition (DTD) given above.
+
+  The root element (distribution-rules) contains 3 node elements which are
+  composed of column elements:
+
+    1. select: This contains the columns you want to keep for distribution
+               It is required to define this (select) element.
+               There must be at least one column definition in it.
+
+    2. drop: This contains the columns you want to drop before distribution
+             It is optional to define this element.
+
+    3. filter: This contains the filter rules to be applied on the selected
+               columns. It is optional to define this element.
+
+  NOTE:
+    1. The order of parsing is select -> drop -> filter.
+       i.e The columns selected in 'select' will be dropped if are defined in
+       'drop'
+
+    2. If a column's attribute 'subcol' is missing all the subcolumns under it
+       will be selected / dropped
+
+    3. Rules can only be defined on columns that appear in 'select' and not in
+       'drop'
+
+    4. The rules can be of three types depending upon the operator:
+       some_column < some_value
+       some_column = some_value
+       some_column > some_value
+
+       For the above three cases the operator attribute must be
+       "&lt;", "=", "&gt;" respectively
+
+       Also note that to compare a column with a string value,
+       for e.g. for a filter like simbadType=Star, ensure to enclose the
+       string within single quotes (i.e. value="'Star'")
+
+       Examples:
+       <column name="candidate" subcol="ra" operator="&lt;" value="11"/>
+       <column name="candidate" subcol="magpsf" operator="&gt;" value="15"/>
+       <column name="simbadType" operator="=" value="'Star'"/>
+-->
+
+<!-- root element -->
+<distribution-rules>
+
+  <!-- columns to select for distribution -->
+  <select>
+    <column name="objectId"/>
+    <column name="candid"/>
+    <column name="candidate" subcol="pid"/>
+    <column name="candidate" subcol="ra"/>
+    <column name="candidate" subcol="dec"/>
+    <column name="candidate" subcol="magpsf"/>
+    <column name="candidate" subcol="xpos"/>
+    <column name="candidate" subcol="ypos"/>
+    <column name="prv_candidates"/>
+    <column name="simbadType"/>
+    <column name="status"/>
+  </select>
+
+  <!-- columns to drop before distribution -->
+  <drop>
+    <column name="prv_candidates"/>
+  </drop>
+
+
+  <!-- filters to apply before distribution -->
+  <filter>
+    <column name="candidate" subcol="magpsf" operator="&gt;" value="12"/>
+    <column name="candidate" subcol="ra" operator="&gt;" value="11"/>
+  </filter>
+
+</distribution-rules>
