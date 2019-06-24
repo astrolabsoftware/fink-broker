@@ -98,7 +98,7 @@ coverage run --source=${FINK_HOME} \
 fink start stream2raw --exit_after 30 --simulator -c $conf
 
 # Run the test suite on the modules
-for i in ${FINK_HOME}/python/fink_broker/*.py
+for i in ${FINK_HOME}/fink_broker/*.py
 do
   coverage run \
     --source=${FINK_HOME} \
@@ -120,6 +120,12 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 50 -c $conf
+
+  # Start the distribution service
+  fink start distribution --exit_after 25 -c $conf &
+
+  # Connect to distribution service
+  fink start distribution_test --exit_after 20 -c $conf
 fi
 
 # Combine individual reports in one

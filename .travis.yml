@@ -4,8 +4,8 @@ dist: xenial
 
 # Check against N & N-1 Spark versions
 env:
-  - SPARK_VERSION=2.4.0
   - SPARK_VERSION=2.4.1
+  - SPARK_VERSION=2.4.3
 
 python:
   - "3.6"
@@ -36,8 +36,12 @@ install:
   - echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
   - echo "spark.python.daemon.module coverage_daemon" > ${SPARK_HOME}/conf/spark-defaults.conf
   - export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
-  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_HOME}/python:$PYTHONPATH"
+  - export PYTHONPATH="${SPARKLIB}:${FINK_HOME}:$PYTHONPATH"
   - export PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
+
+  # Download and Install Kafka
+  - source conf/install_kafka.sh
+  - export KAFKA_HOME=$( pwd )/kafka
 
   # Python deps
   - pip install --upgrade pip setuptools wheel
@@ -46,6 +50,10 @@ install:
 script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
+
+  # Start Kafka Server and create a test topic
+  - fink_kafka start
+  - fink_kafka --create-topic distribution_test
 
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis

@@ -74,7 +74,7 @@ Finally, define `FINK_HOME` and add the path to the Fink binaries and modules in
 ```bash
 # in ~/.bash_profile
 export FINK_HOME=/path/to/fink-broker
-export PYTHONPATH=$FINK_HOME/python:$PYTHONPATH
+export PYTHONPATH=$FINK_HOME:$PYTHONPATH
 export PATH=$FINK_HOME/bin:$PATH
 ```
 
@@ -152,6 +152,6 @@ Handle Kafka stream received by Apache Spark
  To see the running processes:
   fink show
 
- Available services are: dashboard, checkstream, stream2raw, raw2science
+ Available services are: dashboard, checkstream, stream2raw, raw2science, distribution
  Typical configuration would be ${FINK_HOME}/conf/fink.conf
 ```

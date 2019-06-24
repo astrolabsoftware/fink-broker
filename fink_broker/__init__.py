@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2019 AstroLab Software
 # Author: Julien Peloton
 #
@@ -13,14 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -e
-
-HBASE_VERSION=2.1.5
-
-wget http://www-us.apache.org/dist/hbase/${HBASE_VERSION}/hbase-${HBASE_VERSION}-bin.tar.gz
-tar -zxvf hbase-${HBASE_VERSION}-bin.tar.gz
-rm hbase-${HBASE_VERSION}-bin.tar.gz
-
-cp conf/hbase-site.xml hbase-${HBASE_VERSION}/conf/
-
-hbase-${HBASE_VERSION}/bin/start-hbase.sh
+__version__ = "0.2.0"

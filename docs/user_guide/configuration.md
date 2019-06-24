@@ -64,15 +64,15 @@ Note that while Apache Avro is supported natively since Spark 2.4, you still nee
 # These are the Maven Coordinates of dependencies for Fink
 # Change the version according to your Spark version.
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
-org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
-org.apache.spark:spark-avro_2.11:2.4.0
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.1,\
+org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.1,\
+org.apache.spark:spark-avro_2.11:2.4.1
 ```
 
 In addition to packages, you can specify external libraries as jars:
 ```
-# These two are shipped with the code
-FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,\
+# These two are shipped with the code - use the latest version
+FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.2.0.jar,\
 ${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar
 ```
 
@@ -101,6 +101,15 @@ Do not forget to give a name to your HBase science table:
 ```
 # The name of the HBase table
 SCIENCE_DB_NAME="test_catalog"
+```
+
+And link to the HBase XML configuration file of your cluster. The file must be
+located in the `conf` folder of the Spark installation:
+
+```
+# HBase configuration file - must be under ${SPARK_HOME}/conf
+# You can find an example in ${FINK_HOME}/conf
+HBASE_XML_CONF=${SPARK_HOME}/conf/hbase-site.xml
 ```
 
 ## Configuring the dashboard

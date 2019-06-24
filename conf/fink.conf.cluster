@@ -36,15 +36,15 @@ SECURED_KAFKA_CONFIG=''
 # Change the version according to your Spark version.
 # NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.0,\
-org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.0,\
-org.apache.spark:spark-avro_2.11:2.4.0,\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.1,\
+org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.1,\
+org.apache.spark:spark-avro_2.11:2.4.1,\
 org.apache.hbase:hbase-client:2.1.4,\
 org.apache.hbase:hbase-common:2.1.4,\
 org.apache.hbase:hbase-mapreduce:2.1.4
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.1.0.jar,\
+FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-0.2.0.jar,\
 ${FINK_HOME}/libs/shc-core-1.1.3-2.4-s_2.11.jar
 
 # Time interval between 2 trigger updates (second)
@@ -71,6 +71,11 @@ FINK_ALERT_CHECKPOINT_SCI=""
 
 # The name of the HBase table
 SCIENCE_DB_NAME=""
+SCIENCE_DB_CATALOG=${FINK_HOME}/catalog.json
+
+# HBase configuration file - must be under ${SPARK_HOME}/conf
+# You can find an example in ${FINK_HOME}/conf
+HBASE_XML_CONF=${SPARK_HOME}/conf/hbase-site.xml
 
 ######################################
 # Dashboard
@@ -98,3 +103,11 @@ TIME_INTERVAL=0.1
 
 # Total number of alerts to send
 POOLSIZE=100
+
+######################################
+# Distribution
+# Configurations for Alert Re-Distribution
+# The path where to store the avro distribution schema
+DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema.avsc
+DISTRIBUTION_OFFSET="latest"
+DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset

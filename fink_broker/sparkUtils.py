@@ -17,6 +17,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
+from pyspark.sql.functions import col, struct
 
 import os
 import json
@@ -61,6 +62,48 @@ def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
     f = getattr(getattr(avro, "package$"), "MODULE$").from_avro
     return Column(f(_to_java_column(dfcol), jsonformatschema))
 
+def to_avro(dfcol: Column) -> Column:
+    """Serialize the structured data of a DataFrame column into avro data (binary).
+
+    Note:
+    Since Pyspark does not have a function to convert a column to and from
+    avro data, this is a wrapper around the scala function 'to_avro'.
+    Just like the function above, to be able to use this you need to have
+    the package org.apache.spark:spark-avro_2.11:2.x.y in the classpath.
+
+    Parameters
+    ----------
+    dfcol: Column
+        A DataFrame Column with Structured data
+
+    Returns
+    ----------
+    out: Column
+        DataFrame Column encoded into avro data (binary).
+        This is what is required to publish to Kafka Server for distribution.
+
+    Examples
+    ----------
+    >>> avro_example_schema = '''
+    ... {
+    ...     "type" : "record",
+    ...     "name" : "struct",
+    ...     "fields" : [
+    ...             {"name" : "col1", "type" : "long"},
+    ...             {"name" : "col2", "type" : "string"}
+    ...     ]
+    ... }'''
+    >>> df = spark.range(5)
+    >>> df = df.select(struct("id",\
+                 col("id").cast("string").alias("id2"))\
+                 .alias("struct"))
+    >>> avro_df = df.select(to_avro(col("struct")).alias("avro"))
+    """
+    sc = SparkContext._active_spark_context
+    avro = sc._jvm.org.apache.spark.sql.avro
+    f = getattr(getattr(avro, "package$"), "MODULE$").to_avro
+    return Column(f(_to_java_column(dfcol)))
+
 def write_to_csv(
         batchdf: DataFrame, batchid: int, fn: str = "web/data/simbadtype.csv"):
     """ Write DataFrame data into a CSV file.
@@ -76,7 +119,8 @@ def write_to_csv(
     Parameters
     ----------
     batchdf: DataFrame
-        Static Spark DataFrame with stream data
+        Static Spark DataFrame with stream data. Expect 2 columns
+        with variable names and their count.
     batchid: int
         ID of the batch.
     fn: str, optional
@@ -89,7 +133,7 @@ def write_to_csv(
     >>> write_to_csv(df, 0, fn="test.csv")
     >>> os.remove("test.csv")
     """
-    batchdf.select(["type", "count"])\
+    batchdf\
         .toPandas()\
         .to_csv(fn, index=False)
     batchdf.unpersist()
@@ -280,7 +324,11 @@ def connect_to_raw_database(
         .getOrCreate()
 
     # Create a DF from the database
-    userschema = spark.read.format("parquet").load(path).schema
+    userschema = spark\
+            .read\
+            .parquet(basepath)\
+            .schema
+
     df = spark \
         .readStream \
         .format("parquet") \

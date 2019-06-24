@@ -1,5 +1,6 @@
+#!/bin/bash
 # Copyright 2019 AstroLab Software
-# Author: Julien Peloton
+# Author: Abhishek Chauhan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,4 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-__version__ = "0.1.1"
+set -e
+
+KAFKA_VERSION=2.2.0
+
+wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
+mkdir -p kafka
+tar -xzf kafka.tgz -C kafka --strip-components 1
+rm kafka.tgz
