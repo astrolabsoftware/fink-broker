@@ -7,6 +7,7 @@ This tutorial illustrates the basics of simulating a data stream, reading it usi
 **Before starting**
 
 For this tutorial, make sure:
+
 * Fink is installed on your computer.
 * Apache Spark (2.4+) is installed on your computer.
 * Docker is installed on your computer.
@@ -78,6 +79,9 @@ The `stream2raw` service connects to the stream, decode the alert data (Apache A
 # Launch a pyspark shell with fink dependencies loaded
 source conf/fink.conf.tutorial1
 PYSPARK_DRIVER_PYTHON=ipython pyspark --jars $FINK_JARS --packages $FINK_PACKAGES
+
+# You can also use jupyter-notebook
+PYSPARK_DRIVER_PYTHON=jupyter-notebook pyspark --jars $FINK_JARS --packages $FINK_PACKAGES
 ```
 
 and type:
@@ -87,8 +91,8 @@ and type:
 datapath = "archive/alerts_store"
 
 df = spark.read\
-  .format('parquet')
-  .option("basePath", datapath)
+  .format('parquet')\
+  .option("basePath", datapath)\
   .load(datapath + "/topic=tutorial1")
 
 df.show(5)
@@ -117,3 +121,73 @@ df.select("decoded.*").show(5)
 # |      3.2|ZTF (www.ztf.calt...|ZTF18abomlbr|697252384915015004|[2458451.7523843,...|[[2458423.7417014...|[candid6972523849...|[candid6972523849...|[candid6972523849...|
 # +---------+--------------------+------------+------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
 ```
+
+You can keep accessing the fields but going deeper in the nested structure:
+
+```python
+df.select("decoded.candidate.*").select(["ra", "dec"]).show(5)
+# +----------+-----------+
+# |        ra|        dec|
+# +----------+-----------+
+# |14.4972117|  -8.052153|
+# |12.7713275| -8.0862249|
+# | 16.772793|-18.2193328|
+# |25.5512235|-24.0744837|
+# | 9.1837617|  -6.149572|
+# +----------+-----------+
+# only showing top 5 rows
+```
+
+Finally, let's have a quick look at some of the cutouts:
+
+```python
+import matplotlib.pyplot as plt
+from astropy.io import fits
+
+import io
+import gzip
+import aplpy
+
+def plot_cutout(stamp, fig=None, subplot=None, **kwargs):
+    """ Plot square FITS image stores in the ZTF alert.
+    Borrowed from the ZTF repo:
+    https://github.com/ZwickyTransientFacility/ztf-avro-alert/
+
+    Parameters
+    ----------
+    stamp: bytes
+        Binary image data
+
+    Returns
+    ----------
+    ffig: FITSFigure
+    """
+    with gzip.open(io.BytesIO(stamp), 'rb') as f:
+        with fits.open(io.BytesIO(f.read())) as hdul:
+            if fig is None:
+                fig = plt.figure(figsize=(4,4))
+            if subplot is None:
+                subplot = (1,1,1)
+            ffig = aplpy.FITSFigure(
+                hdul[0], figure=fig, subplot=subplot, **kwargs)
+            ffig.show_grayscale(stretch='arcsinh')
+    return ffig
+
+# Take a few alerts
+alerts = df.select("decoded.*").take(3)
+
+fig = plt.figure(figsize=(10, 10))
+for index_alert, alert in enumerate(alerts):
+    for index_cutout, cutout in enumerate(
+            ["cutoutScience", "cutoutTemplate", "cutoutDifference"]):
+        o = plot_cutout(
+            alert[cutout]["stampData"],
+            fig=fig, subplot=(3, 3, 3*index_alert+index_cutout+1))
+        if index_alert == 0:
+            o.set_title(cutout)
+        if index_cutout == 0:
+            o.add_label(30, 5, "{}".format(alert["objectId"]), color="white")
+plt.show()
+```
+
+![Screenshot](../img/cutouts.png)
