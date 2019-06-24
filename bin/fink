@@ -226,13 +226,17 @@ elif [[ $service == "distribution" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
   ${FINK_HOME}/bin/distribute.py -science_db_catalog ${SCIENCE_DB_CATALOG} \
-  -distribution_schema ${DISTRIBUTION_SCHEMA}
+  -science_db_name ${SCIENCE_DB_NAME} \
+  -distribution_schema ${DISTRIBUTION_SCHEMA} \
+  -startingOffset_dist ${DISTRIBUTION_OFFSET} \
+  -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} ${EXIT_AFTER} 
 elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
-  ${FINK_HOME}/bin/distribution_test.py -distribution_schema ${DISTRIBUTION_SCHEMA}
+  ${FINK_HOME}/bin/distribution_test.py ${EXIT_AFTER} \
+  -distribution_schema ${DISTRIBUTION_SCHEMA}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
