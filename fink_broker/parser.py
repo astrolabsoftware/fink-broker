@@ -157,6 +157,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         scanned and alerts have been distributed.
         [DISTRIBUTION_OFFSET_FILE]
         """)
+    parser.add_argument(
+        '-distribution_rules_xml', type=str, default='',
+        help="""
+        The path to distribution-rules.xml which stores user defined rules to
+        filter the distribution stream
+        [DISTRIBUTION_RULES_XML]
+        """)
     args = parser.parse_args(None)
     return args
 

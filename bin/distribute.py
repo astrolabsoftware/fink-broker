@@ -17,7 +17,8 @@
 """Distribute the alerts to users
 
 1. Use the Alert data that is stored in the Science database (HBase)
-2. Serialize into Avro
+2. Apply user defined filters
+3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
 
@@ -48,7 +49,6 @@ def main():
     # Define variables
     min_timestamp = 100     # set a default
     t_end = 1577836799      # some default value
-    rules_xml = os.path.abspath(os.path.join(os.environ['FINK_HOME'], 'conf/distribution-rules.xml'))
 
     # get distribution offset
     min_timestamp = get_distribution_offset(
@@ -79,8 +79,8 @@ def main():
         # Filter out records that have been distributed
         df = df.filter("status!='distributed'")
 
-        # Apply additional filters
-        df = get_filtered_df(df, rules_xml)
+        # Apply additional filters (user defined)
+        df = get_filtered_df(df, args.distribution_rules_xml)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
@@ -93,7 +93,7 @@ def main():
             .option("topic", "fink_outstream")\
             .save()
 
-        # Update the status column in Hbase
+        # Update the status in Hbase and commit checkpoint to file
         update_status_in_hbase(df, args.science_db_name, "objectId",
                 args.checkpointpath_dist, max_timestamp)
 
