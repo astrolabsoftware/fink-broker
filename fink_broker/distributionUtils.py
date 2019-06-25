@@ -332,6 +332,32 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
 
     Examples
     ----------
+    # Set path to xml rule file
+    >>> rules_xml = os.path.abspath(os.path.join(
+    ...         os.environ['FINK_HOME'], 'distribution-rules-sample.xml'))
+
+    # get list of all columns in the dataframe
+    >>> df_cols = ["objectId", "candid", "candidate_jd", "candidate_ra",
+    ...        "candidate_dec", "candidate_magpsf", "simbadType"]
+
+    # get columns to distribute and rules to apply
+    >>> cols_to_distribute, rules_list = parse_distribution_rules(rules_xml, df_cols)
+
+    # Print
+    >>> for x in cols_to_distribute:
+    ...     print(x)
+    objectId
+    candid
+    candidate_ra
+    candidate_dec
+    candidate_magpsf
+    simbadType
+
+    >>> for rule in rules_list:
+    ...     print(rule)
+    candidate_magpsf>16
+    candidate_ra<22
+    simbadType='Star'
     """
     # parse the xml and make an element tree
     tree = ET.parse(rules_xml)
@@ -345,7 +371,7 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
     # check if the tree has a select element
     if not ET.iselement(root[0]):
         print("Invalid rules: Select not found")
-        return
+        return [],[]
 
     # iterate the 'select' element in the xml tree
     for elem in root[0]:
@@ -373,7 +399,7 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
                 cols_to_select.append(col)
             else:
                 print("Error in Select: invalid column: {}".format(col))
-                return
+                return [],[]
 
     # remove duplicates
     cols_to_select = list(dict.fromkeys(cols_to_select))
@@ -411,7 +437,7 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
                     cols_to_drop.append(col)
                 else:
                     print("Error in Drop: invalid column: {}".format(col))
-                    return
+                    return [],[]
 
         # remove duplicates
         cols_to_drop = list(dict.fromkeys(cols_to_drop))
@@ -443,6 +469,7 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
                     rules_list.append(rule)
                 else:
                     print("can not apply rule to the column {}".format(attrib['name']))
+                    return cols_to_distribute, []
 
             # when subcolumn is given
             elif 'subcol' in attrib:
@@ -454,7 +481,7 @@ def parse_distribution_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]
                     rules_list.append(rule)
                 else:
                     print("Error in Filter: invalid column: {}".format(col))
-                    return
+                    return cols_to_distribute, []
 
         # remove duplicate rules
         rules_list = list(dict.fromkeys(rules_list))
@@ -481,6 +508,38 @@ def get_filtered_df(df: DataFrame, rules_xml: str) -> DataFrame:
 
     Examples
     ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw", "ZTF18acsbten"],
+    ...     [697251923115015002, 697251921215010004, 697252386115010006],
+    ...     [2458451.7519213, 2458451.7519213, 2458451.7523843],
+    ...     [20.393772, 20.4233877, 12.5489498],
+    ...     [-25.4669463, -27.0588511, -13.7619586],
+    ...     [16.074839, 17.245092, 19.667372],
+    ...     ["Star", "Unknown", "Unknown"])).toDF(["objectId", "candid", "candidate_jd",
+    ...     "candidate_ra", "candidate_dec", "candidate_magpsf", "simbadType"])
+    >>> df.show()
+    +------------+------------------+---------------+------------+-------------+----------------+----------+
+    |    objectId|            candid|   candidate_jd|candidate_ra|candidate_dec|candidate_magpsf|simbadType|
+    +------------+------------------+---------------+------------+-------------+----------------+----------+
+    |ZTF18aceatkx|697251923115015002|2458451.7519213|   20.393772|  -25.4669463|       16.074839|      Star|
+    |ZTF18acsbjvw|697251921215010004|2458451.7519213|  20.4233877|  -27.0588511|       17.245092|   Unknown|
+    |ZTF18acsbten|697252386115010006|2458451.7523843|  12.5489498|  -13.7619586|       19.667372|   Unknown|
+    +------------+------------------+---------------+------------+-------------+----------------+----------+
+    <BLANKLINE>
+
+    # Set path to xml rule file
+    >>> rules_xml = os.path.abspath(os.path.join(
+    ...         os.environ['FINK_HOME'], 'distribution-rules-sample.xml'))
+
+    # get filtered dataframe
+    >>> df_filtered = get_filtered_df(df, rules_xml)
+    >>> df_filtered.show()
+    +------------+------------------+------------+-------------+----------------+----------+
+    |    objectId|            candid|candidate_ra|candidate_dec|candidate_magpsf|simbadType|
+    +------------+------------------+------------+-------------+----------------+----------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|       16.074839|      Star|
+    +------------+------------------+------------+-------------+----------------+----------+
+    <BLANKLINE>
     """
     # Get all the columns in the DataFrame
     df_cols = df.columns
