@@ -22,55 +22,46 @@ import xml.etree.ElementTree as ET
 
 from typing import Any, Tuple
 
+from userfilters.levelone import *
+
 from fink_broker.tester import spark_unit_tests
 
-@pandas_udf(BooleanType(), PandasUDFType.SCALAR)
-def keep_alert_based_on(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
-    """ Experimental filtering service. For testing purposes only.
-
-    Create a column whose entry is false if the alert has to be discarded,
-    and true otherwise.
+def apply_user_defined_filters(df, filter_names):
+    """Apply iteratively user filters to keep only wanted alerts.
 
     Parameters
     ----------
-    nbad: Spark DataFrame Column
-        Column containing the nbad values
-    rb: Spark DataFrame Column
-        Column containing the rb values
-    magdiff: Spark DataFrame Column
-        Column containing the magdiff values
+    df: DataFrame
+        Spark DataFrame with alert data
+    filter_names: list of string
+        List containing filter name to be applied. These filters should
+        be functions defined in `user_filter.py`.
 
     Returns
-    ----------
-    out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: 1 for bad alert,
-        and 0 for good alert.
+    -------
+    df: DataFrame
+        Spark DataFrame with filtered alert data
 
     Examples
-    ----------
-    >>> df = spark.sparkContext.parallelize(zip(
-    ...   [0, 1, 0, 0],
-    ...   [0.01, 0.02, 0.6, 0.01],
-    ...   [0.02, 0.05, 0.2, 0.01])).toDF(["nbad", "rb", "magdiff"])
-    >>> df_type = df.withColumn(
-    ...   "tokeep",
-    ...   keep_alert_based_on(col("nbad"), col("rb"), col("magdiff")))
-    >>> df_type.show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+------+
-    |nbad|  rb|magdiff|tokeep|
-    +----+----+-------+------+
-    |   0|0.01|   0.02|  true|
-    |   1|0.02|   0.05| false|
-    |   0| 0.6|    0.2| false|
-    |   0|0.01|   0.01|  true|
-    +----+----+-------+------+
-    <BLANKLINE>
-    """
-    mask = nbad.values == 0
-    mask *= rb.values <= 0.55
-    mask *= abs(magdiff.values) <= 0.1
+    -------
+    >>>
 
-    return pd.Series(mask)
+    """
+    for filter_func_name in filter_names:
+        filter_func = globals()[filter_func_name]
+        # Note to access input argument, we need f.func and not just f.
+        # This is because f has a decorator on it.
+        ninput = filter_func.func.__code__.co_argcount
+        colnames = [
+            col("decoded.candidate.{}".format(i))
+            for i in filter_func.func.__code__.co_varnames[:ninput]]
+
+        df = df\
+            .withColumn("toKeep", filter_func(*colnames))\
+            .filter("toKeep == true")\
+            .drop("toKeep")
+
+    return df
 
 
 def get_columns(node: Any, df_cols: list) -> list:
