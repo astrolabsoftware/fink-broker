@@ -48,17 +48,17 @@ Manage Finks Kafka Server for Alert Distribution
 The Spark process is responsible for reading the alert data from the [Science Database](database.md#science-database-structure),
 converting the data into avro packets and publishing them to Kafka topic(s).
 <br>
-To test the working of the distribution system, first start Fink's Kafka Cluster
-and create a test topic:
+To see the working of the distribution system, first start Fink's Kafka Cluster
+and create the topic "fink_outstream":
 
 ```bash
 # Start the Kafka Cluster
 fink_kafka start
 # Create a test topic
-fink_kafka --create-topic distribution_test
+fink_kafka --create-topic fink_outstream
 ```
 
-This will start the Kafka Cluster and create a topic "distribution_test" if it didn't already exist.
+This will start the Kafka Cluster and create a topic "fink_outstream" if it didn't already exist.
 Now, start the distribution service:
 
 ```bash
@@ -79,7 +79,7 @@ DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema
 This schema can be used by a consumer service to read and decode the Kafka messages. To learn more about configuring Fink see [configuration](configuration.md).
 <br><br>
 To check the working of the distribution pipelline we provide a Spark Consumer that reads the messages published
-on the topic "distribution_test" and uses the schema above to convert them back to Spark DataFrame. This can be run using:
+on the topic "fink_outstream" and uses the schema above to convert them back to Spark DataFrame. This can be run using:
 
 ```bash
 fink start distribution_test

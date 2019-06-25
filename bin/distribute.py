@@ -90,7 +90,7 @@ def main():
             .write\
             .format("kafka")\
             .option("kafka.bootstrap.servers", "localhost:9093")\
-            .option("topic", "distribution_test")\
+            .option("topic", "fink_outstream")\
             .save()
 
         # Update the status column in Hbase
