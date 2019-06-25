@@ -496,7 +496,7 @@ def get_filtered_df(df: DataFrame, rules_xml: str) -> DataFrame:
     for rule in rules_list:
         df_filtered = df_filtered.filter(rule)
 
-    return df_filtered
+    return df_filtered.cache()
 
 
 if __name__ == "__main__":
