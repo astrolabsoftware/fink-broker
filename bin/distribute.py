@@ -30,7 +30,8 @@ import os
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
-from fink_broker.distributionUtils import get_distribution_offset, get_filtered_df
+from fink_broker.distributionUtils import get_distribution_offset
+from fink_broker.filters import filter_df_using_xml
 from pyspark.sql import DataFrame
 
 def main():
@@ -80,7 +81,7 @@ def main():
         df = df.filter("status!='distributed'")
 
         # Apply additional filters (user defined)
-        df = get_filtered_df(df, args.distribution_rules_xml)
+        df = filter_df_using_xml(df, args.distribution_rules_xml)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)

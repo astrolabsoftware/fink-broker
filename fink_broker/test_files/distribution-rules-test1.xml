@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+
+<!-- distribution.dtd -->
+<!DOCTYPE distribution-rules [
+  <!ELEMENT distribution-rules (select, drop?, filter?) >
+  <!ELEMENT select (column+) >
+  <!ELEMENT drop (column*) >
+  <!ELEMENT filter (column*) >
+  <!ELEMENT column (#PCDATA)>
+  <!ATTLIST column name CDATA #REQUIRED
+                   subcol CDATA #IMPLIED
+                   operator CDATA #IMPLIED
+                   value CDATA #IMPLIED >
+]>
+
+<!-- root element -->
+<distribution-rules>
+  <select>
+    <column name="objectId"/>
+    <column name="candid"/>
+    <column name="candidate" subcol="jd"/>
+    <column name="candidate" subcol="ra"/>
+    <column name="candidate" subcol="dec"/>
+    <column name="candidate" subcol="pid"/>
+    <column name="candidate" subcol="magpsf"/>
+    <column name="prv_candidates"/>
+    <column name="simbadType"/>
+  </select>
+
+  <!-- columns to drop before distribution -->
+  <drop>
+    <column name="candidate" subcol="jd"/>
+  </drop>
+
+
+  <!-- filters to apply before distribution -->
+  <filter>
+    <column name="candidate" subcol="magpsf" operator="&gt;" value="16"/>
+    <column name="candidate" subcol="ra" operator="&lt;" value="22"/>
+    <column name="simbadType" operator="=" value="'Star'"/>
+  </filter>
+
+</distribution-rules>

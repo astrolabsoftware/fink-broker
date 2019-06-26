@@ -15,8 +15,6 @@
 
 <!-- root element -->
 <distribution-rules>
-
-  <!-- columns to select for distribution -->
   <select>
     <column name="objectId"/>
     <column name="candid"/>
@@ -30,7 +28,7 @@
 
   <!-- columns to drop before distribution -->
   <drop>
-    <column name="candidate" subcol="jd"/>
+    <column name="candidate" subcol="pid"/>
   </drop>
 
 
