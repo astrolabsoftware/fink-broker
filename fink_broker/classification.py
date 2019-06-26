@@ -196,61 +196,6 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
 
         return out
 
-@pandas_udf(StringType(), PandasUDFType.SCALAR)
-def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
-    """ Query the CDSXmatch service to find identified objects
-    in alerts. The catalog queried is the SIMBAD bibliographical database.
-    We can also use the 10,000+ VizieR tables if needed :-)
-
-    I/O specifically designed for use as `pandas_udf` in `select` or
-    `withColumn` dataframe methods
-
-    Parameters
-    ----------
-    oid: list of str or Spark DataFrame Column of str
-        List containing object ids (custom)
-    ra: list of float or Spark DataFrame Column of float
-        List containing object ra coordinates
-    dec: list of float or Spark DataFrame Column of float
-        List containing object dec coordinates
-
-    Returns
-    ----------
-    out: pandas.Series of string
-        Return a Pandas DataFrame with the type of object found in Simbad.
-        If the object is not found in Simbad, the type is
-        marked as Unknown. In the case several objects match
-        the centroid of the alert, only the closest is returned.
-        If the request Failed (no match at all), return Column of Fail.
-
-    Examples
-    ----------
-    >>> df = spark.sparkContext.parallelize(zip(
-    ...   [26.8566983, 26.24497],
-    ...   [-26.9677112, -26.7569436],
-    ...   ["1", "2"])).toDF(["ra", "dec", "id"])
-    >>> df_type = df.withColumn(
-    ...   "type",
-    ...   cross_match_alerts_per_batch(col("id"), col("ra"), col("dec")))
-    >>> df_type.show() # doctest: +NORMALIZE_WHITESPACE
-    +----------+-----------+---+-------+
-    |        ra|        dec| id|   type|
-    +----------+-----------+---+-------+
-    |26.8566983|-26.9677112|  1|   Star|
-    |  26.24497|-26.7569436|  2|Unknown|
-    +----------+-----------+---+-------+
-    <BLANKLINE>
-    """
-    matches = cross_match_alerts_raw(id.values, ra.values, dec.values)
-    if len(matches) > 0:
-        # (id, ra, dec, name, type)
-        # return only the type.
-        names = np.transpose(matches)[-1]
-    else:
-        # Tag as Fail if the request failed.
-        names = ["Fail"] * len(id)
-    return pd.Series(names)
-
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
