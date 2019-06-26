@@ -36,8 +36,10 @@ from fink_broker.sparkUtils import write_to_csv
 from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.filters import apply_user_defined_filters
+from fink_broker.filters import apply_user_defined_processors
 
 from userfilters.levelone import filter_levelone_names
+from userfilters.levelone import processor_levelone_names
 
 from pyspark.sql.functions import lit
 
@@ -65,8 +67,10 @@ def main():
     # Apply level one processors
     df = apply_user_defined_processors(df, processor_levelone_names)
 
+    # Select alert data + timestamp + added value from processors
     new_colnames = ["decoded.*", "cast(timestamp as string) as timestamp"]
-    [new_colnames.append(i) for i in processor_levelone_names]
+    for i in processor_levelone_names:
+        new_colnames.append(i)
 
     df = df.selectExpr(new_colnames)
 
