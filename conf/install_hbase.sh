@@ -24,3 +24,4 @@ rm hbase-${HBASE_VERSION}-bin.tar.gz
 cp conf/hbase-site.xml hbase-${HBASE_VERSION}/conf/
 
 hbase-${HBASE_VERSION}/bin/start-hbase.sh
+export PATH="hbase-${HBASE_VERSION}/bin:${PATH}"
