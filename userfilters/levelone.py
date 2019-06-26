@@ -19,7 +19,12 @@ import pandas as pd
 
 from typing import Any
 
+# Declare here the filters that will be applied in the
+# level one (stream -> raw database)
 filter_levelone_names = ["qualitycuts"]
+
+# Declare here the processors that will be applied in the
+# level one (stream -> raw database)
 processor_levelone_names = [""]
 
 @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
