@@ -33,7 +33,6 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.sparkUtils import write_to_csv
-from fink_broker.classification import cross_match_alerts_per_batch
 from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.filters import apply_user_defined_filters
@@ -60,19 +59,16 @@ def main():
     df = connect_to_raw_database(
         args.rawdatapath, args.rawdatapath + "/*", latesfirst)
 
+    # Apply level one filters
     df = apply_user_defined_filters(df, filter_levelone_names)
 
-    # for good alerts, perform a cross-match with SIMBAD,
-    # and return the types of the objects (Star, AGN, Unknown, etc.)
-    df_type = df.withColumn(
-        "simbadType",
-        cross_match_alerts_per_batch(
-            col("decoded.objectId"),
-            col("decoded.candidate.ra"),
-            col("decoded.candidate.dec")
-        )
-    ).selectExpr(
-        "decoded.*", "cast(timestamp as string) as timestamp", "simbadType")
+    # Apply level one processors
+    df = apply_user_defined_processors(df, processor_levelone_names)
+
+    new_colnames = ["decoded.*", "cast(timestamp as string) as timestamp"]
+    [new_colnames.append(i) for i in processor_levelone_names]
+
+    df = df.selectExpr(new_colnames)
 
     df_hbase = flattenstruct(df_type, "candidate")
     df_hbase = flattenstruct(df_hbase, "cutoutScience")
