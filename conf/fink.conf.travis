@@ -109,3 +109,5 @@ POOLSIZE=10
 # Configurations for Alert Re-Distribution
 # The path where to store the avro distribution schema
 DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema.avsc
+DISTRIBUTION_OFFSET="latest"
+DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset

@@ -17,12 +17,14 @@ import json
 import os
 import glob
 import shutil
+import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import get_spark_context, to_avro, from_avro
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import struct, col
+from pyspark.sql.functions import struct, col, lit
 from fink_broker.tester import spark_unit_tests
+from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
 def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     """Create and return a df to pubish to Kafka
@@ -54,9 +56,15 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
         A Spark DataFrame with an avro(binary) encoded Column named "value"
     ----------
     """
+    # Remove the status column before distribution
+    cols = df.columns
+    if "status" in cols:
+        cols.remove("status")
+
+    df = df.select(cols)
+
     # Create a StructType column in the df for distribution.
-    # The contents and schema of the df can change over time with
-    # changing requirements of Alert redistribution
+    # The contents and schema of the df can change over time
     df_struct = df.select(struct(df.columns).alias("struct"))
 
     # Convert into avro and save the schema
@@ -181,6 +189,122 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     df = df_kafka.select(from_avro("value", avro_schema).alias("struct"))
 
     return df
+
+
+def update_status_in_hbase(
+        df: DataFrame, database_name: str, rowkey: str,
+        offsetFile: str, timestamp: int):
+    """update the status column in Hbase
+
+    Parameters
+    ----------
+    df: DataFrame
+        A Spark DataFrame created after reading the database (HBase)
+    database_name: str
+        Name of the database
+    rowkey: str
+        Name of the rowkey in the HBase catalog
+    offsetFile: str
+        the path of offset file for distribution
+    timestamp: int
+        timestamp till which science db has been scanned and distributed
+    ----------
+    """
+    df = df.select(rowkey, "status")
+    df = df.withColumn("status", lit("distributed"))
+
+    update_catalog = construct_hbase_catalog_from_flatten_schema(df.schema,\
+                    database_name, rowkey)
+    df.write\
+      .option("catalog", update_catalog)\
+      .format("org.apache.spark.sql.execution.datasources.hbase")\
+      .save()
+
+    # write offset(timestamp) to file
+    with open(offsetFile, 'w') as f:
+        string = "distributed till, {}".format(timestamp)
+        f.write(string)
+
+
+def get_distribution_offset(
+        offsetFile: str, startingOffset_dist: str = "latest") -> int:
+    """Read and return distribution offset from file
+
+    Parameters
+    ----------
+    offsetFile: str
+        the path of offset file for distribution
+
+    startingOffset_dist: str, optional
+        Offset(timestamp) from where to start the distribution. Options are
+        latest (read timestamp from file), earliest (from the beginning of time),
+        timestamp (custom timestamp input by user)
+
+    Returns
+    ----------
+    timestamp: int
+        a timestamp (typical unix timestamp: time in ms since epoch)
+
+    Examples
+    ----------
+    # set a test timestamp
+    >>> test_t = int(round(time.time() * 1000))
+
+    # write to a file
+    >>> with open('dist.offset.test', 'w') as f:
+    ...     string = "distributed till, {}".format(test_t)
+    ...     f.write(string)
+    ...
+    31
+
+    # test 1 (wrong file name)
+    >>> min_timestamp = get_distribution_offset("invalidFile", "latest")
+    >>> min_timestamp
+    100
+
+    # test 2 (given earliest)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", "earliest")
+    >>> min_timestamp
+    100
+
+    # test 3 (given latest)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", "latest")
+    >>> min_timestamp == test_t
+    True
+
+    # test 4 (no offset given)
+    >>> min_timestamp = get_distribution_offset("dist.offset.test")
+    >>> min_timestamp == test_t
+    True
+
+    # test 5 (custom timestamp given)
+    >>> custom_t = int(round(time.time() * 1000))
+    >>> min_timestamp = get_distribution_offset("dist.offset.test", custom_t)
+    >>> min_timestamp == custom_t
+    True
+
+    # Delete offset file
+    >>> os.remove('dist.offset.test')
+
+    """
+    # if the offset file doesn't exist or is empty
+    if not os.path.isfile(offsetFile) or os.path.getsize(offsetFile) <= 0:
+        # set a default
+        min_timestamp = 100
+    else:
+        if startingOffset_dist == "latest":
+            with open(offsetFile, 'r') as f:
+                line = f.readlines()[-1]
+                min_timestamp = int(line.split(", ")[-1])
+
+        elif startingOffset_dist == "earliest":
+            # set timestamp to beginning of time
+            min_timestamp = 100
+        else:
+            # user given timestamp
+            min_timestamp = int(startingOffset_dist)
+
+    return min_timestamp
 
 
 if __name__ == "__main__":
