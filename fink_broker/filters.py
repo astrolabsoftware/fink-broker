@@ -73,12 +73,12 @@ def keep_alert_based_on(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     return pd.Series(mask)
 
 
-def parse_xml_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]:
+def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     """Parse an xml file with rules for filtering
 
     Parameters
     ----------
-    rules_xml: str
+    xml_file: str
         Path to the xml file
 
     df_cols: list
@@ -118,160 +118,117 @@ def parse_xml_rules(rules_xml: str, df_cols: list) -> Tuple[list, list]:
 
     >>> for rule in rules_list:
     ...     print(rule)
-    candidate_magpsf>16
-    candidate_ra<22
-    simbadType='Star'
+    candidate_magpsf > 16
+    candidate_ra < 22
+    simbadType = 'Star'
 
     # given an empty xml file
     >>> cols_to_distribute, rules_list = parse_xml_rules('invalid_xml', df_cols)
-    invalid xml: does not exist or is empty
+    invalid xml file
 
     # invalid column definition in 'select'
     >>> rules_xml_test1 = os.path.abspath(os.path.join(
     ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test1.xml'))
     >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test1, df_cols)
-    Error in Select: invalid column: candidate_pid
+    Invalid column: candidate_pid
 
     # invalid column definition in 'drop'
     >>> rules_xml_test2 = os.path.abspath(os.path.join(
     ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test2.xml'))
     >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test2, df_cols)
-    Error in Drop: invalid column: candidate_pid
+    Invalid column: candidate_pid
 
     # invalid column definition in 'filter'
     >>> rules_xml_test3 = os.path.abspath(os.path.join(
     ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test3.xml'))
     >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test3, df_cols)
-    Error in Filter: invalid column: candidate_fid
+    Can't apply rule: invalid column: candidate_fid
     """
-    # if the xml file doesn't exist or is empty
-    if not os.path.isfile(rules_xml) or os.path.getsize(rules_xml) <= 0:
-        print("invalid xml: does not exist or is empty")
+    # check if the file exists and isn't empty
+    if not os.path.isfile(xml_file) or os.path.getsize(xml_file) <= 0:
+        print("invalid xml file")
         return [],[]
 
-    # parse the xml and make an element tree
-    tree = ET.parse(rules_xml)
+    # parse xml file and make element tree
+    tree = ET.parse(xml_file)
     root = tree.getroot()
 
-    #------------------------------------------------------#
+    # method to get columns
+    def get_columns(node: Any, df_cols: list):
 
-    # create a list of columns to select
-    cols_to_select = []
-
-    # iterate the 'select' element in the xml tree
-    for elem in root[0]:
-        # get the attributes' dictionary
-        attrib = elem.attrib
-
-        # if subcolumn is not given
-        if 'subcol' not in attrib:
-
-            # if no subcol exist i.e top-level namespace, select it
-            if attrib['name'] in df_cols:
-                cols_to_select.append(attrib['name'])
-
-            # else select all sub-columns
-            else:
-                sub = attrib['name'] + "_"
-                cols = [s for s in df_cols if sub in s]
-                cols_to_select.extend(cols)
-
-        # when subcolumn is given
-        elif 'subcol' in attrib:
-            # add the col to select list
-            col = attrib['name'] + "_" + attrib['subcol']
-            if col in df_cols:
-                cols_to_select.append(col)
-            else:
-                print("Error in Select: invalid column: {}".format(col))
-                return [],[]
-
-    # remove duplicates
-    cols_to_select = list(dict.fromkeys(cols_to_select))
-
-    #------------------------------------------------------#
-
-    # create a list of columns to drop
-    cols_to_drop = []
-
-    # check if the tree has a 'drop' element
-    if ET.iselement(root[1]):
-        # iterate the 'drop' element in the xml tree
-        for elem in root[1]:
-            # get the attributes' dictionary
+        cols = []
+        for elem in node:
             attrib = elem.attrib
+            col = attrib['name']
 
-            # if subcolumn is not given
-            if 'subcol' not in attrib:
+            if 'subcol' in attrib:
+                col += "_" + attrib['subcol']
 
-                # if no subcol exist i.e top-level namespace
-                if attrib['name'] in df_cols:
-                    cols_to_drop.append(attrib['name'])
+                if col not in df_cols:
+                    print(f"Invalid column: {col}")
+                    return []
 
-                # else select all sub-columns
-                else:
-                    sub = attrib['name'] + "_"
-                    cols = [s for s in df_cols if sub in s]
-                    cols_to_drop.extend(cols)
+                cols.append(col)
 
-            # when subcolumn is given
-            elif 'subcol' in attrib:
-                # add the col to select list
-                col = attrib['name'] + "_" + attrib['subcol']
-                if col in df_cols:
-                    cols_to_drop.append(col)
-                else:
-                    print("Error in Drop: invalid column: {}".format(col))
-                    return [],[]
+            elif col in df_cols:
+                cols.append(col)
+
+            else:
+                col += "_"
+                col_list = [x for x in df_cols if col in x]
+                cols.extend(col_list)
 
         # remove duplicates
-        cols_to_drop = list(dict.fromkeys(cols_to_drop))
+        cols = list(dict.fromkeys(cols))
+        return cols
 
-    #------------------------------------------------------#
+    # method to get rules
+    def get_rules(node: Any, cols: list):
 
-    # obtain columns to distribute
-    cols_to_distribute = [e for e in cols_to_select if e not in cols_to_drop]
+        rules = []
+        for elem in node:
+            attrib = elem.attrib
+            col = attrib['name']
 
-    #------------------------------------------------------#
+            if 'subcol' in attrib:
+                col += "_" + attrib['subcol']
 
-    # Create a filtering rules' list
+                if col not in cols:
+                    print(f"Can't apply rule: invalid column: {col}")
+                    return []
+
+                rule = col + " " + attrib['operator'] + " " + attrib['value']
+                rules.append(rule)
+
+            elif col in cols:
+                rule = col + " " + attrib['operator'] + " " + attrib['value']
+                rules.append(rule)
+            else:
+                print(f"To apply rule, please select subcol for: {col}")
+                return []
+
+        # remove duplicates
+        rules = list(dict.fromkeys(rules))
+        return rules
+
+    cols_to_select = []
+    cols_to_drop = []
     rules_list = []
 
-    # check if the tree has a 'filter' element
-    if ET.iselement(root[2]):
-        # iterate the 'filter' element and create a list of rules
-        for elem in root[2]:
-            # get the attributes' dictionary
-            attrib = elem.attrib
+    # 'select' is present
+    if ET.iselement(root[0]):
+        cols_to_select = get_columns(root[0], df_cols)
 
-            # if subcolumn is not given
-            if 'subcol' not in attrib:
+    # 'drop' is present and cols_to_select isn't empty
+    if ET.iselement(root[1]) and cols_to_select:
+        cols_to_drop = get_columns(root[1], df_cols)
 
-                # check if the col exist in top-level namespace
-                if attrib['name'] in cols_to_distribute:
-                    # create a rule string and append to list
-                    rule = attrib['name'] + attrib['operator'] + attrib['value']
-                    rules_list.append(rule)
-                else:
-                    print("can not apply rule to the column {}".format(attrib['name']))
-                    return cols_to_distribute, []
+    cols_to_distribute = [c for c in cols_to_select if c not in cols_to_drop]
 
-            # when subcolumn is given
-            elif 'subcol' in attrib:
-                # check for valid column
-                col = attrib['name'] + "_" + attrib['subcol']
-                if col in cols_to_distribute:
-                    # create a rule string and append to list
-                    rule = col + attrib['operator'] + attrib['value']
-                    rules_list.append(rule)
-                else:
-                    print("Error in Filter: invalid column: {}".format(col))
-                    return cols_to_distribute, []
+    # 'filter' is present and cols_to_distribute isn't empty
+    if ET.iselement(root[2]) and cols_to_distribute:
+        rules_list = get_rules(root[2], cols_to_distribute)
 
-        # remove duplicate rules
-        rules_list = list(dict.fromkeys(rules_list))
-
-    #------------------------------------------------------#
     return cols_to_distribute, rules_list
 
 
