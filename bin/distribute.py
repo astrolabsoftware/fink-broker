@@ -95,8 +95,9 @@ def main():
             .save()
 
         # Update the status in Hbase and commit checkpoint to file
-        update_status_in_hbase(df, args.science_db_name, "objectId",
-                args.checkpointpath_dist, max_timestamp)
+        update_status_in_hbase(
+            df, args.science_db_name, "objectId",
+            args.checkpointpath_dist, max_timestamp)
 
         # update min_timestamp for next iteration
         min_timestamp = max_timestamp
