@@ -297,7 +297,7 @@ def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     for rule in rules_list:
         df_filtered = df_filtered.filter(rule)
 
-    return df_filtered.cache()
+    return df_filtered
 
 
 if __name__ == "__main__":
