@@ -208,44 +208,7 @@ def update_status_in_hbase(
         the path of offset file for distribution
     timestamp: int
         timestamp till which science db has been scanned and distributed
-
-    Examples
     ----------
-    # Get a df after reading hbase
-    >>> test_catalog = os.path.abspath(os.path.join(
-    ...     os.environ['FINK_HOME'], 'fink_broker/test_files/test_catalog.json'))
-    >>> with open(test_catalog) as f:
-    ...     catalog = json.load(f)
-    >>> df = spark.read\
-    .option("catalog", catalog)\
-    .format("org.apache.spark.sql.execution.datasources.hbase")\
-    .load()
-    >>> df.show()
-    +------------+----------+--------+
-    |    objectId|simbadType|  status|
-    +------------+----------+--------+
-    |ZTF18aceatkx|      Star|updateDB|
-    |ZTF18acsbjvw|   Unknown|updateDB|
-    |ZTF18acsbten|   Unknown|updateDB|
-    +------------+----------+--------+
-    <BLANKLINE>
-
-    # update status
-    >>> t = round(time.time() * 1000)
-    >>> update_status_in_hbase(df, 'test_table', "objectId",
-    ...         'temp.offset', t)
-    >>> df.show()
-    +------------+----------+-----------+
-    |    objectId|simbadType|     status|
-    +------------+----------+-----------+
-    |ZTF18aceatkx|      Star|distributed|
-    |ZTF18acsbjvw|   Unknown|distributed|
-    |ZTF18acsbten|   Unknown|distributed|
-    +------------+----------+-----------+
-    <BLANKLINE>
-
-    # Remove test files
-    os.remove('temp.offset')
     """
     df = df.select(rowkey, "status")
     df = df.withColumn("status", lit("distributed"))
