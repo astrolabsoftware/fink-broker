@@ -74,7 +74,7 @@ def main():
 
     df = df.selectExpr(new_colnames)
 
-    df_hbase = flattenstruct(df_type, "candidate")
+    df_hbase = flattenstruct(df, "candidate")
     df_hbase = flattenstruct(df_hbase, "cutoutScience")
     df_hbase = flattenstruct(df_hbase, "cutoutTemplate")
     df_hbase = flattenstruct(df_hbase, "cutoutDifference")
@@ -126,7 +126,7 @@ def main():
 
     # Query to group objects by type according to SIMBAD
     # Do it every 30 seconds
-    df_group = df_type.groupBy("simbadType").count()
+    df_group = df.groupBy("cross_match_alerts_per_batch").count()
     groupquery = df_group\
         .writeStream\
         .outputMode("complete") \

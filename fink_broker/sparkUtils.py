@@ -63,7 +63,8 @@ def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
     return Column(f(_to_java_column(dfcol), jsonformatschema))
 
 def to_avro(dfcol: Column) -> Column:
-    """Serialize the structured data of a DataFrame column into avro data (binary).
+    """Serialize the structured data of a DataFrame column into
+    avro data (binary).
 
     Note:
     Since Pyspark does not have a function to convert a column to and from
@@ -325,9 +326,9 @@ def connect_to_raw_database(
 
     # Create a DF from the database
     userschema = spark\
-            .read\
-            .parquet(basepath)\
-            .schema
+        .read\
+        .parquet(basepath)\
+        .schema
 
     df = spark \
         .readStream \
