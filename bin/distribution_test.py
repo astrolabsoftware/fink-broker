@@ -53,9 +53,6 @@ def main():
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
     # Print to console
-    # cols = ["objectId", "candid", "candidate_ra", "candidate_dec", "simbadType"]
-    # cols = ["struct." + c for c in cols]
-    # df = df.select(cols)
     df = df.select("struct.*")
 
     print("\nReading Fink OutStream\n")
