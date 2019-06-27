@@ -53,7 +53,9 @@ def main():
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
     # Print to console
-    cols = ["objectId", "candid", "candidate_ra", "candidate_dec", "simbadType"]
+    cols = [
+        "objectId", "candid", "candidate_ra",
+        "candidate_dec", "cross_match_alerts_per_batch"]
     cols = ["struct." + c for c in cols]
     df = df.select(cols)
 
