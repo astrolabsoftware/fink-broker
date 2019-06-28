@@ -194,7 +194,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 def update_status_in_hbase(
         df: DataFrame, database_name: str, rowkey: str,
         offsetFile: str, timestamp: int):
-    """update the status column in Hbase
+    """Update the status column in Hbase
 
     Parameters
     ----------

@@ -17,18 +17,21 @@
 """Distribute the alerts to users
 
 1. Use the Alert data that is stored in the Science database (HBase)
-2. Serialize into Avro
+2. Apply user defined filters
+3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
 
 import argparse
 import json
 import time
+import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
 from fink_broker.distributionUtils import get_distribution_offset
+from fink_broker.filters import filter_df_using_xml
 from pyspark.sql import DataFrame
 
 def main():
@@ -77,6 +80,12 @@ def main():
         # Filter out records that have been distributed
         df = df.filter("status!='distributed'")
 
+        # Apply additional filters (user defined)
+        df = filter_df_using_xml(df, args.distribution_rules_xml)
+
+        # Persist df to memory to materialize changes
+        df.persist()
+
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
 
@@ -85,15 +94,19 @@ def main():
             .write\
             .format("kafka")\
             .option("kafka.bootstrap.servers", "localhost:9093")\
-            .option("topic", "distribution_test")\
+            .option("topic", "fink_outstream")\
             .save()
 
-        # Update the status column in Hbase
-        update_status_in_hbase(df, args.science_db_name, "objectId",
-                args.checkpointpath_dist, max_timestamp)
+        # Update the status in Hbase and commit checkpoint to file
+        update_status_in_hbase(
+            df, args.science_db_name, "objectId",
+            args.checkpointpath_dist, max_timestamp)
 
         # update min_timestamp for next iteration
         min_timestamp = max_timestamp
+
+        # free the memory
+        df.unpersist()
 
         # Wait for some time before another loop
         time.sleep(1)
