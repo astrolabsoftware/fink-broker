@@ -82,6 +82,8 @@ def main():
 
         # Apply additional filters (user defined)
         df = filter_df_using_xml(df, args.distribution_rules_xml)
+
+        # Persist df to memory to materialize changes
         df.persist()
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
@@ -102,6 +104,8 @@ def main():
 
         # update min_timestamp for next iteration
         min_timestamp = max_timestamp
+
+        # free the memory
         df.unpersist()
 
         # Wait for some time before another loop

@@ -42,6 +42,15 @@ Manage Finks Kafka Server for Alert Distribution
 
  	--create-topic <TOPIC>
  		Creates a topic named <TOPIC> if it does not already exist
+
+ 	--delete-topic <TOPIC>
+ 		Deletes an existing topic <TOPIC>
+
+ 	--describe-topic <TOPIC>
+ 		Lists out details for the given topic <TOPIC>
+
+ 	--list-topics
+ 		Lists all the topics
 ```
 
 ## Spark process
@@ -87,3 +96,12 @@ fink start distribution_test
 This starts a Spark streaming process that reads the Kafka messages
 published by the above distribution service, decodes them and print
 the resulting DataFrame on console.
+
+## Filtering alerts before distribution
+It is expensive (resource-wise) to redistribute the whole stream of alerts
+received from telescopes. Hence Fink adds value to the alerts and distribute a
+filtered stream of alerts. <br>
+Simple rules based on key-value can be defined using
+an xml file. See `conf/distribution-rules.xml` for more details. These rules
+are applied to obtain a filtered stream which is then distributed on the Kafka topic
+`fink_outstream`.
