@@ -73,6 +73,96 @@ def keep_alert_based_on(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     return pd.Series(mask)
 
 
+def get_columns(node: Any, df_cols: list) -> list:
+    """Iterates over an xml element to retrieve columns
+
+    Iterates over 'select' or 'drop' element of xml tree
+    to create a list of columns that are defined under it
+
+    Parameters
+    ----------
+    node: xml element
+        an element of xml tree (select/drop)
+    df_cols: list
+        List of columns of the dataframe
+
+    Returns
+    ----------
+    cols: list
+        List of selected columns
+    """
+    cols = []
+    for elem in node:
+        attrib = elem.attrib
+        col = attrib['name']
+
+        if 'subcol' in attrib:
+            col += "_" + attrib['subcol']
+
+            if col not in df_cols:
+                print(f"Invalid column: {col}")
+                return []
+
+            cols.append(col)
+
+        elif col in df_cols:
+            cols.append(col)
+
+        else:
+            col += "_"
+            col_list = [x for x in df_cols if col in x]
+            cols.extend(col_list)
+
+    # remove duplicates
+    cols = list(dict.fromkeys(cols))
+    return cols
+
+
+def get_rules(node: Any, cols: list):
+    """Iterates over an xml element to retrieve filtering rules
+
+    Iterates over the 'filter' element of xml tree
+    to create a list of rules
+
+    Parameters
+    ----------
+    node: xml element
+        an element of xml tree (filter)
+    cols: list
+        List of columns to apply rules on
+
+    Returns
+    ----------
+    rules: list
+        List of comparison rules as strings
+    """
+    rules = []
+    for elem in node:
+        attrib = elem.attrib
+        col = attrib['name']
+
+        if 'subcol' in attrib:
+            col += "_" + attrib['subcol']
+
+            if col not in cols:
+                print(f"Can't apply rule: invalid column: {col}")
+                return []
+
+            rule = col + " " + attrib['operator'] + " " + attrib['value']
+            rules.append(rule)
+
+        elif col in cols:
+            rule = col + " " + attrib['operator'] + " " + attrib['value']
+            rules.append(rule)
+        else:
+            print(f"To apply rule, please select subcol for: {col}")
+            return []
+
+    # remove duplicates
+    rules = list(dict.fromkeys(rules))
+    return rules
+
+
 def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     """Parse an xml file with rules for filtering
 
@@ -152,64 +242,6 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     # parse xml file and make element tree
     tree = ET.parse(xml_file)
     root = tree.getroot()
-
-    # method to get columns
-    def get_columns(node: Any, df_cols: list):
-
-        cols = []
-        for elem in node:
-            attrib = elem.attrib
-            col = attrib['name']
-
-            if 'subcol' in attrib:
-                col += "_" + attrib['subcol']
-
-                if col not in df_cols:
-                    print(f"Invalid column: {col}")
-                    return []
-
-                cols.append(col)
-
-            elif col in df_cols:
-                cols.append(col)
-
-            else:
-                col += "_"
-                col_list = [x for x in df_cols if col in x]
-                cols.extend(col_list)
-
-        # remove duplicates
-        cols = list(dict.fromkeys(cols))
-        return cols
-
-    # method to get rules
-    def get_rules(node: Any, cols: list):
-
-        rules = []
-        for elem in node:
-            attrib = elem.attrib
-            col = attrib['name']
-
-            if 'subcol' in attrib:
-                col += "_" + attrib['subcol']
-
-                if col not in cols:
-                    print(f"Can't apply rule: invalid column: {col}")
-                    return []
-
-                rule = col + " " + attrib['operator'] + " " + attrib['value']
-                rules.append(rule)
-
-            elif col in cols:
-                rule = col + " " + attrib['operator'] + " " + attrib['value']
-                rules.append(rule)
-            else:
-                print(f"To apply rule, please select subcol for: {col}")
-                return []
-
-        # remove duplicates
-        rules = list(dict.fromkeys(rules))
-        return rules
 
     cols_to_select = []
     cols_to_drop = []
