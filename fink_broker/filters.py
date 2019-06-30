@@ -26,6 +26,8 @@ from typing import Any, Tuple
 
 from userfilters.levelone import *
 
+from userfilters.levelone import *
+
 from fink_broker.tester import spark_unit_tests
 
 def return_flatten_names(
