@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql.functions import pandas_udf, PandasUDFType, col
-from pyspark.sql.types import BooleanType
 from pyspark.sql import DataFrame
+from pyspark.sql.types import BooleanType, StructType
 from pyspark.sql.functions import struct
+from pyspark.sql import DataFrame
 
 import os
 import pandas as pd
@@ -26,6 +27,69 @@ from typing import Any, Tuple
 from userfilters.levelone import *
 
 from fink_broker.tester import spark_unit_tests
+
+def return_flatten_names(
+        df: DataFrame, pref: str = "", flatten_schema: list = []) -> list:
+    """From a nested schema (using struct), retrieve full paths for entries
+    in the form level1.level2.etc.entry.
+
+    Example, if I have a nested structure such as:
+    root
+     |-- timestamp: timestamp (nullable = true)
+     |-- decoded: struct (nullable = true)
+     |    |-- schemavsn: string (nullable = true)
+     |    |-- publisher: string (nullable = true)
+     |    |-- objectId: string (nullable = true)
+     |    |-- candid: long (nullable = true)
+     |    |-- candidate: struct (nullable = true)
+
+    It will return a list like
+        ["timestamp", "decoded" ,"decoded.schemavsn", "decoded.publisher", ...]
+
+    Parameters
+    ----------
+    df : DataFrame
+        Alert DataFrame
+    pref : str, optional
+        Internal variable to keep track of the structure, initially sets to "".
+    flatten_schema: list, optional
+        List containing the names of the flatten schema names.
+        Initially sets to [].
+
+    Returns
+    -------
+    flatten_frame: list
+        List containing the names of the flatten schema names.
+
+    Examples
+    -------
+    >>> df = spark.read.format("parquet").load("archive/alerts_store")
+    >>> flatten_schema = return_flatten_names(df)
+    >>> assert("decoded.candidate.candid" in flatten_schema)
+    """
+    if flatten_schema == []:
+        for colname in df.columns:
+            flatten_schema.append(colname)
+
+    # If the entry is not top level, it is then hidden inside a nested structure
+    l_struct_names = [
+        i.name for i in df.schema if isinstance(i.dataType, StructType)]
+
+    for l_struct_name in l_struct_names:
+        colnames = df.select("{}.*".format(l_struct_name)).columns
+        for colname in colnames:
+            if pref == "":
+                flatten_schema.append(".".join([l_struct_name, colname]))
+            else:
+                flatten_schema.append(".".join([pref, l_struct_name, colname]))
+
+        # Check if there are other levels nested
+        flatten_schema = return_flatten_names(
+            df.select("{}.*".format(l_struct_name)),
+            pref=l_struct_name,
+            flatten_schema=flatten_schema)
+
+    return flatten_schema
 
 def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     """Apply iteratively user filters to keep only wanted alerts.
@@ -80,6 +144,8 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     <BLANKLINE>
 
     """
+    flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
+
     # Loop over user-defined filters
     for filter_func_name in filter_names:
         # Note: we could use import_module instead?
@@ -89,11 +155,18 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
         # This is because f has a decorator on it.
         ninput = filter_func.func.__code__.co_argcount
 
-        # Note: This works only with `candidate` fields.
-        # TODO: Make it general.
-        colnames = [
-            col("decoded.candidate.{}".format(i))
-            for i in filter_func.func.__code__.co_varnames[:ninput]]
+        # Note: This works only with `struct` fields - not `array`
+        argnames = filter_func.func.__code__.co_varnames[:ninput]
+        colnames = []
+        for argname in argnames:
+            colname = [
+                col(i) for i in flatten_schema
+                if i.endswith(".{}".format(argname))]
+            if len(colname) == 0:
+                raise AssertionError("""
+                    Column name {} is not a valid column of the DataFrame.
+                    """)
+            colnames.append(colname[0])
 
         df = df\
             .withColumn("toKeep", filter_func(*colnames))\
@@ -102,7 +175,7 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
 
     return df
 
-def apply_user_defined_processors(df, processor_names):
+def apply_user_defined_processors(df: DataFrame, processor_names: list):
     """Apply iteratively user processors to give added values to the stream.
 
     Each processor will add one new column to the input DataFrame. The name
@@ -147,6 +220,8 @@ def apply_user_defined_processors(df, processor_names):
     <BLANKLINE>
 
     """
+    flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
+
     # Loop over user-defined processors
     for processor_func_name in processor_names:
         # Note: we could use import_module instead?
@@ -156,11 +231,18 @@ def apply_user_defined_processors(df, processor_names):
         # This is because f has a decorator on it.
         ninput = processor_func.func.__code__.co_argcount
 
-        # Note: This works only with `candidate` fields.
-        # TODO: Make it general.
-        colnames = [
-            col("decoded.candidate.{}".format(i))
-            for i in processor_func.func.__code__.co_varnames[:ninput]]
+        # Note: This works only with `struct` fields - not `array`
+        argnames = processor_func.func.__code__.co_varnames[:ninput]
+        colnames = []
+        for argname in argnames:
+            colname = [
+                col(i) for i in flatten_schema
+                if i.endswith(".{}".format(argname))]
+            if len(colname) == 0:
+                raise AssertionError("""
+                    Column name {} is not a valid column of the DataFrame.
+                    """)
+            colnames.append(colname[0])
 
         df = df.withColumn(processor_func.__name__, processor_func(*colnames))
 
