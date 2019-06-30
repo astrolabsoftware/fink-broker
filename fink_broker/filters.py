@@ -16,15 +16,12 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType, col
 from pyspark.sql import DataFrame
 from pyspark.sql.types import BooleanType, StructType
 from pyspark.sql.functions import struct
-from pyspark.sql import DataFrame
 
 import os
 import pandas as pd
 import xml.etree.ElementTree as ET
 
 from typing import Any, Tuple
-
-from userfilters.levelone import *
 
 from userfilters.levelone import *
 
