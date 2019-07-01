@@ -290,9 +290,11 @@ def get_distribution_offset(
     # if the offset file doesn't exist or is empty or
     # one wants the earliest offset
     fileexist = os.path.isfile(offsetFile)
-    negatifoffset = os.path.getsize(offsetFile) <= 0
-    earliestoffset = startingOffset_dist == "earliest"
-    if not fileexist or negatifoffset or earliestoffset:
+    if fileexist:
+        negatifoffset = os.path.getsize(offsetFile) <= 0
+    else:
+        negatifoffset = False
+    if not fileexist or negatifoffset or startingOffset_dist == "earliest":
         # set a default
         min_timestamp = 100
     else:
