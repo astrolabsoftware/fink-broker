@@ -396,7 +396,8 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     >>> rules_xml_test1 = os.path.abspath(os.path.join(
     ...   os.environ['FINK_HOME'],
     ...   'fink_broker/test_files/distribution-rules-test1.xml'))
-    >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test1, df_cols)
+    >>> cols_to_distribute, rules_list = parse_xml_rules(
+    ...   rules_xml_test1, df_cols)
     Invalid column: candidate_pid
 
     # invalid column definition in 'drop'
@@ -470,8 +471,10 @@ def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     ...     [20.393772, 20.4233877, 12.5489498],
     ...     [-25.4669463, -27.0588511, -13.7619586],
     ...     [16.074839, 17.245092, 19.667372],
-    ...     ["Star", "Unknown", "Unknown"])).toDF(["objectId", "candid", "candidate_jd",
-    ...     "candidate_ra", "candidate_dec", "candidate_magpsf", "simbadType"])
+    ...     ["Star", "Unknown", "Unknown"])).toDF([
+    ...       "objectId", "candid", "candidate_jd",
+    ...       "candidate_ra", "candidate_dec",
+    ...       "candidate_magpsf", "simbadType"])
     >>> df.show()
     +------------+------------------+---------------+------------+-------------+----------------+----------+
     |    objectId|            candid|   candidate_jd|candidate_ra|candidate_dec|candidate_magpsf|simbadType|

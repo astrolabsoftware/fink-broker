@@ -57,9 +57,9 @@ def main():
 
     print("\nReading Fink OutStream\n")
     debug_query = df.writeStream\
-                    .format("console")\
-                    .trigger(processingTime='2 seconds')\
-                    .start()
+        .format("console")\
+        .trigger(processingTime='2 seconds')\
+        .start()
 
     # Keep the Streaming running for some time
     if args.exit_after is not None:
