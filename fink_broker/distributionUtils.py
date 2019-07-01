@@ -309,6 +309,87 @@ def get_distribution_offset(
     return min_timestamp
 
 
+def group_df_into_struct(
+        df: DataFrame, colFamily: str) -> DataFrame:
+    """Group columns of a df into a struct column
+
+    If we have a df with the following schema:
+    root
+     |-- objectId: string (nullable = true)
+     |-- candidate_ra: double (nullable = true)
+     |-- candidate_dec: double (nullable = true)
+
+    and we want to group all `candidate_*` into a struct like:
+    root
+     |-- objectId: string (nullable = true)
+     |-- candidate: struct (nullable = false)
+     |    |-- ra: double (nullable = true)
+     |    |-- dec: double (nullable = true)
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        a Spark DataFrame with flat columns
+
+    colFamily: str
+        prefix of columns to be grouped into a struct
+
+    Returns
+    ----------
+    df: Spark DataFrame
+        a Spark DataFrame with columns grouped into struct
+
+    Examples
+    ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
+    ...     [697251923115015002, 697251921215010004],
+    ...     [20.393772, 20.4233877],
+    ...     [-25.4669463, -27.0588511],
+    ...     ["Star", "Unknown"])).toDF([
+    ...       "objectId", "candid", "candidate_ra",
+    ...       "candidate_dec", "simbadType"])
+    >>> df.printSchema()
+    root
+     |-- objectId: string (nullable = true)
+     |-- candid: long (nullable = true)
+     |-- candidate_ra: double (nullable = true)
+     |-- candidate_dec: double (nullable = true)
+     |-- simbadType: string (nullable = true)
+    <BLANKLINE>
+
+    >>> df = group_df_into_struct(df, 'candidate')
+    >>> df.printSchema()
+    root
+     |-- objectId: string (nullable = true)
+     |-- candid: long (nullable = true)
+     |-- simbadType: string (nullable = true)
+     |-- candidate: struct (nullable = false)
+     |    |-- ra: double (nullable = true)
+     |    |-- dec: double (nullable = true)
+    <BLANKLINE>
+
+    """
+    newcols = []
+    cols_to_group = []
+    flat_cols = []
+
+    l = len(colFamily) + 1
+
+    for col in df.columns:
+        if col.startswith(colFamily + "_"):
+            newcols.append(col[l:])
+            cols_to_group.append(col[l:])
+        else:
+            newcols.append(col)
+            flat_cols.append(col)
+
+    df_new = df.toDF(*newcols)
+    df_new = df_new.select(*flat_cols, struct(*cols_to_group).alias(colFamily))
+
+    return df_new
+
+
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 

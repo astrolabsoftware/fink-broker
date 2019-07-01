@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ET
 from typing import Any, Tuple
 
 from userfilters.levelone import *
+from userfilters.leveltwo import *
 
 from fink_broker.tester import spark_unit_tests
 
@@ -163,7 +164,7 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.
-                    """)
+                    """.format(argname))
             colnames.append(colname[0])
 
         df = df\
@@ -239,7 +240,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.
-                    """)
+                    """.format(argname))
             colnames.append(colname[0])
 
         df = df.withColumn(processor_func.__name__, processor_func(*colnames))

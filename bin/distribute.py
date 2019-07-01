@@ -31,7 +31,12 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
 from fink_broker.distributionUtils import get_distribution_offset
-from fink_broker.filters import filter_df_using_xml
+from fink_broker.distributionUtils import group_df_into_struct
+from fink_broker.hbaseUtils import flattenstruct
+
+from fink_broker.filters import filter_df_using_xml, apply_user_defined_filters
+from userfilters.leveltwo import filter_leveltwo_names
+
 from pyspark.sql import DataFrame
 
 def main():
@@ -77,12 +82,21 @@ def main():
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .load()
 
-        # Filter out records that have been distributed
+        # Keep records that haven't been distributed
         df = df.filter("status!='distributed'")
 
         # Apply additional filters (user defined)
         df = filter_df_using_xml(df, args.distribution_rules_xml)
 
+        # group `candidate_*` columns into a struct column
+        df = group_df_into_struct(df, "candidate")
+
+        # Apply level two filters
+        df = apply_user_defined_filters(df, filter_leveltwo_names)
+
+        # Flatten the struct before distribution
+        df = flattenstruct(df, "candidate")
+        
         # Persist df to memory to materialize changes
         df.persist()
 
