@@ -23,11 +23,11 @@ from fink_broker.classification import cross_match_alerts_raw
 from typing import Any
 
 # Declare here the filters that will be applied in the
-# level one (stream -> raw database)
+# level one (raw -> science database)
 filter_levelone_names = ["qualitycuts"]
 
 # Declare here the processors that will be applied in the
-# level one (stream -> raw database)
+# level one (raw -> science database)
 processor_levelone_names = ["cross_match_alerts_per_batch"]
 
 @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
@@ -56,12 +56,12 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     Returns
     ----------
     out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: 1 for bad alert,
-        and 0 for good alert.
+        Return a Pandas DataFrame with the appropriate flag: 0 for bad alert,
+        and 1 for good alert.
 
     """
     mask = nbad.values == 0
-    mask *= rb.values <= 0.55
+    mask *= rb.values >= 0.55
     mask *= abs(magdiff.values) <= 0.1
 
     return pd.Series(mask)
@@ -81,8 +81,7 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
     1) Define the input entry column. These must be `candidate` entries.
     2) Update the logic inside the function. The idea is to
         apply conditions based on the values of the columns.
-    3) Return a column whose entry is false if the alert has to be discarded,
-    and true otherwise.
+    3) Return a column with added value after processing
 
     Parameters
     ----------
