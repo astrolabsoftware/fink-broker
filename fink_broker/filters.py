@@ -362,12 +362,13 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     ----------
     # Set path to xml rule file
     >>> rules_xml = os.path.abspath(os.path.join(
-    ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-sample.xml'))
+    ...   os.environ['FINK_HOME'],
+    ...   'fink_broker/test_files/distribution-rules-sample.xml'))
 
     # get list of all columns in the dataframe
     >>> df_cols = ["objectId", "candid", "candidate_jd", "candidate_ra",
-    ...        "candidate_dec", "candidate_magpsf", "simbadType",
-    ...        "cutoutScience_fileName", "cutoutScience_stampData"]
+    ...   "candidate_dec", "candidate_magpsf", "simbadType",
+    ...   "cutoutScience_fileName", "cutoutScience_stampData"]
 
     # get columns to distribute and rules to apply
     >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml, df_cols)
@@ -393,26 +394,31 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
 
     # invalid column definition in 'select'
     >>> rules_xml_test1 = os.path.abspath(os.path.join(
-    ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test1.xml'))
+    ...   os.environ['FINK_HOME'],
+    ...   'fink_broker/test_files/distribution-rules-test1.xml'))
     >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test1, df_cols)
     Invalid column: candidate_pid
 
     # invalid column definition in 'drop'
     >>> rules_xml_test2 = os.path.abspath(os.path.join(
-    ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test2.xml'))
-    >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test2, df_cols)
+    ...   os.environ['FINK_HOME'],
+    ...   'fink_broker/test_files/distribution-rules-test2.xml'))
+    >>> cols_to_distribute, rules_list = parse_xml_rules(
+    ...   rules_xml_test2, df_cols)
     Invalid column: candidate_pid
 
     # invalid column definition in 'filter'
     >>> rules_xml_test3 = os.path.abspath(os.path.join(
-    ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-test3.xml'))
-    >>> cols_to_distribute, rules_list = parse_xml_rules(rules_xml_test3, df_cols)
+    ...   os.environ['FINK_HOME'],
+    ...   'fink_broker/test_files/distribution-rules-test3.xml'))
+    >>> cols_to_distribute, rules_list = parse_xml_rules(
+    ...   rules_xml_test3, df_cols)
     Can't apply rule: invalid column: candidate_fid
     """
     # check if the file exists and isn't empty
     if not os.path.isfile(xml_file) or os.path.getsize(xml_file) <= 0:
         print("invalid xml file")
-        return [],[]
+        return [], []
 
     # parse xml file and make element tree
     tree = ET.parse(xml_file)
@@ -478,7 +484,8 @@ def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
 
     # Set path to xml rule file
     >>> rules_xml = os.path.abspath(os.path.join(
-    ...         os.environ['FINK_HOME'], 'fink_broker/test_files/distribution-rules-sample.xml'))
+    ...   os.environ['FINK_HOME'],
+    ...   'fink_broker/test_files/distribution-rules-sample.xml'))
 
     # get filtered dataframe
     >>> df_filtered = filter_df_using_xml(df, rules_xml)
