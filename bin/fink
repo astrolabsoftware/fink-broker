@@ -229,7 +229,8 @@ elif [[ $service == "distribution" ]]; then
   -science_db_name ${SCIENCE_DB_NAME} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
-  -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} ${EXIT_AFTER} 
+  -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
+  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} ${EXIT_AFTER} 
 elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \

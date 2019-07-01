@@ -28,6 +28,12 @@ Option:\n
     \t\tTo view this help message \n\n
   \t--create-topic <TOPIC> \n
     \t\tCreates a topic named <TOPIC> if it does not already exist \n\n
+  \t--delete-topic <TOPIC> \n
+    \t\tDeletes an existing topic <TOPIC> \n\n
+  \t--describe-topic <TOPIC> \n
+    \t\tLists out details for the given topic <TOPIC> \n\n
+  \t--list-topics \n
+    \t\tLists all the topics \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -96,6 +102,35 @@ case "$1" in
       --topic $TOPIC \
       --zookeeper "localhost:2182"  >&1
       # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
+      ;;
+  "--delete-topic")
+      if [[ $2 == "" ]]; then
+        echo "$1 requires an argument (Topic Name)" >&2
+        exit 1
+      fi
+      TOPIC=$2
+      # delete the topic
+      ${KAFKA_HOME}/bin/kafka-topics.sh \
+      --delete \
+      --topic $TOPIC \
+      --zookeeper "localhost:2182"  >&1
+      ;;
+"--describe-topic")
+    if [[ $2 == "" ]]; then
+      echo "$1 requires an argument (Topic Name)" >&2
+      exit 1
+    fi
+    TOPIC=$2
+    # delete the topic
+    ${KAFKA_HOME}/bin/kafka-topics.sh \
+    --describe \
+    --topic $TOPIC \
+    --zookeeper "localhost:2182"  >&1
+    ;;
+  "--list-topics")
+      ${KAFKA_HOME}/bin/kafka-topics.sh \
+      --list \
+      --zookeeper "localhost:2182" >&1
       ;;
   "-h"|"--help")
       echo -e $message_help
