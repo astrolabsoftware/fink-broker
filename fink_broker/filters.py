@@ -112,14 +112,14 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     >>> df = spark.sparkContext.parallelize(zip(
     ...   [0, 1, 0, 0],
     ...   [0.01, 0.02, 0.6, 0.01],
-    ...   [0.02, 0.05, 0.2, 0.01])).toDF(colnames)
+    ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
     +----+----+-------+
     |nbad|  rb|magdiff|
     +----+----+-------+
     |   0|0.01|   0.02|
     |   1|0.02|   0.05|
-    |   0| 0.6|    0.2|
+    |   0| 0.6|    0.1|
     |   0|0.01|   0.01|
     +----+----+-------+
     <BLANKLINE>
@@ -134,12 +134,11 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
 
     >>> df = apply_user_defined_filters(df, ["qualitycuts"])
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+
-    |nbad|  rb|magdiff|
-    +----+----+-------+
-    |   0|0.01|   0.02|
-    |   0|0.01|   0.01|
-    +----+----+-------+
+    +----+---+-------+
+    |nbad| rb|magdiff|
+    +----+---+-------+
+    |   0|0.6|    0.1|
+    +----+---+-------+
     <BLANKLINE>
 
     """
