@@ -53,7 +53,7 @@ def main():
 
     # get distribution offset
     min_timestamp = get_distribution_offset(
-                        args.checkpointpath_dist, args.startingOffset_dist)
+        args.checkpointpath_dist, args.startingOffset_dist)
 
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
@@ -71,11 +71,11 @@ def main():
 
         # Read Hbase within timestamp range
         df = spark.read\
-                  .option("catalog", catalog)\
-                  .option("minStamp", min_timestamp)\
-                  .option("maxStamp", max_timestamp)\
-                  .format("org.apache.spark.sql.execution.datasources.hbase")\
-                  .load()
+            .option("catalog", catalog)\
+            .option("minStamp", min_timestamp)\
+            .option("maxStamp", max_timestamp)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .load()
 
         # Filter out records that have been distributed
         df = df.filter("status!='distributed'")
@@ -89,7 +89,8 @@ def main():
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
 
-        # Publish Kafka topic(s) (Ensure that the topic(s) exist on the Kafka Server)
+        # Publish Kafka topic(s)
+        # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
             .write\
             .format("kafka")\
