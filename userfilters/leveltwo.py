@@ -1,5 +1,5 @@
 # Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan
+# Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,12 +40,10 @@ def dist_stream_cut(sigmapsf: Any, sgscore1: Any) -> pd.Series:
 
     Parameters
     ----------
-    nbad: Spark DataFrame Column
-        Column containing the nbad values
-    rb: Spark DataFrame Column
-        Column containing the rb values
-    magdiff: Spark DataFrame Column
-        Column containing the magdiff values
+    sigmapsf: Spark DataFrame Column
+        Column containing the sigmapsf values
+    sgscore1: Spark DataFrame Column
+        Column containing the sgscore1 values
 
     Returns
     ----------

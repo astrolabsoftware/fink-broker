@@ -247,7 +247,6 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
 
     return df
 
-
 def get_columns(node: Any, df_cols: list) -> list:
     """Iterates over an xml element to retrieve columns
 
@@ -292,7 +291,6 @@ def get_columns(node: Any, df_cols: list) -> list:
     cols = list(dict.fromkeys(cols))
     return cols
 
-
 def get_rules(node: Any, cols: list):
     """Iterates over an xml element to retrieve filtering rules
 
@@ -336,7 +334,6 @@ def get_rules(node: Any, cols: list):
     # remove duplicates
     rules = list(dict.fromkeys(rules))
     return rules
-
 
 def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     """Parse an xml file with rules for filtering
@@ -444,7 +441,6 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
         rules_list = get_rules(root[2], cols_to_distribute)
 
     return cols_to_distribute, rules_list
-
 
 def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     """Filter the DataFrame before distribution

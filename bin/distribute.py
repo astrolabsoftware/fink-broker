@@ -72,7 +72,7 @@ def main():
         """Keep scanning the HBase for new records in a loop
         """
         # Scan the HBase till current time
-        max_timestamp = int(round(time.time() * 1000)) # time in ms
+        max_timestamp = int(round(time.time() * 1000))  # time in ms
 
         # Read Hbase within timestamp range
         df = spark.read\
@@ -96,7 +96,7 @@ def main():
 
         # Flatten the struct before distribution
         df = flattenstruct(df, "candidate")
-        
+
         # Persist df to memory to materialize changes
         df.persist()
 

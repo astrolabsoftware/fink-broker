@@ -72,7 +72,6 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     return df_kafka
 
-
 def save_avro_schema(df: DataFrame, schema_path: str):
     """Writes the avro schema to a file at schema_path
 
@@ -109,7 +108,6 @@ def save_avro_schema(df: DataFrame, schema_path: str):
 
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)
-
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
@@ -189,7 +187,6 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     df = df_kafka.select(from_avro("value", avro_schema).alias("struct"))
 
     return df
-
 
 def update_status_in_hbase(
         df: DataFrame, database_name: str, rowkey: str,
@@ -307,7 +304,6 @@ def get_distribution_offset(
             min_timestamp = int(startingOffset_dist)
 
     return min_timestamp
-
 
 def group_df_into_struct(
         df: DataFrame, colFamily: str) -> DataFrame:
