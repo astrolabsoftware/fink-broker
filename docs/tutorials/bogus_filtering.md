@@ -2,7 +2,7 @@
 
 **Context**
 
-This tutorial illustrates the basics of connecting to the raw database, and filtering out alerts that do not satisfy quality criteria.
+This tutorial illustrates the basics of connecting to the raw database (Parquet), filtering out alerts that do not satisfy quality criteria, and pushing remaining alerts to the science database (HBase).
 
 **Before starting**
 
