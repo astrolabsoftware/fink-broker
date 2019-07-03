@@ -134,3 +134,7 @@ print("Number of entries in {}: ".format(
 df.show()
 # ...
 ```
+
+Example of alerts kept after applying quality cuts:
+
+![Screenshot](../img/cutouts_filtered.png)
