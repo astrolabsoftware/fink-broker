@@ -23,7 +23,7 @@ from fink_broker.classification import cross_match_alerts_raw
 from typing import Any
 
 # Declare here the filters that will be applied in the
-# level one (stream -> raw database)
+# level one (raw -> science database)
 filter_levelone_names = ["qualitycuts"]
 
 # Declare here the processors that will be applied in the
@@ -56,12 +56,12 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     Returns
     ----------
     out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: 1 for bad alert,
-        and 0 for good alert.
+        Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+        and true for good alert.
 
     """
     mask = nbad.values == 0
-    mask *= rb.values <= 0.55
+    mask *= rb.values >= 0.55
     mask *= abs(magdiff.values) <= 0.1
 
     return pd.Series(mask)
@@ -81,8 +81,7 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
     1) Define the input entry column. These must be `candidate` entries.
     2) Update the logic inside the function. The idea is to
         apply conditions based on the values of the columns.
-    3) Return a column whose entry is false if the alert has to be discarded,
-    and true otherwise.
+    3) Return a column with added value after processing
 
     Parameters
     ----------
@@ -104,6 +103,11 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
 
     """
     matches = cross_match_alerts_raw(objectId.values, ra.values, dec.values)
+
+    # For regular alerts, the number of matches is always non-zero as
+    # alerts with no counterpart will be labeled as Unknown.
+    # If cross_match_alerts_raw returns a zero-length list of matches, it is
+    # a sign of a problem (logged).
     if len(matches) > 0:
         # (objectId, ra, dec, name, type)
         # return only the type.
