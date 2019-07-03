@@ -17,6 +17,7 @@ from pyspark.sql.types import StringType
 
 import io
 import csv
+import logging
 import requests
 import numpy as np
 import pandas as pd
@@ -88,14 +89,6 @@ def xmatch(
     header: list of string
         Unformatted decoded header returned by the xMatch
 
-    Examples
-    ----------
-    >>> ra = [26.8566983, 26.24497]
-    >>> dec = [-26.9677112, -26.7569436]
-    >>> id = ["1", "2"]
-    >>> data, header = xmatch(ra, dec, id, "simbad", 1)
-    >>> 'TYC' in data[0]
-    True
     """
     # Build a catalog of alert in a CSV-like string
     table_header = """ra_in,dec_in,objectId\n"""
@@ -156,43 +149,46 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     if len(ra) == 0:
         return []
 
-    data, header = xmatch(ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
+    # Catch TimeoutError and ConnectionError
+    try:
+        data, header = xmatch(
+            ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
+    except (ConnectionError, TimeoutError) as ce:
+        logging.warning("XMATCH failed " + repr(ce))
+        return []
 
     # Fields of interest (their indices in the output)
-    if "main_id" not in header:
-        return []
-    else:
-        main_id = header.index("main_id")
-        main_type = header.index("main_type")
-        oid_ind = header.index("objectId")
+    main_id = header.index("main_id")
+    main_type = header.index("main_type")
+    oid_ind = header.index("objectId")
 
-        # Get the objectId of matches
-        id_out = [np.array(i.split(","))[oid_ind] for i in data]
+    # Get the objectId of matches
+    id_out = [np.array(i.split(","))[oid_ind] for i in data]
 
-        # Get the names of matches
-        names = [np.array(i.split(","))[main_id] for i in data]
+    # Get the names of matches
+    names = [np.array(i.split(","))[main_id] for i in data]
 
-        # Get the types of matches
-        types = [np.array(i.split(","))[main_type] for i in data]
+    # Get the types of matches
+    types = [np.array(i.split(","))[main_type] for i in data]
 
-        # Assign names and types to inputs
-        out = []
-        for ra_in, dec_in, id_in in zip(ra, dec, oid):
-            # cast for picky Spark
-            ra_in, dec_in = float(ra_in), float(dec_in)
-            id_in = str(id_in)
+    # Assign names and types to inputs
+    out = []
+    for ra_in, dec_in, id_in in zip(ra, dec, oid):
+        # cast for picky Spark
+        ra_in, dec_in = float(ra_in), float(dec_in)
+        id_in = str(id_in)
 
-            # Discriminate with the objectID
-            if id_in in id_out:
-                # Return the closest object in case of many
-                # (smallest angular distance)
-                index = id_out.index(id_in)
-                out.append((
-                    id_in, ra_in, dec_in,
-                    str(names[index]), str(types[index])))
-            else:
-                # Mark as unknown if no match
-                out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+        # Discriminate with the objectID
+        if id_in in id_out:
+            # Return the closest object in case of many
+            # (smallest angular distance)
+            index = id_out.index(id_in)
+            out.append((
+                id_in, ra_in, dec_in,
+                str(names[index]), str(types[index])))
+        else:
+            # Mark as unknown if no match
+            out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
 
         return out
 
