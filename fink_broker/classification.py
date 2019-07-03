@@ -190,7 +190,7 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
             # Mark as unknown if no match
             out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
 
-        return out
+    return out
 
 
 if __name__ == "__main__":
