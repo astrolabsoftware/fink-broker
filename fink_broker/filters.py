@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ET
 from typing import Any, Tuple
 
 from userfilters.levelone import *
+from userfilters.leveltwo import *
 
 from fink_broker.tester import spark_unit_tests
 
@@ -112,14 +113,14 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     >>> df = spark.sparkContext.parallelize(zip(
     ...   [0, 1, 0, 0],
     ...   [0.01, 0.02, 0.6, 0.01],
-    ...   [0.02, 0.05, 0.2, 0.01])).toDF(colnames)
+    ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
     +----+----+-------+
     |nbad|  rb|magdiff|
     +----+----+-------+
     |   0|0.01|   0.02|
     |   1|0.02|   0.05|
-    |   0| 0.6|    0.2|
+    |   0| 0.6|    0.1|
     |   0|0.01|   0.01|
     +----+----+-------+
     <BLANKLINE>
@@ -134,12 +135,11 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
 
     >>> df = apply_user_defined_filters(df, ["qualitycuts"])
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+
-    |nbad|  rb|magdiff|
-    +----+----+-------+
-    |   0|0.01|   0.02|
-    |   0|0.01|   0.01|
-    +----+----+-------+
+    +----+---+-------+
+    |nbad| rb|magdiff|
+    +----+---+-------+
+    |   0|0.6|    0.1|
+    +----+---+-------+
     <BLANKLINE>
 
     """
@@ -164,7 +164,7 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.
-                    """)
+                    """.format(argname))
             colnames.append(colname[0])
 
         df = df\
@@ -240,13 +240,12 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.
-                    """)
+                    """.format(argname))
             colnames.append(colname[0])
 
         df = df.withColumn(processor_func.__name__, processor_func(*colnames))
 
     return df
-
 
 def get_columns(node: Any, df_cols: list) -> list:
     """Iterates over an xml element to retrieve columns
@@ -292,7 +291,6 @@ def get_columns(node: Any, df_cols: list) -> list:
     cols = list(dict.fromkeys(cols))
     return cols
 
-
 def get_rules(node: Any, cols: list):
     """Iterates over an xml element to retrieve filtering rules
 
@@ -336,7 +334,6 @@ def get_rules(node: Any, cols: list):
     # remove duplicates
     rules = list(dict.fromkeys(rules))
     return rules
-
 
 def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     """Parse an xml file with rules for filtering
@@ -444,7 +441,6 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
         rules_list = get_rules(root[2], cols_to_distribute)
 
     return cols_to_distribute, rules_list
-
 
 def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     """Filter the DataFrame before distribution
