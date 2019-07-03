@@ -48,8 +48,8 @@ def dist_stream_cut(sigmapsf: Any, sgscore1: Any) -> pd.Series:
     Returns
     ----------
     out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: 0 for bad alert,
-        and 1 for good alert.
+        Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+        and true for good alert.
 
     """
     mask = sigmapsf.values < 0.1

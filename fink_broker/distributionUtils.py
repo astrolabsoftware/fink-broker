@@ -305,8 +305,7 @@ def get_distribution_offset(
 
     return min_timestamp
 
-def group_df_into_struct(
-        df: DataFrame, colFamily: str) -> DataFrame:
+def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
     """Group columns of a df into a struct column
 
     If we have a df with the following schema:
@@ -370,12 +369,12 @@ def group_df_into_struct(
     cols_to_group = []
     flat_cols = []
 
-    l = len(colFamily) + 1
+    pos = len(colFamily) + 1
 
     for col in df.columns:
         if col.startswith(colFamily + "_"):
-            newcols.append(col[l:])
-            cols_to_group.append(col[l:])
+            newcols.append(col[pos:])
+            cols_to_group.append(col[pos:])
         else:
             newcols.append(col)
             flat_cols.append(col)

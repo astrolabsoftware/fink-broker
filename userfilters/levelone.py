@@ -56,8 +56,8 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     Returns
     ----------
     out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: 0 for bad alert,
-        and 1 for good alert.
+        Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+        and true for good alert.
 
     """
     mask = nbad.values == 0
