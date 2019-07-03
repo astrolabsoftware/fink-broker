@@ -15,12 +15,6 @@ export SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zi
 export PYTHONPATH=${SPARKLIB}:$PYTHONPATH
 export PATH=${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}
 ```
-Then execute the following (to ensure working of coverage module) :
-
-```bash
-echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" >> ${SPARK_HOME}/conf/spark-defaults.conf
-echo "spark.python.daemon.module coverage_daemon" >> ${SPARK_HOME}/conf/spark-defaults.conf
-```
 
 Set the path to HBase
 ```bash
