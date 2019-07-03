@@ -126,19 +126,23 @@ def main():
 
     # Query to group objects by type according to SIMBAD
     # Do it every 30 seconds
-    df_group = df.groupBy("cross_match_alerts_per_batch").count()
-    groupquery = df_group\
-        .writeStream\
-        .outputMode("complete") \
-        .foreachBatch(write_to_csv)\
-        .trigger(processingTime='30 seconds'.format(args.tinterval))\
-        .start()
+    groupedquery_started = False
+    if "cross_match_alerts_per_batch" in processor_levelone_names:
+        df_group = df.groupBy("cross_match_alerts_per_batch").count()
+        groupquery = df_group\
+            .writeStream\
+            .outputMode("complete") \
+            .foreachBatch(write_to_csv)\
+            .trigger(processingTime='30 seconds'.format(args.tinterval))\
+            .start()
+        groupedquery_started = True
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        groupquery.stop()
+        if groupedquery_started:
+            groupquery.stop()
         print("Exiting the raw2science service normally...")
     else:
         # Wait for the end of queries
