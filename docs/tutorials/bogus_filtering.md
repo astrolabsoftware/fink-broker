@@ -7,6 +7,7 @@ This tutorial illustrates the basics of connecting to the raw database (Parquet)
 **Before starting**
 
 For this tutorial, make sure:
+
 * Fink is installed on your computer.
 * Apache Spark (2.4+) is installed on your computer.
 * Docker is installed on your computer.
