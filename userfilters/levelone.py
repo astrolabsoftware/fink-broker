@@ -103,6 +103,11 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
 
     """
     matches = cross_match_alerts_raw(objectId.values, ra.values, dec.values)
+
+    # For regular alerts, the number of matches is always non-zero as
+    # alerts with no counterpart will be labeled as Unknown.
+    # If cross_match_alerts_raw returns a zero-length list of matches, it is
+    # a sign of a problem (logged).
     if len(matches) > 0:
         # (objectId, ra, dec, name, type)
         # return only the type.
