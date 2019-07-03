@@ -131,8 +131,6 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
         .select(struct("candidate").alias("decoded"))
 
     # Apply quality cuts for example (level one)
-    >>> assert("qualitycuts" in filter_levelone_names)
-
     >>> df = apply_user_defined_filters(df, ["qualitycuts"])
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
     +----+---+-------+
@@ -204,8 +202,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
     >>> df = df.select(struct(df.columns).alias("candidate"))\
         .select(struct("candidate").alias("decoded"))
 
-    >>> assert("cross_match_alerts_per_batch" in processor_levelone_names)
-
+    # Perform cross-match
     >>> df = apply_user_defined_processors(df, ["cross_match_alerts_per_batch"])
     >>> new_colnames = ["decoded.candidate.*", "cross_match_alerts_per_batch"]
     >>> df = df.select(new_colnames)
