@@ -60,6 +60,7 @@ export FINK_JARS=$FINK_JARS
 export SPARK_MASTER=$SPARK_MASTER
 export EXTRA_SPARK_CONFIG=$EXTRA_SPARK_CONFIG
 export HBASE_XML_CONF=$HBASE_XML_CONF
+export DEPLOY_FINK_PYTHON=$DEPLOY_FINK_PYTHON
 
 # For use on cluster, the HBase configuration file is actually mandatory.
 if [[ -f ${HBASE_XML_CONF} ]]; then
@@ -70,9 +71,21 @@ else
   HBASE_XML_CONF=${FINK_HOME}/conf/hbase-site.xml
 fi
 
+# For use on cluster, we need to package fink_broker
+PYTHON_EXTRA_FILE=""
+if [[ $DEPLOY_FINK_PYTHON != "false" ]]; then
+  cd $FINK_HOME
+  python3 setup.py bdist_egg
+  FINK_VERSION=`fink --version`
+  PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
+  PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
+  echo "Distributing ${PYTHON_EXTRA_FILE}"
+  cd -
+fi
+
 PYSPARK_DRIVER_PYTHON=${PYSPARK_DRIVER_PYTHON} pyspark \
   --master ${SPARK_MASTER} ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-  --files ${HBASE_XML_CONF} \
+  --files ${HBASE_XML_CONF} ${PYTHON_EXTRA_FILE} \
   --jars ${FINK_JARS} --packages ${FINK_PACKAGES}
 
 unset PYSPARK_DRIVER_PYTHON
@@ -81,3 +94,4 @@ unset FINK_JARS
 unset SPARK_MASTER
 unset EXTRA_SPARK_CONFIG
 unset HBASE_XML_CONF
+unset DEPLOY_FINK_PYTHON
