@@ -60,8 +60,11 @@ case "$1" in
       j=0
       KAFKA_PID=""
       while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
+        # Set security opts
+        unset KAFKA_OPTS
+        export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
         # Start the Kafka Server(Brokers)
-        ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/kafka.server.properties > /dev/null 2>&1 &
+        ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/fink_kafka.server.properties > /dev/null 2>&1 &
         sleep 3
         KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
         j=$[$j+1]
