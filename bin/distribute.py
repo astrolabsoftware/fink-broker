@@ -104,12 +104,16 @@ def main():
         df_kafka = get_kafka_df(df, args.distribution_schema)
 
         # Publish Kafka topic(s)
+        topic = "fink_outstream"
+
         # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
             .write\
             .format("kafka")\
             .option("kafka.bootstrap.servers", "localhost:9093")\
-            .option("topic", "fink_outstream")\
+            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
+            .option("kafka.sasl.mechanism", "PLAIN")\
+            .option("topic", topic)\
             .save()
 
         # Update the status in Hbase and commit checkpoint to file
