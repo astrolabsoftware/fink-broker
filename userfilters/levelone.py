@@ -28,7 +28,7 @@ filter_levelone_names = ["qualitycuts"]
 
 # Declare here the processors that will be applied in the
 # level one (stream -> raw database)
-processor_levelone_names = []
+processor_levelone_names = ["cross_match_alerts_per_batch"]
 
 @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
 def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
