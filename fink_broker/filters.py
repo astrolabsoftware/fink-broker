@@ -361,7 +361,7 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
 
     # get list of all columns in the dataframe
     >>> df_cols = ["objectId", "candid", "candidate_jd", "candidate_ra",
-    ...   "candidate_dec", "candidate_magpsf", "simbadType",
+    ...   "candidate_dec", "candidate_magpsf", "cross_match_alerts_per_batch",
     ...   "cutoutScience_fileName", "cutoutScience_stampData"]
 
     # get columns to distribute and rules to apply
@@ -374,13 +374,13 @@ def parse_xml_rules(xml_file: str, df_cols: list) -> Tuple[list, list]:
     candidate_ra
     candidate_dec
     candidate_magpsf
-    simbadType
+    cross_match_alerts_per_batch
 
     >>> for rule in rules_list:
     ...     print(rule)
     candidate_magpsf > 16
     candidate_ra < 22
-    simbadType = 'Star'
+    cross_match_alerts_per_batch = 'Star'
 
     # given an empty xml file
     >>> cols_to_distribute, rules_list = parse_xml_rules('invalid_xml', df_cols)
@@ -467,15 +467,15 @@ def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     ...     ["Star", "Unknown", "Unknown"])).toDF([
     ...       "objectId", "candid", "candidate_jd",
     ...       "candidate_ra", "candidate_dec",
-    ...       "candidate_magpsf", "simbadType"])
+    ...       "candidate_magpsf", "cross_match_alerts_per_batch"])
     >>> df.show()
-    +------------+------------------+---------------+------------+-------------+----------------+----------+
-    |    objectId|            candid|   candidate_jd|candidate_ra|candidate_dec|candidate_magpsf|simbadType|
-    +------------+------------------+---------------+------------+-------------+----------------+----------+
-    |ZTF18aceatkx|697251923115015002|2458451.7519213|   20.393772|  -25.4669463|       16.074839|      Star|
-    |ZTF18acsbjvw|697251921215010004|2458451.7519213|  20.4233877|  -27.0588511|       17.245092|   Unknown|
-    |ZTF18acsbten|697252386115010006|2458451.7523843|  12.5489498|  -13.7619586|       19.667372|   Unknown|
-    +------------+------------------+---------------+------------+-------------+----------------+----------+
+    +------------+------------------+---------------+------------+-------------+----------------+----------------------------+
+    |    objectId|            candid|   candidate_jd|candidate_ra|candidate_dec|candidate_magpsf|cross_match_alerts_per_batch|
+    +------------+------------------+---------------+------------+-------------+----------------+----------------------------+
+    |ZTF18aceatkx|697251923115015002|2458451.7519213|   20.393772|  -25.4669463|       16.074839|                        Star|
+    |ZTF18acsbjvw|697251921215010004|2458451.7519213|  20.4233877|  -27.0588511|       17.245092|                     Unknown|
+    |ZTF18acsbten|697252386115010006|2458451.7523843|  12.5489498|  -13.7619586|       19.667372|                     Unknown|
+    +------------+------------------+---------------+------------+-------------+----------------+----------------------------+
     <BLANKLINE>
 
     # Set path to xml rule file
@@ -486,11 +486,11 @@ def filter_df_using_xml(df: DataFrame, rules_xml: str) -> DataFrame:
     # get filtered dataframe
     >>> df_filtered = filter_df_using_xml(df, rules_xml)
     >>> df_filtered.show()
-    +------------+------------+-------------+----------------+----------+
-    |    objectId|candidate_ra|candidate_dec|candidate_magpsf|simbadType|
-    +------------+------------+-------------+----------------+----------+
-    |ZTF18aceatkx|   20.393772|  -25.4669463|       16.074839|      Star|
-    +------------+------------+-------------+----------------+----------+
+    +------------+------------+-------------+----------------+----------------------------+
+    |    objectId|candidate_ra|candidate_dec|candidate_magpsf|cross_match_alerts_per_batch|
+    +------------+------------+-------------+----------------+----------------------------+
+    |ZTF18aceatkx|   20.393772|  -25.4669463|       16.074839|                        Star|
+    +------------+------------+-------------+----------------+----------------------------+
     <BLANKLINE>
     """
     # Get all the columns in the DataFrame

@@ -24,7 +24,7 @@
     <column name="candidate" subcol="pid"/>
     <column name="candidate" subcol="magpsf"/>
     <column name="prv_candidates"/>
-    <column name="simbadType"/>
+    <column name="cross_match_alerts_per_batch"/>
   </select>
 
   <!-- columns to drop before distribution -->
@@ -37,7 +37,7 @@
   <filter>
     <column name="candidate" subcol="magpsf" operator="&gt;" value="16"/>
     <column name="candidate" subcol="ra" operator="&lt;" value="22"/>
-    <column name="simbadType" operator="=" value="'Star'"/>
+    <column name="cross_match_alerts_per_batch" operator="=" value="'Star'"/>
   </filter>
 
 </distribution-rules>
