@@ -33,7 +33,10 @@ $message_service\n
 $message_conf\n\n
 
 To see the running processes: \n
-\tfink show \n
+\tfink show \n\n
+
+To stop a service or all running processes: \n
+\tfink stop <service or all> \n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -121,7 +124,28 @@ fi
 
 # Stop services
 if [[ $MODE == "stop" ]]; then
-  if [[ $service == "dashboard" ]]; then
+  if [[ $service == "all" ]]; then
+    SIGNAL=${SIGNAL:-TERM}
+
+    # Kill instance of HBase connector running if needed
+    PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
+
+    if [ -z "$PIDS" ]; then
+      echo "No HBase connection to stop"
+    else
+      echo "Stopping HBase connection..."
+      kill -s $SIGNAL $PIDS
+    fi
+
+    # Kill other services
+    PIDS=$(ps ax | grep -i 'fink' | awk '{print $1}')
+    if [ -z "$PIDS" ]; then
+      echo "No fink service(s) to stop"
+    else
+      echo "Stopping all services..."
+      kill -s $SIGNAL $PIDS
+    fi
+  elif [[ $service == "dashboard" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
     FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
   elif [[ $service == "simulator" ]]; then
@@ -230,7 +254,7 @@ elif [[ $service == "distribution" ]]; then
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
   -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
-  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} ${EXIT_AFTER} 
+  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \
