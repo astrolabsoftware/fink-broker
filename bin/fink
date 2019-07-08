@@ -201,28 +201,27 @@ elif [[ $service == "simulator" ]]; then
     echo "docker-compose not found"
     exit
   fi
-  python3 ${FINK_HOME}/bin/simulate_stream.py \
+  python3 ${FINK_HOME}/bin/simulate_stream.py ${HELP_ON_SERVICE} \
     -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
-    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
+    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/checkstream.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
-    -startingoffsets_stream ${KAFKA_STARTING_OFFSET} -finkwebpath ${FINK_UI_PATH} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
+    -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
+    -finkwebpath ${FINK_UI_PATH} ${EXIT_AFTER}
 elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/stream2raw.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
     -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
-    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
   # For use on cluster, the HBase configuration file is actually mandatory.
@@ -240,16 +239,18 @@ elif [[ $service == "raw2science" ]]; then
     --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     --files ${HBASE_XML_CONF} \
-    ${FINK_HOME}/bin/raw2science.py -rawdatapath ${FINK_ALERT_PATH} \
+    ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
+    -rawdatapath ${FINK_ALERT_PATH} \
     -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
     -science_db_name ${SCIENCE_DB_NAME} \
-    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
-  ${FINK_HOME}/bin/distribute.py -science_db_catalog ${SCIENCE_DB_CATALOG} \
+  ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
+  -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
@@ -260,7 +261,7 @@ elif [[ $service == "distribution_test" ]]; then
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
-  ${FINK_HOME}/bin/distribution_test.py ${EXIT_AFTER} \
+  ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -distribution_schema ${DISTRIBUTION_SCHEMA}
 else
   # In case you give an unknown service
