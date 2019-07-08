@@ -52,9 +52,32 @@ case "$1" in
         sleep 3
         ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
         i=$[$i+1]
-        # echo "zk attempt" $i
-        # echo "ZK_PID" $ZK_PID
       done
+
+      # Create SCRAM Credentials
+      # For brokers
+      ${KAFKA_HOME}/bin/kafka-configs.sh \
+      --zookeeper localhost:2182 \
+      --alter \
+      --add-config 'SCRAM-SHA-256=[password=admin-secret]' \
+      --entity-type users \
+      --entity-name admin
+
+      # For Producer
+      ${KAFKA_HOME}/bin/kafka-configs.sh \
+      --zookeeper localhost:2182 \
+      --alter \
+      --add-config 'SCRAM-SHA-256=[password=finkProducer-secret]' \
+      --entity-type users \
+      --entity-name finkProducer
+
+      # For Consumer
+      ${KAFKA_HOME}/bin/kafka-configs.sh \
+      --zookeeper localhost:2182 \
+      --alter \
+      --add-config 'SCRAM-SHA-256=[password=finkConsumer-secret]' \
+      --entity-type users \
+      --entity-name finkConsumer
 
       # Try to start the Kafka server with 3 attempts
       j=0
@@ -68,8 +91,6 @@ case "$1" in
         sleep 3
         KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
         j=$[$j+1]
-        # echo "Kafka attempt" $j
-        # echo "KAFKA_PID" $KAFKA_PID
       done
 
       if [ -n "$ZK_PID" ] && [ -n "$KAFKA_PID" ]
