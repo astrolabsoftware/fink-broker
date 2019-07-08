@@ -308,6 +308,12 @@ def get_distribution_offset(
 def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     """Group columns of a df into a struct column
 
+    *Note*
+    Currently, the dataframe is transformed by splitting it into
+    two dataframes, reshaping one of them and then using a join.
+    This might consume more resources than necessary and should be
+    optimized in the future if required.
+
     If we have a df with the following schema:
     root
      |-- objectId: string (nullable = true)
@@ -324,7 +330,7 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     Parameters
     ----------
     df: Spark DataFrame
-        a Spark DataFrame with flat columns
+        a Spark dataframe with flat columns
 
     colFamily: str
         prefix of columns to be grouped into a struct
@@ -335,7 +341,7 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     Returns
     ----------
     df: Spark DataFrame
-        a Spark DataFrame with columns grouped into struct
+        a Spark dataframe with columns grouped into struct
 
     Examples
     ----------
@@ -379,13 +385,13 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
         else:
             flat_cols.append(col)
 
-    # DataFrame with columns other than 'columnFamily_*'
+    # dataframe with columns other than 'columnFamily_*'
     df1 = df.select(flat_cols)
 
     new_col_names = []
     new_col_names.append(key)
 
-    # DataFrame with key + 'columnFamily_*'
+    # dataframe with key + 'columnFamily_*'
     df2 = df.select(new_col_names + struct_cols)
 
     struct_cols = [x[pos:] for x in struct_cols]
@@ -396,7 +402,7 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     # Group 'columnFamily_*' into a struct
     df2_struct = df2_renamed.select(key, struct(*struct_cols).alias(colFamily))
 
-    # join the two DataFrames based on 'key'
+    # join the two dataframes based on 'key'
     df_new = df1.join(df2_struct, key)
 
     return df_new
