@@ -92,7 +92,7 @@ def main():
         df = filter_df_using_xml(df, args.distribution_rules_xml)
 
         # group `candidate_*` columns into a struct column
-        df = group_df_into_struct(df, "candidate")
+        df = group_df_into_struct(df, "candidate", "objectId")
 
         # Apply level two filters
         df = apply_user_defined_filters(df, filter_leveltwo_names)

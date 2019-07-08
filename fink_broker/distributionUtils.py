@@ -305,7 +305,7 @@ def get_distribution_offset(
 
     return min_timestamp
 
-def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
+def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     """Group columns of a df into a struct column
 
     If we have a df with the following schema:
@@ -328,6 +328,9 @@ def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
 
     colFamily: str
         prefix of columns to be grouped into a struct
+
+    key: str
+        a column with unique values (used for join)
 
     Returns
     ----------
@@ -353,7 +356,7 @@ def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
      |-- cross_match_alerts_per_batch: string (nullable = true)
     <BLANKLINE>
 
-    >>> df = group_df_into_struct(df, 'candidate')
+    >>> df = group_df_into_struct(df, 'candidate', 'objectId')
     >>> df.printSchema()
     root
      |-- objectId: string (nullable = true)
@@ -365,22 +368,36 @@ def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
     <BLANKLINE>
 
     """
-    newcols = []
-    cols_to_group = []
+    struct_cols = []
     flat_cols = []
 
     pos = len(colFamily) + 1
 
     for col in df.columns:
         if col.startswith(colFamily + "_"):
-            newcols.append(col[pos:])
-            cols_to_group.append(col[pos:])
+            struct_cols.append(col)
         else:
-            newcols.append(col)
             flat_cols.append(col)
 
-    df_new = df.toDF(*newcols)
-    df_new = df_new.select(*flat_cols, struct(*cols_to_group).alias(colFamily))
+    # DataFrame with columns other than 'columnFamily_*'
+    df1 = df.select(flat_cols)
+
+    new_col_names = []
+    new_col_names.append(key)
+
+    # DataFrame with key + 'columnFamily_*'
+    df2 = df.select(new_col_names + struct_cols)
+
+    struct_cols = [x[pos:] for x in struct_cols]
+
+    new_col_names.extend(struct_cols)
+    df2_renamed = df2.toDF(*new_col_names)
+
+    # Group 'columnFamily_*' into a struct
+    df2_struct = df2_renamed.select(key, struct(*struct_cols).alias(colFamily))
+
+    # join the two DataFrames based on 'key'
+    df_new = df1.join(df2_struct, key)
 
     return df_new
 
