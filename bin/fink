@@ -128,18 +128,18 @@ if [[ $MODE == "stop" ]]; then
     PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
 
     if [ -z "$PIDS" ]; then
-      echo "No fink $service service to stop"
+      echo "No HBase connection to stop"
     else
-      echo "Stopping $service (HBase connection)..."
+      echo "Stopping HBase connection..."
       kill -s $SIGNAL $PIDS
     fi
 
     # Kill other services
     PIDS=$(ps ax | grep -i 'fink' | awk '{print $1}')
     if [ -z "$PIDS" ]; then
-      echo "No fink $service service to stop"
+      echo "No fink service(s) to stop"
     else
-      echo "Stopping $service..."
+      echo "Stopping all services..."
       kill -s $SIGNAL $PIDS
     fi
   elif [[ $service == "dashboard" ]]; then
