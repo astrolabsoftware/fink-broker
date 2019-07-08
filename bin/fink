@@ -33,7 +33,10 @@ $message_service\n
 $message_conf\n\n
 
 To see the running processes: \n
-\tfink show \n
+\tfink show \n\n
+
+To stop a service or all running processes: \n
+\tfink stop <service or all> \n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
