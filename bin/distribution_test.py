@@ -39,7 +39,7 @@ def main():
         name="distribution_test", shuffle_partitions=2, log_level="ERROR")
 
     # Topic to read from
-    topic = "fink_outstream"
+    topic = args.distribution_topic
 
     # Read from the Kafka topic
     df_kafka = spark \

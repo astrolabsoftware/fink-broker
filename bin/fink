@@ -231,6 +231,7 @@ elif [[ $service == "distribution" ]]; then
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
   ${FINK_HOME}/bin/distribute.py -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
+  -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
   -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
@@ -245,6 +246,7 @@ elif [[ $service == "distribution_test" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   ${FINK_HOME}/bin/distribution_test.py ${EXIT_AFTER} \
+  -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA}
 else
   # In case you give an unknown service

@@ -60,6 +60,9 @@ def main():
     min_timestamp = get_distribution_offset(
         args.checkpointpath_dist, args.startingOffset_dist)
 
+    # Get topic name to publish on
+    topic = args.distribution_topic
+
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
         t_end = time.time() + args.exit_after
@@ -102,9 +105,6 @@ def main():
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
-
-        # Publish Kafka topic(s)
-        topic = "fink_outstream"
 
         # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
