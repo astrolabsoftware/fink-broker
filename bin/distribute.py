@@ -21,6 +21,7 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
+from pyspark.sql import DataFrame
 
 import argparse
 import json
@@ -33,11 +34,10 @@ from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
 from fink_broker.distributionUtils import get_distribution_offset
 from fink_broker.distributionUtils import group_df_into_struct
 from fink_broker.hbaseUtils import flattenstruct
-
 from fink_broker.filters import filter_df_using_xml, apply_user_defined_filters
-from userfilters.leveltwo import filter_leveltwo_names
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
-from pyspark.sql import DataFrame
+from userfilters.leveltwo import filter_leveltwo_names
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
