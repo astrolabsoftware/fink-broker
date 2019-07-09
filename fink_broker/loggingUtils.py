@@ -14,6 +14,8 @@
 # limitations under the License.
 from pyspark import SparkContext
 
+from fink_broker.tester import spark_unit_tests
+
 def get_fink_logger(name: str = "test", log_level: str = "INFO"):
     """ Initialise log4j logger
 
