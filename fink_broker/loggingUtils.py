@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark import SparkContext
+from pyspark.sql import SparkSession
 
 from fink_broker.tester import spark_unit_tests
 
@@ -53,6 +54,30 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO"):
     loggermodule.LogManager.getLogger('org').setLevel(level)
 
     return mylogger
+
+def inspect_application(logger):
+    """Print INFO and DEBUG statements about the current application such
+    as the Spark configuration, the Spark & Python versions.
+
+    Parameters
+    ----------
+    logger : log4j logger
+        Logger initialised by get_fink_logger.
+
+    Examples
+    -------
+    >>> log = get_fink_logger(__name__, "DEBUG")
+    >>> inspect_application(log) # doctest: +SKIP
+    """
+    spark = SparkSession.builder.getOrCreate()
+
+    logger.info('Application: {}'.format(spark.sparkContext.appName))
+    logger.info('Python version: {}'.format(spark.sparkContext.pythonVer))
+    logger.info('Spark version: {}'.format(spark.sparkContext.version))
+
+    # Debug statements
+    conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])
+    logger.debug(conf)
 
 
 if __name__ == "__main__":

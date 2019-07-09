@@ -34,9 +34,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    # Get or create a Spark Session
-    spark = init_sparksession(
-        name="distribution_test", shuffle_partitions=2, log_level="ERROR")
+    # Initialise Spark session
+    spark = init_sparksession(name="distribution_test", shuffle_partitions=2)
+
+    # The level here should be controlled by an argument.
+    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+
+    # debug statements
+    inspect_application(logger)
 
     # Topic to read from
     topic = "fink_outstream"

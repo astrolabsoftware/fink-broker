@@ -139,34 +139,8 @@ def write_to_csv(
         .to_csv(fn, index=False)
     batchdf.unpersist()
 
-def quiet_logs(sc: SparkContext, log_level: str = "ERROR"):
-    """ Set the level of log in Apache Spark.
-
-    Parameters
-    ----------
-    sc : SparkContext
-        The SparkContext for the session
-    log_level : String [optional]
-        Level of log wanted: INFO, WARN, ERROR, OFF, etc.
-
-    Examples
-    ----------
-    Display only ERROR messages (ignore INFO, WARN, etc.)
-    >>> quiet_logs(spark.sparkContext, "ERROR")
-    """
-    # Get the logger
-    logger = sc._jvm.org.apache.log4j
-
-    # Set the level
-    level = getattr(logger.Level, log_level, "INFO")
-
-    logger.LogManager.getLogger("org"). setLevel(level)
-    logger.LogManager.getLogger("akka").setLevel(level)
-
-def init_sparksession(
-        name: str = "my-streaming-app", shuffle_partitions: int = 2,
-        log_level: str = "ERROR") -> SparkSession:
-    """ Initialise SparkSession, and set some configuration parameters
+def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
+    """ Initialise SparkSession, the logger and some configuration parameters
 
     Parameters
     ----------
@@ -175,11 +149,6 @@ def init_sparksession(
     shuffle_partitions: int, optional
         Number of partition to use when shuffling data.
         Typically better to keep the size of shuffles small. Default is 2.
-    log_level: str, optional
-        Level of verbosity for the Spark logger.
-        Put WARN or INFO for debugging, but you will have to dive into
-        a sea of millions irrelevant messages for what you typically need...
-        Default is ERROR.
 
     Returns
     ----------
@@ -188,11 +157,11 @@ def init_sparksession(
 
     Examples
     ----------
-    >>> spark_tmp = init_sparksession()
+    >>> spark_tmp = init_sparksession("test")
     >>> conf = spark_tmp.sparkContext.getConf().getAll()
     >>> name = [i[1] for i in conf if i[0] == "spark.app.name"][0]
     >>> print(name)
-    my-streaming-app
+    test
     """
     # Grab the running Spark Session,
     # otherwise create it.
@@ -200,11 +169,6 @@ def init_sparksession(
         .builder \
         .appName(name) \
         .getOrCreate()
-
-    # Set logs to be quieter
-    # Put WARN or INFO for debugging, but you will have to dive into
-    # a sea of millions irrelevant messages for what you typically need...
-    quiet_logs(spark.sparkContext, log_level=log_level)
 
     # keep the size of shuffles small
     spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)

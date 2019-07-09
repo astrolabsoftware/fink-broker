@@ -47,10 +47,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    # Grab the running Spark Session,
-    # otherwise create it.
-    spark = init_sparksession(
-        name="buildSciDB", shuffle_partitions=2, log_level="ERROR")
+    # Initialise Spark session
+    spark = init_sparksession(name="raw2science", shuffle_partitions=2)
+
+    # The level here should be controlled by an argument.
+    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+
+    # debug statements
+    inspect_application(logger)
 
     # FIXME!
     if "travis" in args.science_db_name:
@@ -143,7 +147,7 @@ def main():
         countquery.stop()
         if groupedquery_started:
             groupquery.stop()
-        print("Exiting the raw2science service normally...")
+        logger.info("Exiting the raw2science service normally...")
     else:
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()

@@ -37,6 +37,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_broker.monitoring import monitor_progress_webui
 
@@ -45,8 +46,13 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    init_sparksession(
-        name="archivingStream", shuffle_partitions=2, log_level="ERROR")
+    spark = init_sparksession(name="stream2raw", shuffle_partitions=2)
+
+    # The level here should be controlled by an argument.
+    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+
+    # debug statements
+    inspect_application(logger)
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
@@ -114,7 +120,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        print("Exiting the stream2raw service normally...")
+        logger.info("Exiting the stream2raw service normally...")
     else:
         countquery.awaitTermination()
 
