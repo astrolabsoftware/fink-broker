@@ -47,7 +47,7 @@ def main():
         .format("kafka") \
         .option("kafka.bootstrap.servers", "localhost:9093") \
         .option("kafka.security.protocol", "SASL_PLAINTEXT")\
-        .option("kafka.sasl.mechanism", "SCRAM-SHA-256")\
+        .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
         .option("subscribe", topic) \
         .load()
 
