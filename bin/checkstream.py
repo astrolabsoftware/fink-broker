@@ -23,7 +23,7 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.monitoring import monitor_progress_webui
-from fink_broker.logging import get_fink_logger, inspect_application
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

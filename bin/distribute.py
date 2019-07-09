@@ -35,7 +35,7 @@ from fink_broker.distributionUtils import get_distribution_offset
 from fink_broker.distributionUtils import group_df_into_struct
 from fink_broker.hbaseUtils import flattenstruct
 from fink_broker.filters import filter_df_using_xml, apply_user_defined_filters
-from fink_broker.logging import get_fink_logger, inspect_application
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from userfilters.leveltwo import filter_leveltwo_names
 
