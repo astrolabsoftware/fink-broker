@@ -37,7 +37,7 @@ from fink_broker.hbaseUtils import flattenstruct, explodearrayofstruct
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.filters import apply_user_defined_filters
 from fink_broker.filters import apply_user_defined_processors
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging import get_fink_logger, inspect_application
 
 from userfilters.levelone import filter_levelone_names
 from userfilters.levelone import processor_levelone_names
