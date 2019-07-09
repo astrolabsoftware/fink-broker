@@ -34,12 +34,39 @@ Option:\n
     \t\tLists out details for the given topic <TOPIC> \n\n
   \t--list-topics \n
     \t\tLists all the topics \n\n
+  \t--authentication [-a] [-d] [-u user] [-p password] [-h] \n
+    \t\tAuthenticate users on Fink's Kafka Cluster (use -h for more help) \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
   echo -e $message_help
   exit 1
 fi
+
+# function to create SCRAM credentials
+create_scram_credential() {
+  username="$1"
+  password="$2"
+
+  ${KAFKA_HOME}/bin/kafka-configs.sh \
+  --zookeeper localhost:2182 \
+  --alter \
+  --add-config "SCRAM-SHA-512=[password=${password}]" \
+  --entity-type users \
+  --entity-name ${username}
+}
+
+# function to delete SCRAM credentials
+delete_scram_credential() {
+  username="$1"
+
+  ${KAFKA_HOME}/bin/kafka-configs.sh \
+  --zookeeper localhost:2182 \
+  --alter \
+  --delete-config 'SCRAM-SHA-512' \
+  --entity-type users \
+  --entity-name ${username}
+}
 
 case "$1" in
   "start")
@@ -56,28 +83,11 @@ case "$1" in
 
       # Create SCRAM Credentials
       # For brokers
-      ${KAFKA_HOME}/bin/kafka-configs.sh \
-      --zookeeper localhost:2182 \
-      --alter \
-      --add-config 'SCRAM-SHA-256=[password=admin-secret]' \
-      --entity-type users \
-      --entity-name admin
-
-      # For Producer
-      ${KAFKA_HOME}/bin/kafka-configs.sh \
-      --zookeeper localhost:2182 \
-      --alter \
-      --add-config 'SCRAM-SHA-256=[password=finkProducer-secret]' \
-      --entity-type users \
-      --entity-name finkProducer
-
-      # For Consumer
-      ${KAFKA_HOME}/bin/kafka-configs.sh \
-      --zookeeper localhost:2182 \
-      --alter \
-      --add-config 'SCRAM-SHA-256=[password=finkConsumer-secret]' \
-      --entity-type users \
-      --entity-name finkConsumer
+      create_scram_credential admin admin-secret
+      # For Fink producer
+      create_scram_credential finkProducer finkProducer-secret
+      # For Fink's test consumer
+      create_scram_credential finkConsumer finkConsumer-secret
 
       # Try to start the Kafka server with 3 attempts
       j=0
@@ -124,7 +134,7 @@ case "$1" in
       --partitions 1 \
       --replication-factor 1 \
       --topic $TOPIC \
-      --zookeeper "localhost:2182"  >&1
+      --zookeeper "localhost:2182"
       # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
       ;;
   "--delete-topic")
@@ -156,6 +166,10 @@ case "$1" in
       --list \
       --zookeeper "localhost:2182" >&1
       ;;
+  "--authentication")
+      service="authentication"
+      shift 1
+      ;;
   "-h"|"--help")
       echo -e $message_help
       ;;
@@ -168,3 +182,77 @@ case "$1" in
       exit 1
       ;;
 esac
+
+authentication_usage() {
+  cat <<END
+
+ Usage:
+        fink_kafka --authentication [-a] [-d] [-u user] [-p password] [-h]
+
+ Add/delete credentials for user's authentication
+        -a: add user's credentials (default)
+        -d: delete user's credentials (optional)
+        -u: username
+        -p: password (not required for delete)
+        -h: to view this help message
+
+END
+}
+
+if [[ $service == "authentication" ]]; then
+  if [[ $# -lt 1 ]]; then
+    echo "Insufficient arguments for service: ${service}"
+    authentication_usage
+    exit 2
+  fi
+
+  declare operation="add"
+
+  while getopts ":adu:p:h" opt; do
+    case $opt in
+      a)
+        # do nothing (default)
+        ;;
+      d)
+        operation="delete"
+        ;;
+      u)
+        username=${OPTARG}
+        ;;
+      p)
+        password=${OPTARG}
+        ;;
+      h)
+        authentication_usage
+        exit 0
+        ;;
+      :)
+        if [[ ! $operation == "delete" ]]; then
+          echo "error: option ${OPTARG} is missing and argument" >&2
+          exit 3
+        fi
+        ;;
+      \?)
+        echo "error: unknown option -${OPTARG}" >&2
+        exit 4
+        ;;
+    esac
+  done
+
+  if [[ $operation == "add" ]]; then
+    if [[ $username && $password ]]; then
+      create_scram_credential "$username" "$password"
+    else
+      echo "error: missing username/password" >&2
+      exit 5
+    fi
+  elif [[ $operation == "delete" ]]; then
+    if [[ $username ]]; then
+      delete_scram_credential "$username"
+    else
+      echo "error: missing username" >&2
+      exit 5
+    fi
+  fi
+
+fi
