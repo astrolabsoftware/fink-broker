@@ -33,7 +33,10 @@ $message_service\n
 $message_conf\n\n
 
 To see the running processes: \n
-\tfink show \n
+\tfink show \n\n
+
+To stop a service or all running processes: \n
+\tfink stop <service or all> \n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -121,7 +124,28 @@ fi
 
 # Stop services
 if [[ $MODE == "stop" ]]; then
-  if [[ $service == "dashboard" ]]; then
+  if [[ $service == "all" ]]; then
+    SIGNAL=${SIGNAL:-TERM}
+
+    # Kill instance of HBase connector running if needed
+    PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
+
+    if [ -z "$PIDS" ]; then
+      echo "No HBase connection to stop"
+    else
+      echo "Stopping HBase connection..."
+      kill -s $SIGNAL $PIDS
+    fi
+
+    # Kill other services
+    PIDS=$(ps ax | grep -i 'fink' | awk '{print $1}')
+    if [ -z "$PIDS" ]; then
+      echo "No fink service(s) to stop"
+    else
+      echo "Stopping all services..."
+      kill -s $SIGNAL $PIDS
+    fi
+  elif [[ $service == "dashboard" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
     FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
   elif [[ $service == "simulator" ]]; then
@@ -177,28 +201,27 @@ elif [[ $service == "simulator" ]]; then
     echo "docker-compose not found"
     exit
   fi
-  python3 ${FINK_HOME}/bin/simulate_stream.py \
+  python3 ${FINK_HOME}/bin/simulate_stream.py ${HELP_ON_SERVICE} \
     -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
-    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} ${HELP_ON_SERVICE}
+    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/checkstream.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
-    -startingoffsets_stream ${KAFKA_STARTING_OFFSET} -finkwebpath ${FINK_UI_PATH} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
+    -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
+    -finkwebpath ${FINK_UI_PATH} ${EXIT_AFTER}
 elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/stream2raw.py -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
+    ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
     -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
-    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} \
-    ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
   # For use on cluster, the HBase configuration file is actually mandatory.
@@ -216,10 +239,11 @@ elif [[ $service == "raw2science" ]]; then
     --jars ${FINK_JARS} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     --files ${HBASE_XML_CONF} \
-    ${FINK_HOME}/bin/raw2science.py -rawdatapath ${FINK_ALERT_PATH} \
+    ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
+    -rawdatapath ${FINK_ALERT_PATH} \
     -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
     -science_db_name ${SCIENCE_DB_NAME} \
-    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER} ${HELP_ON_SERVICE}
+    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
@@ -229,7 +253,8 @@ elif [[ $service == "distribution" ]]; then
   --driver-java-options "-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
-  ${FINK_HOME}/bin/distribute.py -science_db_catalog ${SCIENCE_DB_CATALOG} \
+  ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
+  -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
@@ -245,7 +270,7 @@ elif [[ $service == "distribution_test" ]]; then
   --driver-java-options "-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
-  ${FINK_HOME}/bin/distribution_test.py ${EXIT_AFTER} \
+  ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA}
 else
