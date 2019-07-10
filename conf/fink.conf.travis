@@ -77,7 +77,8 @@ SCIENCE_DB_CATALOG=${FINK_HOME}/catalog.json
 # You can find an example in ${FINK_HOME}/conf
 HBASE_XML_CONF=${SPARK_HOME}/conf/hbase-site.xml
 
-# The minimum level of log: OFF, DEBUG, INFO, WARN, ERROR, CRITICAL
+# The minimum level of log for FINK: OFF, DEBUG, INFO, WARN, ERROR, CRITICAL
+# Note that for Spark, the level is set to WARN (see log4j.properties)
 LOG_LEVEL=INFO
 
 ######################################

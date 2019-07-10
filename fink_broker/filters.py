@@ -118,6 +118,7 @@ def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
     # Wrong filter name will lead to error
     >>> f = load_user_f_and_p(
     ...   "unknownfunc", ["one", "two"])
+    ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
      ...
     ImportError:
