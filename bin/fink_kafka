@@ -36,6 +36,8 @@ Option:\n
     \t\tLists all the topics \n\n
   \t--authentication [-a] [-d] [-u user] [-p password] [-h] \n
     \t\tAuthenticate users on Fink's Kafka Cluster (use -h for more help) \n\n
+  \t--authorization [-a] [-d] [-u user] [-H host] [-c consumer-group] [-p] [-t topic] [-h] \n
+    \t\tAuthorize permissions on Fink's Kafka Cluster (use -h for more help) \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
