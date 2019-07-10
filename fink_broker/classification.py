@@ -121,6 +121,84 @@ def xmatch(
 
     return data, header
 
+from astroquery.simbad import Simbad
+import astropy.coordinates as coord
+#suppress warnings which query returns if no objects found
+import warnings
+warnings.filterwarnings('ignore')
+
+def xmatch_slow(
+                ra: list, dec: list, id: list,
+                distmaxarcsec: int = 1) -> (list, list):
+    """ Build a catalog of (ra, dec, id) as pandas DataFrame,
+        cross-match with astroquery, and decode the output.
+        See  https://astroquery.readthedocs.io/en/latest/simbad/simbad.html for more information.
+        Parameters
+        ----------
+        ra: list of float
+        List of RA
+        dec: list of float
+        List of Dec of the same size as ra.
+        id: list of str
+        List of object ID (custom)
+        distmaxarcsec: int
+        Radius used for searching match. extcatalog sources lying within
+        radius of the center (ra, dec) will be considered as matches.
+        
+        Returns
+        ----------
+        data_new: dataframe
+        
+        Examples
+        ----------
+        >>> ra = [26.8566983, 26.24497]
+        >>> dec = [-26.9677112, -26.7569436]
+        >>> id = ["1", "2"]
+        >>> data = xmatch_slow(ra, dec, id, 1)
+        >>> 'TYC' in str(data['main_id']).split(",")[0]
+        True
+        """
+    
+    #Set minimal number of fields
+    Simbad.reset_votable_fields()
+    #Add a new field to the query
+    Simbad.add_votable_fields('otype')
+    
+    list_keys = ['MAIN_ID', 'RA', 'DEC', 'OTYPE']
+    list_old_keys = ['main_id', 'ra', 'dec', 'main_type']
+    dictionary_simbad_to_new = dict( zip(list_keys, list_old_keys) )
+    
+    query_new = {}
+    data_new = {}
+    
+    for k in range(0,len(ra)):
+        
+        #create a list
+        lista_in = ['Unknown', ra[k], dec[k], 'Unknown', id[k]]
+        
+        # Send requests one by one (as required by the protocol)
+        query_new[k] = (Simbad.query_region(coord.SkyCoord(ra=ra[k],
+                                                           dec=dec[k],
+                                                           unit ='deg'),
+                                            radius='0h0m'+str(distmaxarcsec)+'s') )
+            
+        try:
+            #if table not empy, convert to a pandas DataFrame
+            data_new[k] = query_new[k][list_keys].to_pandas().rename(columns=dictionary_simbad_to_new)
+            #need to convert from bytes to ascii
+            data_new[k]['main_id'] = data_new[k]['main_id'].values[0].decode('ascii')
+            data_new[k]['main_type'] = data_new[k]['main_type'].values[0].decode('ascii')
+                                                            
+            data_new[k]['ra'] = ra[k]
+            data_new[k]['objectId'] = id[k]
+                                                            
+        except:
+            #if table empy, create a dataframe
+            data_new[k] = pd.DataFrame(lista_in).transpose()
+            data_new[k].columns = list_old_keys + ['objectId']
+                                                                
+    return pd.concat([ data_new[k] for k in range(0,len(ra))], axis=0)
+
 def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     """ Query the CDSXmatch service to find identified objects
     in alerts. The catalog queried is the SIMBAD bibliographical database.
@@ -196,6 +274,85 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
 
         return out
 
+
+
+def cross_match_alerts_raw_slow(oid: list, ra: list, dec: list) -> list:
+    """ Query the CDSXmatch service to find identified objects
+        in alerts. The catalog queried is the SIMBAD bibliographical database.
+        We can also use the 10,000+ VizieR tables if needed :-)
+        
+        Parameters
+        ----------
+        oid: list of str
+        List containing object ids (custom)
+        ra: list of float
+        List containing object ra coordinates
+        dec: list of float
+        List containing object dec coordinates
+        
+        Returns
+        ----------
+        out: List of Tuple
+        Each tuple contains (objectId, ra, dec, name, type).
+        If the object is not found in Simbad, name & type
+        are marked as Unknown. In the case several objects match
+        the centroid of the alert, only the closest is returned.
+        
+        Examples
+        ----------
+        >>> ra = [26.8566983, 26.24497]
+        >>> dec = [-26.9677112, -26.7569436]
+        >>> id = ["1", "2"]
+        >>> objects = cross_match_alerts_raw(id, ra, dec)
+        >>> print(objects) # doctest: +NORMALIZE_WHITESPACE
+        [('1', 26.8566983, -26.9677112, 'TYC 6431-115-1', 'Star'),
+        ('2', 26.24497, -26.7569436, 'Unknown', 'Unknown')]
+        """
+
+    if len(ra) == 0:
+        return []
+
+    data_new = xmatch_slow(ra, dec, oid, distmaxarcsec=1)
+
+    # Fields of interest (their indices in the output)
+    if "main_id" not in data_new.columns:
+        return []
+
+    else:
+        main_id ='main_id'
+        main_type ='main_type'
+        oid_ind ='objectId'
+        
+        # Get the objectId of matches
+        id_out = list(data_new[oid_ind].values)
+        
+        # Get the names of matches
+        names = data_new[main_id].values
+        
+        # Get the types of matches
+        types = data_new[main_type].values
+        # Assign names and types to inputs
+        out = []
+        for ra_in, dec_in, id_in in zip(ra, dec, oid):
+            # cast for picky Spark
+            ra_in, dec_in = float(ra_in), float(dec_in)
+            id_in = str(id_in)
+            
+            # Discriminate with the objectID
+            if id_in in id_out:
+                # Return the closest object in case of many
+                # (smallest angular distance)
+                index = id_out.index(id_in)
+                out.append((
+                            id_in, ra_in, dec_in,
+                            str(names[index]), str(types[index])))
+            
+            else:
+                # Mark as unknown if no match
+                out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+    
+    return out
+
 @pandas_udf(StringType(), PandasUDFType.SCALAR)
 def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
     """ Query the CDSXmatch service to find identified objects
@@ -257,3 +414,6 @@ if __name__ == "__main__":
 
     # Run the Spark test suite
     spark_unit_tests(globals())
+    #import sys
+    #import doctest
+    #sys.exit(doctest.testmod()[0])
