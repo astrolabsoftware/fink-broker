@@ -68,7 +68,7 @@ def inspect_application(logger):
     """
     spark = SparkSession.builder.getOrCreate()
 
-    logger.info('Application: {}'.format(spark.sparkContext.appName))
+    logger.info('Application started')
     logger.info('Python version: {}'.format(spark.sparkContext.pythonVer))
     logger.info('Spark version: {}'.format(spark.sparkContext.version))
 
