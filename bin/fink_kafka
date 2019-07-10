@@ -68,6 +68,71 @@ delete_scram_credential() {
   --entity-name ${username}
 }
 
+# function to add Acl for a producer
+add_acl_producer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --add \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --producer \
+  --topic ${topic}
+}
+
+# function to add Acl for a consumer
+add_acl_consumer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+  consumer_group="$4"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --add \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --consumer \
+  --topic ${topic} \
+  --group ${consumer_group}
+}
+
+# function to remove Acl for a producer
+remove_acl_producer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --remove \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --producer \
+  --topic ${topic}
+}
+
+# function to remove Acl for a consumer
+remove_acl_consumer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+  consumer_group="$4"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --remove \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --consumer \
+  --topic ${topic} \
+  --group ${consumer_group}
+}
+
+
 case "$1" in
   "start")
       # Try to Start the Zookeeper with 3 attempts
@@ -81,13 +146,27 @@ case "$1" in
         i=$[$i+1]
       done
 
-      # Create SCRAM Credentials
+      # Create SCRAM Credentials for Authentication
       # For brokers
-      create_scram_credential admin admin-secret
+      create_scram_credential "admin" "admin-secret"
       # For Fink producer
-      create_scram_credential finkProducer finkProducer-secret
+      create_scram_credential "finkProducer" "finkProducer-secret"
       # For Fink's test consumer
-      create_scram_credential finkConsumer finkConsumer-secret
+      create_scram_credential "finkConsumer" "finkConsumer-secret"
+
+      # Enable Authorization
+      # For Fink producer
+      add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
+      # For Fink's test consumer
+      ${KAFKA_HOME}/bin/kafka-acls.sh \
+      --authorizer-properties zookeeper.connect=localhost:2182 \
+      --add \
+      --allow-principal User:finkConsumer \
+      --allow-host 127.0.0.1 \
+      --consumer \
+      --topic fink_outstream \
+      --group spark-kafka- \
+      --resource-pattern-type prefixed
 
       # Try to start the Kafka server with 3 attempts
       j=0
@@ -170,6 +249,14 @@ case "$1" in
       service="authentication"
       shift 1
       ;;
+  "--authorization")
+      service="authorization"
+      shift 1
+      ;;
+  "--authentication")
+      service="authorization"
+      shift 1
+      ;;
   "-h"|"--help")
       echo -e $message_help
       ;;
@@ -228,7 +315,7 @@ if [[ $service == "authentication" ]]; then
         ;;
       :)
         if [[ ! $operation == "delete" ]]; then
-          echo "error: option ${OPTARG} is missing and argument" >&2
+          echo "error: option ${OPTARG} is missing an argument" >&2
           exit 3
         fi
         ;;
@@ -255,4 +342,119 @@ if [[ $service == "authentication" ]]; then
     fi
   fi
 
+fi
+
+authorization_usage() {
+  cat <<END
+
+ Usage:
+        fink_kafka --authorization [-a] [-d] [-u user] [-H host] [-c consumer-group] [-p] [-t topic] [-h]
+
+ Add/delete ACLs for authorization on Fink's Kafka Cluster
+        -a: add Acl
+        -d: delete/remove Acl
+        -u: username (Principal)
+        -H: IP address from which Principal will have access (using hostname is not supported)
+        -c: give access rights for a consumer (argument required: consumer-group)
+        -p: give access rights for a producer
+        -t: topic
+        -h: to view this help message
+
+END
+}
+
+if [[ $service == "authorization" ]]; then
+  if [[ $# -lt 1 ]]; then
+    echo "Insufficient arguments for service: ${service}"
+    authorization_usage
+    exit 2
+  fi
+
+  declare operation=""
+  declare mode=""
+
+  while getopts ":adu:H:c:pt:h" opt; do
+    case $opt in
+      a)
+        operation="add"
+        ;;
+      d)
+        operation="remove"
+        ;;
+      u)
+        username=${OPTARG}
+        ;;
+      H)
+        host=${OPTARG}
+        ;;
+      c)
+        mode="consumer"
+        group=${OPTARG}
+        ;;
+      p)
+        mode="producer"
+        ;;
+      t)
+        topic=${OPTARG}
+        ;;
+      h)
+        authorization_usage
+        exit 0
+        ;;
+      :)
+        echo "error: option ${OPTARG} is missing an argument" >&2
+        exit 3
+        ;;
+      \?)
+        echo "error: unknown option -${OPTARG}" >&2
+        exit 4
+        ;;
+    esac
+  done
+
+  if [[ $operation == "add" ]]; then
+
+    if [[ $username && $host && $topic ]]; then
+      if [[ ! $mode ]]; then
+        echo "error: use -c -p to add consumer/producer permissions"
+        authorization_usage
+        exit 6
+      fi
+
+      if [[ $mode == "producer" ]]; then
+        add_acl_producer "$username" "$host" "$topic"
+      elif [[ $mode == "consumer" ]]; then
+        [[ $group ]] || echo "error: no consumer-group given" exit 7
+        add_acl_consumer "$username" "$host" "$topic" "$group"
+      fi
+
+    else
+      echo "error: Illegal usage"
+      authorization_usage
+      exit 6
+    fi
+  fi
+
+  if [[ $operation == "remove" ]]; then
+
+    if [[ $username && $host && $topic ]]; then
+      if [[ ! $mode ]]; then
+        echo "error: use -c -p to remove consumer/producer permissions"
+        authorization_usage
+        exit 6
+      fi
+
+      if [[ $mode == "producer" ]]; then
+        remove_acl_producer "$mode" "$username" "$host" "$topic"
+      elif [[ $mode == "consumer" ]]; then
+        [[ $group ]] || echo "error: no consumer-group given" exit 7
+        remove_acl_consumer "$mode" "$username" "$host" "$topic" "$group"
+      fi
+
+    else
+      echo "error: Illegal usage"
+      authorization_usage
+      exit 6
+    fi
+  fi
 fi
