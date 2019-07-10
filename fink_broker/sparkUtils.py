@@ -173,6 +173,9 @@ def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
     # keep the size of shuffles small
     spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
 
+    # Set spark log level to WARN
+    spark.sparkContext.setLogLevel("WARN")
+
     return spark
 
 def get_spark_context() -> SparkContext:

@@ -45,13 +45,10 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO"):
     loggermodule = sc._jvm.org.apache.log4j
     mylogger = loggermodule.Logger.getLogger(name)
 
-    # Set the minimum level of log
+    # Set the minimum level of log - INFO is the default
     level = getattr(loggermodule.Level, log_level, "INFO")
 
     loggermodule.LogManager.getLogger(name).setLevel(level)
-
-    # Set the minimum level of log from org.* module
-    loggermodule.LogManager.getLogger('org').setLevel(level)
 
     return mylogger
 
