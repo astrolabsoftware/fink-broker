@@ -23,8 +23,8 @@ import xml.etree.ElementTree as ET
 
 from typing import Any, Tuple
 
-from userfilters.levelone import *
-from userfilters.leveltwo import *
+# from userfilters.levelone import *
+# from userfilters.leveltwo import *
 
 from fink_broker.tester import spark_unit_tests
 
