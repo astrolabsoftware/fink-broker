@@ -17,18 +17,26 @@
 """Distribute the alerts to users
 
 1. Use the Alert data that is stored in the Science database (HBase)
-2. Serialize into Avro
+2. Apply user defined filters
+3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
 
 import argparse
 import json
 import time
+import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import get_kafka_df, update_status_in_hbase
 from fink_broker.distributionUtils import get_distribution_offset
+from fink_broker.distributionUtils import group_df_into_struct
+from fink_broker.hbaseUtils import flattenstruct
+
+from fink_broker.filters import filter_df_using_xml, apply_user_defined_filters
+from userfilters.leveltwo import filter_leveltwo_names
+
 from pyspark.sql import DataFrame
 
 def main():
@@ -50,7 +58,7 @@ def main():
 
     # get distribution offset
     min_timestamp = get_distribution_offset(
-                        args.checkpointpath_dist, args.startingOffset_dist)
+        args.checkpointpath_dist, args.startingOffset_dist)
 
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
@@ -64,36 +72,56 @@ def main():
         """Keep scanning the HBase for new records in a loop
         """
         # Scan the HBase till current time
-        max_timestamp = int(round(time.time() * 1000)) # time in ms
+        max_timestamp = int(round(time.time() * 1000))  # time in ms
 
         # Read Hbase within timestamp range
         df = spark.read\
-                  .option("catalog", catalog)\
-                  .option("minStamp", min_timestamp)\
-                  .option("maxStamp", max_timestamp)\
-                  .format("org.apache.spark.sql.execution.datasources.hbase")\
-                  .load()
+            .option("catalog", catalog)\
+            .option("minStamp", min_timestamp)\
+            .option("maxStamp", max_timestamp)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .load()
 
-        # Filter out records that have been distributed
+        # Keep records that haven't been distributed
         df = df.filter("status!='distributed'")
+
+        # Apply additional filters (user defined)
+        df = filter_df_using_xml(df, args.distribution_rules_xml)
+
+        # group `candidate_*` columns into a struct column
+        df = group_df_into_struct(df, "candidate")
+
+        # Apply level two filters
+        df = apply_user_defined_filters(df, filter_leveltwo_names)
+
+        # Flatten the struct before distribution
+        df = flattenstruct(df, "candidate")
+
+        # Persist df to memory to materialize changes
+        df.persist()
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
 
-        # Publish Kafka topic(s) (Ensure that the topic(s) exist on the Kafka Server)
+        # Publish Kafka topic(s)
+        # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
             .write\
             .format("kafka")\
             .option("kafka.bootstrap.servers", "localhost:9093")\
-            .option("topic", "distribution_test")\
+            .option("topic", "fink_outstream")\
             .save()
 
-        # Update the status column in Hbase
-        update_status_in_hbase(df, args.science_db_name, "objectId",
-                args.checkpointpath_dist, max_timestamp)
+        # Update the status in Hbase and commit checkpoint to file
+        update_status_in_hbase(
+            df, args.science_db_name, "objectId",
+            args.checkpointpath_dist, max_timestamp)
 
         # update min_timestamp for next iteration
         min_timestamp = max_timestamp
+
+        # free the memory
+        df.unpersist()
 
         # Wait for some time before another loop
         time.sleep(1)

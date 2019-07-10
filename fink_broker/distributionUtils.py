@@ -31,12 +31,11 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     For a kafka output the dataframe should have the following columns:
     key: (optional) Using a unique key can prevent reading duplicate data
-                    as Kafka supports "at least once" write semantics
-                    and might result in duplicate writing
+        as Kafka supports "at least once" write semantics
+        and might result in duplicate writing
     value: (required)
-    topic: (*optional)
-    *if a topic field is not present in the dataframe it has to be given
-    while writng to kafka
+    topic: (*optional) if a topic field is not present in the dataframe
+        it has to be given while writing to kafka
 
     This routine groups the DataFrame columns to be published to Kafka into
     a StructType column and convert it into avro(binary).
@@ -50,11 +49,11 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     schema_path: str
         Path where to store the avro schema required for decoding the
         Kafka messages.
+
     Returns
     ----------
     df: DataFrame
         A Spark DataFrame with an avro(binary) encoded Column named "value"
-    ----------
     """
     # Remove the status column before distribution
     cols = df.columns
@@ -73,7 +72,6 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     return df_kafka
 
-
 def save_avro_schema(df: DataFrame, schema_path: str):
     """Writes the avro schema to a file at schema_path
 
@@ -90,7 +88,6 @@ def save_avro_schema(df: DataFrame, schema_path: str):
         A Spark DataFrame
     schema_path: str
         Path where to store the avro schema
-    ----------
     """
 
     # Check if the file exists
@@ -112,7 +109,6 @@ def save_avro_schema(df: DataFrame, schema_path: str):
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)
 
-
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
 
@@ -126,8 +122,8 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     timestampType: integer
 
     The value column contains the structured data of the alert encoded into
-    avro(binary). This routine creates a Spark DataFrame with a decoded StructType
-    column using the avro schema at schema_path.
+    avro(binary). This routine creates a Spark DataFrame with a decoded
+    StructType column using the avro schema at schema_path.
 
     Parameters
     ----------
@@ -149,7 +145,9 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     ...     [697251923115015002, 697251921215010004],
     ...     [20.393772, 20.4233877],
     ...     [-25.4669463, -27.0588511],
-    ...     ["Star", "Unknown"])).toDF(["objectId", "candid", "candidate_ra", "candidate_dec", "simbadType"])
+    ...     ["Star", "Unknown"])).toDF([
+    ...       "objectId", "candid", "candidate_ra",
+    ...       "candidate_dec", "simbadType"])
     >>> df.show()
     +------------+------------------+------------+-------------+----------+
     |    objectId|            candid|candidate_ra|candidate_dec|simbadType|
@@ -190,11 +188,10 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 
     return df
 
-
 def update_status_in_hbase(
         df: DataFrame, database_name: str, rowkey: str,
         offsetFile: str, timestamp: int):
-    """update the status column in Hbase
+    """Update the status column in Hbase
 
     Parameters
     ----------
@@ -213,8 +210,9 @@ def update_status_in_hbase(
     df = df.select(rowkey, "status")
     df = df.withColumn("status", lit("distributed"))
 
-    update_catalog = construct_hbase_catalog_from_flatten_schema(df.schema,\
-                    database_name, rowkey)
+    update_catalog = construct_hbase_catalog_from_flatten_schema(
+        df.schema, database_name, rowkey)
+
     df.write\
       .option("catalog", update_catalog)\
       .format("org.apache.spark.sql.execution.datasources.hbase")\
@@ -224,7 +222,6 @@ def update_status_in_hbase(
     with open(offsetFile, 'w') as f:
         string = "distributed till, {}".format(timestamp)
         f.write(string)
-
 
 def get_distribution_offset(
         offsetFile: str, startingOffset_dist: str = "latest") -> int:
@@ -287,8 +284,14 @@ def get_distribution_offset(
     >>> os.remove('dist.offset.test')
 
     """
-    # if the offset file doesn't exist or is empty
-    if not os.path.isfile(offsetFile) or os.path.getsize(offsetFile) <= 0:
+    # if the offset file doesn't exist or is empty or
+    # one wants the earliest offset
+    fileexist = os.path.isfile(offsetFile)
+    if fileexist:
+        negatifoffset = os.path.getsize(offsetFile) <= 0
+    else:
+        negatifoffset = False
+    if not fileexist or negatifoffset or startingOffset_dist == "earliest":
         # set a default
         min_timestamp = 100
     else:
@@ -296,15 +299,90 @@ def get_distribution_offset(
             with open(offsetFile, 'r') as f:
                 line = f.readlines()[-1]
                 min_timestamp = int(line.split(", ")[-1])
-
-        elif startingOffset_dist == "earliest":
-            # set timestamp to beginning of time
-            min_timestamp = 100
         else:
             # user given timestamp
             min_timestamp = int(startingOffset_dist)
 
     return min_timestamp
+
+def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
+    """Group columns of a df into a struct column
+
+    If we have a df with the following schema:
+    root
+     |-- objectId: string (nullable = true)
+     |-- candidate_ra: double (nullable = true)
+     |-- candidate_dec: double (nullable = true)
+
+    and we want to group all `candidate_*` into a struct like:
+    root
+     |-- objectId: string (nullable = true)
+     |-- candidate: struct (nullable = false)
+     |    |-- ra: double (nullable = true)
+     |    |-- dec: double (nullable = true)
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        a Spark DataFrame with flat columns
+
+    colFamily: str
+        prefix of columns to be grouped into a struct
+
+    Returns
+    ----------
+    df: Spark DataFrame
+        a Spark DataFrame with columns grouped into struct
+
+    Examples
+    ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
+    ...     [697251923115015002, 697251921215010004],
+    ...     [20.393772, 20.4233877],
+    ...     [-25.4669463, -27.0588511],
+    ...     ["Star", "Unknown"])).toDF([
+    ...       "objectId", "candid", "candidate_ra",
+    ...       "candidate_dec", "simbadType"])
+    >>> df.printSchema()
+    root
+     |-- objectId: string (nullable = true)
+     |-- candid: long (nullable = true)
+     |-- candidate_ra: double (nullable = true)
+     |-- candidate_dec: double (nullable = true)
+     |-- simbadType: string (nullable = true)
+    <BLANKLINE>
+
+    >>> df = group_df_into_struct(df, 'candidate')
+    >>> df.printSchema()
+    root
+     |-- objectId: string (nullable = true)
+     |-- candid: long (nullable = true)
+     |-- simbadType: string (nullable = true)
+     |-- candidate: struct (nullable = false)
+     |    |-- ra: double (nullable = true)
+     |    |-- dec: double (nullable = true)
+    <BLANKLINE>
+
+    """
+    newcols = []
+    cols_to_group = []
+    flat_cols = []
+
+    pos = len(colFamily) + 1
+
+    for col in df.columns:
+        if col.startswith(colFamily + "_"):
+            newcols.append(col[pos:])
+            cols_to_group.append(col[pos:])
+        else:
+            newcols.append(col)
+            flat_cols.append(col)
+
+    df_new = df.toDF(*newcols)
+    df_new = df_new.select(*flat_cols, struct(*cols_to_group).alias(colFamily))
+
+    return df_new
 
 
 if __name__ == "__main__":

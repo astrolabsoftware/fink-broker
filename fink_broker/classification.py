@@ -17,6 +17,7 @@ from pyspark.sql.types import StringType
 
 import io
 import csv
+import logging
 import requests
 import numpy as np
 import pandas as pd
@@ -88,14 +89,6 @@ def xmatch(
     header: list of string
         Unformatted decoded header returned by the xMatch
 
-    Examples
-    ----------
-    >>> ra = [26.8566983, 26.24497]
-    >>> dec = [-26.9677112, -26.7569436]
-    >>> id = ["1", "2"]
-    >>> data, header = xmatch(ra, dec, id, "simbad", 1)
-    >>> 'TYC' in data[0]
-    True
     """
     # Build a catalog of alert in a CSV-like string
     table_header = """ra_in,dec_in,objectId\n"""
@@ -156,100 +149,48 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     if len(ra) == 0:
         return []
 
-    data, header = xmatch(ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
+    # Catch TimeoutError and ConnectionError
+    try:
+        data, header = xmatch(
+            ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
+    except (ConnectionError, TimeoutError) as ce:
+        logging.warning("XMATCH failed " + repr(ce))
+        return []
 
     # Fields of interest (their indices in the output)
-    if "main_id" not in header:
-        return []
-    else:
-        main_id = header.index("main_id")
-        main_type = header.index("main_type")
-        oid_ind = header.index("objectId")
+    main_id = header.index("main_id")
+    main_type = header.index("main_type")
+    oid_ind = header.index("objectId")
 
-        # Get the objectId of matches
-        id_out = [np.array(i.split(","))[oid_ind] for i in data]
+    # Get the objectId of matches
+    id_out = [np.array(i.split(","))[oid_ind] for i in data]
 
-        # Get the names of matches
-        names = [np.array(i.split(","))[main_id] for i in data]
+    # Get the names of matches
+    names = [np.array(i.split(","))[main_id] for i in data]
 
-        # Get the types of matches
-        types = [np.array(i.split(","))[main_type] for i in data]
+    # Get the types of matches
+    types = [np.array(i.split(","))[main_type] for i in data]
 
-        # Assign names and types to inputs
-        out = []
-        for ra_in, dec_in, id_in in zip(ra, dec, oid):
-            # cast for picky Spark
-            ra_in, dec_in = float(ra_in), float(dec_in)
-            id_in = str(id_in)
+    # Assign names and types to inputs
+    out = []
+    for ra_in, dec_in, id_in in zip(ra, dec, oid):
+        # cast for picky Spark
+        ra_in, dec_in = float(ra_in), float(dec_in)
+        id_in = str(id_in)
 
-            # Discriminate with the objectID
-            if id_in in id_out:
-                # Return the closest object in case of many
-                # (smallest angular distance)
-                index = id_out.index(id_in)
-                out.append((
-                    id_in, ra_in, dec_in,
-                    str(names[index]), str(types[index])))
-            else:
-                # Mark as unknown if no match
-                out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+        # Discriminate with the objectID
+        if id_in in id_out:
+            # Return the closest object in case of many
+            # (smallest angular distance)
+            index = id_out.index(id_in)
+            out.append((
+                id_in, ra_in, dec_in,
+                str(names[index]), str(types[index])))
+        else:
+            # Mark as unknown if no match
+            out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
 
-        return out
-
-@pandas_udf(StringType(), PandasUDFType.SCALAR)
-def cross_match_alerts_per_batch(id: Any, ra: Any, dec: Any) -> pd.Series:
-    """ Query the CDSXmatch service to find identified objects
-    in alerts. The catalog queried is the SIMBAD bibliographical database.
-    We can also use the 10,000+ VizieR tables if needed :-)
-
-    I/O specifically designed for use as `pandas_udf` in `select` or
-    `withColumn` dataframe methods
-
-    Parameters
-    ----------
-    oid: list of str or Spark DataFrame Column of str
-        List containing object ids (custom)
-    ra: list of float or Spark DataFrame Column of float
-        List containing object ra coordinates
-    dec: list of float or Spark DataFrame Column of float
-        List containing object dec coordinates
-
-    Returns
-    ----------
-    out: pandas.Series of string
-        Return a Pandas DataFrame with the type of object found in Simbad.
-        If the object is not found in Simbad, the type is
-        marked as Unknown. In the case several objects match
-        the centroid of the alert, only the closest is returned.
-        If the request Failed (no match at all), return Column of Fail.
-
-    Examples
-    ----------
-    >>> df = spark.sparkContext.parallelize(zip(
-    ...   [26.8566983, 26.24497],
-    ...   [-26.9677112, -26.7569436],
-    ...   ["1", "2"])).toDF(["ra", "dec", "id"])
-    >>> df_type = df.withColumn(
-    ...   "type",
-    ...   cross_match_alerts_per_batch(col("id"), col("ra"), col("dec")))
-    >>> df_type.show() # doctest: +NORMALIZE_WHITESPACE
-    +----------+-----------+---+-------+
-    |        ra|        dec| id|   type|
-    +----------+-----------+---+-------+
-    |26.8566983|-26.9677112|  1|   Star|
-    |  26.24497|-26.7569436|  2|Unknown|
-    +----------+-----------+---+-------+
-    <BLANKLINE>
-    """
-    matches = cross_match_alerts_raw(id.values, ra.values, dec.values)
-    if len(matches) > 0:
-        # (id, ra, dec, name, type)
-        # return only the type.
-        names = np.transpose(matches)[-1]
-    else:
-        # Tag as Fail if the request failed.
-        names = ["Fail"] * len(id)
-    return pd.Series(names)
+    return out
 
 
 if __name__ == "__main__":

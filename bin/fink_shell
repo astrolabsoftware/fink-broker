@@ -1,0 +1,113 @@
+#!/bin/bash
+# Copyright 2019 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+set -e
+
+message_help="""
+Launch pyspark shell with Fink configuration pre-loaded \n\n
+Usage:\n
+  \tfink_shell [option] \n\n
+Option:\n
+  \t-c <CONFIGURATION_FILE>\n
+    \t\tSpecify a configuration file. Default is conf/fink.conf.shell \n\n
+  \t-h, --help \n
+    \t\tTo view this help message \n\n
+"""
+
+# Grab the command line arguments
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h)
+        echo -e $message_help
+        exit
+        ;;
+    -c)
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument" >&2
+          exit 1
+        fi
+        conf="$2"
+        shift 2
+        ;;
+  esac
+done
+
+# Source configuration file for tests
+if [[ -f $conf ]]; then
+  echo "Reading custom shell configuration file from " $conf
+else
+  conf=${FINK_HOME}/conf/fink.conf.shell
+  echo "Reading the default shell configuration file from " $conf
+fi
+
+source $conf
+
+export PYSPARK_DRIVER_PYTHON=$PYSPARK_DRIVER_PYTHON
+export FINK_PACKAGES=$FINK_PACKAGES
+export FINK_JARS=$FINK_JARS
+export SPARK_MASTER=$SPARK_MASTER
+export EXTRA_SPARK_CONFIG=$EXTRA_SPARK_CONFIG
+export HBASE_XML_CONF=$HBASE_XML_CONF
+export DEPLOY_FINK_PYTHON=$DEPLOY_FINK_PYTHON
+export DEPLOY_FINK_SCALA=$DEPLOY_FINK_SCALA
+
+# Grab Fink and Python version numbers
+FINK_VERSION=`fink --version`
+PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
+
+# For use on cluster, the HBase configuration file is actually mandatory.
+if [[ -f ${HBASE_XML_CONF} ]]; then
+  export SPARK_CLASSPATH=${HBASE_XML_CONF}
+else
+  echo "[WARN] HBase configuration file cannot be found at" ${HBASE_XML_CONF}
+  echo "[WARN] Default HBase file will be used " ${FINK_HOME}/conf/hbase-site.xml
+  HBASE_XML_CONF=${FINK_HOME}/conf/hbase-site.xml
+fi
+
+# For use on cluster, we need to package fink_broker
+PYTHON_EXTRA_FILE=""
+if [[ $DEPLOY_FINK_PYTHON != "false" ]]; then
+  cd $FINK_HOME
+  python3 setup.py bdist_egg
+  PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
+  echo "Distributing ${PYTHON_EXTRA_FILE}"
+  cd -
+fi
+
+# Default is to use fink jars distributed with the code
+FINK_EXTRA_JARS=${FINK_JARS},${FINK_HOME}/libs/fink-broker_2.11-${FINK_VERSION}.jar
+
+# Otherwise compile Scala source and ship it.
+if [[ $DEPLOY_FINK_SCALA != "false" ]]; then
+  cd $FINK_HOME
+  sbt ++2.11.8 package
+  FINK_EXTRA_JARS=${FINK_JARS},${FINK_HOME}/target/scala-2.11/fink-broker_2.11-${FINK_VERSION}.jar
+  echo "Distributing ${FINK_EXTRA_JARS}"
+  cd -
+fi
+
+PYSPARK_DRIVER_PYTHON=${PYSPARK_DRIVER_PYTHON} pyspark \
+  --master ${SPARK_MASTER} ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
+  --files ${HBASE_XML_CONF} ${PYTHON_EXTRA_FILE} \
+  --jars ${FINK_EXTRA_JARS} --packages ${FINK_PACKAGES}
+
+unset PYSPARK_DRIVER_PYTHON
+unset FINK_PACKAGES
+unset FINK_JARS
+unset SPARK_MASTER
+unset EXTRA_SPARK_CONFIG
+unset HBASE_XML_CONF
+unset DEPLOY_FINK_PYTHON
+unset DEPLOY_FINK_SCALA
