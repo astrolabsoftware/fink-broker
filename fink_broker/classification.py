@@ -90,8 +90,16 @@ def xmatch(
     data: list of string
         Unformatted decoded data returned by the xMatch
     header: list of string
-        Unformatted decoded header returned by the xMatch
+        Unformatted decoded header returned by the xmatch
 
+    Examples
+    ----------
+    >>> ra = [26.8566983, 26.24497]
+    >>> dec = [-26.9677112, -26.7569436]
+    >>> id = ["1", "2"]
+    >>> data = xmatch_slow(ra, dec, id, 1)
+    >>> 'TYC' in str(data['main_id']).split(",")[0]
+    True
     """
     # Build a catalog of alert in a CSV-like string
     table_header = """ra_in,dec_in,objectId\n"""
@@ -122,33 +130,35 @@ def xmatch_slow(
                 ra: list, dec: list, id: list,
                 distmaxarcsec: int = 1) -> (list, list):
     """ Build a catalog of (ra, dec, id) as pandas DataFrame,
-        cross-match with astroquery, and decode the output.
-        See https://astroquery.readthedocs.io/en/latest/simbad/simbad.html
-        for more information. Parameters
-        ----------
-        ra: list of float
+    cross-match using astroquery, and decode the output.
+    See https://astroquery.readthedocs.io/en/latest/simbad/simbad.html
+    for more information.
+
+    Parameters
+    ----------
+    ra: list of float
         List of RA
-        dec: list of float
+    dec: list of float
         List of Dec of the same size as ra.
-        id: list of str
+    id: list of str
         List of object ID (custom)
-        distmaxarcsec: int
+    distmaxarcsec: int
         Radius used for searching match. extcatalog sources lying within
         radius of the center (ra, dec) will be considered as matches.
+    Returns
+    ----------
+    data_new: dataframe
+        Formatted decoded data returned by astroquery
 
-        Returns
-        ----------
-        data_new: dataframe
-
-        Examples
-        ----------
-        >>> ra = [26.8566983, 26.24497]
-        >>> dec = [-26.9677112, -26.7569436]
-        >>> id = ["1", "2"]
-        >>> data = xmatch_slow(ra, dec, id, 1)
-        >>> 'TYC' in str(data['main_id']).split(",")[0]
-        True
-        """
+    Examples
+    ----------
+    >>> ra = [26.8566983, 26.24497]
+    >>> dec = [-26.9677112, -26.7569436]
+    >>> id = ["1", "2"]
+    >>> data = xmatch_slow(ra, dec, id, 1)
+    >>> 'TYC' in str(data['main_id']).split(",")[0]
+    True
+    """
 
     # Set minimal number of fields
     Simbad.reset_votable_fields()
@@ -275,36 +285,36 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
 
 def cross_match_alerts_raw_slow(oid: list, ra: list, dec: list) -> list:
     """ Query the CDSXmatch service to find identified objects
-        in alerts. The catalog queried is the SIMBAD bibliographical database.
-        We can also use the 10,000+ VizieR tables if needed :-)
+    in alerts. The catalog queried is the SIMBAD bibliographical database.
+    We can also use the 10,000+ VizieR tables if needed :-)
 
-        Parameters
-        ----------
-        oid: list of str
+    Parameters
+    ----------
+    oid: list of str
         List containing object ids (custom)
-        ra: list of float
+    ra: list of float
         List containing object ra coordinates
-        dec: list of float
+    dec: list of float
         List containing object dec coordinates
 
-        Returns
-        ----------
-        out: List of Tuple
+    Returns
+    ----------
+    out: List of Tuple
         Each tuple contains (objectId, ra, dec, name, type).
         If the object is not found in Simbad, name & type
         are marked as Unknown. In the case several objects match
         the centroid of the alert, only the closest is returned.
 
-        Examples
-        ----------
-        >>> ra = [26.8566983, 26.24497]
-        >>> dec = [-26.9677112, -26.7569436]
-        >>> id = ["1", "2"]
-        >>> objects = cross_match_alerts_raw(id, ra, dec)
-        >>> print(objects) # doctest: +NORMALIZE_WHITESPACE
-        [('1', 26.8566983, -26.9677112, 'TYC 6431-115-1', 'Star'),
-        ('2', 26.24497, -26.7569436, 'Unknown', 'Unknown')]
-        """
+    Examples
+    ----------
+    >>> ra = [26.8566983, 26.24497]
+    >>> dec = [-26.9677112, -26.7569436]
+    >>> id = ["1", "2"]
+    >>> objects = cross_match_alerts_raw_slow(id, ra, dec)
+    >>> print(objects) # doctest: +NORMALIZE_WHITESPACE
+    [('1', 26.8566983, -26.9677112, 'TYC 6431-115-1', 'Star'),
+    ('2', 26.24497, -26.7569436, 'Unknown', 'Unknown')]
+    """
 
     if len(ra) == 0:
         return []
