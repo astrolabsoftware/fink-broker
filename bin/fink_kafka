@@ -59,6 +59,9 @@ start_zookeeper() {
 
 # function to start a Kafka Server
 start_kafka_server() {
+  kafka_server_prop="$1"
+  kafka_port="$2"
+
   # Try starting a Kafka Server with max 3 attempts
   j=0
   while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
@@ -67,9 +70,9 @@ start_kafka_server() {
     export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
 
     # Start the Kafka Server
-    ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/fink_kafka.server.properties > /dev/null 2>&1 &
+    ${KAFKA_HOME}/bin/kafka-server-start.sh ${kafka_server_prop} > /dev/null 2>&1 &
     sleep 3
-    KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
+    KAFKA_PID=$( lsof -i :${kafka_port} | grep -i "java" | awk 'NR==1{ print $2 }' )
     j=$[$j+1]
   done
 }
@@ -195,11 +198,25 @@ case "$1" in
       --group spark-kafka- \
       --resource-pattern-type prefixed
 
-      # Start Kafka Server(s)
+      # Start Kafka Servers / Brokers
       declare KAFKA_PID=""
-      start_kafka_server
 
-      if [ -n "$ZK_PID" ] && [ -n "$KAFKA_PID" ]
+      # Kafka Broker 0
+      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server0.properties" 9093
+      KAFKA_BROKER0_PID=${KAFKA_PID}
+      KAFKA_PID=""
+
+      # Kafka Broker 1
+      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server1.properties" 9094
+      KAFKA_BROKER1_PID=${KAFKA_PID}
+      KAFKA_PID=""
+
+      # Kafka Broker 2
+      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server2.properties" 9095
+      KAFKA_BROKER2_PID=${KAFKA_PID}
+      KAFKA_PID=""
+
+      if [[ "$ZK_PID" && "$KAFKA_BROKER0_PID" && "$KAFKA_BROKER1_PID" && "$KAFKA_BROKER2_PID" ]]
       then
         echo "Kafka Server started successfully"
       else
