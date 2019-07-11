@@ -45,6 +45,35 @@ if [[ $1 == "" ]]; then
   exit 1
 fi
 
+# function to start the Zookeeper
+start_zookeeper() {
+  # Try starting Zookeeper with max 3 attempts
+  i=0
+  while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
+    ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
+    sleep 3
+    ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
+    i=$[$i+1]
+  done
+}
+
+# function to start a Kafka Server
+start_kafka_server() {
+  # Try starting a Kafka Server with max 3 attempts
+  j=0
+  while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
+    # Set security options for jvm
+    unset KAFKA_OPTS
+    export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
+
+    # Start the Kafka Server
+    ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/fink_kafka.server.properties > /dev/null 2>&1 &
+    sleep 3
+    KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
+    j=$[$j+1]
+  done
+}
+
 # function to create SCRAM credentials
 create_scram_credential() {
   username="$1"
@@ -137,28 +166,24 @@ remove_acl_consumer() {
 
 case "$1" in
   "start")
-      # Try to Start the Zookeeper with 3 attempts
-      i=0
-      ZK_PID=""
-      while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
-        # Start the Zookeeper
-        ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-        sleep 3
-        ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
-        i=$[$i+1]
-      done
+      # Start the Zookeeper
+      declare ZK_PID=""
+      start_zookeeper
 
       # Create SCRAM Credentials for Authentication
       # For brokers
       create_scram_credential "admin" "admin-secret"
+
       # For Fink producer
       create_scram_credential "finkProducer" "finkProducer-secret"
+
       # For Fink's test consumer
       create_scram_credential "finkConsumer" "finkConsumer-secret"
 
       # Enable Authorization
       # For Fink producer
       add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
+
       # For Fink's test consumer
       ${KAFKA_HOME}/bin/kafka-acls.sh \
       --authorizer-properties zookeeper.connect=localhost:2182 \
@@ -170,19 +195,9 @@ case "$1" in
       --group spark-kafka- \
       --resource-pattern-type prefixed
 
-      # Try to start the Kafka server with 3 attempts
-      j=0
-      KAFKA_PID=""
-      while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
-        # Set security opts
-        unset KAFKA_OPTS
-        export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
-        # Start the Kafka Server(Brokers)
-        ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/fink_kafka.server.properties > /dev/null 2>&1 &
-        sleep 3
-        KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
-        j=$[$j+1]
-      done
+      # Start Kafka Server(s)
+      declare KAFKA_PID=""
+      start_kafka_server
 
       if [ -n "$ZK_PID" ] && [ -n "$KAFKA_PID" ]
       then
