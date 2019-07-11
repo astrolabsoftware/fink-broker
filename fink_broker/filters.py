@@ -164,7 +164,7 @@ def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
                     func_name, level))
             return func
 
-    # Warn if the filter has not been found in the modules
+    # Error if the filter has not been found in the modules
     msg = """
     Filter or processor `{}` not found.
     Available filters are: {}

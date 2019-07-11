@@ -140,7 +140,8 @@ def write_to_csv(
     batchdf.unpersist()
 
 def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
-    """ Initialise SparkSession, the logger and some configuration parameters
+    """ Initialise SparkSession, the level of log for Spark and
+    some configuration parameters
 
     Parameters
     ----------

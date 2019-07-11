@@ -12,13 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark import SparkContext
 from pyspark.sql import SparkSession
+
+import logging
+from logging import Logger
 
 from fink_broker.tester import spark_unit_tests
 
-def get_fink_logger(name: str = "test", log_level: str = "INFO"):
-    """ Initialise log4j logger
+def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
+    """ Initialise python logger. Suitable for both driver and executors.
 
     Parameters
     ----------
@@ -26,31 +28,36 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO"):
         Name of the application to be logged. Typically __name__ of a
         function or module.
     log_level : str
-        Minimum level of log wanted: INFO, WARN, ERROR, OFF, etc.
+        Minimum level of log wanted: DEBUG, INFO, WARNING, ERROR, CRITICAL, OFF
 
     Returns
     ----------
-    logger : org.apache.log4j.Logger
-        log4j Logger (Java object)
+    logger : logging.Logger
+        Python Logger
 
     Examples
     ----------
     >>> log = get_fink_logger(__name__, "INFO")
     >>> log.info("Hi!")
     """
-    # Grab the running Spark context
-    sc = SparkContext._active_spark_context
+    # Format of the log message to be printed
+    FORMAT = "%(asctime)-15s "
+    FORMAT += "%(levelname)s "
+    FORMAT += "%(funcName)s "
+    FORMAT += "(%(filename)s "
+    FORMAT += "line %(lineno)d): "
+    FORMAT += "%(message)s"
 
-    # Get the logger
-    loggermodule = sc._jvm.org.apache.log4j
-    mylogger = loggermodule.Logger.getLogger(name)
+    # Date format
+    DATEFORMAT = "%y/%m/%d %H:%M:%S"
 
-    # Set the minimum level of log - INFO is the default
-    level = getattr(loggermodule.Level, log_level, "INFO")
+    logging.basicConfig(format=FORMAT, datefmt=DATEFORMAT)
+    logger = logging.getLogger(name)
 
-    loggermodule.LogManager.getLogger(name).setLevel(level)
+    # Set the minimum log level
+    logger.setLevel(level)
 
-    return mylogger
+    return logger
 
 def inspect_application(logger):
     """Print INFO and DEBUG statements about the current application such
