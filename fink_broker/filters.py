@@ -124,7 +124,7 @@ def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
     ImportError:
         Filter or processor `unknownfunc` not found.
         Available filters are: [['qualitycuts'], ['dist_stream_cut']]
-        Available processors are: [[], None]
+        Available processors are: [['cross_match_alerts_per_batch'], None]
     """
     logger = get_fink_logger(__name__, "INFO")
     available_filters = []
