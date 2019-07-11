@@ -55,7 +55,7 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
     logger = logging.getLogger(name)
 
     # Set the minimum log level
-    logger.setLevel(level)
+    logger.setLevel(log_level)
 
     return logger
 
@@ -75,9 +75,9 @@ def inspect_application(logger):
     """
     spark = SparkSession.builder.getOrCreate()
 
-    logger.info('Application started')
-    logger.info('Python version: {}'.format(spark.sparkContext.pythonVer))
-    logger.info('Spark version: {}'.format(spark.sparkContext.version))
+    logger.debug('Application started')
+    logger.debug('Python version: {}'.format(spark.sparkContext.pythonVer))
+    logger.debug('Spark version: {}'.format(spark.sparkContext.version))
 
     # Debug statements
     conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])
