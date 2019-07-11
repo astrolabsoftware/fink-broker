@@ -62,6 +62,7 @@ def main():
 
     # Get topic name to publish on
     topic = args.distribution_topic
+    broker_list = "localhost:9093, localhost:9094, localhost:9095"
 
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
@@ -110,7 +111,7 @@ def main():
         df_kafka\
             .write\
             .format("kafka")\
-            .option("kafka.bootstrap.servers", "localhost:9093")\
+            .option("kafka.bootstrap.servers", broker_list)\
             .option("kafka.security.protocol", "SASL_PLAINTEXT")\
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("topic", topic)\

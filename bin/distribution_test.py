@@ -40,12 +40,13 @@ def main():
 
     # Topic to read from
     topic = args.distribution_topic
+    broker_list = "localhost:9093, localhost:9094, localhost:9095"
 
     # Read from the Kafka topic
     df_kafka = spark \
         .readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", "localhost:9093") \
+        .option("kafka.bootstrap.servers", broker_list) \
         .option("kafka.security.protocol", "SASL_PLAINTEXT")\
         .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
         .option("subscribe", topic) \
