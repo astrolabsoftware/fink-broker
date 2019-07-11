@@ -24,9 +24,7 @@ from typing import Any
 from astroquery.simbad import Simbad
 import astropy.coordinates as coord
 from fink_broker.tester import spark_unit_tests
-# suppress warnings which query returns if no objects found
-import warnings
-warnings.filterwarnings('ignore')
+import astropy.units as u
 
 
 def generate_csv(s: str, lists: list) -> str:
@@ -92,14 +90,6 @@ def xmatch(
     header: list of string
         Unformatted decoded header returned by the xmatch
 
-    Examples
-    ----------
-    >>> ra = [26.8566983, 26.24497]
-    >>> dec = [-26.9677112, -26.7569436]
-    >>> id = ["1", "2"]
-    >>> data = xmatch_slow(ra, dec, id, 1)
-    >>> 'TYC' in str(data['main_id']).split(",")[0]
-    True
     """
     # Build a catalog of alert in a CSV-like string
     table_header = """ra_in,dec_in,objectId\n"""
@@ -127,12 +117,12 @@ def xmatch(
 
 
 def xmatch_slow(
-                ra: list, dec: list, id: list,
-                distmaxarcsec: int = 1) -> (list, list):
+        ra: list, dec: list, id: list,
+        distmaxarcsec: int = 1) -> (pd.DataFrame):
     """ Build a catalog of (ra, dec, id) as pandas DataFrame,
-    cross-match using astroquery, and decode the output.
-    See https://astroquery.readthedocs.io/en/latest/simbad/simbad.html
-    for more information.
+    cross-match using astroquery module of SIMBAD, and decode the output.
+
+    See https://astroquery.readthedocs.io/ for more information.
 
     Parameters
     ----------
@@ -147,61 +137,60 @@ def xmatch_slow(
         radius of the center (ra, dec) will be considered as matches.
     Returns
     ----------
-    data_new: dataframe
-        Formatted decoded data returned by astroquery
-
-    Examples
-    ----------
-    >>> ra = [26.8566983, 26.24497]
-    >>> dec = [-26.9677112, -26.7569436]
-    >>> id = ["1", "2"]
-    >>> data = xmatch_slow(ra, dec, id, 1)
-    >>> 'TYC' in str(data['main_id']).split(",")[0]
-    True
+    data_new: pd.DataFrame
+        Formatted decoded data returned by the astroquery module
     """
 
-    # Set minimal number of fields
+    # Reset the fields to a minimal number
     Simbad.reset_votable_fields()
-    # Add a new field to the query
+    # Add new fields to the query
     Simbad.add_votable_fields('otype')
+    Simbad.add_votable_fields('ra(d)')
+    Simbad.add_votable_fields('dec(d)')
 
-    list_keys = ['MAIN_ID', 'RA', 'DEC', 'OTYPE']
+    list_keys = ['MAIN_ID', 'RA_d', 'DEC_d', 'OTYPE']
     list_old_keys = ['main_id', 'ra', 'dec', 'main_type']
     dictionary_simbad_to_new = dict(zip(list_keys, list_old_keys))
 
-    query_new = {}
-    data_new = {}
+    # create a mask with the entries of the query
+    nans = [np.nan for a in range(0, len(ra))]
+    mask = pd.DataFrame(zip(nans, ra, dec, nans, id))
+    mask.columns = list_old_keys+['objectId']
 
-    for k in range(0, len(ra)):
+    # Send requests in vector form and obtain a table as a result
+    units = tuple([u.deg, u.deg])
+    query_new = (Simbad.query_region(coord.SkyCoord(
+                ra=ra,
+                dec=dec,
+                unit=units),
+                radius=u.deg/3600.
+                   ))
+    try:
+        # if table not empy, convert it to a pandas DataFrame
+        data_new = query_new[list_keys].to_pandas()\
+            .rename(columns=dictionary_simbad_to_new)
 
-        # create a list
-        lista_in = ['Unknown', ra[k], dec[k], 'Unknown', id[k]]
+        # convert from bytes to ascii
+        data_new['main_id'] = data_new['main_id'].values[0].decode('ascii')
+        data_new['main_type'] = data_new['main_type'].values[0].decode('ascii')
+        # locate object id
+        place_objId = data_new['dec'].round(4).values == mask['dec']\
+            .round(4).values
+        data_new['objectId'] = mask['objectId'].loc[place_objId]
+        # concatenate table with mask if needed
+        complementary_mask = data_new['dec'].round(4).values != mask['dec']\
+            .round(4).values
+        data_filt_new = pd.concat([mask.loc[complementary_mask], data_new])\
+            .replace(np.nan, 'Unknown')
+        # sort if needed
+        data_filt_new = data_filt_new.sort_values(by=['objectId'])
 
-        # Send requests one by one (as required by the protocol)
-        query_new[k] = (Simbad.query_region(coord.SkyCoord(ra=ra[k],
-                                            dec=dec[k], unit='deg'),
-                                            radius='0h0m'
-                                            + str(distmaxarcsec)+'s'))
+    except Exception:
 
-        try:
-            # if table not empy, convert to a pandas DataFrame
-            data_new[k] = query_new[k][list_keys].to_pandas()\
-                .rename(columns=dictionary_simbad_to_new)
-            # need to convert from bytes to ascii
-            data_new[k]['main_id'] = data_new[k]['main_id'].values[0]\
-                .decode('ascii')
-            data_new[k]['main_type'] = data_new[k]['main_type'].values[0]\
-                .decode('ascii')
+        data_filt_new = mask.replace(np.nan, 'Unknown')\
+            .sort_values(by=['objectId'])
 
-            data_new[k]['ra'] = ra[k]
-            data_new[k]['objectId'] = id[k]
-
-        except Exception:
-            # if table empy, create a dataframe
-            data_new[k] = pd.DataFrame(lista_in).transpose()
-            data_new[k].columns = list_old_keys + ['objectId']
-
-    return pd.concat([data_new[k] for k in range(0, len(ra))], axis=0)
+    return data_filt_new
 
 
 def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
@@ -285,8 +274,8 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
 
 def cross_match_alerts_raw_slow(oid: list, ra: list, dec: list) -> list:
     """ Query the CDSXmatch service to find identified objects
-    in alerts. The catalog queried is the SIMBAD bibliographical database.
-    We can also use the 10,000+ VizieR tables if needed :-)
+    in alerts. The catalog queried is the SIMBAD database using the
+    astroquery module, as an alternative to the xmatch method.
 
     Parameters
     ----------
@@ -366,4 +355,7 @@ if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
     # Run the Spark test suite
-    spark_unit_tests(globals())
+    # spark_unit_tests(globals())
+    import doctest
+    import sys
+    sys.exit(doctest.testmod()[0])
