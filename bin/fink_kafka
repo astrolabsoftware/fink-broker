@@ -244,7 +244,7 @@ case "$1" in
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --create \
       --if-not-exists \
-      --partitions 1 \
+      --partitions 2 \
       --replication-factor 1 \
       --topic $TOPIC \
       --zookeeper "localhost:2182"
