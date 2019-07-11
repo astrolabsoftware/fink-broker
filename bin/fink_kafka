@@ -287,10 +287,6 @@ case "$1" in
       service="authorization"
       shift 1
       ;;
-  "--authentication")
-      service="authorization"
-      shift 1
-      ;;
   "-h"|"--help")
       echo -e $message_help
       ;;
