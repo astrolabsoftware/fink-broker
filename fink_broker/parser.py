@@ -98,6 +98,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [SCIENCE_DB_CATALOG]
         """)
     parser.add_argument(
+        '-log_level', type=str, default='',
+        help="""
+        The minimum level of log: OFF, DEBUG, INFO, WARN, ERROR, CRITICAL
+        [LOG_LEVEL]
+        """)
+    parser.add_argument(
         '-finkwebpath', type=str, default='',
         help="""
         Folder to store UI data for display.

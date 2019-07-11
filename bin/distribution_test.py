@@ -21,6 +21,7 @@ Consume the distributed alerts from the Kafka Server.
 2. Deserialize the avro data using the pre-defined schema
 3. Carry out operations on the obtained DataFrame
 """
+from pyspark.sql.functions import col
 
 import argparse
 import time
@@ -28,15 +29,22 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.distributionUtils import decode_kafka_df
-from pyspark.sql.functions import col
+
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    # Get or create a Spark Session
-    spark = init_sparksession(
-        name="distribution_test", shuffle_partitions=2, log_level="ERROR")
+    # Initialise Spark session
+    spark = init_sparksession(name="distribution_test", shuffle_partitions=2)
+
+    # The level here should be controlled by an argument.
+    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+
+    # debug statements
+    inspect_application(logger)
 
     # Topic to read from
     topic = args.distribution_topic

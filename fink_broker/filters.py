@@ -20,13 +20,12 @@ from pyspark.sql.functions import struct
 import os
 import pandas as pd
 import xml.etree.ElementTree as ET
+import importlib
 
 from typing import Any, Tuple
 
-from userfilters.levelone import *
-from userfilters.leveltwo import *
-
 from fink_broker.tester import spark_unit_tests
+from fink_broker.loggingUtils import get_fink_logger
 
 def return_flatten_names(
         df: DataFrame, pref: str = "", flatten_schema: list = []) -> list:
@@ -91,6 +90,92 @@ def return_flatten_names(
 
     return flatten_schema
 
+def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
+    """Load programmatically filter or processor defined by the user in the
+    different levels (userfilters/level{one, two, ...}.py).
+
+    Parameters
+    ----------
+    func_name : str
+        Name of the filter or processor to import.
+        Should be defined in userfilters modules.
+    levels : list
+        Level in which the filter or processor has to be searched:
+            [level]one, [level]two,...
+        The corresponding module level<number>.py must exist.
+
+    Returns
+    -------
+    func: function or None
+        Imported filter or processor. If not found, raise an error.
+
+    Examples
+    -------
+    # retrieve qualitycuts from levelone (i.e. there is a function
+    # qualitycuts in the module userfilters/levelone.py)
+    >>> f = load_user_f_and_p("qualitycuts", ["one", "two"])
+
+    # Wrong filter name will lead to error
+    >>> f = load_user_f_and_p(
+    ...   "unknownfunc", ["one", "two"])
+    ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+    Traceback (most recent call last):
+     ...
+    ImportError:
+        Filter or processor `unknownfunc` not found.
+        Available filters are: [['qualitycuts'], ['dist_stream_cut']]
+        Available processors are: [[], None]
+    """
+    logger = get_fink_logger(__name__, "INFO")
+    available_filters = []
+    available_processors = []
+
+    # Loop over modules
+    for level in levels:
+        # Load module
+        modulename = "userfilters.level{}".format(level)
+        module = importlib.import_module(modulename)
+
+        # Load filter in module
+        func = getattr(module, func_name, None)
+
+        # Append existing filter names in that module
+        available_filters.append(
+            getattr(
+                module,
+                'filter_level{}_names'.format(level),
+                None
+            )
+        )
+
+        # Append existing processor names in that module
+        available_processors.append(
+            getattr(
+                module,
+                'processor_level{}_names'.format(level),
+                None
+            )
+        )
+
+        # If filter exists, return it
+        if func is not None:
+            logger.info(
+                "new filter/processor registered: {} from level {}".format(
+                    func_name, level))
+            return func
+
+    # Error if the filter has not been found in the modules
+    msg = """
+    Filter or processor `{}` not found.
+    Available filters are: {}
+    Available processors are: {}
+    """.format(
+        func_name,
+        available_filters,
+        available_processors
+    )
+    raise ImportError(msg)
+
 def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     """Apply iteratively user filters to keep only wanted alerts.
 
@@ -140,13 +225,17 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
     +----+---+-------+
     <BLANKLINE>
 
+    # Using a wrong filter name will lead to an error
+    >>> df = apply_user_defined_filters(
+    ...   df, ["unknownfunc"]) # doctest: +SKIP
     """
     flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
 
     # Loop over user-defined filters
     for filter_func_name in filter_names:
-        # Note: we could use import_module instead?
-        filter_func = globals()[filter_func_name]
+
+        # Load the filter
+        filter_func = load_user_f_and_p(filter_func_name, ["one", "two"])
 
         # Note: to access input argument, we need f.func and not just f.
         # This is because f has a decorator on it.
@@ -220,8 +309,9 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
 
     # Loop over user-defined processors
     for processor_func_name in processor_names:
-        # Note: we could use import_module instead?
-        processor_func = globals()[processor_func_name]
+
+        # Load the processor
+        processor_func = load_user_f_and_p(processor_func_name, ["one", "two"])
 
         # Note: to access input argument, we need f.func and not just f.
         # This is because f has a decorator on it.

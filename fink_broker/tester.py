@@ -92,12 +92,12 @@ def spark_unit_tests(
         "spark.jars": os.environ["FINK_JARS"],
         "spark.python.daemon.module": "coverage_daemon"}
     conf.setMaster("local[2]")
-    conf.setAppName("test")
+    conf.setAppName("fink_test")
     for k, v in confdic.items():
         conf.set(key=k, value=v)
     spark = SparkSession\
         .builder\
-        .appName("test")\
+        .appName("fink_test")\
         .config(conf=conf)\
         .getOrCreate()
 

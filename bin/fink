@@ -203,7 +203,7 @@ elif [[ $service == "simulator" ]]; then
   fi
   python3 ${FINK_HOME}/bin/simulate_stream.py ${HELP_ON_SERVICE} \
     -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
-    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE}
+    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} -log_level ${LOG_LEVEL}
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
@@ -211,7 +211,7 @@ elif [[ $service == "checkstream" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
     -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-    -finkwebpath ${FINK_UI_PATH} ${EXIT_AFTER}
+    -finkwebpath ${FINK_UI_PATH} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
@@ -221,7 +221,7 @@ elif [[ $service == "stream2raw" ]]; then
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
     -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
-    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} ${EXIT_AFTER}
+    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
   # For use on cluster, the HBase configuration file is actually mandatory.
@@ -243,7 +243,8 @@ elif [[ $service == "raw2science" ]]; then
     -rawdatapath ${FINK_ALERT_PATH} \
     -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
     -science_db_name ${SCIENCE_DB_NAME} \
-    -science_db_catalog ${SCIENCE_DB_CATALOG} ${EXIT_AFTER}
+    -science_db_catalog ${SCIENCE_DB_CATALOG} \
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
@@ -260,7 +261,8 @@ elif [[ $service == "distribution" ]]; then
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
   -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
-  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} ${EXIT_AFTER}
+  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \
@@ -271,8 +273,12 @@ elif [[ $service == "distribution_test" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
+<<<<<<< HEAD
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA}
+=======
+  -distribution_schema ${DISTRIBUTION_SCHEMA} -log_level ${LOG_LEVEL}
+>>>>>>> master
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
