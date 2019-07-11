@@ -273,12 +273,8 @@ elif [[ $service == "distribution_test" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
   ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
-<<<<<<< HEAD
   -distribution_topic ${DISTRIBUTION_TOPIC} \
-  -distribution_schema ${DISTRIBUTION_SCHEMA}
-=======
   -distribution_schema ${DISTRIBUTION_SCHEMA} -log_level ${LOG_LEVEL}
->>>>>>> master
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
