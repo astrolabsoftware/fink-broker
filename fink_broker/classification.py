@@ -137,7 +137,7 @@ def xmatch_slow(
         radius of the center (ra, dec) will be considered as matches.
     Returns
     ----------
-    data_new: pd.DataFrame
+    data_filt_new: pd.DataFrame
         Formatted decoded data returned by the astroquery module
     """
 
@@ -355,7 +355,4 @@ if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
     # Run the Spark test suite
-    # spark_unit_tests(globals())
-    import doctest
-    import sys
-    sys.exit(doctest.testmod()[0])
+    spark_unit_tests(globals())
