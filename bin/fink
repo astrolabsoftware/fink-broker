@@ -185,11 +185,14 @@ FINK_VERSION=`fink --version`
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
 
 # Package fink_broker & userfilters modules
-cd $FINK_HOME
-python3 setup.py bdist_egg
-PYTHON_EXTRA_FILE="${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
-echo "Distributing ${PYTHON_EXTRA_FILE}"
-cd -
+PYTHON_EXTRA_FILE=""
+if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
+  cd $FINK_HOME
+  python3 setup.py bdist_egg
+  PYTHON_EXTRA_FILE="${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
+  echo "Distributing ${PYTHON_EXTRA_FILE}"
+  cd -
+fi
 
 if [[ $service == "dashboard" ]]; then
   # Launch the UI
