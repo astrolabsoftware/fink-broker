@@ -189,7 +189,7 @@ PYTHON_EXTRA_FILE=""
 if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd $FINK_HOME
   python3 setup.py bdist_egg
-  PYTHON_EXTRA_FILE="${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
+  PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
   echo "Distributing ${PYTHON_EXTRA_FILE}"
   cd -
 fi
@@ -222,7 +222,7 @@ elif [[ $service == "simulator" ]]; then
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} --py-files ${PYTHON_EXTRA_FILE} \
+    --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
     -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
@@ -231,7 +231,7 @@ elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} --py-files ${PYTHON_EXTRA_FILE} \
+    --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
@@ -252,7 +252,7 @@ elif [[ $service == "raw2science" ]]; then
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     --jars ${FINK_JARS} \
-    --py-files ${PYTHON_EXTRA_FILE} \
+    ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     --files ${HBASE_XML_CONF} \
     ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
@@ -266,7 +266,7 @@ elif [[ $service == "distribution" ]]; then
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
-  --py-files ${PYTHON_EXTRA_FILE} \
+  ${PYTHON_EXTRA_FILE} \
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
@@ -279,7 +279,7 @@ elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
-  --jars ${FINK_JARS} --py-files ${PYTHON_EXTRA_FILE} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
   ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} -log_level ${LOG_LEVEL}
 else
