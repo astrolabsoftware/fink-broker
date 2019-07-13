@@ -107,19 +107,3 @@ TIME_INTERVAL=0.1
 
 # Total number of alerts to send
 POOLSIZE=10
-
-######################################
-# Distribution
-# Configurations for Alert Re-Distribution
-# The Kafka topic to publish on
-DISTRIBUTION_TOPIC="fink_outstream"
-
-# The path where to store the avro distribution schema
-DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema.avsc
-
-# Offset for reading the science database
-DISTRIBUTION_OFFSET="latest"
-DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset
-
-# Path of XML rule file for redistribution
-DISTRIBUTION_RULES_XML=${FINK_HOME}/conf/distribution-rules.xml
