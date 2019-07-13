@@ -33,6 +33,13 @@ KAFKA_BROKER_PROPERTIES[0]="${FINK_HOME}/conf/fink_kafka.server0.properties"
 KAFKA_BROKER_PROPERTIES[1]="${FINK_HOME}/conf/fink_kafka.server1.properties"
 KAFKA_BROKER_PROPERTIES[2]="${FINK_HOME}/conf/fink_kafka.server2.properties"
 
+declare kafka_servers
+for i in ${KAFKA_BROKER_IPPORT[@]}; do
+  kafka_servers=$kafka_servers",$i"
+done
+
+DISTRIBUTION_SERVERS=${kafka_servers#,}
+
 # Kafka topic to publish on
 DISTRIBUTION_TOPIC="fink_outstream"
 

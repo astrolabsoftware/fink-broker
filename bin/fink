@@ -259,6 +259,7 @@ elif [[ $service == "distribution" ]]; then
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
+  -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
@@ -277,6 +278,7 @@ elif [[ $service == "distribution_test" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
   ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
+  -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} -log_level ${LOG_LEVEL}
 else

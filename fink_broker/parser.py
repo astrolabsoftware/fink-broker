@@ -143,6 +143,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [POOLSIZE]
         """)
     parser.add_argument(
+        '-distribution_servers', type=str, default='',
+        help="""
+        Kafka bootstrap servers for alert redistribution
+        [DISTRIBUTION_SERVERS]
+        """)
+    parser.add_argument(
         '-distribution_topic', type=str, default='',
         help="""
         Kafka topic for Alert redistribution

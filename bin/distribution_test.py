@@ -48,7 +48,7 @@ def main():
 
     # Topic to read from
     topic = args.distribution_topic
-    broker_list = "localhost:9093, localhost:9094, localhost:9095"
+    broker_list = args.distribution_servers
 
     # Read from the Kafka topic
     df_kafka = spark \
