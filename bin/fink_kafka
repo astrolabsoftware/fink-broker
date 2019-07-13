@@ -45,6 +45,9 @@ if [[ $1 == "" ]]; then
   exit 1
 fi
 
+# load distribution configurations
+source ${FINK_HOME}/conf/fink.conf.distribution
+
 # function to start the Zookeeper
 start_zookeeper() {
   # Try starting Zookeeper with max 3 attempts
@@ -97,7 +100,7 @@ create_scram_credential() {
   password="$2"
 
   ${KAFKA_HOME}/bin/kafka-configs.sh \
-  --zookeeper localhost:2182 \
+  --zookeeper ${ZK_IPPORT} \
   --alter \
   --add-config "SCRAM-SHA-512=[password=${password}]" \
   --entity-type users \
@@ -109,7 +112,7 @@ delete_scram_credential() {
   username="$1"
 
   ${KAFKA_HOME}/bin/kafka-configs.sh \
-  --zookeeper localhost:2182 \
+  --zookeeper ${ZK_IPPORT} \
   --alter \
   --delete-config 'SCRAM-SHA-512' \
   --entity-type users \
@@ -123,7 +126,7 @@ add_acl_producer() {
   topic="$3"
 
   ${KAFKA_HOME}/bin/kafka-acls.sh \
-  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --add \
   --allow-principal "User:${username}" \
   --allow-host ${host} \
@@ -139,7 +142,7 @@ add_acl_consumer() {
   consumer_group="$4"
 
   ${KAFKA_HOME}/bin/kafka-acls.sh \
-  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --add \
   --allow-principal "User:${username}" \
   --allow-host ${host} \
@@ -155,7 +158,7 @@ remove_acl_producer() {
   topic="$3"
 
   ${KAFKA_HOME}/bin/kafka-acls.sh \
-  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --remove \
   --allow-principal "User:${username}" \
   --allow-host ${host} \
@@ -171,7 +174,7 @@ remove_acl_consumer() {
   consumer_group="$4"
 
   ${KAFKA_HOME}/bin/kafka-acls.sh \
-  --authorizer-properties zookeeper.connect=localhost:2182 \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --remove \
   --allow-principal "User:${username}" \
   --allow-host ${host} \
@@ -203,7 +206,7 @@ case "$1" in
 
       # For Fink's test consumer
       ${KAFKA_HOME}/bin/kafka-acls.sh \
-      --authorizer-properties zookeeper.connect=localhost:2182 \
+      --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
       --add \
       --allow-principal User:finkConsumer \
       --allow-host 127.0.0.1 \
@@ -213,24 +216,18 @@ case "$1" in
       --resource-pattern-type prefixed
 
       # Start Kafka Servers / Brokers
-      declare KAFKA_PID=""
+      declare -a kafka_pids
+      declare KAFKA_PID
+      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+        KAFKA_PID=""
+        start_kafka_server \
+          ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:}
 
-      # Kafka Broker 0
-      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server0.properties" 9093
-      KAFKA_BROKER0_PID=${KAFKA_PID}
-      KAFKA_PID=""
+        if [[ $KAFKA_PID ]]; then kafka_pids[$id]=${KAFKA_PID}; fi
+      done
 
-      # Kafka Broker 1
-      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server1.properties" 9094
-      KAFKA_BROKER1_PID=${KAFKA_PID}
-      KAFKA_PID=""
 
-      # Kafka Broker 2
-      start_kafka_server "${FINK_HOME}/conf/fink_kafka.server2.properties" 9095
-      KAFKA_BROKER2_PID=${KAFKA_PID}
-      KAFKA_PID=""
-
-      if [[ "$ZK_PID" && "$KAFKA_BROKER0_PID" && "$KAFKA_BROKER1_PID" && "$KAFKA_BROKER2_PID" ]]
+      if [[ "$ZK_PID" && ${#KAFKA_BROKER_IPPORT[@]} == ${#kafka_pids[@]} ]]
       then
         echo "Kafka Server started successfully"
       else
@@ -239,9 +236,9 @@ case "$1" in
       ;;
   "stop")
       # Stop Kafka brokers
-      stop_kafka_server "${FINK_HOME}/conf/kafka.server0.properties"
-      stop_kafka_server "${FINK_HOME}/conf/kafka.server1.properties"
-      stop_kafka_server "${FINK_HOME}/conf/kafka.server2.properties"
+      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+        stop_kafka_server ${KAFKA_BROKER_PROPERTIES[$id]}
+      done
 
       # Stop the Zookeeper
       stop_zookeeper
@@ -261,7 +258,7 @@ case "$1" in
       --partitions 2 \
       --replication-factor 1 \
       --topic $TOPIC \
-      --zookeeper "localhost:2182"
+      --zookeeper ${ZK_IPPORT}
       # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
       ;;
   "--delete-topic")
@@ -274,7 +271,7 @@ case "$1" in
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --delete \
       --topic $TOPIC \
-      --zookeeper "localhost:2182"  >&1
+      --zookeeper ${ZK_IPPORT}  >&1
       ;;
 "--describe-topic")
     if [[ $2 == "" ]]; then
@@ -286,12 +283,12 @@ case "$1" in
     ${KAFKA_HOME}/bin/kafka-topics.sh \
     --describe \
     --topic $TOPIC \
-    --zookeeper "localhost:2182"  >&1
+    --zookeeper ${ZK_IPPORT}  >&1
     ;;
   "--list-topics")
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --list \
-      --zookeeper "localhost:2182" >&1
+      --zookeeper ${ZK_IPPORT} >&1
       ;;
   "--authentication")
       service="authentication"

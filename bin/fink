@@ -253,9 +253,9 @@ elif [[ $service == "distribution" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
   --files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf \
-  --driver-java-options "-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
-  --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
-  --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_producer_jaas.conf" \
+  --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
+  --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
+  --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -science_db_name ${SCIENCE_DB_NAME} \
@@ -273,9 +273,9 @@ elif [[ $service == "distribution_test" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} \
   --files ${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf \
-  --driver-java-options "-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
-  --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
-  --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf" \
+  --driver-java-options "-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
+  --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
+  --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
   ${FINK_HOME}/bin/distribution_test.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} -log_level ${LOG_LEVEL}
