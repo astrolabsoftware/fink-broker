@@ -18,7 +18,8 @@ from pyspark.sql.types import BooleanType, StringType
 import pandas as pd
 import numpy as np
 
-from fink_broker.classification import cross_match_alerts_raw
+from fink_broker.classification import cross_match_alerts_raw,
+from fink_broker.classification import cross_match_alerts_raw_slow
 
 from typing import Any
 
