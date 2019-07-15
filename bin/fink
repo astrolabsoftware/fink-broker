@@ -179,6 +179,21 @@ fi
 
 # Start services
 mkdir -p ${FINK_HOME}/web/data
+
+# Grab Fink and Python version numbers
+FINK_VERSION=`fink --version`
+PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
+
+# Package fink_broker & userfilters modules
+PYTHON_EXTRA_FILE=""
+if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
+  cd $FINK_HOME
+  python3 setup.py bdist_egg
+  PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
+  echo "Distributing ${PYTHON_EXTRA_FILE}"
+  cd -
+fi
+
 if [[ $service == "dashboard" ]]; then
   # Launch the UI
   export is_docker=`command -v docker-compose`
@@ -207,7 +222,7 @@ elif [[ $service == "simulator" ]]; then
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} \
+    --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
     -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
@@ -216,7 +231,7 @@ elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
-    --packages ${FINK_PACKAGES} \
+    --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
@@ -237,6 +252,7 @@ elif [[ $service == "raw2science" ]]; then
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     --jars ${FINK_JARS} \
+    ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     --files ${HBASE_XML_CONF} \
     ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
@@ -251,7 +267,7 @@ elif [[ $service == "distribution" ]]; then
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
-  --jars ${FINK_JARS} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
   --files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf \
   --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
@@ -272,7 +288,7 @@ elif [[ $service == "distribution_test" ]]; then
   # Start a spark consumer to test the distribution
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
-  --jars ${FINK_JARS} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
   --files ${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf \
   --driver-java-options "-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_TEST_CONSUMER_JAAS}" \
