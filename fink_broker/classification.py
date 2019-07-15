@@ -195,6 +195,8 @@ def xmatch_slow(
 
 
 def refine_search(ra, dec, oid, id_out, names, types):
+    """ Create a final table by merging coordinates of objects found on the
+    bibliographical database, with those objects which were not found."""
     out = []
     for ra_in, dec_in, id_in in zip(ra, dec, oid):
         # cast for picky Spark
