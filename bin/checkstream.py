@@ -21,18 +21,22 @@ import argparse
 import time
 
 from fink_broker.parser import getargs
-
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
-
 from fink_broker.monitoring import monitor_progress_webui
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     # Initialise Spark session
-    init_sparksession(
-        name="checkStream", shuffle_partitions=2, log_level="ERROR")
+    spark = init_sparksession(name="checkstream", shuffle_partitions=2)
+
+    # The level here should be controlled by an argument.
+    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+
+    # debug statements
+    inspect_application(logger)
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
@@ -60,7 +64,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        print("Exiting the checkstream service normally...")
+        logger.info("Exiting the checkstream service normally...")
     else:
         countquery.awaitTermination()
 
