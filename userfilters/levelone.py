@@ -56,7 +56,7 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     Returns
     ----------
     out: pandas.Series of bool
-        Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+    Return a Pandas DataFrame with the appropriate flag: false for bad alert,
         and true for good alert.
 
     """
@@ -102,7 +102,13 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
         If the request Failed (no match at all), return Column of Fail.
 
     """
-    matches = cross_match_alerts_raw(objectId.values, ra.values, dec.values)
+    # discriminate which service to use using the number of alerts
+    if len(ra) <= 100:
+        matches = cross_match_alerts_raw_slow(
+            objectId.values, ra.values, dec.values)
+    else:
+        matches = cross_match_alerts_raw(
+            objectId.values, ra.values, dec.values)
 
     # For regular alerts, the number of matches is always non-zero as
     # alerts with no counterpart will be labeled as Unknown.

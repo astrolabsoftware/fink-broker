@@ -173,24 +173,48 @@ def xmatch_slow(
         # convert from bytes to ascii
         data_new['main_id'] = data_new['main_id'].values[0].decode('ascii')
         data_new['main_type'] = data_new['main_type'].values[0].decode('ascii')
-        # locate object id
+        # locate object id rounding to the first 3 digits
         place_objId = data_new['dec'].round(4).values == mask['dec']\
             .round(4).values
         data_new['objectId'] = mask['objectId'].loc[place_objId]
-        # concatenate table with mask if needed
+        # create a complementary mask
         complementary_mask = data_new['dec'].round(4).values != mask['dec']\
             .round(4).values
+        # concatenate table with mask if needed
         data_filt_new = pd.concat([mask.loc[complementary_mask], data_new])\
             .replace(np.nan, 'Unknown')
         # sort if needed
         data_filt_new = data_filt_new.sort_values(by=['objectId'])
 
-    except Exception:
+    except TypeError:
 
         data_filt_new = mask.replace(np.nan, 'Unknown')\
             .sort_values(by=['objectId'])
 
     return data_filt_new
+
+
+def refine_search(ra, dec, oid, id_out, names, types):
+    out = []
+    for ra_in, dec_in, id_in in zip(ra, dec, oid):
+        # cast for picky Spark
+        ra_in, dec_in = float(ra_in), float(dec_in)
+        id_in = str(id_in)
+
+        # Discriminate with the objectID
+        if id_in in id_out:
+            # Return the closest object in case of many
+            # (smallest angular distance)
+            index = id_out.index(id_in)
+            out.append((
+                id_in, ra_in, dec_in,
+                str(names[index]), str(types[index])))
+
+        else:
+            # Mark as unknown if no match
+            out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+
+    return out
 
 
 def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
@@ -251,23 +275,7 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     types = [np.array(i.split(","))[main_type] for i in data]
 
     # Assign names and types to inputs
-    out = []
-    for ra_in, dec_in, id_in in zip(ra, dec, oid):
-        # cast for picky Spark
-        ra_in, dec_in = float(ra_in), float(dec_in)
-        id_in = str(id_in)
-
-        # Discriminate with the objectID
-        if id_in in id_out:
-            # Return the closest object in case of many
-            # (smallest angular distance)
-            index = id_out.index(id_in)
-            out.append((
-                id_in, ra_in, dec_in,
-                str(names[index]), str(types[index])))
-        else:
-            # Mark as unknown if no match
-            out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+    out = refine_search(ra, dec, oid, id_out, names, types)
 
     return out
 
@@ -329,24 +337,7 @@ def cross_match_alerts_raw_slow(oid: list, ra: list, dec: list) -> list:
         types = data_new[main_type].values
 
         # Assign names and types to inputs
-        out = []
-        for ra_in, dec_in, id_in in zip(ra, dec, oid):
-            # cast for picky Spark
-            ra_in, dec_in = float(ra_in), float(dec_in)
-            id_in = str(id_in)
-
-            # Discriminate with the objectID
-            if id_in in id_out:
-                # Return the closest object in case of many
-                # (smallest angular distance)
-                index = id_out.index(id_in)
-                out.append((
-                            id_in, ra_in, dec_in,
-                            str(names[index]), str(types[index])))
-
-            else:
-                # Mark as unknown if no match
-                out.append((id_in, ra_in, dec_in, "Unknown", "Unknown"))
+        out = refine_search(ra, dec, oid, id_out, names, types)
 
     return out
 
