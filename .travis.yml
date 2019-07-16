@@ -52,7 +52,7 @@ script:
 
   # Start Kafka Server and create a test topic
   - fink_kafka start
-  - fink_kafka --create-topic distribution_test
+  - fink_kafka --create-topic fink_outstream
 
   # Execute tests and report coverage
   - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
