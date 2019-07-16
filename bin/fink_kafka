@@ -53,8 +53,8 @@ start_zookeeper() {
   # Try starting Zookeeper with max 3 attempts
   i=0
   while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
-    ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-    sleep 3
+    ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > ${zk_logs} &
+    sleep 4
     ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
     i=$[$i+1]
   done
@@ -64,13 +64,14 @@ start_zookeeper() {
 stop_zookeeper() {
   # Stop Zookeeper
   ${KAFKA_HOME}/bin/zookeeper-server-stop.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-  sleep 1
+  sleep 2
 }
 
 # function to start a Kafka Server
 start_kafka_server() {
   kafka_server_prop="$1"
   kafka_port="$2"
+  log_file="$3"
 
   # Try starting a Kafka Server with max 3 attempts
   j=0
@@ -79,8 +80,8 @@ start_kafka_server() {
     export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
 
     # Start the Kafka Server
-    ${KAFKA_HOME}/bin/kafka-server-start.sh ${kafka_server_prop} > /dev/null 2>&1 &
-    sleep 3
+    ${KAFKA_HOME}/bin/kafka-server-start.sh ${kafka_server_prop} > ${log_file} &
+    sleep 4
     KAFKA_PID=$( lsof -i :${kafka_port} | grep -i "LISTEN" | awk 'NR==1{ print $2 }' )
     j=$[$j+1]
   done
@@ -221,7 +222,7 @@ case "$1" in
       for id in ${!KAFKA_BROKER_IPPORT[@]}; do
         KAFKA_PID=""
         start_kafka_server \
-          ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:}
+          ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:} ${kafka_broker_logs[$id]}
 
         if [[ $KAFKA_PID ]]; then kafka_pids[$id]=${KAFKA_PID}; fi
       done

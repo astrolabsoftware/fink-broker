@@ -40,6 +40,19 @@ done
 
 DISTRIBUTION_SERVERS=${kafka_servers#,}
 
+# Store logs for zk and brokers:
+cd ${FINK_HOME}
+[[ -d fink_kafka_logs ]] || mkdir fink_kafka_logs
+
+# log file for zk
+zk_logs="${FINK_HOME}/fink_kafka_logs/zklogs"
+
+# log files for kafka brokers
+declare -a kafka_broker_logs
+kafka_broker_logs[0]="${FINK_HOME}/fink_kafka_logs/broker0"
+kafka_broker_logs[1]="${FINK_HOME}/fink_kafka_logs/broker1"
+kafka_broker_logs[2]="${FINK_HOME}/fink_kafka_logs/broker2"
+
 # Kafka topic to publish on
 DISTRIBUTION_TOPIC="fink_outstream"
 
