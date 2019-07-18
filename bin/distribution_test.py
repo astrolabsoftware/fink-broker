@@ -47,13 +47,16 @@ def main():
     inspect_application(logger)
 
     # Topic to read from
-    topic = "fink_outstream"
+    topic = args.distribution_topic
+    broker_list = args.distribution_servers
 
     # Read from the Kafka topic
     df_kafka = spark \
         .readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", "localhost:9093") \
+        .option("kafka.bootstrap.servers", broker_list) \
+        .option("kafka.security.protocol", "SASL_PLAINTEXT")\
+        .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
         .option("subscribe", topic) \
         .load()
 
