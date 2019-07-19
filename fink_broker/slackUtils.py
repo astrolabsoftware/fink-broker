@@ -17,6 +17,7 @@
 import os
 import slack
 
+
 class FinkSlackClient:
 
     def __init__(self, api_token):
@@ -29,31 +30,32 @@ class FinkSlackClient:
 
         # create a dict of {channelName: ID}
         channels = self._client.channels_list()['channels']
-        self._channel_ids = {x['name']:x['id'] for x in channels}
+        self._channel_ids = {x['name']: x['id'] for x in channels}
 
         # create a dict of {userName: ID}
         members = self._client.users_list()['members']
-        self._user_ids = {x['real_name']:x['id'] for x in members}
+        self._user_ids = {x['real_name']: x['id'] for x in members}
 
     def send_message(self, recipient, msg):
         """sends a message to a given channel/user on the slack workspace
 
         Parameters
         ----------
-        channel: str
-            name of recipient e.g. a channel: '#general' or a user: 'Abhishek Chauhan'
+        recipient: str
+            name of recipient e.g. a channel: '#general'
+            or a user: 'Abhishek Chauhan'
         msg: str
             message payload to send
         """
         # if recipient is a channel e.g. #general
         if recipient[0] == '#':
             name = recipient[1:]
-            if not name in self._channel_ids:
+            if name not in self._channel_ids:
                 print("Invalid Channel Name")
                 return
             channel_id = self._channel_ids[name]
         else:   # user
-            if not recipient in self._user_ids:
+            if recipient not in self._user_ids:
                 print("User is not member of your slack workspace")
                 return
             channel_id = self._user_ids[recipient]
