@@ -112,13 +112,23 @@ def send_slack_alerts(df: DataFrame):
     df: DataFrame
         spark dataframe to send slack alerts
     """
+    finkSlack = get_slack_client()
+
+    # filter out unkonw object types
     df = df.filter("cross_match_alerts_per_batch!='Unknown'")
 
-    if df.count() == 0:
-        return
+    object_types = df \
+        .select("cross_match_alerts_per_batch")\
+        .distinct()\
+        .collect()
+    object_types = [x[0] for x in object_types]
 
-    alert_text = getShowString(df)
-    slack_alert = "```\n" + alert_text + "```"
+    # Send alerts to the respective channels
+    for obj in object_types:
+        channel_name = '#' + ''.join(e.lower() for e in obj if e.isalpha())
 
-    finkSlack = get_slack_client()
-    finkSlack.send_message("#fink-test-streamout", slack_alert)
+        alert_text = getShowString(
+            df.filter(df.cross_match_alerts_per_batch == obj))
+        slack_alert = "```\n" + alert_text + "```"
+
+        finkSlack.send_message(channel_name, slack_alert)
