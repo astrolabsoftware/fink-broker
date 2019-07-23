@@ -36,6 +36,7 @@ from fink_broker.distributionUtils import group_df_into_struct
 from fink_broker.hbaseUtils import flattenstruct
 from fink_broker.filters import filter_df_using_xml, apply_user_defined_filters
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.slackUtils import send_slack_alerts
 
 from userfilters.leveltwo import filter_leveltwo_names
 
@@ -93,6 +94,12 @@ def main():
 
         # Keep records that haven't been distributed
         df = df.filter("status!='distributed'")
+
+        # Send out slack alerts
+        slack_cols = [
+            "objectId", "candidate_ra",
+            "candidate_dec", "cross_match_alerts_per_batch"]
+        send_slack_alerts(df.select(slack_cols))
 
         # Apply additional filters (user defined)
         df = filter_df_using_xml(df, args.distribution_rules_xml)

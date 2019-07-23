@@ -16,7 +16,7 @@
 
 import os
 import slack
-
+from pyspark.sql import DataFrame
 
 class FinkSlackClient:
 
@@ -61,12 +61,18 @@ class FinkSlackClient:
             channel_id = self._user_ids[recipient]
 
         response = self._client.chat_postMessage(
-                channel=channel_id,
-                text=msg)
+            channel=channel_id, text=msg, as_user="false",
+            username="fink-alert", icon_emoji="strend:")
 
 
 def get_slack_client():
-    """ returns an object of class FinkSlackClient"""
+    """ returns an object of class FinkSlackClient
+
+    Returns
+    ----------
+    FinkSlackClient:
+        an object of class FinkSlackClient initialized with OAuth token
+    """
     try:
         api_token = os.environ["SLACK_API_TOKEN"]
     except KeyError:
@@ -74,3 +80,45 @@ def get_slack_client():
         return
 
     return FinkSlackClient(api_token)
+
+def getShowString(
+        df: DataFrame, n: int = 20,
+        truncate: int = 0, vertical: bool = False) -> str:
+    """returns the string printed by df.show()
+
+    Parameters
+    ----------
+    df: DataFrame
+        a spark dataframe
+    n: int
+        number of rows to print
+    truncate: int
+        truncate level for columns, default: 0 means no truncation
+    vertical: bool
+        set true to get output in vertical format (not tabular)
+
+    Returns
+    ----------
+    showString: str
+        string printed by DataFrame.show()
+    """
+    return(df._jdf.showString(n, truncate, vertical))
+
+def send_slack_alerts(df: DataFrame):
+    """Send alerts to slack channel
+
+    Parameters
+    ----------
+    df: DataFrame
+        spark dataframe to send slack alerts
+    """
+    df = df.filter("cross_match_alerts_per_batch!='Unknown'")
+
+    if df.count() == 0:
+        return
+
+    alert_text = getShowString(df)
+    slack_alert = "```\n" + alert_text + "```"
+
+    finkSlack = get_slack_client()
+    finkSlack.send_message("#fink-test-streamout", slack_alert)
