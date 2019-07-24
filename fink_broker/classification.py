@@ -165,7 +165,7 @@ def xmatch_slow(
                 unit=units),
                 radius=u.deg/3600.
                    ))
-    if query_new is not None:
+    try:
         # if table not empy, convert it to a pandas DataFrame
         data_new = query_new[list_keys].to_pandas()\
             .rename(columns=dictionary_simbad_to_new)
@@ -186,7 +186,7 @@ def xmatch_slow(
         # sort if needed
         data_filt_new = data_filt_new.sort_values(by=['objectId'])
 
-    else:
+    Except TypeError:
 
         data_filt_new = mask.replace(np.nan, 'Unknown')\
             .sort_values(by=['objectId'])
