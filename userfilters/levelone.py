@@ -68,7 +68,8 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     return pd.Series(mask)
 
 @pandas_udf(StringType(), PandasUDFType.SCALAR)
-def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
+def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any,
+                                 n_max_alerts: 100) -> pd.Series:
     """ Query the CDSXmatch service to find identified objects
     in alerts. The catalog queried is the SIMBAD bibliographical database.
     We can also use the 10,000+ VizieR tables if needed :-)
@@ -104,7 +105,7 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
 
     """
     # discriminate which service to use using the number of alerts
-    if len(ra) <= 100:
+    if len(ra) <= n_max_alerts:
         matches = cross_match_alerts_raw_slow(
             objectId.values, ra.values, dec.values)
     else:
