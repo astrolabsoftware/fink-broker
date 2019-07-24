@@ -186,7 +186,7 @@ def xmatch_slow(
         # sort if needed
         data_filt_new = data_filt_new.sort_values(by=['objectId'])
 
-    Except TypeError:
+    except TypeError:
 
         data_filt_new = mask.replace(np.nan, 'Unknown')\
             .sort_values(by=['objectId'])
