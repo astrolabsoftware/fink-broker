@@ -61,7 +61,7 @@ script:
 
   # Scan with sonarqube only if internal PR (i.e. no fork)
   # Note: this is unsatisfactory...
-  - if [ $TRAVIS_REPO_SLUG == "astrolabsoftware/fink-broker" ]; then
+  - if [ $TRAVIS_PULL_REQUEST == false ] || [ $TRAVIS_PULL_REQUEST_SLUG == "astrolabsoftware/fink-broker"]; then
     coverage xml -i;
     sonar-scanner;
     fi
