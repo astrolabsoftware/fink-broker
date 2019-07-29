@@ -75,12 +75,13 @@
     <column name="candidate" subcol="xpos"/>
     <column name="candidate" subcol="ypos"/>
     <column name="prv_candidates"/>
-    <column name="simbadType"/>
+    <column name="cross_match_alerts_per_batch"/>
     <column name="status"/>
   </select>
 
   <!-- columns to drop before distribution -->
   <drop>
+    <column name="candid"/>
     <column name="prv_candidates"/>
   </drop>
 

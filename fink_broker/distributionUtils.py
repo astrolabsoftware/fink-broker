@@ -147,14 +147,14 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     ...     [-25.4669463, -27.0588511],
     ...     ["Star", "Unknown"])).toDF([
     ...       "objectId", "candid", "candidate_ra",
-    ...       "candidate_dec", "simbadType"])
+    ...       "candidate_dec", "cross_match_alerts_per_batch"])
     >>> df.show()
-    +------------+------------------+------------+-------------+----------+
-    |    objectId|            candid|candidate_ra|candidate_dec|simbadType|
-    +------------+------------------+------------+-------------+----------+
-    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|      Star|
-    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|   Unknown|
-    +------------+------------------+------------+-------------+----------+
+    +------------+------------------+------------+-------------+----------------------------+
+    |    objectId|            candid|candidate_ra|candidate_dec|cross_match_alerts_per_batch|
+    +------------+------------------+------------+-------------+----------------------------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|                        Star|
+    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|                     Unknown|
+    +------------+------------------+------------+-------------+----------------------------+
     <BLANKLINE>
     >>> temp_schema = os.path.join(os.environ["PWD"] + "temp_schema")
     >>> df_kafka = get_kafka_df(df, temp_schema)
@@ -167,15 +167,15 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
      |    |-- candid: long (nullable = true)
      |    |-- candidate_ra: double (nullable = true)
      |    |-- candidate_dec: double (nullable = true)
-     |    |-- simbadType: string (nullable = true)
+     |    |-- cross_match_alerts_per_batch: string (nullable = true)
     <BLANKLINE>
     >>> df_decoded.select(col("struct.*")).show()
-    +------------+------------------+------------+-------------+----------+
-    |    objectId|            candid|candidate_ra|candidate_dec|simbadType|
-    +------------+------------------+------------+-------------+----------+
-    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|      Star|
-    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|   Unknown|
-    +------------+------------------+------------+-------------+----------+
+    +------------+------------------+------------+-------------+----------------------------+
+    |    objectId|            candid|candidate_ra|candidate_dec|cross_match_alerts_per_batch|
+    +------------+------------------+------------+-------------+----------------------------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|                        Star|
+    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|                     Unknown|
+    +------------+------------------+------------+-------------+----------------------------+
     <BLANKLINE>
     >>> os.remove(temp_schema)
     """
@@ -305,8 +305,14 @@ def get_distribution_offset(
 
     return min_timestamp
 
-def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
+def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     """Group columns of a df into a struct column
+
+    *Note*
+    Currently, the dataframe is transformed by splitting it into
+    two dataframes, reshaping one of them and then using a join.
+    This might consume more resources than necessary and should be
+    optimized in the future if required.
 
     If we have a df with the following schema:
     root
@@ -324,15 +330,18 @@ def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
     Parameters
     ----------
     df: Spark DataFrame
-        a Spark DataFrame with flat columns
+        a Spark dataframe with flat columns
 
     colFamily: str
         prefix of columns to be grouped into a struct
 
+    key: str
+        a column with unique values (used for join)
+
     Returns
     ----------
     df: Spark DataFrame
-        a Spark DataFrame with columns grouped into struct
+        a Spark dataframe with columns grouped into struct
 
     Examples
     ----------
@@ -343,44 +352,58 @@ def group_df_into_struct(df: DataFrame, colFamily: str) -> DataFrame:
     ...     [-25.4669463, -27.0588511],
     ...     ["Star", "Unknown"])).toDF([
     ...       "objectId", "candid", "candidate_ra",
-    ...       "candidate_dec", "simbadType"])
+    ...       "candidate_dec", "cross_match_alerts_per_batch"])
     >>> df.printSchema()
     root
      |-- objectId: string (nullable = true)
      |-- candid: long (nullable = true)
      |-- candidate_ra: double (nullable = true)
      |-- candidate_dec: double (nullable = true)
-     |-- simbadType: string (nullable = true)
+     |-- cross_match_alerts_per_batch: string (nullable = true)
     <BLANKLINE>
 
-    >>> df = group_df_into_struct(df, 'candidate')
+    >>> df = group_df_into_struct(df, 'candidate', 'objectId')
     >>> df.printSchema()
     root
      |-- objectId: string (nullable = true)
      |-- candid: long (nullable = true)
-     |-- simbadType: string (nullable = true)
+     |-- cross_match_alerts_per_batch: string (nullable = true)
      |-- candidate: struct (nullable = false)
      |    |-- ra: double (nullable = true)
      |    |-- dec: double (nullable = true)
     <BLANKLINE>
 
     """
-    newcols = []
-    cols_to_group = []
+    struct_cols = []
     flat_cols = []
 
     pos = len(colFamily) + 1
 
     for col in df.columns:
         if col.startswith(colFamily + "_"):
-            newcols.append(col[pos:])
-            cols_to_group.append(col[pos:])
+            struct_cols.append(col)
         else:
-            newcols.append(col)
             flat_cols.append(col)
 
-    df_new = df.toDF(*newcols)
-    df_new = df_new.select(*flat_cols, struct(*cols_to_group).alias(colFamily))
+    # dataframe with columns other than 'columnFamily_*'
+    df1 = df.select(flat_cols)
+
+    new_col_names = []
+    new_col_names.append(key)
+
+    # dataframe with key + 'columnFamily_*'
+    df2 = df.select(new_col_names + struct_cols)
+
+    struct_cols = [x[pos:] for x in struct_cols]
+
+    new_col_names.extend(struct_cols)
+    df2_renamed = df2.toDF(*new_col_names)
+
+    # Group 'columnFamily_*' into a struct
+    df2_struct = df2_renamed.select(key, struct(*struct_cols).alias(colFamily))
+
+    # join the two dataframes based on 'key'
+    df_new = df1.join(df2_struct, key)
 
     return df_new
 

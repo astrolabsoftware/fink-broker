@@ -111,12 +111,3 @@ TIME_INTERVAL=0.1
 
 # Total number of alerts to send
 POOLSIZE=100
-
-######################################
-# Distribution
-# Configurations for Alert Re-Distribution
-# The path where to store the avro distribution schema
-DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema.avsc
-DISTRIBUTION_OFFSET="latest"
-DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset
-DISTRIBUTION_RULES_XML=${FINK_HOME}/conf/distribution-rules.xml

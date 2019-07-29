@@ -65,6 +65,10 @@ def main():
     min_timestamp = get_distribution_offset(
         args.checkpointpath_dist, args.startingOffset_dist)
 
+    # Get topic name to publish on
+    topic = args.distribution_topic
+    broker_list = args.distribution_servers
+
     # Run distribution for (args.exit_after) seconds
     if args.exit_after is not None:
         t_end = time.time() + args.exit_after
@@ -94,7 +98,7 @@ def main():
         df = filter_df_using_xml(df, args.distribution_rules_xml)
 
         # group `candidate_*` columns into a struct column
-        df = group_df_into_struct(df, "candidate")
+        df = group_df_into_struct(df, "candidate", "objectId")
 
         # Apply level two filters
         df = apply_user_defined_filters(df, filter_leveltwo_names)
@@ -108,13 +112,14 @@ def main():
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df, args.distribution_schema)
 
-        # Publish Kafka topic(s)
         # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
             .write\
             .format("kafka")\
-            .option("kafka.bootstrap.servers", "localhost:9093")\
-            .option("topic", "fink_outstream")\
+            .option("kafka.bootstrap.servers", broker_list)\
+            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
+            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
+            .option("topic", topic)\
             .save()
 
         # Update the status in Hbase and commit checkpoint to file

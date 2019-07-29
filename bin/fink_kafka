@@ -34,6 +34,10 @@ Option:\n
     \t\tLists out details for the given topic <TOPIC> \n\n
   \t--list-topics \n
     \t\tLists all the topics \n\n
+  \t--authentication [-a] [-d] [-u user] [-p password] [-h] \n
+    \t\tAuthenticate users on Fink's Kafka Cluster (use -h for more help) \n\n
+  \t--authorization [-a] [-d] [-u user] [-H host] [-c consumer-group] [-p] [-t topic] [-h] \n
+    \t\tAuthorize permissions on Fink's Kafka Cluster (use -h for more help) \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -41,35 +45,190 @@ if [[ $1 == "" ]]; then
   exit 1
 fi
 
+# load distribution configurations
+source ${FINK_HOME}/conf/fink.conf.distribution
+
+# function to start the Zookeeper
+start_zookeeper() {
+  # Try starting Zookeeper with max 3 attempts
+  i=0
+  while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
+    ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > ${zk_logs} &
+    sleep 4
+    ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
+    i=$[$i+1]
+  done
+}
+
+# function to stop the Zookeeper
+stop_zookeeper() {
+  # Stop Zookeeper
+  ${KAFKA_HOME}/bin/zookeeper-server-stop.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
+  sleep 2
+}
+
+# function to start a Kafka Server
+start_kafka_server() {
+  kafka_server_prop="$1"
+  kafka_port="$2"
+  log_file="$3"
+
+  # Try starting a Kafka Server with max 3 attempts
+  j=0
+  while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
+    # Set security options for jvm
+    export KAFKA_OPTS="-Djava.security.auth.login.config=${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
+
+    # Start the Kafka Server
+    ${KAFKA_HOME}/bin/kafka-server-start.sh ${kafka_server_prop} > ${log_file} &
+    sleep 4
+    KAFKA_PID=$( lsof -i :${kafka_port} | grep -i "LISTEN" | awk 'NR==1{ print $2 }' )
+    j=$[$j+1]
+  done
+}
+
+# function to stop a running Kafka Server
+stop_kafka_server() {
+  kafka_server_prop="$1"
+  # stop kafka server
+  ${KAFKA_HOME}/bin/kafka-server-stop.sh ${kafka_server_prop} > /dev/null 2>&1
+  sleep 2
+}
+
+# function to create SCRAM credentials
+create_scram_credential() {
+  username="$1"
+  password="$2"
+
+  ${KAFKA_HOME}/bin/kafka-configs.sh \
+  --zookeeper ${ZK_IPPORT} \
+  --alter \
+  --add-config "SCRAM-SHA-512=[password=${password}]" \
+  --entity-type users \
+  --entity-name ${username}
+}
+
+# function to delete SCRAM credentials
+delete_scram_credential() {
+  username="$1"
+
+  ${KAFKA_HOME}/bin/kafka-configs.sh \
+  --zookeeper ${ZK_IPPORT} \
+  --alter \
+  --delete-config 'SCRAM-SHA-512' \
+  --entity-type users \
+  --entity-name ${username}
+}
+
+# function to add Acl for a producer
+add_acl_producer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+  --add \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --producer \
+  --topic ${topic}
+}
+
+# function to add Acl for a consumer
+add_acl_consumer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+  consumer_group="$4"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+  --add \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --consumer \
+  --topic ${topic} \
+  --group ${consumer_group}
+}
+
+# function to remove Acl for a producer
+remove_acl_producer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+  --remove \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --producer \
+  --topic ${topic}
+}
+
+# function to remove Acl for a consumer
+remove_acl_consumer() {
+  username="$1"
+  host="$2"
+  topic="$3"
+  consumer_group="$4"
+
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+  --remove \
+  --allow-principal "User:${username}" \
+  --allow-host ${host} \
+  --consumer \
+  --topic ${topic} \
+  --group ${consumer_group}
+}
+
+
 case "$1" in
   "start")
-      # Try to Start the Zookeeper with 3 attempts
-      i=0
-      ZK_PID=""
-      while [ $i -lt 3 ] && [ -z "$ZK_PID" ]; do
-        # Start the Zookeeper
-        ${KAFKA_HOME}/bin/zookeeper-server-start.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-        sleep 3
-        ZK_PID=$( lsof -i :2182 | grep -i "java" | awk 'NR==1{ print $2 }' )
-        i=$[$i+1]
-        # echo "zk attempt" $i
-        # echo "ZK_PID" $ZK_PID
+      # Start the Zookeeper
+      declare ZK_PID=""
+      start_zookeeper
+
+      # Create SCRAM Credentials for Authentication
+      # For brokers
+      create_scram_credential "admin" "admin-secret"
+
+      # For Fink producer
+      create_scram_credential "finkProducer" "finkProducer-secret"
+
+      # For Fink's test consumer
+      create_scram_credential "finkConsumer" "finkConsumer-secret"
+
+      # Enable Authorization
+      # For Fink producer
+      add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
+
+      # For Fink's test consumer
+      ${KAFKA_HOME}/bin/kafka-acls.sh \
+      --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+      --add \
+      --allow-principal User:finkConsumer \
+      --allow-host 127.0.0.1 \
+      --consumer \
+      --topic fink_outstream \
+      --group spark-kafka- \
+      --resource-pattern-type prefixed
+
+      # Start Kafka Servers / Brokers
+      declare -a kafka_pids
+      declare KAFKA_PID
+      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+        KAFKA_PID=""
+        start_kafka_server \
+          ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:} ${kafka_broker_logs[$id]}
+
+        if [[ $KAFKA_PID ]]; then kafka_pids[$id]=${KAFKA_PID}; fi
       done
 
-      # Try to start the Kafka server with 3 attempts
-      j=0
-      KAFKA_PID=""
-      while [ $j -lt 3 ] && [ -z "$KAFKA_PID" ]; do
-        # Start the Kafka Server(Brokers)
-        ${KAFKA_HOME}/bin/kafka-server-start.sh ${FINK_HOME}/conf/kafka.server.properties > /dev/null 2>&1 &
-        sleep 3
-        KAFKA_PID=$( lsof -i :9093 | grep -i "java" | awk 'NR==1{ print $2 }' )
-        j=$[$j+1]
-        # echo "Kafka attempt" $j
-        # echo "KAFKA_PID" $KAFKA_PID
-      done
 
-      if [ -n "$ZK_PID" ] && [ -n "$KAFKA_PID" ]
+      if [[ "$ZK_PID" && ${#KAFKA_BROKER_IPPORT[@]} == ${#kafka_pids[@]} ]]
       then
         echo "Kafka Server started successfully"
       else
@@ -78,12 +237,12 @@ case "$1" in
       ;;
   "stop")
       # Stop Kafka brokers
-      ${KAFKA_HOME}/bin/kafka-server-stop.sh ${FINK_HOME}/conf/kafka.server.properties > /dev/null 2>&1 &
-      sleep 1
+      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+        stop_kafka_server ${KAFKA_BROKER_PROPERTIES[$id]}
+      done
 
-      # Stop Zookeeper
-      ${KAFKA_HOME}/bin/zookeeper-server-stop.sh ${FINK_HOME}/conf/kafka.zookeeper.properties > /dev/null 2>&1 &
-      sleep 1
+      # Stop the Zookeeper
+      stop_zookeeper
 
       echo "Kafka Server stopped"
       ;;
@@ -97,10 +256,10 @@ case "$1" in
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --create \
       --if-not-exists \
-      --partitions 1 \
+      --partitions 2 \
       --replication-factor 1 \
       --topic $TOPIC \
-      --zookeeper "localhost:2182"  >&1
+      --zookeeper ${ZK_IPPORT}
       # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
       ;;
   "--delete-topic")
@@ -113,7 +272,7 @@ case "$1" in
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --delete \
       --topic $TOPIC \
-      --zookeeper "localhost:2182"  >&1
+      --zookeeper ${ZK_IPPORT}  >&1
       ;;
 "--describe-topic")
     if [[ $2 == "" ]]; then
@@ -125,12 +284,20 @@ case "$1" in
     ${KAFKA_HOME}/bin/kafka-topics.sh \
     --describe \
     --topic $TOPIC \
-    --zookeeper "localhost:2182"  >&1
+    --zookeeper ${ZK_IPPORT}  >&1
     ;;
   "--list-topics")
       ${KAFKA_HOME}/bin/kafka-topics.sh \
       --list \
-      --zookeeper "localhost:2182" >&1
+      --zookeeper ${ZK_IPPORT} >&1
+      ;;
+  "--authentication")
+      service="authentication"
+      shift 1
+      ;;
+  "--authorization")
+      service="authorization"
+      shift 1
       ;;
   "-h"|"--help")
       echo -e $message_help
@@ -144,3 +311,192 @@ case "$1" in
       exit 1
       ;;
 esac
+
+authentication_usage() {
+  cat <<END
+
+ Usage:
+        fink_kafka --authentication [-a] [-d] [-u user] [-p password] [-h]
+
+ Add/delete credentials for user's authentication
+        -a: add user's credentials (default)
+        -d: delete user's credentials (optional)
+        -u: username
+        -p: password (not required for delete)
+        -h: to view this help message
+
+END
+}
+
+if [[ $service == "authentication" ]]; then
+  if [[ $# -lt 1 ]]; then
+    echo "Insufficient arguments for service: ${service}"
+    authentication_usage
+    exit 2
+  fi
+
+  declare operation="add"
+
+  while getopts ":adu:p:h" opt; do
+    case $opt in
+      a)
+        # do nothing (default)
+        ;;
+      d)
+        operation="delete"
+        ;;
+      u)
+        username=${OPTARG}
+        ;;
+      p)
+        password=${OPTARG}
+        ;;
+      h)
+        authentication_usage
+        exit 0
+        ;;
+      :)
+        if [[ ! $operation == "delete" ]]; then
+          echo "error: option ${OPTARG} is missing an argument" >&2
+          exit 3
+        fi
+        ;;
+      \?)
+        echo "error: unknown option -${OPTARG}" >&2
+        exit 4
+        ;;
+    esac
+  done
+
+  if [[ $operation == "add" ]]; then
+    if [[ $username && $password ]]; then
+      create_scram_credential "$username" "$password"
+    else
+      echo "error: missing username/password" >&2
+      exit 5
+    fi
+  elif [[ $operation == "delete" ]]; then
+    if [[ $username ]]; then
+      delete_scram_credential "$username"
+    else
+      echo "error: missing username" >&2
+      exit 5
+    fi
+  fi
+
+fi
+
+authorization_usage() {
+  cat <<END
+
+ Usage:
+        fink_kafka --authorization [-a] [-d] [-u user] [-H host] [-c consumer-group] [-p] [-t topic] [-h]
+
+ Add/delete ACLs for authorization on Fink's Kafka Cluster
+        -a: add Acl
+        -d: delete/remove Acl
+        -u: username (Principal)
+        -H: IP address from which Principal will have access (using hostname is not supported)
+        -c: give access rights for a consumer (argument required: consumer-group)
+        -p: give access rights for a producer
+        -t: topic
+        -h: to view this help message
+
+END
+}
+
+if [[ $service == "authorization" ]]; then
+  if [[ $# -lt 1 ]]; then
+    echo "Insufficient arguments for service: ${service}"
+    authorization_usage
+    exit 2
+  fi
+
+  declare operation=""
+  declare mode=""
+
+  while getopts ":adu:H:c:pt:h" opt; do
+    case $opt in
+      a)
+        operation="add"
+        ;;
+      d)
+        operation="remove"
+        ;;
+      u)
+        username=${OPTARG}
+        ;;
+      H)
+        host=${OPTARG}
+        ;;
+      c)
+        mode="consumer"
+        group=${OPTARG}
+        ;;
+      p)
+        mode="producer"
+        ;;
+      t)
+        topic=${OPTARG}
+        ;;
+      h)
+        authorization_usage
+        exit 0
+        ;;
+      :)
+        echo "error: option ${OPTARG} is missing an argument" >&2
+        exit 3
+        ;;
+      \?)
+        echo "error: unknown option -${OPTARG}" >&2
+        exit 4
+        ;;
+    esac
+  done
+
+  if [[ $operation == "add" ]]; then
+
+    if [[ $username && $host && $topic ]]; then
+      if [[ ! $mode ]]; then
+        echo "error: use -c -p to add consumer/producer permissions"
+        authorization_usage
+        exit 6
+      fi
+
+      if [[ $mode == "producer" ]]; then
+        add_acl_producer "$username" "$host" "$topic"
+      elif [[ $mode == "consumer" ]]; then
+        [[ $group ]] || echo "error: no consumer-group given" exit 7
+        add_acl_consumer "$username" "$host" "$topic" "$group"
+      fi
+
+    else
+      echo "error: Illegal usage"
+      authorization_usage
+      exit 6
+    fi
+  fi
+
+  if [[ $operation == "remove" ]]; then
+
+    if [[ $username && $host && $topic ]]; then
+      if [[ ! $mode ]]; then
+        echo "error: use -c -p to remove consumer/producer permissions"
+        authorization_usage
+        exit 6
+      fi
+
+      if [[ $mode == "producer" ]]; then
+        remove_acl_producer "$mode" "$username" "$host" "$topic"
+      elif [[ $mode == "consumer" ]]; then
+        [[ $group ]] || echo "error: no consumer-group given" exit 7
+        remove_acl_consumer "$mode" "$username" "$host" "$topic" "$group"
+      fi
+
+    else
+      echo "error: Illegal usage"
+      authorization_usage
+      exit 6
+    fi
+  fi
+fi
