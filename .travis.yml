@@ -65,3 +65,8 @@ script:
     coverage xml -i;
     sonar-scanner;
     fi
+
+notifications:
+  slack:
+    rooms:
+      secure: "TH78sSD5a938BsRH1rI6nZtoC+5GV7GBTBS2sI4z1ySvdnJIcz26rfr3BtCpG8WYgrDgco3Dx3StIjRM0GlvuEVFDS2HbzfgjThmLdRU8u4fjaUqGHkJ4vZNXj3NUxK7lp0e2NGoNpp+meWJR7O1BYT4GmYoD03Gj4Bw4qTUDZlKLCM0rVsFcX7kSsoMhoYizGG89z7F8EsH95kFQTPp9ICYIX6qC+or45/9WphwuhKHa0Nt+8cRtJL8yttgEyhqLIORmZ91cqO2y6s4zgp0Ues+xAcQk3zBWhpnBmqqIMSTmd++mZLtRcXcAiqSAeG5B/cC05Trmzvtt9N/3ihdaXEFtnDTZ7aPj5ojSkr4Nu4VkFwMasQ8oj4vIwSnhtYN752B/ZnlkSEsSKB22kkq2ZzSC+3eatIU1qLDQrqJRVaMJ5Yihd1SRTFT7XORLFUbO8JpAOu/yjleRuklfvWH5kVBD3JiPVa4dq7N2f9YqWp9eXp1t9zH4YAGGbh86GaVILl7vOc1sTU4BPo5MjUA1QgqS9WUTUpaoG4nDx9Hwvs1PPfZTd/LU6VsC0gWAh/E2le7+QTlXt9r34u4a3oqMqxCk13ijuHJaBQv2wyac1VFrxXA06EAPE/zVAd9SUdgS3kMtUAtC0yCSCZePTpO0jag6hOJJhZMOPlmjzR4HW8="
