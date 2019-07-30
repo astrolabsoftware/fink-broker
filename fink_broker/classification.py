@@ -135,6 +135,7 @@ def xmatch_slow(
     distmaxarcsec: int
         Radius used for searching match. extcatalog sources lying within
         radius of the center (ra, dec) will be considered as matches.
+
     Returns
     ----------
     data_filt_new: pd.DataFrame
@@ -155,16 +156,20 @@ def xmatch_slow(
     # create a mask with the entries of the query
     nans = [np.nan for a in range(0, len(ra))]
     mask = pd.DataFrame(zip(nans, ra, dec, nans, id))
-    mask.columns = list_old_keys+['objectId']
+    mask.columns = list_old_keys + ['objectId']
 
     # Send requests in vector form and obtain a table as a result
     units = tuple([u.deg, u.deg])
-    query_new = (Simbad.query_region(coord.SkyCoord(
+    query_new = (
+        Simbad.query_region(
+            coord.SkyCoord(
                 ra=ra,
                 dec=dec,
-                unit=units),
-                radius=u.deg/3600.
-                   ))
+                unit=units
+            ), radius=u.deg / 3600.
+        )
+    )
+
     if query_new is not None:
         # if table not empy, convert it to a pandas DataFrame
         data_new = query_new[list_keys].to_pandas()\
@@ -173,30 +178,60 @@ def xmatch_slow(
         # convert from bytes to ascii
         data_new['main_id'] = data_new['main_id'].values[0].decode('ascii')
         data_new['main_type'] = data_new['main_type'].values[0].decode('ascii')
+
         # locate object id rounding to the first 3 digits
-        place_objId = data_new['dec'].round(4).values == mask['dec']\
+        place_objid = data_new['dec'].round(4).values == mask['dec']\
             .round(4).values
-        data_new['objectId'] = mask['objectId'].loc[place_objId]
+        data_new['objectId'] = mask['objectId'].loc[place_objid]
+
         # create a complementary mask
         complementary_mask = data_new['dec'].round(4).values != mask['dec']\
             .round(4).values
+
         # concatenate table with mask if needed
         data_filt_new = pd.concat([mask.loc[complementary_mask], data_new])\
             .replace(np.nan, 'Unknown')
+
         # sort if needed
         data_filt_new = data_filt_new.sort_values(by=['objectId'])
 
     else:
-
+        logging.warning("Empty query - setting xmatch to Unknown")
         data_filt_new = mask.replace(np.nan, 'Unknown')\
             .sort_values(by=['objectId'])
 
     return data_filt_new
 
 
-def refine_search(ra, dec, oid, id_out, names, types):
+def refine_search(
+        ra: list, dec: list, oid: list,
+        id_out: list, names: list, types: list) -> list:
     """ Create a final table by merging coordinates of objects found on the
-    bibliographical database, with those objects which were not found."""
+    bibliographical database, with those objects which were not found.
+
+    Parameters
+    ----------
+    ra: list of float
+        List of RA
+    dec: list of float
+        List of Dec of the same size as ra.
+    oid: list of str
+        List of object ID (custom)
+    id_out: list of str
+        List of object ID returned by the xmatch with CDS
+    names: list of str
+        For matches, names of the celestial objects found
+    types: list of str
+        For matches, astronomical types of the celestial objects found
+
+    Returns
+    ----------
+    out: List of Tuple
+        Each tuple contains (objectId, ra, dec, name, type).
+        If the object is not found in Simbad, name & type
+        are marked as Unknown. In the case several objects match
+        the centroid of the alert, only the closest is returned.
+    """
     out = []
     for ra_in, dec_in, id_in in zip(ra, dec, oid):
         # cast for picky Spark
