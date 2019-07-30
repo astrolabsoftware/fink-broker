@@ -105,7 +105,7 @@ create_scram_credential() {
   --alter \
   --add-config "SCRAM-SHA-512=[password=${password}]" \
   --entity-type users \
-  --entity-name ${username}
+  --entity-name "${username}"
 }
 
 # function to delete SCRAM credentials
@@ -117,7 +117,7 @@ delete_scram_credential() {
   --alter \
   --delete-config 'SCRAM-SHA-512' \
   --entity-type users \
-  --entity-name ${username}
+  --entity-name "${username}"
 }
 
 # function to add Acl for a producer
@@ -130,9 +130,9 @@ add_acl_producer() {
   --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --add \
   --allow-principal "User:${username}" \
-  --allow-host ${host} \
+  --allow-host "${host}" \
   --producer \
-  --topic ${topic}
+  --topic "${topic}"
 }
 
 # function to add Acl for a consumer
@@ -146,10 +146,10 @@ add_acl_consumer() {
   --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --add \
   --allow-principal "User:${username}" \
-  --allow-host ${host} \
+  --allow-host "${host}" \
   --consumer \
-  --topic ${topic} \
-  --group ${consumer_group}
+  --topic "${topic}" \
+  --group "${consumer_group}"
 }
 
 # function to remove Acl for a producer
@@ -162,9 +162,9 @@ remove_acl_producer() {
   --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --remove \
   --allow-principal "User:${username}" \
-  --allow-host ${host} \
+  --allow-host "${host}" \
   --producer \
-  --topic ${topic}
+  --topic "${topic}"
 }
 
 # function to remove Acl for a consumer
@@ -178,10 +178,10 @@ remove_acl_consumer() {
   --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
   --remove \
   --allow-principal "User:${username}" \
-  --allow-host ${host} \
+  --allow-host "${host}" \
   --consumer \
-  --topic ${topic} \
-  --group ${consumer_group}
+  --topic "${topic}" \
+  --group "${consumer_group}"
 }
 
 
