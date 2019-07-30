@@ -57,7 +57,9 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    # FIXME!
+    # Not very satisfactory... The problem is that latesfirst = false is
+    # required to create new HBase table (i.e. all the time in the CI).
+    # If you have a better idea, let me know!
     if "travis" in args.science_db_name:
         latesfirst = False
     else:
