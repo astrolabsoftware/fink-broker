@@ -190,7 +190,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 
 def update_status_in_hbase(
         df: DataFrame, database_name: str, rowkey: str,
-        offsetFile: str, timestamp: int):
+        offsetfile: str, timestamp: int):
     """Update the status column in Hbase
 
     Parameters
@@ -201,7 +201,7 @@ def update_status_in_hbase(
         Name of the database
     rowkey: str
         Name of the rowkey in the HBase catalog
-    offsetFile: str
+    offsetfile: str
         the path of offset file for distribution
     timestamp: int
         timestamp till which science db has been scanned and distributed
@@ -219,20 +219,19 @@ def update_status_in_hbase(
       .save()
 
     # write offset(timestamp) to file
-    with open(offsetFile, 'w') as f:
+    with open(offsetfile, 'w') as f:
         string = "distributed till, {}".format(timestamp)
         f.write(string)
 
 def get_distribution_offset(
-        offsetFile: str, startingOffset_dist: str = "latest") -> int:
+        offsetfile: str, startingoffset_dist: str = "latest") -> int:
     """Read and return distribution offset from file
 
     Parameters
     ----------
-    offsetFile: str
+    offsetfile: str
         the path of offset file for distribution
-
-    startingOffset_dist: str, optional
+    startingoffset_dist: str, optional
         Offset(timestamp) from where to start the distribution. Options are
         latest (read timestamp from file), earliest (from the beginning of time),
         timestamp (custom timestamp input by user)
@@ -286,26 +285,26 @@ def get_distribution_offset(
     """
     # if the offset file doesn't exist or is empty or
     # one wants the earliest offset
-    fileexist = os.path.isfile(offsetFile)
+    fileexist = os.path.isfile(offsetfile)
     if fileexist:
-        negatifoffset = os.path.getsize(offsetFile) <= 0
+        negatifoffset = os.path.getsize(offsetfile) <= 0
     else:
         negatifoffset = False
-    if not fileexist or negatifoffset or startingOffset_dist == "earliest":
+    if not fileexist or negatifoffset or startingoffset_dist == "earliest":
         # set a default
         min_timestamp = 100
     else:
-        if startingOffset_dist == "latest":
-            with open(offsetFile, 'r') as f:
+        if startingoffset_dist == "latest":
+            with open(offsetfile, 'r') as f:
                 line = f.readlines()[-1]
                 min_timestamp = int(line.split(", ")[-1])
         else:
             # user given timestamp
-            min_timestamp = int(startingOffset_dist)
+            min_timestamp = int(startingoffset_dist)
 
     return min_timestamp
 
-def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
+def group_df_into_struct(df: DataFrame, colfamily: str, key: str) -> DataFrame:
     """Group columns of a df into a struct column
 
     *Note*
@@ -331,10 +330,8 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     ----------
     df: Spark DataFrame
         a Spark dataframe with flat columns
-
-    colFamily: str
+    colfamily: str
         prefix of columns to be grouped into a struct
-
     key: str
         a column with unique values (used for join)
 
@@ -377,10 +374,10 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     struct_cols = []
     flat_cols = []
 
-    pos = len(colFamily) + 1
+    pos = len(colfamily) + 1
 
     for col in df.columns:
-        if col.startswith(colFamily + "_"):
+        if col.startswith(colfamily + "_"):
             struct_cols.append(col)
         else:
             flat_cols.append(col)
@@ -400,7 +397,7 @@ def group_df_into_struct(df: DataFrame, colFamily: str, key: str) -> DataFrame:
     df2_renamed = df2.toDF(*new_col_names)
 
     # Group 'columnFamily_*' into a struct
-    df2_struct = df2_renamed.select(key, struct(*struct_cols).alias(colFamily))
+    df2_struct = df2_renamed.select(key, struct(*struct_cols).alias(colfamily))
 
     # join the two dataframes based on 'key'
     df_new = df1.join(df2_struct, key)
