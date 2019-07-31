@@ -12,20 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType, col
-from pyspark.sql.types import StringType
 import io
 import csv
 import logging
 import requests
 import numpy as np
 import pandas as pd
-from typing import Any
+
 from astroquery.simbad import Simbad
 import astropy.coordinates as coord
-from fink_broker.tester import spark_unit_tests
 import astropy.units as u
 
+from fink_broker.tester import spark_unit_tests
 
 def generate_csv(s: str, lists: list) -> str:
     """ Make a string (CSV formatted) given lists of data and header.
@@ -118,7 +116,7 @@ def xmatch(
 
 def xmatch_slow(
         ra: list, dec: list, id: list,
-        distmaxarcsec: int = 1) -> (pd.DataFrame):
+        distmaxarcsec: int = 1) -> pd.DataFrame:
     """ Build a catalog of (ra, dec, id) as pandas DataFrame,
     cross-match using astroquery module of SIMBAD, and decode the output.
 
