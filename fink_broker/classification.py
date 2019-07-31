@@ -291,8 +291,12 @@ def cross_match_alerts_raw(oid: list, ra: list, dec: list) -> list:
     try:
         data, header = xmatch(
             ra, dec, oid, extcatalog="simbad", distmaxarcsec=1)
-    except (ConnectionError, TimeoutError) as ce:
+    except (ConnectionError, TimeoutError, ValueError) as ce:
         logging.warning("XMATCH failed " + repr(ce))
+        return []
+
+    # Fields of interest (their indices in the output)
+    if "main_id" not in header:
         return []
 
     # Fields of interest (their indices in the output)
@@ -351,28 +355,31 @@ def cross_match_alerts_raw_slow(oid: list, ra: list, dec: list) -> list:
     if len(ra) == 0:
         return []
 
-    data_new = xmatch_slow(ra, dec, oid, distmaxarcsec=1)
+    try:
+        data_new = xmatch_slow(ra, dec, oid, distmaxarcsec=1)
+    except (ConnectionError, TimeoutError, ValueError) as ce:
+        logging.warning("XMATCH failed " + repr(ce))
+        return []
 
     # Fields of interest (their indices in the output)
     if "main_id" not in data_new.columns:
         return []
 
-    else:
-        main_id = 'main_id'
-        main_type = 'main_type'
-        oid_ind = 'objectId'
+    main_id = 'main_id'
+    main_type = 'main_type'
+    oid_ind = 'objectId'
 
-        # Get the objectId of matches
-        id_out = list(data_new[oid_ind].values)
+    # Get the objectId of matches
+    id_out = list(data_new[oid_ind].values)
 
-        # Get the names of matches
-        names = data_new[main_id].values
+    # Get the names of matches
+    names = data_new[main_id].values
 
-        # Get the types of matches
-        types = data_new[main_type].values
+    # Get the types of matches
+    types = data_new[main_type].values
 
-        # Assign names and types to inputs
-        out = refine_search(ra, dec, oid, id_out, names, types)
+    # Assign names and types to inputs
+    out = refine_search(ra, dec, oid, id_out, names, types)
 
     return out
 
