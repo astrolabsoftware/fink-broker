@@ -152,7 +152,7 @@ def xmatch_slow(
     dictionary_simbad_to_new = dict(zip(list_keys, list_old_keys))
 
     # create a mask with the entries of the query
-    nans = [np.nan for a in range(0, len(ra))]
+    nans = [np.nan] * len(ra)
     mask = pd.DataFrame(zip(nans, ra, dec, nans, id))
     mask.columns = list_old_keys + ['objectId']
 
