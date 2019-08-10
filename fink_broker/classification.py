@@ -178,6 +178,7 @@ def xmatch_slow(
         data_new['main_type'] = data_new['main_type'].values[0].decode('ascii')
 
         # locate object id rounding to the first 3 digits
+        # This is buggy: if there is no match, then place_objid is False...
         place_objid = data_new['dec'].round(4).values == mask['dec']\
             .round(4).values
         data_new['objectId'] = mask['objectId'].loc[place_objid]

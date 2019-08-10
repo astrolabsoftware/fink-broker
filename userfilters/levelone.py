@@ -104,7 +104,8 @@ def cross_match_alerts_per_batch(objectId: Any, ra: Any, dec: Any) -> pd.Series:
 
     """
     # discriminate which service to use using the number of alerts
-    if len(ra) <= 100:
+    # Issue 265: cross_match_alerts_raw_slow is buggy and need to be fixed.
+    if len(ra) <= 1:
         matches = cross_match_alerts_raw_slow(
             objectId.values, ra.values, dec.values)
     else:
