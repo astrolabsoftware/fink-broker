@@ -153,7 +153,7 @@ def xmatch_slow(
 
     # create a mask with the entries of the query
     nans = [np.nan] * len(ra)
-    mask = pd.DataFrame(zip(nans, ra, dec, nans, id))
+    mask = pd.DataFrame(list(zip(nans, ra, dec, nans, id)))
     mask.columns = list_old_keys + ['objectId']
 
     # Send requests in vector form and obtain a table as a result
