@@ -63,8 +63,13 @@ def main():
     # Decode df_kafka into a Spark DataFrame with StructType column
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
-    # Print to console
-    df = df.select("struct.*")
+    # Print a few columns to the console
+    cols_to_print = [
+            "objectId", "candid", "candidate_ra",
+            "candidate_dec", "cross_match_alerts_per_batch"
+    ]
+    cols_to_print = ["struct." + x for x in cols_to_print]
+    df = df.select(cols_to_print)
 
     print("\nReading Fink OutStream\n")
     debug_query = df.writeStream\
@@ -76,6 +81,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         debug_query.stop()
+        logger.info("Exiting distribution_test service normally...")
     else:
         debug_query.awaitTermination()
 

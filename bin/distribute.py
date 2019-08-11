@@ -94,8 +94,11 @@ def main():
         # Keep records that haven't been distributed
         df = df.filter("status!='distributed'")
 
-        # Apply additional filters (user defined)
-        df = filter_df_using_xml(df, args.distribution_rules_xml)
+        # Apply additional filters (user defined xml)
+        if args.distribution_rules_xml:
+            df = filter_df_using_xml(df, args.distribution_rules_xml)
+        else:
+            logger.info("distribution_rules.xml file not given")
 
         # group `candidate_*` columns into a struct column
         df = group_df_into_struct(df, "candidate", "objectId")
