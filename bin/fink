@@ -280,7 +280,7 @@ elif [[ $service == "distribution" ]]; then
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
   -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
-  -distribution_rules_xml ${DISTRIBUTION_RULES_XML} \
+  -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Read configuration for redistribution

@@ -71,6 +71,8 @@ def main():
     cols_to_print = ["struct." + x for x in cols_to_print]
     df = df.select(cols_to_print)
 
+    # df = df.select("struct.*")
+
     print("\nReading Fink OutStream\n")
     debug_query = df.writeStream\
         .format("console")\
