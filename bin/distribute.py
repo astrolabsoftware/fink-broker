@@ -100,20 +100,21 @@ def main():
         else:
             logger.info("distribution_rules.xml file not given")
 
-        # group `candidate_*` columns into a struct column
-        df = group_df_into_struct(df, "candidate", "objectId")
+        # create a nested dataframe similar to the original ztf dataframe
+        df_nested = group_df_into_struct(df, "candidate", "objectId")
+        df_nested = group_df_into_struct(df_nested, "prv_candidates", "objectId")
+        df_nested = group_df_into_struct(df_nested, "cutoutTemplate", "objectId")
+        df_nested = group_df_into_struct(df_nested, "cutoutScience", "objectId")
+        df_nested = group_df_into_struct(df_nested, "cutoutDifference", "objectId")
 
         # Apply level two filters
-        df = apply_user_defined_filters(df, filter_leveltwo_names)
-
-        # Flatten the struct before distribution
-        df = flattenstruct(df, "candidate")
+        df_nested = apply_user_defined_filters(df_nested, filter_leveltwo_names)
 
         # Persist df to memory to materialize changes
-        df.persist()
+        df_nested.persist()
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
-        df_kafka = get_kafka_df(df, args.distribution_schema)
+        df_kafka = get_kafka_df(df_nested, args.distribution_schema)
 
         # Ensure that the topic(s) exist on the Kafka Server)
         df_kafka\
@@ -134,7 +135,7 @@ def main():
         min_timestamp = max_timestamp
 
         # free the memory
-        df.unpersist()
+        df_nested.unpersist()
 
         # Wait for some time before another loop
         time.sleep(1)
