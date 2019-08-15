@@ -281,6 +281,7 @@ elif [[ $service == "distribution" ]]; then
   -startingOffset_dist ${DISTRIBUTION_OFFSET} \
   -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
   -distribution_rules_xml ${DISTRIBUTION_RULES_XML} \
+  -slack_channels ${SLACK_CHANNELS} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Read configuration for redistribution

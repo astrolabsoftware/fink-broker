@@ -96,10 +96,10 @@ def main():
         df = df.filter("status!='distributed'")
 
         # Send out slack alerts
-        # slack_cols = [
-        #     "objectId", "candidate_ra",
-        #     "candidate_dec", "cross_match_alerts_per_batch"]
-        # send_slack_alerts(df.select(slack_cols))
+        slack_cols = [
+            "objectId", "candidate_ra",
+            "candidate_dec", "cross_match_alerts_per_batch"]
+        send_slack_alerts(df.select(slack_cols), args.slack_channels)
 
         # Apply additional filters (user defined)
         df = filter_df_using_xml(df, args.distribution_rules_xml)

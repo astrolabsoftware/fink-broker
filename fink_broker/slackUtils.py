@@ -16,6 +16,7 @@
 
 import os
 import slack
+from fink_broker.tester import spark_unit_tests
 from pyspark.sql import DataFrame
 
 class FinkSlackClient:
@@ -101,34 +102,89 @@ def getShowString(
     ----------
     showString: str
         string printed by DataFrame.show()
+
+    Examples
+    ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
+    ...     ["Star", "Unknown"])).toDF([
+    ...       "objectId", "cross_match_alerts_per_batch"])
+    >>> msg_string = getShowString(df)
+    >>> print(msg_string)
+    +------------+----------------------------+
+    |objectId    |cross_match_alerts_per_batch|
+    +------------+----------------------------+
+    |ZTF18aceatkx|Star                        |
+    |ZTF18acsbjvw|Unknown                     |
+    +------------+----------------------------+
+    <BLANKLINE>
     """
     return(df._jdf.showString(n, truncate, vertical))
 
-def send_slack_alerts(df: DataFrame):
+def send_slack_alerts(df: DataFrame, channels: str):
     """Send alerts to slack channel
 
     Parameters
     ----------
     df: DataFrame
         spark dataframe to send slack alerts
+    channels: str
+        path to file with list of channels to which alerts
+        must be sent
+
+    Examples
+    ----------
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
+    ...     [697251923115015002, 697251921215010004],
+    ...     [20.393772, 20.4233877],
+    ...     [-25.4669463, -27.0588511],
+    ...     ["slacktest", "Unknown"])).toDF([
+    ...       "objectId", "candid", "candidate_ra",
+    ...       "candidate_dec", "cross_match_alerts_per_batch"])
+    >>> df.show()
+    +------------+------------------+------------+-------------+----------------------------+
+    |    objectId|            candid|candidate_ra|candidate_dec|cross_match_alerts_per_batch|
+    +------------+------------------+------------+-------------+----------------------------+
+    |ZTF18aceatkx|697251923115015002|   20.393772|  -25.4669463|                   slacktest|
+    |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|                     Unknown|
+    +------------+------------------+------------+-------------+----------------------------+
+    <BLANKLINE>
+    >>> channels = "slacktest_channel.txt"
+    >>> with open(channels, 'wt') as f:
+    ...     f.write("slacktest")
+    9
+    >>> send_slack_alerts(df, channels)
+    >>> os.remove(channels)
     """
+    channels_list = []
+    with open(channels, 'rt') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                channels_list.append('#' + line)
+
     finkSlack = get_slack_client()
 
     # filter out unkonw object types
     df = df.filter("cross_match_alerts_per_batch!='Unknown'")
-
     object_types = df \
         .select("cross_match_alerts_per_batch")\
         .distinct()\
         .collect()
     object_types = [x[0] for x in object_types]
-
     # Send alerts to the respective channels
     for obj in object_types:
         channel_name = '#' + ''.join(e.lower() for e in obj if e.isalpha())
+        if channel_name in channels_list:
+            alert_text = getShowString(
+                df.filter(df.cross_match_alerts_per_batch == obj))
+            slack_alert = "```\n" + alert_text + "```"
 
-        alert_text = getShowString(
-            df.filter(df.cross_match_alerts_per_batch == obj))
-        slack_alert = "```\n" + alert_text + "```"
+            finkSlack.send_message(channel_name, slack_alert)
 
-        finkSlack.send_message(channel_name, slack_alert)
+if __name__ == "__main__":
+    """ Execute the test suite with SparkSession initialised """
+
+    # Run the Spark test suite
+    spark_unit_tests(globals())
