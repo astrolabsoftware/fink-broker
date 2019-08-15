@@ -97,8 +97,6 @@ def main():
         # Apply additional filters (user defined xml)
         if args.distribution_rules_xml:
             df = filter_df_using_xml(df, args.distribution_rules_xml)
-        else:
-            logger.info("distribution_rules.xml file not given")
 
         # create a nested dataframe similar to the original ztf dataframe
         df_nested = group_df_into_struct(df, "candidate", "objectId")
