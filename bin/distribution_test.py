@@ -63,7 +63,7 @@ def main():
     # Decode df_kafka into a Spark DataFrame with StructType column
     df = decode_kafka_df(df_kafka, args.distribution_schema)
 
-    # Print to console
+    # Print received stream to the console
     df = df.select("struct.*")
 
     print("\nReading Fink OutStream\n")
@@ -76,6 +76,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         debug_query.stop()
+        logger.info("Exiting distribution_test service normally...")
     else:
         debug_query.awaitTermination()
 

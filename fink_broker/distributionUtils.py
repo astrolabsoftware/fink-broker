@@ -104,7 +104,7 @@ def save_avro_schema(df: DataFrame, schema_path: str):
 
         # Write the schema to a file for decoding Kafka messages
         with open(schema_path, 'w') as f:
-            json.dump(avro_schema, f)
+            json.dump(avro_schema, f, indent=2)
 
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)

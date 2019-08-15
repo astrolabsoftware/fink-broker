@@ -66,14 +66,10 @@
   <select>
     <column name="objectId"/>
     <column name="candid"/>
-    <column name="candidate" subcol="pid"/>
-    <column name="candidate" subcol="ra"/>
-    <column name="candidate" subcol="dec"/>
-    <column name="candidate" subcol="magpsf"/>
-    <column name="candidate" subcol="sigmapsf"/>
-    <column name="candidate" subcol="sgscore1"/>
-    <column name="candidate" subcol="xpos"/>
-    <column name="candidate" subcol="ypos"/>
+    <column name="candidate"/>
+    <column name="cutoutTemplate"/>
+    <column name="cutoutScience"/>
+    <column name="cutoutDifference"/>
     <column name="prv_candidates"/>
     <column name="cross_match_alerts_per_batch"/>
     <column name="status"/>
@@ -81,8 +77,6 @@
 
   <!-- columns to drop before distribution -->
   <drop>
-    <column name="candid"/>
-    <column name="prv_candidates"/>
   </drop>
 
   <!-- filters to apply before distribution -->
