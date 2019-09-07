@@ -66,6 +66,23 @@ class FinkSlackClient:
             username="fink-alert", icon_emoji="strend:")
 
 
+def get_api_token():
+    """returns slack api token
+
+    Returns
+    ----------
+    api_token: str
+        value of the env variable SLACK_API_TOKEN if set, or None
+    """
+    api_token = None
+
+    try:
+        api_token = os.environ["SLACK_API_TOKEN"]
+    except KeyError:
+        print("SLACK_API_TOKEN is not set")
+
+    return api_token
+
 def get_slack_client():
     """ returns an object of class FinkSlackClient
 
@@ -74,15 +91,14 @@ def get_slack_client():
     FinkSlackClient:
         an object of class FinkSlackClient initialized with OAuth token
     """
-    try:
-        api_token = os.environ["SLACK_API_TOKEN"]
-    except KeyError:
+    api_token = get_api_token()
+
+    if api_token:
+        return FinkSlackClient(api_token)
+    else:
         print("please set the env variable: SLACK_API_TOKEN")
-        return
 
-    return FinkSlackClient(api_token)
-
-def getShowString(
+def get_show_string(
         df: DataFrame, n: int = 20,
         truncate: int = 0, vertical: bool = False) -> str:
     """returns the string printed by df.show()
@@ -109,7 +125,7 @@ def getShowString(
     ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
     ...     ["Star", "Unknown"])).toDF([
     ...       "objectId", "cross_match_alerts_per_batch"])
-    >>> msg_string = getShowString(df)
+    >>> msg_string = get_show_string(df)
     >>> print(msg_string)
     +------------+----------------------------+
     |objectId    |cross_match_alerts_per_batch|
@@ -177,7 +193,7 @@ def send_slack_alerts(df: DataFrame, channels: str):
     for obj in object_types:
         channel_name = '#' + ''.join(e.lower() for e in obj if e.isalpha())
         if channel_name in channels_list:
-            alert_text = getShowString(
+            alert_text = get_show_string(
                 df.filter(df.cross_match_alerts_per_batch == obj))
             slack_alert = "```\n" + alert_text + "```"
 
@@ -186,5 +202,10 @@ def send_slack_alerts(df: DataFrame, channels: str):
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
-    # Run the Spark test suite
-    spark_unit_tests(globals())
+    # Run the Spark test suite if SLACK_API_TOKEN exist
+    api_token = get_api_token()
+
+    if api_token:
+        spark_unit_tests(globals())
+    else:
+        print("Skipping Unit Tests")
