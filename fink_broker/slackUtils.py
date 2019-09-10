@@ -18,6 +18,8 @@ import os
 import slack
 from fink_broker.tester import spark_unit_tests
 from pyspark.sql import DataFrame
+from fink_broker.loggingUtils import get_fink_logger
+logger = get_fink_logger(__name__, "INFO")
 
 class FinkSlackClient:
 
@@ -27,7 +29,7 @@ class FinkSlackClient:
         try:
             self._client.auth_test()
         except Exception:
-            print("Authentication Error: Invalid Token")
+            logger.error("Authentication Error: Invalid Token")
 
         # create a dict of {channelName: ID}
         channels = self._client.channels_list()['channels']
@@ -52,12 +54,12 @@ class FinkSlackClient:
         if recipient[0] == '#':
             name = recipient[1:]
             if name not in self._channel_ids:
-                print("Invalid Channel Name")
+                logger.error("Invalid Channel Name")
                 return
             channel_id = self._channel_ids[name]
         else:   # user
             if recipient not in self._user_ids:
-                print("User is not member of your slack workspace")
+                logger.error("User is not member of your slack workspace")
                 return
             channel_id = self._user_ids[recipient]
 
@@ -79,7 +81,7 @@ def get_api_token():
     try:
         api_token = os.environ["SLACK_API_TOKEN"]
     except KeyError:
-        print("SLACK_API_TOKEN is not set")
+        logger.error("SLACK_API_TOKEN is not set")
 
     return api_token
 
@@ -96,7 +98,7 @@ def get_slack_client():
     if api_token:
         return FinkSlackClient(api_token)
     else:
-        print("please set the env variable: SLACK_API_TOKEN")
+        logger.error("please set the env variable: SLACK_API_TOKEN")
 
 def get_show_string(
         df: DataFrame, n: int = 20,
@@ -182,7 +184,7 @@ def send_slack_alerts(df: DataFrame, channels: str):
 
     finkSlack = get_slack_client()
 
-    # filter out unkonw object types
+    # filter out unknown object types
     df = df.filter("cross_match_alerts_per_batch!='Unknown'")
     object_types = df \
         .select("cross_match_alerts_per_batch")\
@@ -208,4 +210,4 @@ if __name__ == "__main__":
     if api_token:
         spark_unit_tests(globals())
     else:
-        print("Skipping Unit Tests")
+        logger.info("Skipping Unit Tests")
