@@ -182,6 +182,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         filter the distribution stream
         [DISTRIBUTION_RULES_XML]
         """)
+    parser.add_argument(
+        '-slack_channels', type=str, default='',
+        help="""
+        Text file with list of slack channels to which automatic alerts
+        must be sent for e.g. based on cross-match type
+        [SLACK_CHANNELS]
+        """)
     args = parser.parse_args(None)
     return args
 
