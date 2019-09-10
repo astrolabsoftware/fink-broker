@@ -33,11 +33,13 @@ class FinkSlackClient:
 
         # create a dict of {channelName: ID}
         channels = self._client.channels_list()['channels']
-        self._channel_ids = {x['name']: x['id'] for x in channels}
+        self._channel_ids = {
+            x['name']: x['id'] for x in channels if 'name' in x.keys()}
 
         # create a dict of {userName: ID}
         members = self._client.users_list()['members']
-        self._user_ids = {x['real_name']: x['id'] for x in members}
+        self._user_ids = {
+            x['real_name']: x['id'] for x in members if 'real_name' in x.keys()}
 
     def send_message(self, recipient, msg):
         """sends a message to a given channel/user on the slack workspace
