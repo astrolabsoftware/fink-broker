@@ -56,17 +56,15 @@ class FinkSlackClient:
         if recipient[0] == '#':
             name = recipient[1:]
             if name not in self._channel_ids:
-                logger.error("Invalid Channel Name")
-                return
-            channel_id = self._channel_ids[name]
+                logger.warn("Private or Invalid Channel Name")
         else:   # user
+            name = recipient
             if recipient not in self._user_ids:
                 logger.error("User is not member of your slack workspace")
                 return
-            channel_id = self._user_ids[recipient]
 
-        response = self._client.chat_postMessage(
-            channel=channel_id, text=msg, as_user="false",
+        self._client.chat_postMessage(
+            channel=name, text=msg, as_user="false",
             username="fink-alert", icon_emoji="strend:")
 
 
