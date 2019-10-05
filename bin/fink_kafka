@@ -38,6 +38,8 @@ Option:\n
     \t\tAuthenticate users on Fink's Kafka Cluster (use -h for more help) \n\n
   \t--authorization [-a] [-d] [-u user] [-H host] [-c consumer-group] [-p] [-t topic] [-h] \n
     \t\tAuthorize permissions on Fink's Kafka Cluster (use -h for more help) \n\n
+  \t--list-acl \n
+    \t\tLists the current ACL \n\n
 """
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -298,6 +300,11 @@ case "$1" in
   "--authorization")
       service="authorization"
       shift 1
+      ;;
+  "--list-acl")
+      ${KAFKA_HOME}/bin/kafka-acls.sh \
+      --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+      --list
       ;;
   "-h"|"--help")
       echo -e $message_help
