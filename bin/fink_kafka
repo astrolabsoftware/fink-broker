@@ -47,8 +47,104 @@ if [[ $1 == "" ]]; then
   exit 1
 fi
 
+# Grab the command line arguments
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    "start")
+        SERVICE="START"
+        shift 1
+        ;;
+    "stop")
+        SERVICE="STOP"
+        shift 1
+        ;;
+    "-c"|"--conf")
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument: path to configuration file"
+          exit 1
+        fi
+        conf="$2"
+        shift 2
+        ;;
+    --conf=*)
+        conf="${1#*=}"
+        shift 1
+        ;;
+    "--create-topic")
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument (Topic Name)" >&2
+          exit 1
+        fi
+        SERVICE="KAFKA-TOPICS"
+        OPTION="create"
+        TOPIC=$2
+        shift 2
+        ;;
+    "--delete-topic")
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument (Topic Name)" >&2
+          exit 1
+        fi
+        SERVICE="KAFKA-TOPICS"
+        OPTION="delete"
+        TOPIC=$2
+        shift 2
+        ;;
+    "--describe-topic")
+        if [[ $2 == "" ]]; then
+          echo "$1 requires an argument (Topic Name)" >&2
+          exit 1
+        fi
+        SERVICE="KAFKA-TOPICS"
+        OPTION="describe"
+        TOPIC=$2
+        shift 2
+        ;;
+    "--list-topics")
+        SERVICE="KAFKA-TOPICS"
+        OPTION="list"
+        shift 1
+        ;;
+    "--authentication")
+        SERVICE="authentication"
+        shift 1
+        break
+        ;;
+    "--authorization")
+        SERVICE="authorization"
+        shift 1
+        break
+        ;;
+    "--list-acl")
+        SERVICE="authorization"
+        OPTION="list-acl"
+        shift 1
+        ;;
+    "-h"|"--help")
+        echo -e $message_help
+        exit 0
+        ;;
+    -*)
+        echo "unknown option: $1" >&2
+        exit 1
+        ;;
+    *)
+        echo "unknown argument: $1" >&2
+        exit 1
+        ;;
+  esac
+done
+
+# check if configuration file exist otherwise use default
+if [[ -f $conf ]]; then
+  echo -e "Reading custom configuration file from $conf \n"
+else
+  conf="${FINK_HOME}/conf/fink.conf.distribution"
+  echo -e "Reading default conf file from $conf \n"
+fi
+
 # load distribution configurations
-source ${FINK_HOME}/conf/fink.conf.distribution
+source "$conf"
 
 # function to start the Zookeeper
 start_zookeeper() {
@@ -186,138 +282,92 @@ remove_acl_consumer() {
   --group "${consumer_group}"
 }
 
+if [[ $SERVICE == "START" ]]; then
+  # Start the Zookeeper
+  declare ZK_PID=""
+  start_zookeeper
 
-case "$1" in
-  "start")
-      # Start the Zookeeper
-      declare ZK_PID=""
-      start_zookeeper
+  # Create SCRAM Credentials for Authentication
+  # For brokers
+  create_scram_credential "admin" "admin-secret"
 
-      # Create SCRAM Credentials for Authentication
-      # For brokers
-      create_scram_credential "admin" "admin-secret"
+  # For Fink producer
+  create_scram_credential "finkProducer" "finkProducer-secret"
 
-      # For Fink producer
-      create_scram_credential "finkProducer" "finkProducer-secret"
+  # For Fink's test consumer
+  create_scram_credential "finkConsumer" "finkConsumer-secret"
 
-      # For Fink's test consumer
-      create_scram_credential "finkConsumer" "finkConsumer-secret"
+  # Enable Authorization
+  # For Fink producer
+  add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
 
-      # Enable Authorization
-      # For Fink producer
-      add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
+  # For Fink's test consumer
+  ${KAFKA_HOME}/bin/kafka-acls.sh \
+  --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+  --add \
+  --allow-principal User:finkConsumer \
+  --allow-host 127.0.0.1 \
+  --consumer \
+  --topic fink_outstream \
+  --group spark-kafka- \
+  --resource-pattern-type prefixed
 
-      # For Fink's test consumer
-      ${KAFKA_HOME}/bin/kafka-acls.sh \
-      --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
-      --add \
-      --allow-principal User:finkConsumer \
-      --allow-host 127.0.0.1 \
-      --consumer \
-      --topic fink_outstream \
-      --group spark-kafka- \
-      --resource-pattern-type prefixed
+  # Start Kafka Servers / Brokers
+  declare -a kafka_pids
+  declare KAFKA_PID
+  for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+    KAFKA_PID=""
+    start_kafka_server \
+      ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:} ${kafka_broker_logs[$id]}
 
-      # Start Kafka Servers / Brokers
-      declare -a kafka_pids
-      declare KAFKA_PID
-      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
-        KAFKA_PID=""
-        start_kafka_server \
-          ${KAFKA_BROKER_PROPERTIES[$id]} ${KAFKA_BROKER_IPPORT[$id]#*:} ${kafka_broker_logs[$id]}
+    if [[ $KAFKA_PID ]]; then kafka_pids[$id]=${KAFKA_PID}; fi
+  done
 
-        if [[ $KAFKA_PID ]]; then kafka_pids[$id]=${KAFKA_PID}; fi
-      done
+  if [[ "$ZK_PID" && ${#KAFKA_BROKER_IPPORT[@]} == ${#kafka_pids[@]} ]]
+  then
+    echo "Kafka Server started successfully"
+  else
+    echo "Starting Kafka Server failed"
+  fi
+fi
 
+if [[ $SERVICE == "STOP" ]]; then
+  # Stop Kafka Cluster
+  for id in ${!KAFKA_BROKER_IPPORT[@]}; do
+    stop_kafka_server ${KAFKA_BROKER_PROPERTIES[$id]}
+  done
+  stop_zookeeper
+  echo "Kafka Server stopped"
+fi
 
-      if [[ "$ZK_PID" && ${#KAFKA_BROKER_IPPORT[@]} == ${#kafka_pids[@]} ]]
-      then
-        echo "Kafka Server started successfully"
-      else
-        echo "Starting Kafka Server failed"
-      fi
-      ;;
-  "stop")
-      # Stop Kafka brokers
-      for id in ${!KAFKA_BROKER_IPPORT[@]}; do
-        stop_kafka_server ${KAFKA_BROKER_PROPERTIES[$id]}
-      done
-
-      # Stop the Zookeeper
-      stop_zookeeper
-
-      echo "Kafka Server stopped"
-      ;;
-  "--create-topic")
-      if [[ $2 == "" ]]; then
-        echo "$1 requires an argument (Topic Name)" >&2
+if [[ $SERVICE == "KAFKA-TOPICS" ]]; then
+  case "$OPTION" in
+    "list")
+        ${KAFKA_HOME}/bin/kafka-topics.sh \
+        --list \
+        --zookeeper ${ZK_IPPORT} >&1
+        ;;
+    "describe"|"delete")
+        ${KAFKA_HOME}/bin/kafka-topics.sh \
+        --"$OPTION" \
+        --topic $TOPIC \
+        --zookeeper ${ZK_IPPORT}  >&1
+        ;;
+    "create")
+        ${KAFKA_HOME}/bin/kafka-topics.sh \
+        --create \
+        --if-not-exists \
+        --partitions 2 \
+        --replication-factor 1 \
+        --topic $TOPIC \
+        --zookeeper ${ZK_IPPORT}
+        # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
+        ;;
+    *)
         exit 1
-      fi
-      TOPIC=$2
-      # create the topic if does not already exist
-      ${KAFKA_HOME}/bin/kafka-topics.sh \
-      --create \
-      --if-not-exists \
-      --partitions 2 \
-      --replication-factor 1 \
-      --topic $TOPIC \
-      --zookeeper ${ZK_IPPORT}
-      # Note --bootstrap-server <string of host:port> can't be used with --if-not-exists
-      ;;
-  "--delete-topic")
-      if [[ $2 == "" ]]; then
-        echo "$1 requires an argument (Topic Name)" >&2
-        exit 1
-      fi
-      TOPIC=$2
-      # delete the topic
-      ${KAFKA_HOME}/bin/kafka-topics.sh \
-      --delete \
-      --topic $TOPIC \
-      --zookeeper ${ZK_IPPORT}  >&1
-      ;;
-"--describe-topic")
-    if [[ $2 == "" ]]; then
-      echo "$1 requires an argument (Topic Name)" >&2
-      exit 1
-    fi
-    TOPIC=$2
-    # delete the topic
-    ${KAFKA_HOME}/bin/kafka-topics.sh \
-    --describe \
-    --topic $TOPIC \
-    --zookeeper ${ZK_IPPORT}  >&1
-    ;;
-  "--list-topics")
-      ${KAFKA_HOME}/bin/kafka-topics.sh \
-      --list \
-      --zookeeper ${ZK_IPPORT} >&1
-      ;;
-  "--authentication")
-      service="authentication"
-      shift 1
-      ;;
-  "--authorization")
-      service="authorization"
-      shift 1
-      ;;
-  "--list-acl")
-      ${KAFKA_HOME}/bin/kafka-acls.sh \
-      --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
-      --list
-      ;;
-  "-h"|"--help")
-      echo -e $message_help
-      ;;
-  -*)
-      echo "unknown option: $1" >&2
-      exit 1
-      ;;
-  *)
-      echo "unknown argument: $1" >&2
-      exit 1
-      ;;
-esac
+        ;;
+  esac
+fi
 
 authentication_usage() {
   cat <<END
@@ -335,9 +385,9 @@ authentication_usage() {
 END
 }
 
-if [[ $service == "authentication" ]]; then
+if [[ $SERVICE == "authentication" ]]; then
   if [[ $# -lt 1 ]]; then
-    echo "Insufficient arguments for service: ${service}"
+    echo "Insufficient arguments for service: ${SERVICE}"
     authentication_usage
     exit 2
   fi
@@ -412,9 +462,13 @@ authorization_usage() {
 END
 }
 
-if [[ $service == "authorization" ]]; then
-  if [[ $# -lt 1 ]]; then
-    echo "Insufficient arguments for service: ${service}"
+if [[ $SERVICE == "authorization" ]]; then
+  if [[ "$OPTION" == "list-acl" ]]; then
+    ${KAFKA_HOME}/bin/kafka-acls.sh \
+    --authorizer-properties "zookeeper.connect=${ZK_IPPORT}" \
+    --list
+  elif [[ $# -lt 1 ]]; then
+    echo "Insufficient arguments for service: ${SERVICE}"
     authorization_usage
     exit 2
   fi
