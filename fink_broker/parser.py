@@ -66,14 +66,30 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_ALERT_PATH]
         """)
     parser.add_argument(
+        '-scitmpdatapath', type=str, default='',
+        help="""
+        Directory on disk for tmp scientific alerts.
+        [FINK_ALERT_PATH_SCI_TMP]
+        """)
+    parser.add_argument(
         '-checkpointpath_raw', type=str, default='',
         help="""
         The location where the system will write all the checkpoint information
-        for the raw datable. This shoul be a directory in an HDFS-compatible
+        for the raw datable. This should be a directory in an HDFS-compatible
         fault-tolerant file system.
         See conf/fink.conf & https://spark.apache.org/docs/latest/
         structured-streaming-programming-guide.html#starting-streaming-queries
         [FINK_ALERT_CHECKPOINT_RAW]
+        """)
+    parser.add_argument(
+        '-checkpointpath_sci_tmp', type=str, default='',
+        help="""
+        The location where the system will write all the checkpoint information
+        for the TMP science datable. This should be a directory in an
+        HDFS-compatible fault-tolerant file system.
+        See conf/fink.conf & https://spark.apache.org/docs/latest/
+        structured-streaming-programming-guide.html#starting-streaming-queries
+        [FINK_ALERT_CHECKPOINT_SCI_TMP]
         """)
     parser.add_argument(
         '-checkpointpath_sci', type=str, default='',
