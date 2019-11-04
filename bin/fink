@@ -20,8 +20,10 @@ message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \tto start: fink start <service> [-h] [-c <conf>] [--simulator]\n
-    \tto stop : fink stop  <service> [-h] [-c <conf>]\n\n
+    \tto init paths     : fink init [-h] [-c <conf>]\n
+    \tto start a service: fink start <service> [-h] [-c <conf>] [--simulator]\n
+    \tto stop a service : fink stop  <service> [-h] [-c <conf>]\n
+    \tto show services  : fink show [-h] \n\n
 
 To get this help: \n
 \tfink \n\n
@@ -34,6 +36,9 @@ $message_conf\n\n
 
 To see the running processes: \n
 \tfink show \n\n
+
+To initialise data folders and paths: \n
+\tfink init \n\n
 
 To stop a service or all running processes: \n
 \tfink stop <service or all> \n
@@ -64,6 +69,10 @@ while [ "$#" -gt 0 ]; do
         echo "Use <fink stop service_name> to stop a service."
         echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
+        ;;
+    "init")
+        INITPATH=true
+        shift 1
         ;;
     -h)
         HELP_ON_SERVICE="-h"
@@ -115,6 +124,26 @@ if [[ -f $conf ]]; then
 else
   echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
   source ${FINK_HOME}/conf/fink.conf
+fi
+
+# Initialise paths to store data and checkpoints
+if [[ "$INITPATH" = true ]] ; then
+  if [[ "$FS_KIND" = "local" ]] ; then
+    finkdir='mkdir'
+  elif [[ "$FS_KIND" = "hdfs" ]] ; then
+    finkdir='hdfs dfs -mkdir'
+  else
+    echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs}"
+    exit 1
+  fi
+  $finkdir $DATA_PREFIX
+  $finkdir $FINK_ALERT_PATH
+  $finkdir $FINK_ALERT_PATH_SCI_TMP
+  $finkdir $FINK_ALERT_CHECKPOINT_RAW
+  $finkdir $FINK_ALERT_CHECKPOINT_SCI_TMP
+  $finkdir $FINK_ALERT_CHECKPOINT_SCI
+  echo "Data will be stored under $DATA_PREFIX"
+  exit
 fi
 
 if [[ "$SIM_ONLY" = true ]] ; then
