@@ -68,9 +68,44 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     # Convert into avro and save the schema
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
-    save_avro_schema(df, schema_path)
 
     return df_kafka
+
+def save_avro_schema_tmp(df: DataFrame, epochid: int):
+    """ Extract schema from an alert of the stream, and save it on disk.
+    Mostly for debugging purposes - do not work in cluster mode (local only).
+
+    Typically:
+    toto = df_stream.writeStream.foreachBatch(save_avro_schema_tmp).start()
+    time.sleep(10)
+    toto.stop()
+
+    Parameters
+    ----------
+    df: DataFrame
+        Micro-batch Dataframe containing alerts
+    epochid: int
+        Offset of the micro-batch
+    """
+    # Currently harcoded paths...
+    schema_path = 'schemas/current_schema.avsc'
+    path_for_avro = os.path.join(os.environ["PWD"], "flatten_hbase.avro")
+
+    if not os.path.isfile(path_for_avro):
+        df.write.format("avro").save(path_for_avro)
+
+        # Read the avro schema from .avro file
+        avro_file = glob.glob(path_for_avro + "/part*")[0]
+        avro_schema = readschemafromavrofile(avro_file)
+
+        # Write the schema to a file for decoding Kafka messages
+        with open(schema_path, 'w') as f:
+            json.dump(avro_schema, f, indent=2)
+    else:
+        msg = """
+            {} already exists - cannot write the new schema
+        """.format(path_for_avro)
+        print(msg)
 
 def save_avro_schema(df: DataFrame, schema_path: str):
     """Writes the avro schema to a file at schema_path
