@@ -64,7 +64,7 @@ def return_flatten_names(
     -------
     >>> df = spark.read.format("parquet").load("archive/alerts_store")
     >>> flatten_schema = return_flatten_names(df)
-    >>> assert("decoded.candidate.candid" in flatten_schema)
+    >>> assert("candidate.candid" in flatten_schema)
     """
     if flatten_schema == []:
         for colname in df.columns:
