@@ -64,13 +64,6 @@ def main():
     logger.info(processor_levelone_names)
     df = apply_user_defined_processors(df, processor_levelone_names)
 
-    # Select alert data + timestamp + added value from processors
-    new_colnames = ["decoded.*", "timestamp"]
-    for i in processor_levelone_names:
-        new_colnames.append(i)
-
-    df = df.selectExpr(new_colnames)
-
     # Partition the data hourly
     df_partitionedby = df\
         .withColumn("year", date_format("timestamp", "yyyy"))\

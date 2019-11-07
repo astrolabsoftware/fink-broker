@@ -68,6 +68,11 @@ def main():
         ]
     )
 
+    # Flatten the data columns to match the incoming alert data schema
+    cnames = df_decoded.columns
+    cnames[cnames.index('decoded')] = 'decoded.*'
+    df_decoded = df_decoded.selectExpr(cnames)
+
     # Partition the data hourly
     df_partitionedby = df_decoded\
         .withColumn("year", date_format("timestamp", "yyyy"))\

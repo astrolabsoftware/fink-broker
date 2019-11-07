@@ -102,6 +102,16 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_ALERT_CHECKPOINT_SCI]
         """)
     parser.add_argument(
+        '-checkpointpath_kafka', type=str, default='',
+        help="""
+        The location where the system will write all the checkpoint information
+        for the distribution module. This should be a directory in an
+        HDFS-compatible fault-tolerant file system.
+        See conf/fink.conf & https://spark.apache.org/docs/latest/
+        structured-streaming-programming-guide.html#starting-streaming-queries
+        [FINK_ALERT_CHECKPOINT_KAFKA]
+        """)
+    parser.add_argument(
         '-science_db_name', type=str, default='',
         help="""
         The name of the HBase table
