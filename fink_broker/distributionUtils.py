@@ -191,7 +191,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|                     Unknown|
     +------------+------------------+------------+-------------+----------------------------+
     <BLANKLINE>
-    >>> temp_schema = os.path.join(os.environ["PWD"] + "temp_schema")
+    >>> temp_schema = os.path.join(os.environ["PWD"], "temp_schema")
     >>> df_kafka = get_kafka_df(df, temp_schema)
     >>> # Decode the avro df
     >>> df_decoded = decode_kafka_df(df_kafka, temp_schema)
