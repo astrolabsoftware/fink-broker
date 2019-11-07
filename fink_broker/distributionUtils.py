@@ -71,12 +71,15 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     return df_kafka
 
-def save_avro_schema_tmp(df: DataFrame, epochid: int):
+def save_avro_schema_stream(df: DataFrame, epochid: int, schema_path=None):
     """ Extract schema from an alert of the stream, and save it on disk.
     Mostly for debugging purposes - do not work in cluster mode (local only).
 
     Typically:
-    toto = df_stream.writeStream.foreachBatch(save_avro_schema_tmp).start()
+    schema_path = ...
+    toto = df_stream.writeStream.foreachBatch(
+        lambda x, y: save_avro_schema_stream(x, y, schema_path)
+    ).start()
     time.sleep(10)
     toto.stop()
 
@@ -87,25 +90,7 @@ def save_avro_schema_tmp(df: DataFrame, epochid: int):
     epochid: int
         Offset of the micro-batch
     """
-    # Currently harcoded paths...
-    schema_path = 'schemas/current_schema.avsc'
-    path_for_avro = os.path.join(os.environ["PWD"], "flatten_hbase.avro")
-
-    if not os.path.isfile(path_for_avro):
-        df.write.format("avro").save(path_for_avro)
-
-        # Read the avro schema from .avro file
-        avro_file = glob.glob(path_for_avro + "/part*")[0]
-        avro_schema = readschemafromavrofile(avro_file)
-
-        # Write the schema to a file for decoding Kafka messages
-        with open(schema_path, 'w') as f:
-            json.dump(avro_schema, f, indent=2)
-    else:
-        msg = """
-            {} already exists - cannot write the new schema
-        """.format(path_for_avro)
-        print(msg)
+    save_avro_schema(df, schema_path)
 
 def save_avro_schema(df: DataFrame, schema_path: str):
     """Writes the avro schema to a file at schema_path
@@ -143,6 +128,11 @@ def save_avro_schema(df: DataFrame, schema_path: str):
 
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)
+    else:
+        msg = """
+            {} already exists - cannot write the new schema
+        """.format(path_for_avro)
+        print(msg)
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
@@ -192,8 +182,12 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     +------------+------------------+------------+-------------+----------------------------+
     <BLANKLINE>
     >>> temp_schema = os.path.join(os.environ["PWD"], "temp_schema")
-    >>> df_kafka = get_kafka_df(df, temp_schema)
-    >>> # Decode the avro df
+    >>> save_avro_schema(df, temp_schema)
+
+    # Encode the data into avro
+    >>> df_kafka = get_kafka_df(df, '')
+
+    # Decode the avro df
     >>> df_decoded = decode_kafka_df(df_kafka, temp_schema)
     >>> df_decoded.printSchema()
     root
