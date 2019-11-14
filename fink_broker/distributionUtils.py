@@ -26,7 +26,8 @@ from pyspark.sql.functions import struct, col, lit
 from fink_broker.tester import spark_unit_tests
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
-def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
+def get_kafka_df(
+        df: DataFrame, schema_path: str, saveschema: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -49,6 +50,9 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     schema_path: str
         Path where to store the avro schema required for decoding the
         Kafka messages.
+    saveschema: bool
+        If True, save the alert schema on disk. Work only in Spark local mode,
+        and for testing purposes. Default is False.
 
     Returns
     ----------
@@ -68,6 +72,21 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     # Convert into avro and save the schema
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
+
+    if saveschema:
+        # Harcoded path that corresponds to the schema used
+        # for alert redistribution.
+        schema_path = 'schemas/distribution_schema.avsc'
+
+        # Do not work on a DFS like HDFS obviously.
+        # Only local mode & for testing purposes
+        toto = df.writeStream.foreachBatch(
+            lambda x, y: save_avro_schema_stream(x, y, schema_path)
+        ).start()
+        time.sleep(10)
+
+        # Note that the entire Spark application will stop.
+        toto.stop()
 
     return df_kafka
 
