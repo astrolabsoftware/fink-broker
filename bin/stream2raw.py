@@ -29,7 +29,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import date_format
 
 import argparse
-import json
 import time
 
 from fink_broker.parser import getargs
@@ -38,8 +37,6 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-
-from fink_broker.monitoring import monitor_progress_webui
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -71,6 +68,11 @@ def main():
         ]
     )
 
+    # Flatten the data columns to match the incoming alert data schema
+    cnames = df_decoded.columns
+    cnames[cnames.index('decoded')] = 'decoded.*'
+    df_decoded = df_decoded.selectExpr(cnames)
+
     # Partition the data hourly
     df_partitionedby = df_decoded\
         .withColumn("year", date_format("timestamp", "yyyy"))\
@@ -92,29 +94,8 @@ def main():
         countquery = countquery_tmp\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
-        ui_refresh = args.tinterval
     else:
         countquery = countquery_tmp.start()
-        # Update the UI every 2 seconds to place less load on the browser.
-        ui_refresh = 2
-
-    # Monitor the progress of the stream, and save data for the webUI
-    colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
-    monitor_progress_webui(
-        countquery,
-        ui_refresh,
-        colnames,
-        args.finkwebpath,
-        "live_raw.csv",
-        "live")
-
-    monitor_progress_webui(
-        countquery,
-        ui_refresh,
-        colnames,
-        args.finkwebpath,
-        "history.csv",
-        "history")
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

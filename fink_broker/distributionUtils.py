@@ -26,7 +26,8 @@ from pyspark.sql.functions import struct, col, lit
 from fink_broker.tester import spark_unit_tests
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 
-def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
+def get_kafka_df(
+        df: DataFrame, schema_path: str, saveschema: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -49,6 +50,9 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
     schema_path: str
         Path where to store the avro schema required for decoding the
         Kafka messages.
+    saveschema: bool
+        If True, save the alert schema on disk. Work only in Spark local mode,
+        and for testing purposes. Default is False.
 
     Returns
     ----------
@@ -68,9 +72,44 @@ def get_kafka_df(df: DataFrame, schema_path: str) -> DataFrame:
 
     # Convert into avro and save the schema
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
-    save_avro_schema(df, schema_path)
+
+    if saveschema:
+        # Harcoded path that corresponds to the schema used
+        # for alert redistribution.
+        schema_path = 'schemas/distribution_schema.avsc'
+
+        # Do not work on a DFS like HDFS obviously.
+        # Only local mode & for testing purposes
+        toto = df.writeStream.foreachBatch(
+            lambda x, y: save_avro_schema_stream(x, y, schema_path)
+        ).start()
+        time.sleep(10)
+
+        # Note that the entire Spark application will stop.
+        toto.stop()
 
     return df_kafka
+
+def save_avro_schema_stream(df: DataFrame, epochid: int, schema_path=None):
+    """ Extract schema from an alert of the stream, and save it on disk.
+    Mostly for debugging purposes - do not work in cluster mode (local only).
+
+    Typically:
+    schema_path = ...
+    toto = df_stream.writeStream.foreachBatch(
+        lambda x, y: save_avro_schema_stream(x, y, schema_path)
+    ).start()
+    time.sleep(10)
+    toto.stop()
+
+    Parameters
+    ----------
+    df: DataFrame
+        Micro-batch Dataframe containing alerts
+    epochid: int
+        Offset of the micro-batch
+    """
+    save_avro_schema(df, schema_path)
 
 def save_avro_schema(df: DataFrame, schema_path: str):
     """Writes the avro schema to a file at schema_path
@@ -108,6 +147,11 @@ def save_avro_schema(df: DataFrame, schema_path: str):
 
         # Remove .avro files and directory
         shutil.rmtree(path_for_avro)
+    else:
+        msg = """
+            {} already exists - cannot write the new schema
+        """.format(path_for_avro)
+        print(msg)
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
@@ -156,9 +200,13 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     |ZTF18acsbjvw|697251921215010004|  20.4233877|  -27.0588511|                     Unknown|
     +------------+------------------+------------+-------------+----------------------------+
     <BLANKLINE>
-    >>> temp_schema = os.path.join(os.environ["PWD"] + "temp_schema")
-    >>> df_kafka = get_kafka_df(df, temp_schema)
-    >>> # Decode the avro df
+    >>> temp_schema = os.path.join(os.environ["PWD"], "temp_schema")
+    >>> save_avro_schema(df, temp_schema)
+
+    # Encode the data into avro
+    >>> df_kafka = get_kafka_df(df, '')
+
+    # Decode the avro df
     >>> df_decoded = decode_kafka_df(df_kafka, temp_schema)
     >>> df_decoded.printSchema()
     root

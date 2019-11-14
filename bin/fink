@@ -20,8 +20,10 @@ message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
 Usage:\n
-    \tto start: fink start <service> [-h] [-c <conf>] [--simulator]\n
-    \tto stop : fink stop  <service> [-h] [-c <conf>]\n\n
+    \tto init paths     : fink init [-h] [-c <conf>]\n
+    \tto start a service: fink start <service> [-h] [-c <conf>] [--simulator]\n
+    \tto stop a service : fink stop  <service> [-h] [-c <conf>]\n
+    \tto show services  : fink show [-h] \n\n
 
 To get this help: \n
 \tfink \n\n
@@ -34,6 +36,9 @@ $message_conf\n\n
 
 To see the running processes: \n
 \tfink show \n\n
+
+To initialise data folders and paths: \n
+\tfink init \n\n
 
 To stop a service or all running processes: \n
 \tfink stop <service or all> \n
@@ -64,6 +69,10 @@ while [ "$#" -gt 0 ]; do
         echo "Use <fink stop service_name> to stop a service."
         echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
+        ;;
+    "init")
+        INITPATH=true
+        shift 1
         ;;
     -h)
         HELP_ON_SERVICE="-h"
@@ -115,6 +124,26 @@ if [[ -f $conf ]]; then
 else
   echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
   source ${FINK_HOME}/conf/fink.conf
+fi
+
+# Initialise paths to store data and checkpoints
+if [[ "$INITPATH" = true ]] ; then
+  if [[ "$FS_KIND" = "local" ]] ; then
+    finkdir='mkdir'
+  elif [[ "$FS_KIND" = "hdfs" ]] ; then
+    finkdir='hdfs dfs -mkdir'
+  else
+    echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs}"
+    exit 1
+  fi
+  $finkdir $DATA_PREFIX
+  $finkdir $FINK_ALERT_PATH
+  $finkdir $FINK_ALERT_PATH_SCI_TMP
+  $finkdir $FINK_ALERT_CHECKPOINT_RAW
+  $finkdir $FINK_ALERT_CHECKPOINT_SCI_TMP
+  $finkdir $FINK_ALERT_CHECKPOINT_SCI
+  echo "Data will be stored under $DATA_PREFIX"
+  exit
 fi
 
 if [[ "$SIM_ONLY" = true ]] ; then
@@ -239,27 +268,16 @@ elif [[ $service == "stream2raw" ]]; then
     -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
-  # For use on cluster, the HBase configuration file is actually mandatory.
-  if [[ -f ${HBASE_XML_CONF} ]]; then
-    export SPARK_CLASSPATH=${HBASE_XML_CONF}
-  else
-    echo "[WARN] HBase configuration file cannot be found at" ${HBASE_XML_CONF}
-    echo "[WARN] Default HBase file will be used " ${FINK_HOME}/conf/hbase-site.xml
-    HBASE_XML_CONF=${FINK_HOME}/conf/hbase-site.xml
-  fi
-
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
     --jars ${FINK_JARS} \
     ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    --files ${HBASE_XML_CONF} \
     ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
     -rawdatapath ${FINK_ALERT_PATH} \
-    -checkpointpath_sci ${FINK_ALERT_CHECKPOINT_SCI} \
-    -science_db_name ${SCIENCE_DB_NAME} \
-    -science_db_catalog ${SCIENCE_DB_CATALOG} \
+    -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
+    -checkpointpath_sci_tmp ${FINK_ALERT_CHECKPOINT_SCI_TMP} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Read configuration for redistribution
@@ -273,15 +291,12 @@ elif [[ $service == "distribution" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
-  -science_db_catalog ${SCIENCE_DB_CATALOG} \
-  -science_db_name ${SCIENCE_DB_NAME} \
+  -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
+  -checkpointpath_kafka ${FINK_ALERT_CHECKPOINT_KAFKA} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
-  -startingOffset_dist ${DISTRIBUTION_OFFSET} \
-  -checkpointpath_dist ${DISTRIBUTION_OFFSET_FILE} \
   -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
-  -slack_channels ${SLACK_CHANNELS} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Read configuration for redistribution

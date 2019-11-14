@@ -50,6 +50,9 @@ script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
 
+  # Initialise paths for data and checkpoints
+  - fink init -c ${FINK_HOME}/conf/fink.conf.travis
+
   # Start Kafka Server and create a test topic
   - fink_kafka start
   - fink_kafka --create-topic fink_outstream

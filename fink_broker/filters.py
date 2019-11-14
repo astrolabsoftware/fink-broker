@@ -64,7 +64,7 @@ def return_flatten_names(
     -------
     >>> df = spark.read.format("parquet").load("archive/alerts_store")
     >>> flatten_schema = return_flatten_names(df)
-    >>> assert("decoded.candidate.candid" in flatten_schema)
+    >>> assert("candidate.candid" in flatten_schema)
     """
     if flatten_schema == []:
         for colname in df.columns:
@@ -247,7 +247,7 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
         for argname in argnames:
             colname = [
                 col(i) for i in flatten_schema
-                if i.endswith(".{}".format(argname))]
+                if i.endswith("{}".format(argname))]
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.
@@ -323,7 +323,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
         for argname in argnames:
             colname = [
                 col(i) for i in flatten_schema
-                if i.endswith(".{}".format(argname))]
+                if i.endswith("{}".format(argname))]
             if len(colname) == 0:
                 raise AssertionError("""
                     Column name {} is not a valid column of the DataFrame.

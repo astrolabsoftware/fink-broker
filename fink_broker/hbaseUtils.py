@@ -269,6 +269,31 @@ def explodearrayofstruct(df: DataFrame, columnname: str) -> DataFrame:
     df_flatten = _java2py(sc, _df)
     return df_flatten
 
+def write_to_hbase_and_monitor(
+        df: DataFrame, epochid: int, hbcatalog: str):
+    """Write data into HBase.
+
+    The purpose of this function is to write data to HBase using
+    Structured Streaming tools such as foreachBatch.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input micro-batch DataFrame.
+    epochid : int
+        ID of the micro-batch
+    hbcatalog : str
+        HBase catalog describing the data
+
+    """
+    # If the table does not exist, one needs to specify
+    # the number of zones to use (must be greater than 3).
+    # TODO: remove this harcoded parameter.
+    df.write\
+        .options(catalog=hbcatalog, newtable=5)\
+        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .save()
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
