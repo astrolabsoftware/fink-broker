@@ -37,6 +37,8 @@ from fink_broker.filters import apply_user_defined_filter
 from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+qualitycuts = 'fink_broker.filters.qualitycuts'
+
 processors = [
     'fink_science.xmatch.processor.cdsxmatch'
 ]
@@ -58,8 +60,8 @@ def main():
         args.rawdatapath, args.rawdatapath + "/*", latestfirst=False)
 
     # Apply level one filters
-    logger.info('userfilters.levelone.qualitycuts')
-    df = apply_user_defined_filter(df, 'userfilters.levelone.qualitycuts')
+    logger.info(qualitycuts)
+    df = apply_user_defined_filter(df, qualitycuts)
 
     # Apply level one processors
     logger.info(processors)

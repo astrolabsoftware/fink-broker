@@ -12,7 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import col
+from pyspark.sql.functions import pandas_udf, PandasUDFType, col
+from pyspark.sql.types import BooleanType
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 from pyspark.sql.functions import struct
@@ -20,11 +21,74 @@ from pyspark.sql.functions import struct
 import os
 import xml.etree.ElementTree as ET
 import importlib
+import pandas as pd
 
 from typing import Any, Tuple
 
 from fink_broker.tester import spark_unit_tests
 from fink_broker.loggingUtils import get_fink_logger
+
+@pandas_udf(BooleanType(), PandasUDFType.SCALAR)
+def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
+    """ Apply simple quality cuts to the alert stream to select only
+    alerts with good quality.
+
+    NB: move this into a safer place (that can be edited).
+
+    Parameters
+    ----------
+    nbad: Spark DataFrame Column
+        Column containing the nbad values
+    rb: Spark DataFrame Column
+        Column containing the rb values
+    magdiff: Spark DataFrame Column
+        Column containing the magdiff values
+
+    Returns
+    ----------
+    out: pandas.Series of bool
+    Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+        and true for good alert.
+
+    Examples
+    -------
+    >>> colnames = ["nbad", "rb", "magdiff"]
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...   [0, 1, 0, 0],
+    ...   [0.01, 0.02, 0.6, 0.01],
+    ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
+    >>> df.show() # doctest: +NORMALIZE_WHITESPACE
+    +----+----+-------+
+    |nbad|  rb|magdiff|
+    +----+----+-------+
+    |   0|0.01|   0.02|
+    |   1|0.02|   0.05|
+    |   0| 0.6|    0.1|
+    |   0|0.01|   0.01|
+    +----+----+-------+
+    <BLANKLINE>
+
+    Nest the DataFrame as for alerts
+    >>> df = df.select(struct(df.columns).alias("candidate"))\
+        .select(struct("candidate").alias("decoded"))
+
+    Apply quality cuts
+    >>> filtername = 'fink_broker.filters.qualitycuts'
+    >>> df = apply_user_defined_filter(df, filtername)
+    >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
+    +----+---+-------+
+    |nbad| rb|magdiff|
+    +----+---+-------+
+    |   0|0.6|    0.1|
+    +----+---+-------+
+    <BLANKLINE>
+
+    """
+    mask = nbad.values == 0
+    mask *= rb.values >= 0.55
+    mask *= abs(magdiff.values) <= 0.1
+
+    return pd.Series(mask)
 
 def return_flatten_names(
         df: DataFrame, pref: str = "", flatten_schema: list = []) -> list:
@@ -88,92 +152,6 @@ def return_flatten_names(
             flatten_schema=flatten_schema)
 
     return flatten_schema
-
-def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
-    """Load programmatically filter or processor defined by the user in the
-    different levels (userfilters/level{one, two, ...}.py).
-
-    Parameters
-    ----------
-    func_name : str
-        Name of the filter or processor to import.
-        Should be defined in userfilters modules.
-    levels : list
-        Level in which the filter or processor has to be searched:
-            [level]one, [level]two,...
-        The corresponding module level<number>.py must exist.
-
-    Returns
-    -------
-    func: function or None
-        Imported filter or processor. If not found, raise an error.
-
-    Examples
-    -------
-    # retrieve qualitycuts from levelone (i.e. there is a function
-    # qualitycuts in the module userfilters/levelone.py)
-    >>> f = load_user_f_and_p("qualitycuts", ["one", "two"])
-
-    # Wrong filter name will lead to error
-    >>> f = load_user_f_and_p(
-    ...   "unknownfunc", ["one", "two"])
-    ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-    Traceback (most recent call last):
-     ...
-    ImportError:
-        Filter or processor `unknownfunc` not found.
-        Available filters are: [['qualitycuts'], ['dist_stream_cut']]
-        Available processors are: [['cross_match_alerts_per_batch'], None]
-    """
-    logger = get_fink_logger(__name__, "INFO")
-    available_filters = []
-    available_processors = []
-
-    # Loop over modules
-    for level in levels:
-        # Load module
-        modulename = "userfilters.level{}".format(level)
-        module = importlib.import_module(modulename)
-
-        # Load filter in module
-        func = getattr(module, func_name, None)
-
-        # Append existing filter names in that module
-        available_filters.append(
-            getattr(
-                module,
-                'filter_level{}_names'.format(level),
-                None
-            )
-        )
-
-        # Append existing processor names in that module
-        available_processors.append(
-            getattr(
-                module,
-                'processor_level{}_names'.format(level),
-                None
-            )
-        )
-
-        # If filter exists, return it
-        if func is not None:
-            logger.info(
-                "new filter/processor registered: {} from level {}".format(
-                    func_name, level))
-            return func
-
-    # Error if the filter has not been found in the modules
-    msg = """
-    Filter or processor `{}` not found.
-    Available filters are: {}
-    Available processors are: {}
-    """.format(
-        func_name,
-        available_filters,
-        available_processors
-    )
-    raise ImportError(msg)
 
 def apply_user_defined_filter(df: DataFrame, toapply: str) -> DataFrame:
     """Apply a user filter to keep only wanted alerts.
