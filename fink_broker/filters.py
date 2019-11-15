@@ -176,7 +176,7 @@ def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
     raise ImportError(msg)
 
 def apply_user_defined_filter(df: DataFrame, toapply: str) -> DataFrame:
-    """Apply iteratively user filters to keep only wanted alerts.
+    """Apply a user filter to keep only wanted alerts.
 
     Parameters
     ----------
@@ -277,7 +277,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
         Spark DataFrame with alert data
     processor_names: list of string
         List containing processor names to be applied. These processors should
-        be functions defined in the folder `userfilters`.
+        come from the fink-science module (see example below).
 
     Returns
     -------
@@ -296,26 +296,32 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
         .select(struct("candidate").alias("decoded"))
 
     # Perform cross-match
-    >>> df = apply_user_defined_processors(df, ["cross_match_alerts_per_batch"])
-    >>> new_colnames = ["decoded.candidate.*", "cross_match_alerts_per_batch"]
+    >>> processors = ['fink_science.xmatch.processor.cdsxmatch']
+    >>> df = apply_user_defined_processors(df, processors)
+    >>> new_colnames = ["decoded.candidate.*", "cdsxmatch"]
     >>> df = df.select(new_colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
-    +----------+-----------+--------+----------------------------+
-    |        ra|        dec|objectId|cross_match_alerts_per_batch|
-    +----------+-----------+--------+----------------------------+
-    |26.8566983|-26.9677112|       1|                        Star|
-    |  26.24497|-26.7569436|       2|                     Unknown|
-    +----------+-----------+--------+----------------------------+
+    +----------+-----------+--------+---------+
+    |        ra|        dec|objectId|cdsxmatch|
+    +----------+-----------+--------+---------+
+    |26.8566983|-26.9677112|       1|     Star|
+    |  26.24497|-26.7569436|       2|  Unknown|
+    +----------+-----------+--------+---------+
     <BLANKLINE>
 
     """
+    logger = get_fink_logger(__name__, "INFO")
+
     flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
 
     # Loop over user-defined processors
     for processor_func_name in processor_names:
 
         # Load the processor
-        processor_func = load_user_f_and_p(processor_func_name, ["one", "two"])
+        proc_name = processor_func_name.split('.')[-1]
+        module_name = processor_func_name.split('.' + proc_name)[0]
+        module = importlib.import_module(module_name)
+        processor_func = getattr(module, proc_name, None)
 
         # Note: to access input argument, we need f.func and not just f.
         # This is because f has a decorator on it.
@@ -335,6 +341,10 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
             colnames.append(colname[0])
 
         df = df.withColumn(processor_func.__name__, processor_func(*colnames))
+
+        logger.info(
+            "new processor registered: {} from {}".format(
+                proc_name, module_name))
 
     return df
 
