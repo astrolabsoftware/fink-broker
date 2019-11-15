@@ -38,7 +38,10 @@ from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from userfilters.levelone import filter_levelone_names
-from userfilters.levelone import processor_levelone_names
+
+processors = [
+    'fink_science.xmatch.processor.cdsxmatch'
+]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -61,8 +64,8 @@ def main():
     df = apply_user_defined_filters(df, filter_levelone_names)
 
     # Apply level one processors
-    logger.info(processor_levelone_names)
-    df = apply_user_defined_processors(df, processor_levelone_names)
+    logger.info(processors)
+    df = apply_user_defined_processors(df, processors)
 
     # Partition the data hourly
     df_partitionedby = df\
