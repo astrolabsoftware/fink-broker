@@ -33,11 +33,9 @@ import json
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
-from fink_broker.filters import apply_user_defined_filters
+from fink_broker.filters import apply_user_defined_filter
 from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-
-from userfilters.levelone import filter_levelone_names
 
 processors = [
     'fink_science.xmatch.processor.cdsxmatch'
@@ -60,8 +58,8 @@ def main():
         args.rawdatapath, args.rawdatapath + "/*", latestfirst=False)
 
     # Apply level one filters
-    logger.info(filter_levelone_names)
-    df = apply_user_defined_filters(df, filter_levelone_names)
+    logger.info('userfilters.levelone.qualitycuts')
+    df = apply_user_defined_filter(df, 'userfilters.levelone.qualitycuts')
 
     # Apply level one processors
     logger.info(processors)
