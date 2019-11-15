@@ -29,10 +29,13 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
 from fink_broker.distributionUtils import get_kafka_df
-from fink_broker.filters import apply_user_defined_filters
+from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
-from userfilters.leveltwo import filter_leveltwo_names
+# User-defined topics
+userfilters = [
+    'fink_filters.filter_rrlyr.filter.rrlyr'
+]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -51,8 +54,8 @@ def main():
     df = connect_to_raw_database(
         args.scitmpdatapath, args.scitmpdatapath + "/*", latestfirst=False)
 
-    # Apply level two filters
-    df = apply_user_defined_filters(df, filter_leveltwo_names)
+    # Drop partitioning columns
+    df = df.drop('year').drop('month').drop('day').drop('hour')
 
     # Switch publisher
     df = df.withColumn('publisher-tmp', lit('Fink')) \
@@ -67,28 +70,31 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
-    df = df.selectExpr(cnames)
 
-    # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day').drop('hour')
-
-    # Get the DataFrame for publishing to Kafka (avro serialized)
-    df_kafka = get_kafka_df(df, '')
-
-    # Get topic name to publish on
-    topic = args.distribution_topic
     broker_list = args.distribution_servers
+    for userfilter in userfilters:
+        # The topic name is the filter name
+        topicname = userfilter.split('.')[-1]
 
-    # Ensure that the topic(s) exist on the Kafka Server)
-    disquery = df_kafka\
-        .writeStream\
-        .format("kafka")\
-        .option("kafka.bootstrap.servers", broker_list)\
-        .option("kafka.security.protocol", "SASL_PLAINTEXT")\
-        .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
-        .option("topic", topic)\
-        .option("checkpointLocation", args.checkpointpath_kafka)\
-        .start()
+        # Apply user-defined filter
+        df_tmp = apply_user_defined_filter(df, userfilter)
+
+        # Wrap alert data
+        df_tmp = df_tmp.selectExpr(cnames)
+
+        # Get the DataFrame for publishing to Kafka (avro serialized)
+        df_kafka = get_kafka_df(df_tmp, '')
+
+        # Ensure that the topic(s) exist on the Kafka Server)
+        disquery = df_kafka\
+            .writeStream\
+            .format("kafka")\
+            .option("kafka.bootstrap.servers", broker_list)\
+            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
+            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
+            .option("topic", topicname)\
+            .option("checkpointLocation", args.checkpointpath_kafka)\
+            .start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

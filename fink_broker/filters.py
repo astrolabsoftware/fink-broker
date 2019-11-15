@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType, col
+from pyspark.sql.functions import col
 from pyspark.sql import DataFrame
-from pyspark.sql.types import BooleanType, StructType
+from pyspark.sql.types import StructType
 from pyspark.sql.functions import struct
 
 import os
-import pandas as pd
 import xml.etree.ElementTree as ET
 import importlib
 
@@ -176,16 +175,16 @@ def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
     )
     raise ImportError(msg)
 
-def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
+def apply_user_defined_filter(df: DataFrame, toapply: str) -> DataFrame:
     """Apply iteratively user filters to keep only wanted alerts.
 
     Parameters
     ----------
     df: DataFrame
         Spark DataFrame with alert data
-    filter_names: list of string
-        List containing filter names to be applied. These filters should
-        be functions defined in the folder `userfilters`.
+    toapply: string
+        Filter name to be applied. It should be in the form
+        module.module.routine (see example below).
 
     Returns
     -------
@@ -194,20 +193,20 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
 
     Examples
     -------
-    >>> colnames = ["nbad", "rb", "magdiff"]
+    >>> colnames = ["cdsxmatch", "rb", "magdiff"]
     >>> df = spark.sparkContext.parallelize(zip(
-    ...   [0, 1, 0, 0],
+    ...   ['RRLyr', 'Unknown', 'Star', 'SN1a'],
     ...   [0.01, 0.02, 0.6, 0.01],
     ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+
-    |nbad|  rb|magdiff|
-    +----+----+-------+
-    |   0|0.01|   0.02|
-    |   1|0.02|   0.05|
-    |   0| 0.6|    0.1|
-    |   0|0.01|   0.01|
-    +----+----+-------+
+    +---------+----+-------+
+    |cdsxmatch|  rb|magdiff|
+    +---------+----+-------+
+    |    RRLyr|0.01|   0.02|
+    |  Unknown|0.02|   0.05|
+    |     Star| 0.6|    0.1|
+    |     SN1a|0.01|   0.01|
+    +---------+----+-------+
     <BLANKLINE>
 
 
@@ -216,50 +215,55 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
         .select(struct("candidate").alias("decoded"))
 
     # Apply quality cuts for example (level one)
-    >>> df = apply_user_defined_filters(df, ["qualitycuts"])
+    >>> toapply = 'fink_filters.filter_rrlyr.filter.rrlyr'
+    >>> df = apply_user_defined_filter(df, toapply)
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
-    +----+---+-------+
-    |nbad| rb|magdiff|
-    +----+---+-------+
-    |   0|0.6|    0.1|
-    +----+---+-------+
+    +---------+----+-------+
+    |cdsxmatch|  rb|magdiff|
+    +---------+----+-------+
+    |    RRLyr|0.01|   0.02|
+    +---------+----+-------+
     <BLANKLINE>
 
     # Using a wrong filter name will lead to an error
-    >>> df = apply_user_defined_filters(
-    ...   df, ["unknownfunc"]) # doctest: +SKIP
+    >>> df = apply_user_defined_filter(
+    ...   df, "unknownfunc") # doctest: +SKIP
     """
+    logger = get_fink_logger(__name__, "INFO")
+
     flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
 
-    # Loop over user-defined filters
-    for filter_func_name in filter_names:
+    # Load the filter
+    filter_name = toapply.split('.')[-1]
+    module_name = toapply.split('.' + filter_name)[0]
+    module = importlib.import_module(module_name)
+    filter_func = getattr(module, filter_name, None)
 
-        # Load the filter
-        filter_func = load_user_f_and_p(filter_func_name, ["one", "two"])
+    # Note: to access input argument, we need f.func and not just f.
+    # This is because f has a decorator on it.
+    ninput = filter_func.func.__code__.co_argcount
 
-        # Note: to access input argument, we need f.func and not just f.
-        # This is because f has a decorator on it.
-        ninput = filter_func.func.__code__.co_argcount
+    # Note: This works only with `struct` fields - not `array`
+    argnames = filter_func.func.__code__.co_varnames[:ninput]
+    colnames = []
+    for argname in argnames:
+        colname = [
+            col(i) for i in flatten_schema
+            if i.endswith("{}".format(argname))]
+        if len(colname) == 0:
+            raise AssertionError("""
+                Column name {} is not a valid column of the DataFrame.
+                """.format(argname))
+        colnames.append(colname[0])
 
-        # Note: This works only with `struct` fields - not `array`
-        argnames = filter_func.func.__code__.co_varnames[:ninput]
-        colnames = []
-        for argname in argnames:
-            colname = [
-                col(i) for i in flatten_schema
-                if i.endswith("{}".format(argname))]
-            if len(colname) == 0:
-                raise AssertionError("""
-                    Column name {} is not a valid column of the DataFrame.
-                    """.format(argname))
-            colnames.append(colname[0])
+    logger.info(
+        "new filter/topic registered: {} from {}".format(
+            filter_name, module_name))
 
-        df = df\
-            .withColumn("toKeep", filter_func(*colnames))\
-            .filter("toKeep == true")\
-            .drop("toKeep")
-
-    return df
+    return df\
+        .withColumn("toKeep", filter_func(*colnames))\
+        .filter("toKeep == true")\
+        .drop("toKeep")
 
 def apply_user_defined_processors(df: DataFrame, processor_names: list):
     """Apply iteratively user processors to give added values to the stream.
