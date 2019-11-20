@@ -13,19 +13,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql.functions import pandas_udf, PandasUDFType, col
+from pyspark.sql.types import BooleanType
 from pyspark.sql import DataFrame
-from pyspark.sql.types import BooleanType, StructType
+from pyspark.sql.types import StructType
 from pyspark.sql.functions import struct
 
 import os
-import pandas as pd
 import xml.etree.ElementTree as ET
 import importlib
+import pandas as pd
 
 from typing import Any, Tuple
 
 from fink_broker.tester import spark_unit_tests
 from fink_broker.loggingUtils import get_fink_logger
+
+@pandas_udf(BooleanType(), PandasUDFType.SCALAR)
+def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
+    """ Apply simple quality cuts to the alert stream to select only
+    alerts with good quality.
+
+    NB: move this into a safer place (that can be edited).
+
+    Parameters
+    ----------
+    nbad: Spark DataFrame Column
+        Column containing the nbad values
+    rb: Spark DataFrame Column
+        Column containing the rb values
+    magdiff: Spark DataFrame Column
+        Column containing the magdiff values
+
+    Returns
+    ----------
+    out: pandas.Series of bool
+    Return a Pandas DataFrame with the appropriate flag: false for bad alert,
+        and true for good alert.
+
+    Examples
+    -------
+    >>> colnames = ["nbad", "rb", "magdiff"]
+    >>> df = spark.sparkContext.parallelize(zip(
+    ...   [0, 1, 0, 0],
+    ...   [0.01, 0.02, 0.6, 0.01],
+    ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
+    >>> df.show() # doctest: +NORMALIZE_WHITESPACE
+    +----+----+-------+
+    |nbad|  rb|magdiff|
+    +----+----+-------+
+    |   0|0.01|   0.02|
+    |   1|0.02|   0.05|
+    |   0| 0.6|    0.1|
+    |   0|0.01|   0.01|
+    +----+----+-------+
+    <BLANKLINE>
+
+    Nest the DataFrame as for alerts
+    >>> df = df.select(struct(df.columns).alias("candidate"))\
+        .select(struct("candidate").alias("decoded"))
+
+    Apply quality cuts
+    >>> filtername = 'fink_broker.filters.qualitycuts'
+    >>> df = apply_user_defined_filter(df, filtername)
+    >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
+    +----+---+-------+
+    |nbad| rb|magdiff|
+    +----+---+-------+
+    |   0|0.6|    0.1|
+    +----+---+-------+
+    <BLANKLINE>
+
+    """
+    mask = nbad.values == 0
+    mask *= rb.values >= 0.55
+    mask *= abs(magdiff.values) <= 0.1
+
+    return pd.Series(mask)
 
 def return_flatten_names(
         df: DataFrame, pref: str = "", flatten_schema: list = []) -> list:
@@ -90,102 +153,16 @@ def return_flatten_names(
 
     return flatten_schema
 
-def load_user_f_and_p(func_name: str, levels: list = ["one", "two"]):
-    """Load programmatically filter or processor defined by the user in the
-    different levels (userfilters/level{one, two, ...}.py).
-
-    Parameters
-    ----------
-    func_name : str
-        Name of the filter or processor to import.
-        Should be defined in userfilters modules.
-    levels : list
-        Level in which the filter or processor has to be searched:
-            [level]one, [level]two,...
-        The corresponding module level<number>.py must exist.
-
-    Returns
-    -------
-    func: function or None
-        Imported filter or processor. If not found, raise an error.
-
-    Examples
-    -------
-    # retrieve qualitycuts from levelone (i.e. there is a function
-    # qualitycuts in the module userfilters/levelone.py)
-    >>> f = load_user_f_and_p("qualitycuts", ["one", "two"])
-
-    # Wrong filter name will lead to error
-    >>> f = load_user_f_and_p(
-    ...   "unknownfunc", ["one", "two"])
-    ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-    Traceback (most recent call last):
-     ...
-    ImportError:
-        Filter or processor `unknownfunc` not found.
-        Available filters are: [['qualitycuts'], ['dist_stream_cut']]
-        Available processors are: [['cross_match_alerts_per_batch'], None]
-    """
-    logger = get_fink_logger(__name__, "INFO")
-    available_filters = []
-    available_processors = []
-
-    # Loop over modules
-    for level in levels:
-        # Load module
-        modulename = "userfilters.level{}".format(level)
-        module = importlib.import_module(modulename)
-
-        # Load filter in module
-        func = getattr(module, func_name, None)
-
-        # Append existing filter names in that module
-        available_filters.append(
-            getattr(
-                module,
-                'filter_level{}_names'.format(level),
-                None
-            )
-        )
-
-        # Append existing processor names in that module
-        available_processors.append(
-            getattr(
-                module,
-                'processor_level{}_names'.format(level),
-                None
-            )
-        )
-
-        # If filter exists, return it
-        if func is not None:
-            logger.info(
-                "new filter/processor registered: {} from level {}".format(
-                    func_name, level))
-            return func
-
-    # Error if the filter has not been found in the modules
-    msg = """
-    Filter or processor `{}` not found.
-    Available filters are: {}
-    Available processors are: {}
-    """.format(
-        func_name,
-        available_filters,
-        available_processors
-    )
-    raise ImportError(msg)
-
-def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
-    """Apply iteratively user filters to keep only wanted alerts.
+def apply_user_defined_filter(df: DataFrame, toapply: str) -> DataFrame:
+    """Apply a user filter to keep only wanted alerts.
 
     Parameters
     ----------
     df: DataFrame
         Spark DataFrame with alert data
-    filter_names: list of string
-        List containing filter names to be applied. These filters should
-        be functions defined in the folder `userfilters`.
+    toapply: string
+        Filter name to be applied. It should be in the form
+        module.module.routine (see example below).
 
     Returns
     -------
@@ -194,20 +171,20 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
 
     Examples
     -------
-    >>> colnames = ["nbad", "rb", "magdiff"]
+    >>> colnames = ["cdsxmatch", "rb", "magdiff"]
     >>> df = spark.sparkContext.parallelize(zip(
-    ...   [0, 1, 0, 0],
+    ...   ['RRLyr', 'Unknown', 'Star', 'SN1a'],
     ...   [0.01, 0.02, 0.6, 0.01],
     ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+
-    |nbad|  rb|magdiff|
-    +----+----+-------+
-    |   0|0.01|   0.02|
-    |   1|0.02|   0.05|
-    |   0| 0.6|    0.1|
-    |   0|0.01|   0.01|
-    +----+----+-------+
+    +---------+----+-------+
+    |cdsxmatch|  rb|magdiff|
+    +---------+----+-------+
+    |    RRLyr|0.01|   0.02|
+    |  Unknown|0.02|   0.05|
+    |     Star| 0.6|    0.1|
+    |     SN1a|0.01|   0.01|
+    +---------+----+-------+
     <BLANKLINE>
 
 
@@ -216,50 +193,55 @@ def apply_user_defined_filters(df: DataFrame, filter_names: list) -> DataFrame:
         .select(struct("candidate").alias("decoded"))
 
     # Apply quality cuts for example (level one)
-    >>> df = apply_user_defined_filters(df, ["qualitycuts"])
+    >>> toapply = 'fink_filters.filter_rrlyr.filter.rrlyr'
+    >>> df = apply_user_defined_filter(df, toapply)
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
-    +----+---+-------+
-    |nbad| rb|magdiff|
-    +----+---+-------+
-    |   0|0.6|    0.1|
-    +----+---+-------+
+    +---------+----+-------+
+    |cdsxmatch|  rb|magdiff|
+    +---------+----+-------+
+    |    RRLyr|0.01|   0.02|
+    +---------+----+-------+
     <BLANKLINE>
 
     # Using a wrong filter name will lead to an error
-    >>> df = apply_user_defined_filters(
-    ...   df, ["unknownfunc"]) # doctest: +SKIP
+    >>> df = apply_user_defined_filter(
+    ...   df, "unknownfunc") # doctest: +SKIP
     """
+    logger = get_fink_logger(__name__, "INFO")
+
     flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
 
-    # Loop over user-defined filters
-    for filter_func_name in filter_names:
+    # Load the filter
+    filter_name = toapply.split('.')[-1]
+    module_name = toapply.split('.' + filter_name)[0]
+    module = importlib.import_module(module_name)
+    filter_func = getattr(module, filter_name, None)
 
-        # Load the filter
-        filter_func = load_user_f_and_p(filter_func_name, ["one", "two"])
+    # Note: to access input argument, we need f.func and not just f.
+    # This is because f has a decorator on it.
+    ninput = filter_func.func.__code__.co_argcount
 
-        # Note: to access input argument, we need f.func and not just f.
-        # This is because f has a decorator on it.
-        ninput = filter_func.func.__code__.co_argcount
+    # Note: This works only with `struct` fields - not `array`
+    argnames = filter_func.func.__code__.co_varnames[:ninput]
+    colnames = []
+    for argname in argnames:
+        colname = [
+            col(i) for i in flatten_schema
+            if i.endswith("{}".format(argname))]
+        if len(colname) == 0:
+            raise AssertionError("""
+                Column name {} is not a valid column of the DataFrame.
+                """.format(argname))
+        colnames.append(colname[0])
 
-        # Note: This works only with `struct` fields - not `array`
-        argnames = filter_func.func.__code__.co_varnames[:ninput]
-        colnames = []
-        for argname in argnames:
-            colname = [
-                col(i) for i in flatten_schema
-                if i.endswith("{}".format(argname))]
-            if len(colname) == 0:
-                raise AssertionError("""
-                    Column name {} is not a valid column of the DataFrame.
-                    """.format(argname))
-            colnames.append(colname[0])
+    logger.info(
+        "new filter/topic registered: {} from {}".format(
+            filter_name, module_name))
 
-        df = df\
-            .withColumn("toKeep", filter_func(*colnames))\
-            .filter("toKeep == true")\
-            .drop("toKeep")
-
-    return df
+    return df\
+        .withColumn("toKeep", filter_func(*colnames))\
+        .filter("toKeep == true")\
+        .drop("toKeep")
 
 def apply_user_defined_processors(df: DataFrame, processor_names: list):
     """Apply iteratively user processors to give added values to the stream.
@@ -273,7 +255,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
         Spark DataFrame with alert data
     processor_names: list of string
         List containing processor names to be applied. These processors should
-        be functions defined in the folder `userfilters`.
+        come from the fink-science module (see example below).
 
     Returns
     -------
@@ -292,26 +274,32 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
         .select(struct("candidate").alias("decoded"))
 
     # Perform cross-match
-    >>> df = apply_user_defined_processors(df, ["cross_match_alerts_per_batch"])
-    >>> new_colnames = ["decoded.candidate.*", "cross_match_alerts_per_batch"]
+    >>> processors = ['fink_science.xmatch.processor.cdsxmatch']
+    >>> df = apply_user_defined_processors(df, processors)
+    >>> new_colnames = ["decoded.candidate.*", "cdsxmatch"]
     >>> df = df.select(new_colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
-    +----------+-----------+--------+----------------------------+
-    |        ra|        dec|objectId|cross_match_alerts_per_batch|
-    +----------+-----------+--------+----------------------------+
-    |26.8566983|-26.9677112|       1|                        Star|
-    |  26.24497|-26.7569436|       2|                     Unknown|
-    +----------+-----------+--------+----------------------------+
+    +----------+-----------+--------+---------+
+    |        ra|        dec|objectId|cdsxmatch|
+    +----------+-----------+--------+---------+
+    |26.8566983|-26.9677112|       1|     Star|
+    |  26.24497|-26.7569436|       2|  Unknown|
+    +----------+-----------+--------+---------+
     <BLANKLINE>
 
     """
+    logger = get_fink_logger(__name__, "INFO")
+
     flatten_schema = return_flatten_names(df, pref="", flatten_schema=[])
 
     # Loop over user-defined processors
     for processor_func_name in processor_names:
 
         # Load the processor
-        processor_func = load_user_f_and_p(processor_func_name, ["one", "two"])
+        proc_name = processor_func_name.split('.')[-1]
+        module_name = processor_func_name.split('.' + proc_name)[0]
+        module = importlib.import_module(module_name)
+        processor_func = getattr(module, proc_name, None)
 
         # Note: to access input argument, we need f.func and not just f.
         # This is because f has a decorator on it.
@@ -331,6 +319,10 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
             colnames.append(colname[0])
 
         df = df.withColumn(processor_func.__name__, processor_func(*colnames))
+
+        logger.info(
+            "new processor registered: {} from {}".format(
+                proc_name, module_name))
 
     return df
 
