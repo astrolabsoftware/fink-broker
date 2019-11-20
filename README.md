@@ -11,15 +11,18 @@
 
 Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
 
-## Rationale
+## Getting started
 
-The design of Fink is driven by three pillars:
+Learning Fink is easy whether you are a developer or a scientist:
 
-* **Simplicity** the broker should be simple enough to be used by a majority of scientists and maintained in real-time. This means the exposed API must be easily understood by anyone, and the code base should be as small as possible to allow easy maintenance and upgrade.
-* **Scalability** the broker's behaviour should be the same regardless the amount of incoming data. This implies the technology used for this is scalable.
-* **Flexibility** the broker structure should allow for easy extension. As data will come, new features will be added, and the broker should be able to incorporate those smoothly. In addition, the broker should be able to connect to a large numbers of external tools and frameworks to maximize its scientific production without redeveloping tools.
+* Learn about the [broker technology](https://fink-broker.readthedocs.io/en/latest/broker/introduction/), the [science](https://fink-broker.readthedocs.io/en/latest/science/introduction/) we do, and how to [receive](https://fink-broker.readthedocs.io/en/latest/distribution/introduction/) alerts.
+* Learn how to use the broker or how to contribute following the different [tutorials](https://fink-broker.readthedocs.io/en/latest/tutorials/introduction/).
+* Explore the different components:
+    * [fink-broker](https://github.com/astrolabsoftware/fink-broker): Astronomy Broker based on Apache Spark.
+    * [fink-science](https://github.com/astrolabsoftware/fink-science): Define your science modules to add values to Fink alerts.
+    * [fink-filters](https://github.com/astrolabsoftware/fink-filters): Define your filters to create your alert stream in Fink.
+    * [fink-client](https://github.com/astrolabsoftware/fink-client):  Light-weight client to manipulate alerts from Fink.
 
-Fink core is based on the [Apache Spark](http://spark.apache.org/) framework, and more specifically it uses the [Structured Streaming processing engine](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html). The language chosen for the API is Python, which is widely used in the astronomy community, has a large scientific ecosystem and easily connects with existing tools.
 
 ## Documentation
 
