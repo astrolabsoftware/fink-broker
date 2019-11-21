@@ -150,7 +150,7 @@ def save_avro_schema(df: DataFrame, schema_path: str):
     else:
         msg = """
             {} already exists - cannot write the new schema
-        """.format(path_for_avro)
+        """.format(schema_path)
         print(msg)
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
