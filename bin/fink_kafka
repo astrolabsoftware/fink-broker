@@ -301,7 +301,7 @@ if [[ $SERVICE == "START" ]]; then
 
   # Enable Authorization
   # For Fink producer
-  add_acl_producer "finkProducer" "127.0.0.1" "fink_outstream"
+  add_acl_producer "finkProducer" "127.0.0.1" $DISTRIBUTION_TOPIC
 
   # For Fink's test consumer
   ${KAFKA_HOME}/bin/kafka-acls.sh \
@@ -310,7 +310,7 @@ if [[ $SERVICE == "START" ]]; then
   --allow-principal User:finkConsumer \
   --allow-host 127.0.0.1 \
   --consumer \
-  --topic fink_outstream \
+  --topic $DISTRIBUTION_TOPIC \
   --group spark-kafka- \
   --resource-pattern-type prefixed
 
