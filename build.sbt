@@ -22,7 +22,7 @@ resolvers += "Hortonworks Repository" at "http://repo.hortonworks.com/content/re
 lazy val root = (project in file(".")).
  settings(
    inThisBuild(List(
-     version      := "0.2.1"
+     version      := "0.3.0"
    )),
    // Name of the application
    name := "fink-broker",
@@ -46,9 +46,9 @@ lazy val root = (project in file(".")).
    // assemblyShadeRules in assembly := Seq(ShadeRule.rename("nom.**" -> "new_nom.@1").inAll),
    // Put dependencies of the library
    libraryDependencies ++= Seq(
-     "org.apache.spark" %% "spark-core" % "2.4.1" % "provided",
-     "org.apache.spark" %% "spark-sql" % "2.4.1" % "provided",
-     "org.apache.spark" %% "spark-streaming" % "2.4.1" % "provided",
+     "org.apache.spark" %% "spark-core" % "2.4.3" % "provided",
+     "org.apache.spark" %% "spark-sql" % "2.4.3" % "provided",
+     "org.apache.spark" %% "spark-streaming" % "2.4.3" % "provided",
      "com.hortonworks" % "shc-core" % "1.1.1-2.1-s_2.11",
      scalaTest % Test
    )
