@@ -68,8 +68,11 @@ fi
 
 source $conf
 
+# Export variables for tester.py
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
+export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
+export KAFKA_TOPIC=$KAFKA_TOPIC
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -113,6 +116,8 @@ fi
 # Combine individual reports in one
 coverage combine
 
+unset KAFKA_IPPORT_SIM
+unset KAFKA_TOPIC
 unset COVERAGE_PROCESS_START
 unset FINK_PACKAGES
 unset FINK_JARS
