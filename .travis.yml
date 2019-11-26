@@ -64,7 +64,6 @@ script:
   - fink_kafka --create-topic fink_outstream
 
   # Execute tests and report coverage
-  # - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
   - fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
   - fink_test
   - bash <(curl -s https://codecov.io/bash)

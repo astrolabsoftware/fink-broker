@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: dashboard, checkstream, stream2raw, raw2science, distribution"
+message_service="Available services are: checkstream, stream2raw, raw2science, distribution"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
@@ -148,7 +148,6 @@ fi
 
 if [[ "$SIM_ONLY" = true ]] ; then
   KAFKA_IPPORT=$KAFKA_IPPORT_SIM
-  KAFKA_TOPIC=$KAFKA_TOPIC_SIM
 fi
 
 # Stop services
@@ -177,8 +176,6 @@ if [[ $MODE == "stop" ]]; then
   elif [[ $service == "dashboard" ]]; then
     # PID=$(lsof -t -i :${FINKUIPORT})
     FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
-  elif [[ $service == "simulator" ]]; then
-    KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
 
@@ -236,18 +233,6 @@ if [[ $service == "dashboard" ]]; then
     cd -
   fi
   echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
-elif [[ $service == "simulator" ]]; then
-  # Launch the simulator - kafka & zookeeper
-  export is_docker=`command -v docker-compose`
-  if [[ -f $is_docker ]]; then
-    KAFKA_PORT_SIM=${KAFKA_PORT_SIM} docker-compose -p kafkanet -f ${FINK_HOME}/docker/docker-compose-kafka.yml up -d
-  else
-    echo "docker-compose not found"
-    exit
-  fi
-  python3 ${FINK_HOME}/bin/simulate_stream.py ${HELP_ON_SERVICE} \
-    -servers ${KAFKA_IPPORT_SIM} -topic ${KAFKA_TOPIC_SIM} -datasimpath ${FINK_DATA_SIM}\
-    -tinterval_kafka ${TIME_INTERVAL} -poolsize ${POOLSIZE} -log_level ${LOG_LEVEL}
 elif [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
