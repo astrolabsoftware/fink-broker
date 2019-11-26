@@ -4,8 +4,9 @@
 
 # Latest News
 
+* Fink was featured at the Spark+AI Summit Europe 2019.
 * Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker! Stay tuned for more.
-* Fink has been selected to the Google Summer of Code 2019! Congratulation to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year!
+* Fink has been selected to the Google Summer of Code 2019! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
 
 # Fink
 
@@ -18,6 +19,7 @@ Learning Fink is easy whether you are a developer or a scientist:
 * Learn about the [broker technology](https://fink-broker.readthedocs.io/en/latest/broker/introduction/), the [science](https://fink-broker.readthedocs.io/en/latest/science/introduction/) we do, and how to [receive](https://fink-broker.readthedocs.io/en/latest/distribution/introduction/) alerts.
 * Learn how to use the broker or how to contribute following the different [tutorials](https://fink-broker.readthedocs.io/en/latest/tutorials/introduction/).
 * Explore the different components:
+    * [fink-alert-simulator](https://github.com/astrolabsoftware/fink-alert-simulator): Simulate alert streams for the Fink broker.
     * [fink-broker](https://github.com/astrolabsoftware/fink-broker): Astronomy Broker based on Apache Spark.
     * [fink-science](https://github.com/astrolabsoftware/fink-science): Define your science modules to add values to Fink alerts.
     * [fink-filters](https://github.com/astrolabsoftware/fink-filters): Define your filters to create your alert stream in Fink.
