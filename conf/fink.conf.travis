@@ -13,10 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
-# Infrastructure
-# Kafka producer stream location
+# Local mode (Kafka cluster is spun up on-the-fly in docker).
+# Must match the ones used for the Producer
+KAFKA_PORT_SIM=29092
+KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
+
+# Cluster mode - you need a Kafka cluster installed with write mode.
+# Must match the one used for the Producer
 KAFKA_IPPORT=""
-KAFKA_TOPIC=""
+
+# Topic name for the producer
+KAFKA_TOPIC="ztf-stream-sim"
 
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
@@ -99,23 +106,6 @@ FINK_UI_PATH=${FINK_HOME}/web/data
 
 # The UI will listen on this port
 FINK_UI_PORT=5000
-
-######################################
-# Simulator
-# Simulate a fake stream, and access it locally
-# Kafka producer stream location:
-KAFKA_PORT_SIM=29092
-KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
-KAFKA_TOPIC_SIM="ztf-stream-sim"
-
-# Where the data for sims is
-FINK_DATA_SIM=${FINK_HOME}/datasim
-
-# Time between 2 alerts (second)
-TIME_INTERVAL=0.1
-
-# Total number of alerts to send
-POOLSIZE=100
 
 ######################################
 # Slack

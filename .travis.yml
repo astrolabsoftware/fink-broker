@@ -46,6 +46,12 @@ install:
   - pip install --upgrade pip setuptools wheel
   - pip install -r requirements.txt
 
+  # Install fink-alert-simulator
+  - git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
+  - export FINK_ALERT_SIMULATOR=${PWD}/fink-alert-simulator
+  - export PYTHONPATH=$FINK_ALERT_SIMULATOR:$PYTHONPATH
+  - export PATH=$FINK_ALERT_SIMULATOR/bin:$PATH
+
 script:
   # For sonar to run correctly
   - git fetch --unshallow --quiet
@@ -58,7 +64,7 @@ script:
   - fink_kafka --create-topic fink_outstream
 
   # Execute tests and report coverage
-  - fink start simulator -c ${FINK_HOME}/conf/fink.conf.travis
+  - fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
   - fink_test
   - bash <(curl -s https://codecov.io/bash)
 
