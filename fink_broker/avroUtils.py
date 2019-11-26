@@ -30,47 +30,6 @@ __all__ = [
     'readschemadata',
     'readschemafromavrofile']
 
-def load_single_avsc(file_path: str, names: Names) -> RecordSchema:
-    """Builds an Avro Schema from its avsc descriptor (JSON).
-
-    Parameters
-    ----------
-    file_path: str
-        Path+name of one avro schema
-    names: avro.schema.Names
-        Tracker for Avro named schemas.
-
-    Returns
-    ----------
-    schema: RecordSchema
-        The Avro schema parsed from the JSON descriptor.
-    """
-    with open(file_path) as file_text:
-        json_data = json.load(file_text)
-    schema = avro.schema.SchemaFromJSONData(json_data, names)
-    return schema
-
-
-def combine_schemas(schema_files: list) -> dict:
-    """Combine multiple nested schemas into a single schema.
-
-    Parameters
-    ----------
-    schema_files : list
-        List of files containing schemas.
-        If nested, most internal schema must be first.
-
-    Returns
-    ----------
-    schema: dict
-        Merged Avro schema
-    """
-    known_schemas = avro.schema.Names()
-
-    for s in schema_files:
-        schema = load_single_avsc(s, known_schemas)
-    return schema.to_json()
-
 def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     """ Encode json into Avro format given a schema.
 
