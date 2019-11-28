@@ -62,10 +62,11 @@ RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 ENV PATH $USRLIBS/anaconda3/miniconda/bin:$PATH
 
 # Install the broker deps
-COPY requirements.txt $USRLIBS/anaconda3/requirements.txt
+# fink-filters and fink-science are not installed!
+COPY requirements-docker.txt $USRLIBS/anaconda3/requirements-docker.txt
 RUN pip install --upgrade pip setuptools wheel \
   && pip install ipython \
-  && pip install -r $USRLIBS/anaconda3/requirements.txt
+  && pip install -r $USRLIBS/anaconda3/requirements-docker.txt
 
 # Install the simulator
 WORKDIR /home
