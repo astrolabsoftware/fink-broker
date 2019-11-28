@@ -77,10 +77,10 @@ ENV FINK_ALERT_SIMULATOR /home/fink-alert-simulator
 # Here we assume the container will be ran with
 # --v $HOST_PATH_TO/fink-package:/home/fink-package
 ENV FINK_HOME /home/fink-broker
-ENV FINKSCIENCE /home/fink-science
-ENV FINKFILTERS /home/fink-filters
+ENV FINK_SCIENCE /home/fink-science
+ENV FINK_FILTERS /home/fink-filters
 
-ENV PYTHONPATH $FINK_HOME:$FINK_ALERT_SIMULATOR:$FINKSCIENCE:$FINKFILTERS:$PYTHONPATH
+ENV PYTHONPATH $FINK_HOME:$FINK_ALERT_SIMULATOR:$FINK_SCIENCE:$FINK_FILTERS:$PYTHONPATH
 ENV PATH $FINK_HOME/bin:$FINK_ALERT_SIMULATOR/bin:$PATH
 
 WORKDIR $FINK_HOME
