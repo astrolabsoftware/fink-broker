@@ -73,10 +73,14 @@ WORKDIR /home
 RUN git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
 
 ENV FINK_ALERT_SIMULATOR /home/fink-alert-simulator
-ENV PYTHONPATH $FINK_ALERT_SIMULATOR:$PYTHONPATH
-ENV PATH $FINK_ALERT_SIMULATOR/bin:$PATH
 
+# Here we assume the container will be ran with
+# --v $HOST_PATH_TO/fink-package:/home/fink-package
 ENV FINK_HOME /home/fink-broker
-ENV PATH /home/fink-broker/bin:$PATH
+ENV FINKSCIENCE /home/fink-science
+ENV FINKFILTERS /home/fink-filters
 
-WORKDIR /home/fink-broker
+ENV PYTHONPATH $FINK_HOME:$FINK_ALERT_SIMULATOR:$FINKSCIENCE:$FINKFILTERS:$PYTHONPATH
+ENV PATH $FINK_HOME/bin:$FINK_ALERT_SIMULATOR/bin:$PATH
+
+WORKDIR $FINK_HOME
