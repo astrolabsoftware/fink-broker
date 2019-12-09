@@ -106,7 +106,7 @@ def readschemafromavrofile(fn: str) -> dict:
     ----------
     >>> schema = readschemafromavrofile(ztf_alert_sample)
     >>> print(schema['version'])
-    3.1
+    3.3
     """
     with open(fn, mode='rb') as file_data:
         data = readschemadata(file_data)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "schemas/template_schema_ZTF.avro")
+        root, "schemas/template_schema_ZTF_3p3.avro")
 
     # Run the regular test suite
     regular_unit_tests(globs)
