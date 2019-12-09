@@ -76,7 +76,7 @@ def get_kafka_df(
     if saveschema:
         # Harcoded path that corresponds to the schema used
         # for alert redistribution.
-        schema_path = 'schemas/distribution_schema.avsc'
+        schema_path = 'schemas/distribution_schema_new.avsc'
 
         # Do not work on a DFS like HDFS obviously.
         # Only local mode & for testing purposes

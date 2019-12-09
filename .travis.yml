@@ -27,6 +27,8 @@ before_install:
   - export PATH=$HOME/.local/bin:${FINK_HOME}/bin:$PATH
   # Install HBase
   - source conf/install_hbase.sh
+  # Downlaod data
+  - "cd datasim && source download_ztf_alert_data.sh && cd .."
 
 install:
   # Download spark

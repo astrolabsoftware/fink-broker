@@ -16,8 +16,9 @@
 set -e
 
 # Download subset of ZTF public data - 22 MB (zipped)
-wget https://ztf.uw.edu/alerts/public/ztf_public_20181129.tar.gz
+fn=ztf_public_20190903.tar.gz
+wget https://ztf.uw.edu/alerts/public/${fn}
 
 # Untar the alert data - 55 MB
-tar -zxvf ztf_public_20181129.tar.gz
-rm ztf_public_20181129.tar.gz
+tar -zxvf ${fn}
+rm ${fn}
