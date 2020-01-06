@@ -17,9 +17,9 @@ The ZTF alert schema evolves over time, to include the latest information. We pr
 
 The Fink distribution schema is the input ZTF alert schema plus additional fields describing the added values by Fink. This schema is mandatory to decode the alerts receive by the Fink client, and we release schema versions in this folder: `distribution_schema_<version>.avsc`. The fields are described on this [page](https://fink-broker.readthedocs.io/en/latest/science/added_values/).
 
-| Period | Schema version | Added values |
-|:--------|:-------|:-------|
-| Jul 2019 - now | version 0.1 | `cdsxmatch` |
+| Period | Schema version | Commit | Added values |
+|:--------|:-------|:-------|:-------|
+| Jul 2019 - now | version 0.1 | -- | `cdsxmatch` |
 
 ## Troubleshooting
 
