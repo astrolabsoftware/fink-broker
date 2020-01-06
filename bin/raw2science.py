@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2020 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,8 +23,7 @@ Step 4: Push alert data into the tmp science database (parquet)
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col
-from pyspark.sql.functions import date_format
+from pyspark.sql import functions as F
 
 import argparse
 import time
@@ -37,11 +36,11 @@ from fink_broker.filters import apply_user_defined_filter
 from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
-qualitycuts = 'fink_broker.filters.qualitycuts'
+from fink_science.xmatch.processor import cdsxmatch
+from fink_science.random_forest_snia.processor import rfscore
+from fink_science.random_forest_snia.classifier import concat_col
 
-processors = [
-    'fink_science.xmatch.processor.cdsxmatch'
-]
+qualitycuts = 'fink_broker.filters.qualitycuts'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -63,16 +62,45 @@ def main():
     logger.info(qualitycuts)
     df = apply_user_defined_filter(df, qualitycuts)
 
-    # Apply level one processors
-    logger.info(processors)
-    df = apply_user_defined_processors(df, processors)
+    # Apply level one processor: cdsxmatch
+    logger.info("New processor: cdsxmatch")
+    colnames = [
+        df['objectId'],
+        df['candidate.ra'],
+        df['candidate.dec']
+    ]
+    df = df.withColumn(cdsxmatch.__name__, cdsxmatch(*colnames))
+
+    # Apply level one processor: rfscore
+    logger.info("New processor: rfscore")
+    # Required alert columns
+    what = [
+        'jd', 'fid', 'magpsf', 'sigmapsf',
+        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos']
+
+    # Use for creating temp name
+    prefix = 'c'
+    what_prefix = [prefix + i for i in what]
+
+    # Append temp columns with historical + current measurements
+    for colname in what:
+        df = concat_col(df, colname, prefix=prefix)
+
+    # Perform the fit + classification.
+    # Note we can omit the model_path argument, and in that case the
+    # default model `data/models/default-model.obj` will be used.
+    rfscore_args = [F.col(i) for i in what_prefix]
+    df = df.withColumn(rfscore.__name__, rfscore(*rfscore_args))
+
+    # Drop temp columns
+    df = df.drop(*what_prefix)
 
     # Partition the data hourly
     df_partitionedby = df\
-        .withColumn("year", date_format("timestamp", "yyyy"))\
-        .withColumn("month", date_format("timestamp", "MM"))\
-        .withColumn("day", date_format("timestamp", "dd"))\
-        .withColumn("hour", date_format("timestamp", "HH"))
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))\
+        .withColumn("hour", F.date_format("timestamp", "HH"))
 
     # Append new rows in the tmp science database
     countquery = df_partitionedby\
