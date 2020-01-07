@@ -5,7 +5,7 @@ Apache Avro uses a schema to structure the data (define data types and protocols
 
 ## ZTF alert schema timeline
 
-The ZTF alert schema evolves over time, to include the latest information. We provide a sample alert for each version (starting in 2019) in this folder: `template_schema_ZTF_<version>.avro`. One can find the latest description of fields on this [page](https://zwickytransientfacility.github.io/ztf-avro-alert/). 
+The ZTF alert schema evolves over time, to include the latest information. We provide a sample alert for each version (starting in 2019) in this folder: `template_schema_ZTF_<version>.avro`. One can find the latest description of fields on this [page](https://zwickytransientfacility.github.io/ztf-avro-alert/).
 
 | Period | Schema version | Change |
 |:--------|:-------|:-------|
@@ -19,7 +19,8 @@ The Fink distribution schema is the input ZTF alert schema plus additional field
 
 | Period | Schema version | Commit | Added values |
 |:--------|:-------|:-------|:-------|
-| Jul 2019 - now | version 0.1 | -- | `cdsxmatch` |
+| Jul 2019 - Jan 2020 | version 0.1 | -- | `cdsxmatch` |
+| Jan 2020 - now | version 0.2 | [commit](https://github.com/astrolabsoftware/fink-broker/commit/bc5a03ae42513841c8c071a49f17bae1978e0e94) | `rfscore` |
 
 ## Troubleshooting
 
