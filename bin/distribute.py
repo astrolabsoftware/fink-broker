@@ -34,7 +34,8 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 # User-defined topics
 userfilters = [
-    'fink_filters.filter_rrlyr.filter.rrlyr'
+    'fink_filters.filter_rrlyr.filter.rrlyr',
+    'fink_filters.filter_snlike.filter.snialike'
 ]
 
 def main():
@@ -93,7 +94,7 @@ def main():
             .option("kafka.security.protocol", "SASL_PLAINTEXT")\
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("topic", topicname)\
-            .option("checkpointLocation", args.checkpointpath_kafka)\
+            .option("checkpointLocation", args.checkpointpath_kafka + topicname)\
             .start()
 
     # Keep the Streaming running until something or someone ends it!
