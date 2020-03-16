@@ -85,9 +85,13 @@ fink start stream2raw --exit_after 30 --simulator -c $conf
 # Run the test suite on the modules
 for i in ${FINK_HOME}/fink_broker/*.py
 do
-  coverage run \
-    --source=${FINK_HOME} \
-    --rcfile ${FINK_HOME}/.coveragerc $i
+  if [[ ${i##*/} = 'monitoring' ]] ; then
+      echo "skip {i}"
+  else
+    coverage run \
+        --source=${FINK_HOME} \
+        --rcfile ${FINK_HOME}/.coveragerc $i
+  fi
 done
 
 # Integration tests
@@ -98,13 +102,13 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Check the stream is there
-  fink start checkstream --exit_after 30 --simulator -c $conf
+  #fink start checkstream --exit_after 30 --simulator -c $conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 50 --simulator -c $conf
+  fink start stream2raw --exit_after 60 --simulator -c $conf
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 50 -c $conf
+  fink start raw2science --exit_after 60 -c $conf
 
   # Start the distribution service
   fink start distribution_test --exit_after 30 -c $conf &
