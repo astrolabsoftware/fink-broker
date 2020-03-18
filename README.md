@@ -4,9 +4,11 @@
 
 # Latest News
 
-* Fink was featured at the Spark+AI Summit Europe 2019.
-* Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker! Stay tuned for more.
-* Fink has been selected to the Google Summer of Code 2019! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
+* 03/20: Fink is participating to the Google Summer of Code 2020 (CERN-HSF org). Stay tuned! 
+* 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
+* 10/19: Fink was featured at the Spark+AI Summit Europe 2019.
+* 06/19: Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker.
+* 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
 
 # Fink
 
