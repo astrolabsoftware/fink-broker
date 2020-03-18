@@ -4,9 +4,11 @@
 
 # Latest News
 
-* Fink was featured at the Spark+AI Summit Europe 2019.
-* Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker! Stay tuned for more.
-* Fink has been selected to the Google Summer of Code 2019! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
+* 03/20: Fink is participating to the Google Summer of Code 2020 (CERN-HSF org). Stay tuned! 
+* 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
+* 10/19: Fink was featured at the Spark+AI Summit Europe 2019.
+* 06/19: Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker.
+* 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
 
 # Fink
 
@@ -16,7 +18,7 @@ Fink is a broker infrastructure enabling a wide range of applications and servic
 
 Learning Fink is easy whether you are a developer or a scientist:
 
-* Learn about the [broker technology](https://fink-broker.readthedocs.io/en/latest/broker/introduction/), the [science](https://fink-broker.readthedocs.io/en/latest/science/introduction/) we do, and how to [receive](https://fink-broker.readthedocs.io/en/latest/distribution/introduction/) alerts.
+* Learn about the [broker technology](https://fink-broker.readthedocs.io/en/latest/broker/introduction/), the [science](https://fink-broker.readthedocs.io/en/latest/science/introduction/) we do, and how to [receive](https://fink-broker.readthedocs.io/en/latest/fink-client/) alerts.
 * Learn how to use the broker or how to contribute following the different [tutorials](https://fink-broker.readthedocs.io/en/latest/tutorials/introduction/).
 * Explore the different components:
     * [fink-alert-simulator](https://github.com/astrolabsoftware/fink-alert-simulator): Simulate alert streams for the Fink broker.
