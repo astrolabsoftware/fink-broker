@@ -22,6 +22,19 @@ The Fink distribution schema is the input ZTF alert schema plus additional field
 | Jul 2019 - Jan 2020 | version 0.1 | -- | `cdsxmatch` |
 | Jan 2020 - now | version 0.2 | [commit](https://github.com/astrolabsoftware/fink-broker/commit/bc5a03ae42513841c8c071a49f17bae1978e0e94) | `rfscore` |
 
+## Simulator vs live streams
+
+We run Fink in two modes: live (i.e. live data from ZTF), or simulation (replayed
+streams using the Fink alert simulator). While we would expect the schema to be the same,
+there are some small variations due to the way Spark handles input schema. The variations are as small as some missing comments in the schema - but nevertheless sufficient for the client to consider the data from live or simulation to need a different schema... Hence, for each schema version, we have two files:
+
+```
+schema_name_XpY.avsc --> suitable for data from simulator
+schema_name_XpY-live.avsc --> suitable for live data
+```
+
+We intend to find a solution to merge the two in the future.
+
 ## Troubleshooting
 
 Using a wrong schema to decode alerts will lead to failures. Typically broker users will see this message:
