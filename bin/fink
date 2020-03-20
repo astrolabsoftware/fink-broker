@@ -270,7 +270,7 @@ elif [[ $service == "distribution" ]]; then
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
-  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   --files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf \
   --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
