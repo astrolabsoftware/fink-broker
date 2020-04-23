@@ -77,12 +77,11 @@ def main():
     hbcatalog = construct_hbase_catalog_from_flatten_schema(
         df.schema, args.science_db_name, rowkey="rowkey", cf=cf)
 
-    print(args.save_science_db_catalog_only, type(args.save_science_db_catalog_only))
-    if args.save_science_db_catalog_only:
-        # Save the catalog on disk (local)
-        with open(args.science_db_catalog, 'w') as json_file:
-            json.dump(hbcatalog, json_file)
+    # Save the catalog on disk (local)
+    with open(args.science_db_catalog, 'w') as json_file:
+        json.dump(hbcatalog, json_file)
 
+    if args.save_science_db_catalog_only:
         # Print for visual inspection
         print(hbcatalog)
     else:

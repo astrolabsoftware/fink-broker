@@ -24,3 +24,6 @@ rm hbase-${HBASE_VERSION}-bin.tar.gz
 cp conf/hbase-site.xml hbase-${HBASE_VERSION}/conf/
 
 hbase-${HBASE_VERSION}/bin/start-hbase.sh
+
+# create a fake table for tests
+echo -e "create 'test_portal', 'i', 'd', 'b'" | hbase shell -n
