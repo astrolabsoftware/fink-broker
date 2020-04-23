@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import concat_ws, col
 from pyspark.mllib.common import _java2py
 
 import os
@@ -74,8 +75,147 @@ def flatten_ztf_dataframe(df: DataFrame) -> DataFrame:
 
     return df
 
+def load_science_portal_column_names():
+    """ Load names of the alert fields to use in the science portal.
+
+    These column names should match DataFrame column names. Careful when
+    you update it, as it will change the structure of the HBase table.
+
+    The column names are sorted by column family names:
+        - i: for column that identify the alert (original alert)
+        - d: for column that further describe the alert (Fink added value)
+        - b: for binary blob (FITS image)
+
+    Returns
+    --------
+    cols_*: list of string
+        List of DataFrame column names to use for the science portal
+
+    Examples
+    --------
+    >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
+    >>> print(len(cols_d))
+    2
+    """
+    # Column family i
+    cols_i = [
+        'objectId',
+        'schemavsn',
+        'publisher',
+        'candidate.*'
+    ]
+
+    # Column family d
+    cols_d = [
+        'cdsxmatch',
+        'rfscore'
+    ]
+
+    # Column family b
+    cols_b = [
+        col('cutoutScience.stampData').alias('cutoutScience'),
+        col('cutoutTemplate.stampData').alias('cutoutTemplate'),
+        col('cutoutDifference.stampData').alias('cutoutDifference')
+    ]
+
+    return cols_i, cols_d, cols_b
+
+def assign_column_family_names(df, cols_i, cols_d, cols_b):
+    """ Assign a column family name to each column qualifier.
+
+    There are currently 3 column families:
+        - i: for column that identify the alert (original alert)
+        - d: for column that further describe the alert (Fink added value)
+        - b: for binary blob (FITS image)
+
+    The split is done in `load_science_portal_column_names`.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Input DataFrame containing alert data from the raw science DB (parquet).
+        See `load_parquet_files` for more information.
+    cols_*: list of string
+        List of DataFrame column names to use for the science portal.
+
+    Returns
+    ---------
+    cf: dict
+        Dictionary with keys being column names (also called
+        column qualifiers), and the corresponding column family.
+
+    """
+    cf = {i: 'i' for i in df.select(cols_i).columns}
+    cf.update({i: 'd' for i in df.select(cols_d).columns})
+    cf.update({i: 'b' for i in df.select(cols_b).columns})
+
+    return cf
+
+def retrieve_row_key_cols():
+    """ Retrieve the list of columns to be used to create the row key.
+
+    The column names are defined here. Be careful in not changing it frequently
+    as you can replace (remove and add) columns for existing table,
+    but you cannot change keys, you must copy the table into new table
+    when changing keys design.
+
+    Returns
+    --------
+    row_key_cols: list of string or pyspark col
+    """
+    # build the row key: objectId_jd_ra_dec
+    row_key_cols = [
+        'objectId',
+        col('jd').astype('string'),
+        col('ra').astype('string'),
+        col('dec').astype('string')
+    ]
+    return row_key_cols
+
+def attach_rowkey(df, sep='_'):
+    """ Create and attach the row key to an existing DataFrame.
+
+    The column used to define the row key are declared in
+    `retrieve_row_key_cols`. the row key is made of a string concatenation
+    of those column data, with a separator: str(col1_col2_col3_etc)
+
+    Parameters
+    ----------
+    df: DataFrame
+        Input DataFrame containing alert data from the raw science DB (parquet),
+        and already flattened with a select (i.e. candidate.jd must be jd).
+
+    Returns
+    ----------
+    df: DataFrame
+        Input DataFrame with a new column with the row key. The type of the
+        row key value is string.
+
+    Examples
+    ----------
+    # Read alert from the raw database
+    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
+
+    # Select alert data
+    >>> df = df_raw.select("decoded.*")
+
+    >>> df = df.select(['objectId', 'candidate.*'])
+
+    >>> df_rk = attach_rowkey(df)
+
+    >>> 'objectId_jd_ra_dec' in df_rk.colums
+    True
+    """
+    row_key_cols = retrieve_row_key_cols()
+
+    df = df.withColumn(
+        'rowkey',
+        concat_ws(sep, *row_key_cols)
+    )
+    return df
+
 def construct_hbase_catalog_from_flatten_schema(
-        schema: dict, catalogname: str, rowkey: str) -> str:
+        schema: dict, catalogname: str, rowkey: str, cf: dict) -> str:
     """ Convert a flatten DataFrame schema into a HBase catalog.
     See flatten_ztf_dataframe for more information.
 
@@ -93,6 +233,10 @@ def construct_hbase_catalog_from_flatten_schema(
         Name of the HBase catalog.
     rowkey : str
         Name of the rowkey in the HBase catalog.
+    cf: dict
+        Dictionary with keys being column names (also called
+        column qualifiers), and the corresponding column family.
+        See `assign_column_family_names`.
 
     Returns
     ----------
@@ -145,8 +289,14 @@ def construct_hbase_catalog_from_flatten_schema(
             """.format(column["name"], column["name"], column["type"], sep)
         else:
             catalog += """
-            '{}': {{'cf': 'i', 'col': '{}', 'type': '{}'}}{}
-            """.format(column["name"], column["name"], column["type"], sep)
+            '{}': {{'cf': '{}', 'col': '{}', 'type': '{}'}}{}
+            """.format(
+                column["name"],
+                cf[column["name"]],
+                column["name"],
+                column["type"],
+                sep
+            )
     catalog += """
         }
     }
