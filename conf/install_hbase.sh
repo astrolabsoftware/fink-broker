@@ -26,5 +26,5 @@ cp conf/hbase-site.xml hbase-${HBASE_VERSION}/conf/
 hbase-${HBASE_VERSION}/bin/start-hbase.sh
 
 # create a fake table for tests
-source conf/fink.conf.hbase
-echo -e "create '$SCIENCE_DB_NAME', 'i', 'd', 'b'" | hbase-${HBASE_VERSION}/bin/hbase shell -n
+# source conf/fink.conf.hbase
+# echo -e "create '$SCIENCE_DB_NAME', 'i', 'd', 'b'" | hbase-${HBASE_VERSION}/bin/hbase shell -n
