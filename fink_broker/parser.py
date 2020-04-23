@@ -219,7 +219,14 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         '-night_to_archive', type=str, default='',
         help="""
         Path to the nightly data to archive in HBase.
-        [SLACK_CHANNELS]
+        [NIGHT_TO_ARCHIVE]
+        """)
+    parser.add_argument(
+        '--save_science_db_catalog_only', action='store_true',
+        help="""
+        If True, save only the catalog on disk and do not push
+        data on HBase. Default is False.
+        [SAVE_SCIENCE_DB_CATALOG_ONLY]
         """)
     args = parser.parse_args(None)
     return args
