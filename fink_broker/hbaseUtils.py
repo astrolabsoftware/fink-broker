@@ -21,60 +21,6 @@ import os
 from fink_broker.sparkUtils import get_spark_context
 from fink_broker.tester import spark_unit_tests
 
-def flatten_ztf_dataframe(df: DataFrame) -> DataFrame:
-    """Flatten a nested DataFrame containing ZTF alert data.
-
-    The input DataFrame is supposed to have the alert data (as was sent by
-    the alert system) plus a column containing the timestamp from Kafka.
-
-    Typically, from the raw database, you would do:
-
-    df_ok = df_raw.select("decoded.*", "timestamp")
-    df_ok.show(0)
-
-    +---------+---------+--------+------+---------+
-    |schemavsn|publisher|objectId|candid|candidate|
-    +---------+---------+--------+------+---------+
-
-    +--------------+-------------+--------------+----------------+---------+
-    |prv_candidates|cutoutScience|cutoutTemplate|cutoutDifference|timestamp|
-    +--------------+-------------+--------------+----------------+---------+
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input DataFrame containing ZTF alert data.
-
-    Returns
-    -------
-    DataFrame
-        Flatten input DataFrame.
-
-    Examples
-    --------
-    # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data and Kafka publication timestamp
-    >>> df_ok = df_raw.select("decoded.*", "timestamp")
-
-    # Flatten the DataFrame
-    >>> df_flat = flatten_ztf_dataframe(df_ok)
-    """
-    # Flatten the "struct" columns
-    struct_cols = [
-        "candidate", "cutoutScience", "cutoutTemplate", "cutoutDifference"]
-
-    for column in struct_cols:
-        df = flattenstruct(df, column)
-
-    # Explode the "array" columns
-    array_cols = ["prv_candidates"]
-    for column in array_cols:
-        df = explodearrayofstruct(df, column)
-
-    return df
-
 def load_science_portal_column_names():
     """ Load names of the alert fields to use in the science portal.
 
@@ -203,7 +149,7 @@ def attach_rowkey(df, sep='_'):
 
     >>> df_rk = attach_rowkey(df)
 
-    >>> 'objectId_jd_ra_dec' in df_rk.colums
+    >>> 'objectId_jd_ra_dec' in df_rk.columns
     True
     """
     row_key_cols = retrieve_row_key_cols()
@@ -217,7 +163,6 @@ def attach_rowkey(df, sep='_'):
 def construct_hbase_catalog_from_flatten_schema(
         schema: dict, catalogname: str, rowkey: str, cf: dict) -> str:
     """ Convert a flatten DataFrame schema into a HBase catalog.
-    See flatten_ztf_dataframe for more information.
 
     From
     {'name': 'schemavsn', 'type': 'string', 'nullable': True, 'metadata': {}}
@@ -251,11 +196,15 @@ def construct_hbase_catalog_from_flatten_schema(
     # Select alert data and Kafka publication timestamp
     >>> df_ok = df_raw.select("decoded.*", "timestamp")
 
+    >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
+
     # Flatten the DataFrame
-    >>> df_flat = flatten_ztf_dataframe(df_ok)
+    >>> df_flat = df_ok.select(cols_i + cols_d + cols_b)
+
+    >>> cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
 
     >>> catalog = construct_hbase_catalog_from_flatten_schema(
-    ...     df_flat.schema, "toto", "timestamp")
+    ...     df_flat.schema, "toto", "rowkey", cf)
     """
     schema_columns = schema.jsonValue()["fields"]
 
