@@ -215,6 +215,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         must be sent for e.g. based on cross-match type
         [SLACK_CHANNELS]
         """)
+    parser.add_argument(
+        '-night_to_archive', type=str, default='',
+        help="""
+        Path to the nightly data to archive in HBase.
+        [SLACK_CHANNELS]
+        """)
     args = parser.parse_args(None)
     return args
 

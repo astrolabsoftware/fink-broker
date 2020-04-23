@@ -269,8 +269,7 @@ def explodearrayofstruct(df: DataFrame, columnname: str) -> DataFrame:
     df_flatten = _java2py(sc, _df)
     return df_flatten
 
-def write_to_hbase_and_monitor(
-        df: DataFrame, epochid: int, hbcatalog: str):
+def write_to_hbase_and_monitor(df: DataFrame, epochid: int, hbcatalog: str):
     """Write data into HBase.
 
     The purpose of this function is to write data to HBase using
