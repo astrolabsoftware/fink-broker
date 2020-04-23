@@ -107,14 +107,14 @@ def retrieve_row_key_cols():
 
     Returns
     --------
-    row_key_cols: list of string or pyspark col
+    row_key_cols: list of string
     """
     # build the row key: objectId_jd_ra_dec
     row_key_cols = [
         'objectId',
-        col('jd').astype('string'),
-        col('ra').astype('string'),
-        col('dec').astype('string')
+        'jd',
+        'ra',
+        'dec'
     ]
     return row_key_cols
 
@@ -136,6 +136,8 @@ def attach_rowkey(df, sep='_'):
     df: DataFrame
         Input DataFrame with a new column with the row key. The type of the
         row key value is string.
+    row_key_name: string
+        Name of the rowkey, made of the columns that were used.
 
     Examples
     ----------
@@ -147,21 +149,24 @@ def attach_rowkey(df, sep='_'):
 
     >>> df = df.select(['objectId', 'candidate.*'])
 
-    >>> df_rk = attach_rowkey(df)
+    >>> df_rk, row_key_name = attach_rowkey(df)
 
     >>> 'objectId_jd_ra_dec' in df_rk.columns
     True
     """
     row_key_cols = retrieve_row_key_cols()
+    row_key_name = '_'.join(row_key_cols)
+
+    to_concat = [col(i).astype('string') for i in row_key_cols]
 
     df = df.withColumn(
-        'rowkey',
-        concat_ws(sep, *row_key_cols)
+        row_key_name,
+        concat_ws(sep, *to_concat)
     )
-    return df
+    return df, row_key_name
 
 def construct_hbase_catalog_from_flatten_schema(
-        schema: dict, catalogname: str, rowkey: str, cf: dict) -> str:
+        schema: dict, catalogname: str, rowkeyname: str, cf: dict) -> str:
     """ Convert a flatten DataFrame schema into a HBase catalog.
 
     From
@@ -176,7 +181,7 @@ def construct_hbase_catalog_from_flatten_schema(
         Schema of the flatten DataFrame.
     catalogname : str
         Name of the HBase catalog.
-    rowkey : str
+    rowkeyname : str
         Name of the rowkey in the HBase catalog.
     cf: dict
         Dictionary with keys being column names (also called
@@ -198,13 +203,16 @@ def construct_hbase_catalog_from_flatten_schema(
 
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
 
-    # Flatten the DataFrame
-    >>> df_flat = df_ok.select(cols_i + cols_d + cols_b)
+    >>> cf = assign_column_family_names(df_ok, cols_i, [], [])
 
-    >>> cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
+    # Flatten the DataFrame
+    >>> df_flat = df_ok.select(cols_i)
+
+    Attach the row key
+    >>> df_rk, row_key_name = attach_rowkey(df_flat)
 
     >>> catalog = construct_hbase_catalog_from_flatten_schema(
-    ...     df_flat.schema, "toto", "rowkey", cf)
+    ...     df_rk.schema, "mycatalogname", row_key_name, cf)
     """
     schema_columns = schema.jsonValue()["fields"]
 
@@ -216,7 +224,7 @@ def construct_hbase_catalog_from_flatten_schema(
         }},
         'rowkey': '{}',
         'columns': {{
-    """).format(catalogname, rowkey)
+    """).format(catalogname, rowkeyname)
 
     for column in schema_columns:
         # Last entry should not have comma (malformed json)
@@ -232,7 +240,7 @@ def construct_hbase_catalog_from_flatten_schema(
         if type(column["type"]) == 'timestamp':
             column["type"] = "string" # column["type"]["type"]
 
-        if column["name"] == rowkey:
+        if column["name"] == rowkeyname:
             catalog += """
             '{}': {{'cf': 'rowkey', 'col': '{}', 'type': '{}'}}{}
             """.format(column["name"], column["name"], column["type"], sep)
@@ -367,30 +375,6 @@ def explodearrayofstruct(df: DataFrame, columnname: str) -> DataFrame:
     _df = obj.explodeArrayOfStruct(df._jdf, columnname)
     df_flatten = _java2py(sc, _df)
     return df_flatten
-
-def write_to_hbase_and_monitor(df: DataFrame, epochid: int, hbcatalog: str):
-    """Write data into HBase.
-
-    The purpose of this function is to write data to HBase using
-    Structured Streaming tools such as foreachBatch.
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input micro-batch DataFrame.
-    epochid : int
-        ID of the micro-batch
-    hbcatalog : str
-        HBase catalog describing the data
-
-    """
-    # If the table does not exist, one needs to specify
-    # the number of zones to use (must be greater than 3).
-    # TODO: remove this harcoded parameter.
-    df.write\
-        .options(catalog=hbcatalog, newtable=5)\
-        .format("org.apache.spark.sql.execution.datasources.hbase")\
-        .save()
 
 
 if __name__ == "__main__":

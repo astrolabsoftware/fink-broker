@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: checkstream, stream2raw, raw2science, distribution"
+message_service="Available services are: checkstream, stream2raw, raw2science, distribution, science_archival, check_science_portal"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n

@@ -71,11 +71,11 @@ def main():
     df = df.select(cols_i + cols_d + cols_b)
 
     # Create and attach the rowkey
-    df = attach_rowkey(df)
+    df, row_key_name = attach_rowkey(df)
 
     # construct the hbase catalog
     hbcatalog = construct_hbase_catalog_from_flatten_schema(
-        df.schema, args.science_db_name, rowkey="rowkey", cf=cf)
+        df.schema, args.science_db_name, rowkeyname=row_key_name, cf=cf)
 
     # Save the catalog on disk (local)
     with open(args.science_db_catalog, 'w') as json_file:
