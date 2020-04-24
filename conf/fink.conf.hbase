@@ -1,0 +1,30 @@
+# Copyright 2020 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+######################################
+# Configurations for pushing data to the Science Portal
+
+# The minimum level of log for FINK: OFF, DEBUG, INFO, WARN, ERROR, CRITICAL
+# Note that for Spark, the level is set to WARN (see log4j.properties)
+LOG_LEVEL=INFO
+
+# Path to the night to archive
+NIGHT_TO_ARCHIVE='archive/alerts_store_tmp'
+
+# The name of the HBase table (must exist)
+SCIENCE_DB_NAME="test_portal"
+
+# For debug - careful false/true must be small letters
+SAVE_SCIENCE_DB_CATALOG_ONLY=false
+SCIENCE_DB_CATALOG=${FINK_HOME}/catalog_hbase.json

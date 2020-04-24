@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: checkstream, stream2raw, raw2science, distribution"
+message_service="Available services are: checkstream, stream2raw, raw2science, distribution, science_archival, check_science_portal"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
@@ -282,6 +282,35 @@ elif [[ $service == "distribution" ]]; then
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "science_archival" ]]; then
+  # Read configuration for hbase
+  source ${FINK_HOME}/conf/fink.conf.hbase
+  # Check if the use wants to just drop the catalog on disk
+  if [[ "$SAVE_SCIENCE_DB_CATALOG_ONLY" = true ]] ; then
+    SAVE_SCIENCE_DB_CATALOG_ONLY="--save_science_db_catalog_only"
+  else
+    SAVE_SCIENCE_DB_CATALOG_ONLY=""
+  fi
+
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/science_archival.py ${HELP_ON_SERVICE} \
+  -science_db_name ${SCIENCE_DB_NAME} \
+  -science_db_catalog ${SCIENCE_DB_CATALOG} \
+  ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
+  -night_to_archive ${NIGHT_TO_ARCHIVE} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "check_science_portal" ]]; then
+  # Read configuration for hbase
+  source ${FINK_HOME}/conf/fink.conf.hbase
+
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/access_science_db.py ${HELP_ON_SERVICE} \
+  -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
   # Read configuration for redistribution

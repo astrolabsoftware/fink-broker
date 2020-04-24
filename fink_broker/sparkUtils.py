@@ -309,6 +309,38 @@ def connect_to_raw_database(
 
     return df
 
+def load_parquet_files(path: str) -> DataFrame:
+    """ Initialise SparkSession, and load parquet files with Spark
+
+    Unlike connect_to_raw_database, you get a standard DataFrame, and
+    not a Streaming DataFrame.
+
+    Parameters
+    ----------
+    path: str
+        The path to the data
+
+    Returns
+    ----------
+    df: DataFrame
+        Spark SQL DataFrame
+
+    Examples
+    ----------
+    >>> df = load_parquet_files("archive/alerts_store")
+    """
+    # Grab the running Spark Session
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    df = spark \
+        .read \
+        .format("parquet") \
+        .load(path)
+
+    return df
+
 def get_schemas_from_avro(
         avro_path: str) -> (StructType, dict, str):
     """ Build schemas from an avro file (DataFrame & JSON compatibility)
