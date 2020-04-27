@@ -301,6 +301,7 @@ def construct_schema_row(df, rowkeyname, version):
     +--------+------+------+--------------+
     |  string|double|  long|     schema_v0|
     +--------+------+------+--------------+
+    <BLANKLINE>
     """
     # Grab the running Spark Session,
     # otherwise create it.
