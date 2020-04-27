@@ -4,6 +4,7 @@
 
 # Latest News
 
+* 04/20: New broker release [0.5](https://github.com/astrolabsoftware/fink-broker/pull/354). Plenty of new features!
 * 03/20: Fink is participating to the Google Summer of Code 2020 (CERN-HSF org). Stay tuned! 
 * 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
 * 10/19: Fink was featured at the Spark+AI Summit Europe 2019.
