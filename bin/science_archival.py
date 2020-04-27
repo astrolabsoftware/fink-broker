@@ -109,7 +109,8 @@ def main():
             cf=cf)
 
         # Save the catalog on disk (local)
-        with open(args.science_db_catalog + '_schema_row', 'w') as json_file:
+        catname = args.science_db_catalog.replace('.json', '_schema_row.json')
+        with open(catname, 'w') as json_file:
             json.dump(hbcatalog_schema, json_file)
 
         # Push the data using the shc connector
