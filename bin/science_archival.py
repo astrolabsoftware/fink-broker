@@ -34,6 +34,7 @@ from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
+from fink_broker.hbaseUtils import construct_schema_row
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -85,11 +86,36 @@ def main():
         # Print for visual inspection
         print(hbcatalog)
     else:
-        # TODO: we could check the hbcatalog is the same as the one
-        # specified by the user.
         # Push the data using the shc connector
         df.write\
             .options(catalog=hbcatalog, newtable=5)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .save()
+
+        # Construct the schema row - inplace replacement
+        schema_row_key_name = 'schema_version'
+        df = df.withColumnRenamed(row_key_name, schema_row_key_name)
+
+        df_schema = construct_schema_row(
+            df,
+            rowkeyname=schema_row_key_name,
+            version='schema_v0')
+
+        # construct the hbase catalog for the schema
+        hbcatalog_schema = construct_hbase_catalog_from_flatten_schema(
+            df_schema.schema,
+            args.science_db_name,
+            rowkeyname=schema_row_key_name,
+            cf=cf)
+
+        # Save the catalog on disk (local)
+        catname = args.science_db_catalog.replace('.json', '_schema_row.json')
+        with open(catname, 'w') as json_file:
+            json.dump(hbcatalog_schema, json_file)
+
+        # Push the data using the shc connector
+        df_schema.write\
+            .options(catalog=hbcatalog_schema, newtable=5)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 

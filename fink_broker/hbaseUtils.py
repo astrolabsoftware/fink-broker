@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import concat_ws, col
+from pyspark.sql.functions import concat_ws, col, lit
 from pyspark.mllib.common import _java2py
+from pyspark.sql import SparkSession
+
+import numpy as np
 
 import os
 
@@ -260,6 +263,62 @@ def construct_hbase_catalog_from_flatten_schema(
     """
 
     return catalog.replace("\'", "\"")
+
+def construct_schema_row(df, rowkeyname, version):
+    """ Construct a DataFrame whose columns are those of the
+    original ones, and one row containing schema types
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Input Spark DataFrame. Need to be flattened.
+    rowkeyname: string
+        Name of the HBase row key (column name)
+    version: string
+        Version of the HBase table (row value for the rowkey column).
+
+    Returns
+    ---------
+    df_schema: Spark DataFrame
+        Spark DataFrame with one row (the types of its column). Only the row
+        key is the version of the HBase table.
+
+    Examples
+    --------
+    # Read alert from the raw database
+    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
+
+    # Select alert data and Kafka publication timestamp
+    >>> df = df_raw.select("decoded.*", "timestamp")
+
+    # inplace replacement
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid'])
+    >>> df = df.withColumn('schema_version', lit(''))
+    >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
+    >>> df.show()
+    +--------+------+------+--------------+
+    |objectId|    jd|candid|schema_version|
+    +--------+------+------+--------------+
+    |  string|double|  long|     schema_v0|
+    +--------+------+------+--------------+
+    <BLANKLINE>
+    """
+    # Grab the running Spark Session,
+    # otherwise create it.
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    # Original df columns, but values are types.
+    data = [(c.jsonValue()['type']) for c in df.schema]
+
+    index = np.where(np.array(df.columns) == rowkeyname)[0][0]
+    data[index] = version
+
+    # Create the DataFrame
+    df_schema = spark.createDataFrame([data], df.columns)
+
+    return df_schema
 
 def flattenstruct(df: DataFrame, columnname: str) -> DataFrame:
     """ From a nested column (struct of primitives),
