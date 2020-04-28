@@ -110,7 +110,7 @@ def main():
         'cfid', 'cmagpsf', 'csigmapsf',
         'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
 
-    mulens_args = [col(i) for i in what_prefix_mulens]
+    mulens_args = [F.col(i) for i in what_prefix_mulens]
     df = df.withColumn('mulens', mulens_udf(*mulens_args))
 
     # Drop temp columns
