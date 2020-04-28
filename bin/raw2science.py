@@ -37,8 +37,12 @@ from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science.xmatch.processor import cdsxmatch
+
 from fink_science.random_forest_snia.processor import rfscore
 from fink_science.random_forest_snia.classifier import concat_col
+
+from fink_science.microlensing.processor import mulens
+from fink_science.microlensing.classifier import load_mulens_schema_twobands
 
 qualitycuts = 'fink_broker.filters.qualitycuts'
 
@@ -91,6 +95,23 @@ def main():
     # default model `data/models/default-model.obj` will be used.
     rfscore_args = [F.col(i) for i in what_prefix]
     df = df.withColumn(rfscore.__name__, rfscore(*rfscore_args))
+
+    # Apply level one processor: rfscore
+    logger.info("New processor: microlensing")
+
+    # Retrieve schema
+    schema = load_mulens_schema_twobands()
+
+    # Create standard UDF
+    mulens_udf = F.udf(mulens, schema)
+
+    # Required alert columns - already computed for SN
+    what_prefix_mulens = [
+        'cfid', 'cmagpsf', 'csigmapsf',
+        'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
+
+    mulens_args = [col(i) for i in what_prefix_mulens]
+    df = df.withColumn('mulens', mulens_udf(*mulens_args))
 
     # Drop temp columns
     df = df.drop(*what_prefix)
