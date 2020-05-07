@@ -4,8 +4,8 @@
 
 # Latest News
 
+* 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year.
 * 04/20: New broker release [0.5](https://github.com/astrolabsoftware/fink-broker/pull/354). Plenty of new features!
-* 03/20: Fink is participating to the Google Summer of Code 2020 (CERN-HSF org). Stay tuned! 
 * 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
 * 10/19: Fink was featured at the Spark+AI Summit Europe 2019.
 * 06/19: Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker.
