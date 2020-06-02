@@ -116,8 +116,15 @@ def main():
     # Drop temp columns
     df = df.drop(*what_prefix)
 
+    # re-create partitioning columns.
+    # Partitioned data doesn't preserve type information (cast as int...)
+    df_partitionedby = df\
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))\
+
     # Append new rows in the tmp science database
-    countquery = df\
+    countquery = df_partitionedby\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
