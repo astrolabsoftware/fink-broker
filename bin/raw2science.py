@@ -116,21 +116,14 @@ def main():
     # Drop temp columns
     df = df.drop(*what_prefix)
 
-    # Partition the data hourly
-    df_partitionedby = df\
-        .withColumn("year", F.date_format("timestamp", "yyyy"))\
-        .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))\
-        .withColumn("hour", F.date_format("timestamp", "HH"))
-
     # Append new rows in the tmp science database
-    countquery = df_partitionedby\
+    countquery = df\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
         .option("checkpointLocation", args.checkpointpath_sci_tmp) \
         .option("path", args.scitmpdatapath)\
-        .partitionBy("year", "month", "day", "hour") \
+        .partitionBy("year", "month", "day") \
         .start()
 
     # Keep the Streaming running until something or someone ends it!
