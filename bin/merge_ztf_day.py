@@ -55,7 +55,7 @@ def main():
     input_raw = '{}/year={}/month={}/day={}'.format(
         args.rawdatapath, year, month, day)
     input_science = '{}/year={}/month={}/day={}'.format(
-        args.scitmpdatapath, year, month[1:], day[1:])
+        args.scitmpdatapath, year, month, day)
 
     # they do not need to exist
     output_raw = 'ztf_{}/raw'.format(year)

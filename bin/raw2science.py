@@ -121,7 +121,7 @@ def main():
     df_partitionedby = df\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))
 
     # Append new rows in the tmp science database
     countquery = df_partitionedby\
