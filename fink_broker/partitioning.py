@@ -14,6 +14,7 @@
 # limitations under the License.
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 from pyspark.sql.types import TimestampType
+from pyspark.sql import SparkSession
 
 import numpy as np
 import pandas as pd
@@ -39,7 +40,7 @@ def jd_to_datetime(jd: float):
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("archive/raw")
-    >>> df.withColumn('datetime', jd_to_datetime(df['candidate.jd']))
+    >>> df = df.withColumn('datetime', jd_to_datetime(df['candidate.jd']))
     """
     return pd.Series(Time(jd.values, format='jd').to_datetime())
 
