@@ -52,7 +52,12 @@ def main():
     inspect_application(logger)
 
     # Connect to the TMP science database
-    df = load_parquet_files(args.night_to_archive)
+    path = 'ztf_{}/science/month={}/day={}'.format(
+        args.night[:4],
+        args.night[4:6],
+        args.night[6:8]
+    )
+    df = load_parquet_files(path)
 
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day').drop('hour')
