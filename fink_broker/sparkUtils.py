@@ -283,7 +283,7 @@ def connect_to_raw_database(
     Examples
     ----------
     >>> dfstream_tmp = connect_to_raw_database(
-    ...   "archive/alerts_store", "archive/alerts_store/*", True)
+    ...   "archive/raw", "archive/raw/*", True)
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -327,7 +327,7 @@ def load_parquet_files(path: str) -> DataFrame:
 
     Examples
     ----------
-    >>> df = load_parquet_files("archive/alerts_store")
+    >>> df = load_parquet_files("archive/raw")
     """
     # Grab the running Spark Session
     spark = SparkSession \

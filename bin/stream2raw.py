@@ -37,6 +37,7 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.partitioning import jd_to_datetime
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -62,7 +63,6 @@ def main():
     # Decode the Avro data, and keep only (timestamp, data)
     df_decoded = df.select(
         [
-            "timestamp",
             "topic",
             from_avro(df["value"], alert_schema_json).alias("decoded")
         ]
@@ -75,10 +75,10 @@ def main():
 
     # Partition the data hourly
     df_partitionedby = df_decoded\
+        .withColumn("timestamp", jd_to_datetime(df_decoded['candidate.jd']))\
         .withColumn("year", date_format("timestamp", "yyyy"))\
         .withColumn("month", date_format("timestamp", "MM"))\
-        .withColumn("day", date_format("timestamp", "dd"))\
-        .withColumn("hour", date_format("timestamp", "HH"))
+        .withColumn("day", date_format("timestamp", "dd"))
 
     # Append new rows every `tinterval` seconds
     countquery_tmp = df_partitionedby\
@@ -87,7 +87,7 @@ def main():
         .format("parquet") \
         .option("checkpointLocation", args.checkpointpath_raw) \
         .option("path", args.rawdatapath)\
-        .partitionBy("topic", "year", "month", "day", "hour")
+        .partitionBy("year", "month", "day")
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
