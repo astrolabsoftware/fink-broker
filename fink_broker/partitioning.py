@@ -73,7 +73,6 @@ def numPart(df, partition_size=128.):
     # otherwise create it.
     spark = SparkSession \
         .builder \
-        .appName(name) \
         .getOrCreate()
 
     b = spark._jsparkSession\
