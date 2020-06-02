@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 from astropy.time import Time
 
+from fink_broker.tester import spark_unit_tests
+
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
 def jd_to_datetime(jd: float):
     """ Convert Julian date into datetime (timestamp)
