@@ -292,9 +292,11 @@ elif [[ $service == "merge_and_clean" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/merge_ztf_day.py ${HELP_ON_SERVICE} \
+  -datapath ${DATA_PREFIX} \
   -rawdatapath ${FINK_ALERT_PATH} \
   -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
   -night ${NIGHT} \
+  -fs ${FS_KIND} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "science_archival" ]]; then
   # Read configuration for hbase

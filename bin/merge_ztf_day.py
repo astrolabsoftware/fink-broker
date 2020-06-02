@@ -21,6 +21,7 @@ from pyspark.sql import functions as F
 import argparse
 import time
 import json
+import subprocess
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
@@ -89,6 +90,14 @@ def main():
         .mode("append") \
         .partitionBy("month", "day")\
         .parquet(output_science)
+
+    # Remove temporary alert folder - beware you'll never get it back!
+    if args.fs == 'hdfs':
+        subprocess.run(["hdfs", "dfs", '-rm', '-rf', args.datapath])
+    elif args.fs == 'local':
+        subprocess.run(['rm', '-rf', args.datapath])
+    else:
+        print('Filesystem not understood. FS_KIND must be hdfs or local.')
 
 
 if __name__ == "__main__":

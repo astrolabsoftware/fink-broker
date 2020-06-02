@@ -222,6 +222,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [NIGHT]
         """)
     parser.add_argument(
+        '-fs', type=str, default='',
+        help="""
+        Filesystem: local or hdfs.
+        [FS_KIND]
+        """)
+    parser.add_argument(
+        '-datapath', type=str, default='',
+        help="""
+        Directory on disk for saving temporary alert data.
+        [DATA_PREFIX]
+        """)
+    parser.add_argument(
         '--save_science_db_catalog_only', action='store_true',
         help="""
         If True, save only the catalog on disk and do not push
