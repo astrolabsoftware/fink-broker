@@ -205,7 +205,7 @@ def get_spark_context() -> SparkContext:
 def connect_to_kafka(
         servers: str, topic: str,
         startingoffsets: str = "latest",
-        failondataloss: bool = False) -> DataFrame:
+        failondataloss: bool = False, kerberos: bool = False) -> DataFrame:
     """ Initialise SparkSession, and set default Kafka parameters
 
     Parameters
@@ -223,6 +223,8 @@ def connect_to_kafka(
         If True, Spark streaming job will fail if it is asking for data offsets
         that do not exist anymore in Kafka (because they have been deleted after
         exceeding a retention period for example). Default is False.
+    kerberos: bool, optional
+        If True, add options for a kerberized Kafka cluster. Default is False.
 
     Returns
     ----------
@@ -248,13 +250,23 @@ def connect_to_kafka(
         .format("kafka") \
         .option("kafka.bootstrap.servers", servers)
 
+    if kerberos:
+        df = df.option(
+            "kafka.sasl.kerberos.kinit.cmd",
+            'kinit -t "%{sasl.kerberos.keytab}" -k %{sasl.kerberos.principal}'
+        )
+        df = df.option("kafka.sasl.kerberos.service.name", "kafka")
+
     # Naive check for secure connection - this can be improved...
     to_secure = sum(
         ["-Djava.security.auth.login.config=" in i[1] for i in conf])
     if to_secure > 0:
-        # Here again we can improve this...
-        df = df.option("kafka.sasl.mechanism", "PLAIN") \
-            .option("kafka.security.protocol", 'SASL_SSL')
+        if kerberos:
+            df = df.option("kafka.security.protocol", "SASL_PLAINTEXT")\
+                .option("kafka.sasl.mechanism", "GSSAPI")
+        else:
+            df = df.option("kafka.sasl.mechanism", "PLAIN") \
+                .option("kafka.security.protocol", 'SASL_SSL')
 
     df = df.option("subscribe", topic) \
         .option("startingOffsets", startingoffsets) \
