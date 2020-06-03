@@ -56,8 +56,11 @@ def main():
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
-        servers=args.servers, topic=args.topic,
-        startingoffsets=args.startingoffsets_stream, failondataloss=False)
+        servers=args.servers,
+        topic=args.topic,
+        startingoffsets=args.startingoffsets_stream,
+        failondataloss=False,
+        'public2.alerts.ztf' in args.servers)
 
     # Get Schema of alerts
     alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
