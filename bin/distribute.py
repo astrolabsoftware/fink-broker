@@ -56,7 +56,7 @@ def main():
         args.scitmpdatapath, args.scitmpdatapath + "/*", latestfirst=False)
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day').drop('hour')
+    df = df.drop('year').drop('month').drop('day')
 
     # Switch publisher
     df = df.withColumn('publisher-tmp', lit('Fink')) \

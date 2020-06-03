@@ -116,6 +116,9 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Connect to distribution service
   fink start distribution --exit_after 30 -c $conf
 
+  # merge and clean data
+  fink start merge_and_clean -c conf/fink.conf.travis --night "20190903"
+
   fink start science_archival -c $conf
 
   fink start check_science_portal -c $conf

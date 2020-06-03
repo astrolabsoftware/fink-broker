@@ -139,7 +139,7 @@ def write_to_csv(
         .to_csv(fn, index=False)
     batchdf.unpersist()
 
-def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
+def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession:
     """ Initialise SparkSession, the level of log for Spark and
     some configuration parameters
 
@@ -149,7 +149,8 @@ def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
         Name for the Spark Application.
     shuffle_partitions: int, optional
         Number of partition to use when shuffling data.
-        Typically better to keep the size of shuffles small. Default is 2.
+        Typically better to keep the size of shuffles small.
+        Default is None.
 
     Returns
     ----------
@@ -172,7 +173,8 @@ def init_sparksession(name: str, shuffle_partitions: int = 2) -> SparkSession:
         .getOrCreate()
 
     # keep the size of shuffles small
-    spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
+    if shuffle_partitions is not None:
+        spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
 
     # Set spark log level to WARN
     spark.sparkContext.setLogLevel("WARN")
@@ -283,7 +285,7 @@ def connect_to_raw_database(
     Examples
     ----------
     >>> dfstream_tmp = connect_to_raw_database(
-    ...   "archive/alerts_store", "archive/alerts_store/*", True)
+    ...   "archive/raw", "archive/raw/*", True)
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -327,7 +329,7 @@ def load_parquet_files(path: str) -> DataFrame:
 
     Examples
     ----------
-    >>> df = load_parquet_files("archive/alerts_store")
+    >>> df = load_parquet_files("archive/raw")
     """
     # Grab the running Spark Session
     spark = SparkSession \

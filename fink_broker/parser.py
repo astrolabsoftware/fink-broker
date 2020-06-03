@@ -216,10 +216,22 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [SLACK_CHANNELS]
         """)
     parser.add_argument(
-        '-night_to_archive', type=str, default='',
+        '-night', type=str, default='',
         help="""
-        Path to the nightly data to archive in HBase.
-        [NIGHT_TO_ARCHIVE]
+        YYYYMMDD night
+        [NIGHT]
+        """)
+    parser.add_argument(
+        '-fs', type=str, default='',
+        help="""
+        Filesystem: local or hdfs.
+        [FS_KIND]
+        """)
+    parser.add_argument(
+        '-datapath', type=str, default='',
+        help="""
+        Directory on disk for saving temporary alert data.
+        [DATA_PREFIX]
         """)
     parser.add_argument(
         '--save_science_db_catalog_only', action='store_true',

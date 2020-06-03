@@ -116,12 +116,12 @@ def main():
     # Drop temp columns
     df = df.drop(*what_prefix)
 
-    # Partition the data hourly
+    # re-create partitioning columns.
+    # Partitioned data doesn't preserve type information (cast as int...)
     df_partitionedby = df\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))\
-        .withColumn("hour", F.date_format("timestamp", "HH"))
+        .withColumn("day", F.date_format("timestamp", "dd"))
 
     # Append new rows in the tmp science database
     countquery = df_partitionedby\
@@ -130,7 +130,7 @@ def main():
         .format("parquet") \
         .option("checkpointLocation", args.checkpointpath_sci_tmp) \
         .option("path", args.scitmpdatapath)\
-        .partitionBy("year", "month", "day", "hour") \
+        .partitionBy("year", "month", "day") \
         .start()
 
     # Keep the Streaming running until something or someone ends it!
