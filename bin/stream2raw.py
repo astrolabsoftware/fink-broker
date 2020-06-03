@@ -25,11 +25,13 @@ in an HDFS-compatible fault-tolerant file system.
 See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
-from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf
 from pyspark.sql.functions import date_format
 
+import fastavro
 import argparse
 import time
+import io
 
 from fink_broker.parser import getargs
 
@@ -58,15 +60,32 @@ def main():
         startingoffsets=args.startingoffsets_stream, failondataloss=False)
 
     # Get Schema of alerts
-    _, _, alert_schema_json = get_schemas_from_avro(args.schema)
+    alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    df_decoded = df.select(
-        [
-            "topic",
-            from_avro(df["value"], alert_schema_json).alias("decoded")
-        ]
-    )
+    if '134.158.' in args.server or 'localhost' in args.server:
+        # using custom from_avro (not available for Spark 2.4.x)
+        # it will be available from Spark 3.0 though
+        df_decoded = df.select(
+            [
+                "topic",
+                from_avro(df["value"], alert_schema_json).alias("decoded")
+            ]
+        )
+    elif 'public2.alerts.ztf' in args.server:
+        # Decode on-the-fly using fastavro
+        f = udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
+        df_decoded = df.select(
+            [
+                "topic",
+                f(df['value']).alias("decoded")
+            ]
+        )
+    else:
+        msg = "Data source {} is not known - a decoder must be set".format(
+            args.server)
+        logger.warn(msg)
+        spark.stop()
 
     # Flatten the data columns to match the incoming alert data schema
     cnames = df_decoded.columns

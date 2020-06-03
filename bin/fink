@@ -244,7 +244,7 @@ elif [[ $service == "checkstream" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/checkstream.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} \
     -topic ${KAFKA_TOPIC} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-    -finkwebpath ${FINK_UI_PATH} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "stream2raw" ]]; then
 
   # Store the stream of alerts
@@ -254,7 +254,7 @@ elif [[ $service == "stream2raw" ]]; then
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
     -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
-    -finkwebpath ${FINK_UI_PATH} -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
   # Store the stream of alerts
