@@ -63,7 +63,7 @@ def main():
     alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    if '134.158.' in args.server or 'localhost' in args.server:
+    if '134.158.' in args.servers or 'localhost' in args.servers:
         # using custom from_avro (not available for Spark 2.4.x)
         # it will be available from Spark 3.0 though
         df_decoded = df.select(
@@ -72,7 +72,7 @@ def main():
                 from_avro(df["value"], alert_schema_json).alias("decoded")
             ]
         )
-    elif 'public2.alerts.ztf' in args.server:
+    elif 'public2.alerts.ztf' in args.servers:
         # Decode on-the-fly using fastavro
         f = udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
         df_decoded = df.select(
@@ -83,7 +83,7 @@ def main():
         )
     else:
         msg = "Data source {} is not known - a decoder must be set".format(
-            args.server)
+            args.servers)
         logger.warn(msg)
         spark.stop()
 
