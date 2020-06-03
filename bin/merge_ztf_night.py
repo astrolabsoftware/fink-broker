@@ -33,7 +33,7 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="mergeAndClean")
+    spark = init_sparksession(name="mergeAndClean_{}".format(args.night))
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
