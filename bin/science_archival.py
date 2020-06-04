@@ -52,7 +52,7 @@ def main():
     inspect_application(logger)
 
     # Connect to the TMP science database
-    path = 'ztf_{}/science/month={}/day={}'.format(
+    path = 'ztf_alerts/science/year={}/month={}/day={}'.format(
         args.night[:4],
         args.night[4:6],
         args.night[6:8]

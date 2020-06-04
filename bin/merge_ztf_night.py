@@ -58,9 +58,9 @@ def main():
     input_science = '{}/year={}/month={}/day={}'.format(
         args.scitmpdatapath, year, month, day)
 
-    # they do not need to exist
-    output_raw = 'ztf_{}/raw'.format(year)
-    output_science = 'ztf_{}/science'.format(year)
+    # basepath
+    output_raw = 'ztf_alerts/raw'
+    output_science = 'ztf_alerts/science'
 
     print('Raw data processing....')
     df_raw = spark.read.format('parquet').load(input_raw)
@@ -68,12 +68,13 @@ def main():
     print('Num partitions after : ', numPart(df_raw))
 
     df_raw.withColumn('ts_jd', jd_to_datetime(df_raw['candidate.jd']))\
+        .withColumn("year", F.date_format("ts_jd", "yyyy"))\
         .withColumn("month", F.date_format("ts_jd", "MM"))\
         .withColumn("day", F.date_format("ts_jd", "dd"))\
         .coalesce(numPart(df_raw))\
         .write\
         .mode("append") \
-        .partitionBy("month", "day")\
+        .partitionBy("year", "month", "day")\
         .parquet(output_raw)
 
     print('Science data processing....')
@@ -83,12 +84,13 @@ def main():
     print('Num partitions after : ', numPart(df_science))
 
     df_science.withColumn('ts_jd', jd_to_datetime(df_science['candidate.jd']))\
+        .withColumn("year", F.date_format("ts_jd", "yyyy"))\
         .withColumn("month", F.date_format("ts_jd", "MM"))\
         .withColumn("day", F.date_format("ts_jd", "dd"))\
         .coalesce(numPart(df_science))\
         .write\
         .mode("append") \
-        .partitionBy("month", "day")\
+        .partitionBy("year", "month", "day")\
         .parquet(output_science)
 
     # Remove temporary alert folder - beware you'll never get it back!
