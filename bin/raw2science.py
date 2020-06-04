@@ -38,8 +38,10 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science.xmatch.processor import cdsxmatch
 
-from fink_science.random_forest_snia.processor import rfscore
-from fink_science.random_forest_snia.classifier import concat_col
+from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+from fink_science.utilities import concat_col
+
+from fink_science.snn.processor import snn_ia
 
 from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
@@ -77,10 +79,9 @@ def main():
 
     # Apply level one processor: rfscore
     logger.info("New processor: rfscore")
+
     # Required alert columns
-    what = [
-        'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos']
+    what = ['jd', 'fid', 'magpsf', 'sigmapsf']
 
     # Use for creating temp name
     prefix = 'c'
@@ -94,7 +95,19 @@ def main():
     # Note we can omit the model_path argument, and in that case the
     # default model `data/models/default-model.obj` will be used.
     rfscore_args = [F.col(i) for i in what_prefix]
-    df = df.withColumn(rfscore.__name__, rfscore(*rfscore_args))
+    df = df.withColumn(
+        rfscore_sigmoid_full.__name__,
+        rfscore_sigmoid_full(*rfscore_args)
+    )
+
+    # Apply level one processor: rfscore
+    logger.info("New processor: supernnova")
+
+    snn_args = []
+    snn_args.extend(['candid'])
+    snn_args.extend(what_prefix)
+
+    df = df.withColumn('snnscore', snn_ia(*snn_args))
 
     # Apply level one processor: rfscore
     logger.info("New processor: microlensing")
