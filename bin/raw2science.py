@@ -87,7 +87,7 @@ def main():
         df['candidate.ra'],
         df['candidate.dec']
     ]
-    df = df.withColumn(cdsxmatch.__name__, cdsxmatch(*colnames))
+    df = df.withColumn('cdsxmatch', cdsxmatch(*colnames))
 
     # Apply level one processor: rfscore
     logger.info("New processor: rfscore")
@@ -97,7 +97,7 @@ def main():
     # default model `data/models/default-model.obj` will be used.
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     df = df.withColumn(
-        rfscore_sigmoid_full.__name__,
+        'rfscore',
         rfscore_sigmoid_full(*rfscore_args)
     )
 
