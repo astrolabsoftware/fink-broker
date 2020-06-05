@@ -74,13 +74,11 @@ def main():
         'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
     ]
 
-    # Use for creating temp name
-    prefix = 'c'
-    expanded = [prefix + i for i in to_expand]
-
     # Append temp columns with historical + current measurements
-    for colname in expanded:
+    prefix = 'c'
+    for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
+    expanded = [prefix + i for i in to_expand]
 
     # Apply level one processor: cdsxmatch
     logger.info("New processor: cdsxmatch")
