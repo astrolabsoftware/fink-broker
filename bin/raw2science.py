@@ -38,8 +38,10 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science.xmatch.processor import cdsxmatch
 
-from fink_science.random_forest_snia.processor import rfscore
-from fink_science.random_forest_snia.classifier import concat_col
+from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+from fink_science.utilities import concat_col
+
+from fink_science.snn.processor import snn_ia
 
 from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
@@ -66,6 +68,18 @@ def main():
     logger.info(qualitycuts)
     df = apply_user_defined_filter(df, qualitycuts)
 
+    # Retrieve time-series information
+    to_expand = [
+        'jd', 'fid', 'magpsf', 'sigmapsf',
+        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+    ]
+
+    # Append temp columns with historical + current measurements
+    prefix = 'c'
+    for colname in to_expand:
+        df = concat_col(df, colname, prefix=prefix)
+    expanded = [prefix + i for i in to_expand]
+
     # Apply level one processor: cdsxmatch
     logger.info("New processor: cdsxmatch")
     colnames = [
@@ -73,28 +87,25 @@ def main():
         df['candidate.ra'],
         df['candidate.dec']
     ]
-    df = df.withColumn(cdsxmatch.__name__, cdsxmatch(*colnames))
+    df = df.withColumn('cdsxmatch', cdsxmatch(*colnames))
 
     # Apply level one processor: rfscore
     logger.info("New processor: rfscore")
-    # Required alert columns
-    what = [
-        'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos']
-
-    # Use for creating temp name
-    prefix = 'c'
-    what_prefix = [prefix + i for i in what]
-
-    # Append temp columns with historical + current measurements
-    for colname in what:
-        df = concat_col(df, colname, prefix=prefix)
 
     # Perform the fit + classification.
     # Note we can omit the model_path argument, and in that case the
     # default model `data/models/default-model.obj` will be used.
-    rfscore_args = [F.col(i) for i in what_prefix]
-    df = df.withColumn(rfscore.__name__, rfscore(*rfscore_args))
+    rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    df = df.withColumn(
+        'rfscore',
+        rfscore_sigmoid_full(*rfscore_args)
+    )
+
+    # Apply level one processor: rfscore
+    logger.info("New processor: supernnova")
+
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    df = df.withColumn('snnscore', snn_ia(*snn_args))
 
     # Apply level one processor: rfscore
     logger.info("New processor: microlensing")
@@ -106,15 +117,13 @@ def main():
     mulens_udf = F.udf(mulens, schema)
 
     # Required alert columns - already computed for SN
-    what_prefix_mulens = [
+    mulens_args = [
         'cfid', 'cmagpsf', 'csigmapsf',
         'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
-
-    mulens_args = [F.col(i) for i in what_prefix_mulens]
     df = df.withColumn('mulens', mulens_udf(*mulens_args))
 
     # Drop temp columns
-    df = df.drop(*what_prefix)
+    df = df.drop(*expanded)
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)
