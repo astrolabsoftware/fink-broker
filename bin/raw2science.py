@@ -68,6 +68,20 @@ def main():
     logger.info(qualitycuts)
     df = apply_user_defined_filter(df, qualitycuts)
 
+    # Retrieve time-series information
+    to_expand = [
+        'jd', 'fid', 'magpsf', 'sigmapsf',
+        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+    ]
+
+    # Use for creating temp name
+    prefix = 'c'
+    expanded = [prefix + i for i in to_expand]
+
+    # Append temp columns with historical + current measurements
+    for colname in expanded:
+        df = concat_col(df, colname, prefix=prefix)
+
     # Apply level one processor: cdsxmatch
     logger.info("New processor: cdsxmatch")
     colnames = [
@@ -80,21 +94,10 @@ def main():
     # Apply level one processor: rfscore
     logger.info("New processor: rfscore")
 
-    # Required alert columns
-    what = ['jd', 'fid', 'magpsf', 'sigmapsf']
-
-    # Use for creating temp name
-    prefix = 'c'
-    what_prefix = [prefix + i for i in what]
-
-    # Append temp columns with historical + current measurements
-    for colname in what:
-        df = concat_col(df, colname, prefix=prefix)
-
     # Perform the fit + classification.
     # Note we can omit the model_path argument, and in that case the
     # default model `data/models/default-model.obj` will be used.
-    rfscore_args = [F.col(i) for i in what_prefix]
+    rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     df = df.withColumn(
         rfscore_sigmoid_full.__name__,
         rfscore_sigmoid_full(*rfscore_args)
@@ -103,10 +106,7 @@ def main():
     # Apply level one processor: rfscore
     logger.info("New processor: supernnova")
 
-    snn_args = []
-    snn_args.extend(['candid'])
-    snn_args.extend(what_prefix)
-
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     df = df.withColumn('snnscore', snn_ia(*snn_args))
 
     # Apply level one processor: rfscore
@@ -119,15 +119,13 @@ def main():
     mulens_udf = F.udf(mulens, schema)
 
     # Required alert columns - already computed for SN
-    what_prefix_mulens = [
+    mulens_args = [
         'cfid', 'cmagpsf', 'csigmapsf',
         'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
-
-    mulens_args = [F.col(i) for i in what_prefix_mulens]
     df = df.withColumn('mulens', mulens_udf(*mulens_args))
 
     # Drop temp columns
-    df = df.drop(*what_prefix)
+    df = df.drop(*expanded)
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)
