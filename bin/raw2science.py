@@ -46,6 +46,8 @@ from fink_science.snn.processor import snn_ia
 from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
 
+from fink_science.asteroids.processor import roid_catcher
+
 qualitycuts = 'fink_broker.filters.qualitycuts'
 
 def main():
@@ -101,13 +103,13 @@ def main():
         rfscore_sigmoid_full(*rfscore_args)
     )
 
-    # Apply level one processor: rfscore
+    # Apply level one processor: superNNova
     logger.info("New processor: supernnova")
 
     snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     df = df.withColumn('snnscore', snn_ia(*snn_args))
 
-    # Apply level one processor: rfscore
+    # Apply level one processor: microlensing
     logger.info("New processor: microlensing")
 
     # Retrieve schema
@@ -121,6 +123,11 @@ def main():
         'cfid', 'cmagpsf', 'csigmapsf',
         'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
     df = df.withColumn('mulens', mulens_udf(*mulens_args))
+
+    # Apply level one processor: asteroids
+    logger.info("New processor: asteroids")
+    args_roid = ['cfid', 'cmagpsf', 'candidate.ssdistnr']
+    df = df.withColumn('roid', roid_catcher(*args_roid))
 
     # Drop temp columns
     df = df.drop(*expanded)
