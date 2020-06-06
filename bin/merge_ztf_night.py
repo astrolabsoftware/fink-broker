@@ -47,12 +47,6 @@ def main():
 
     print('Processing {}/{}/{}'.format(year, month, day))
 
-    # Uncomment to move old data
-    # input_raw = 'ztf_{}{}/alerts_store/topic=ztf_{}{}{}_programid1/year={}/month={}/day={}'.format(
-    #     year, month, year, month, day, year, month, day)
-    # input_science = 'ztf_{}{}/alerts_store_tmp/year={}/month={}/day={}'.format(
-    #     year, month, year, month, day)
-
     input_raw = '{}/year={}/month={}/day={}'.format(
         args.rawdatapath, year, month, day)
     input_science = '{}/year={}/month={}/day={}'.format(
@@ -67,10 +61,10 @@ def main():
     print('Num partitions before: ', df_raw.rdd.getNumPartitions())
     print('Num partitions after : ', numPart(df_raw))
 
-    df_raw.withColumn('ts_jd', jd_to_datetime(df_raw['candidate.jd']))\
-        .withColumn("year", F.date_format("ts_jd", "yyyy"))\
-        .withColumn("month", F.date_format("ts_jd", "MM"))\
-        .withColumn("day", F.date_format("ts_jd", "dd"))\
+    df_raw.withColumn('timestamp', jd_to_datetime(df_raw['candidate.jd']))\
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))\
         .coalesce(numPart(df_raw))\
         .write\
         .mode("append") \
@@ -83,10 +77,10 @@ def main():
     print('Num partitions before: ', df_science.rdd.getNumPartitions())
     print('Num partitions after : ', numPart(df_science))
 
-    df_science.withColumn('ts_jd', jd_to_datetime(df_science['candidate.jd']))\
-        .withColumn("year", F.date_format("ts_jd", "yyyy"))\
-        .withColumn("month", F.date_format("ts_jd", "MM"))\
-        .withColumn("day", F.date_format("ts_jd", "dd"))\
+    df_science.withColumn('timestamp', jd_to_datetime(df_science['candidate.jd']))\
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))\
         .coalesce(numPart(df_science))\
         .write\
         .mode("append") \

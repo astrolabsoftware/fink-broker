@@ -72,7 +72,6 @@ def main():
         # it will be available from Spark 3.0 though
         df_decoded = df.select(
             [
-                "topic",
                 from_avro(df["value"], alert_schema_json).alias("decoded")
             ]
         )
@@ -81,7 +80,6 @@ def main():
         f = udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
         df_decoded = df.select(
             [
-                "topic",
                 f(df['value']).alias("decoded")
             ]
         )
