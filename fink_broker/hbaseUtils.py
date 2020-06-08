@@ -81,7 +81,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     There are currently 3 column families:
         - i: for column that identify the alert (original alert)
         - d: for column that further describe the alert (Fink added value)
-        - b: for binary blob (FITS image)
+        - fits: for binary gzipped FITS image
 
     The split is done in `load_science_portal_column_names`.
 
@@ -102,7 +102,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     """
     cf = {i: 'i' for i in df.select(cols_i).columns}
     cf.update({i: 'd' for i in df.select(cols_d).columns})
-    cf.update({i: 'image/fits' for i in df.select(cols_b).columns})
+    cf.update({i: 'fits' for i in df.select(cols_b).columns})
 
     return cf
 
