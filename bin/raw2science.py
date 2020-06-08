@@ -132,8 +132,12 @@ def main():
     # Drop temp columns
     df = df.drop(*expanded)
 
+    # Add librarys versions
     df = df.withColumn('fink_broker_version', F.lit(fink_broker.__version__))\
         .withColumn('fink_science_version', F.lit(fink_science.__version__))
+
+    # Switch publisher
+    df = df.withColumn('publisher', lit('Fink'))
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)

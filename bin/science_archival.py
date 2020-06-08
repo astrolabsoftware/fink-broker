@@ -62,11 +62,6 @@ def main():
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day').drop('hour')
 
-    # Switch publisher
-    df = df.withColumn('publisher-tmp', lit('Fink')) \
-        .drop('publisher') \
-        .withColumnRenamed('publisher-tmp', 'publisher')
-
     # Load column names to use in the science portal
     cols_i, cols_d, cols_b = load_science_portal_column_names()
 

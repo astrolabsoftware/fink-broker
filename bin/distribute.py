@@ -58,11 +58,6 @@ def main():
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
-    # Switch publisher
-    df = df.withColumn('publisher-tmp', lit('Fink')) \
-        .drop('publisher') \
-        .withColumnRenamed('publisher-tmp', 'publisher')
-
     # Cast fields to ease the distribution
     cnames = df.columns
     cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
