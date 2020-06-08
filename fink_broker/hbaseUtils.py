@@ -44,23 +44,29 @@ def load_science_portal_column_names():
     --------
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
     >>> print(len(cols_d))
-    2
+    6
     """
     # Column family i
     cols_i = [
         'objectId',
         'schemavsn',
         'publisher',
+        'fink_broker_version',
+        'fink_science_version',
         'candidate.*'
     ]
 
     # Column family d
     cols_d = [
         'cdsxmatch',
-        'rfscore'
+        'rfscore',
+        'snnscore',
+        'mulens.class_band_1',
+        'mulens.class_band_2',
+        'roid'
     ]
 
-    # Column family b
+    # Column family image/fits
     cols_b = [
         col('cutoutScience.stampData').alias('cutoutScience'),
         col('cutoutTemplate.stampData').alias('cutoutTemplate'),
@@ -96,7 +102,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     """
     cf = {i: 'i' for i in df.select(cols_i).columns}
     cf.update({i: 'd' for i in df.select(cols_d).columns})
-    cf.update({i: 'b' for i in df.select(cols_b).columns})
+    cf.update({i: 'image/fits' for i in df.select(cols_b).columns})
 
     return cf
 
@@ -112,12 +118,10 @@ def retrieve_row_key_cols():
     --------
     row_key_cols: list of string
     """
-    # build the row key: objectId_jd_ra_dec
+    # build the row key: objectId_jd
     row_key_cols = [
         'objectId',
-        'jd',
-        'ra',
-        'dec'
+        'jd'
     ]
     return row_key_cols
 
@@ -154,7 +158,7 @@ def attach_rowkey(df, sep='_'):
 
     >>> df_rk, row_key_name = attach_rowkey(df)
 
-    >>> 'objectId_jd_ra_dec' in df_rk.columns
+    >>> 'objectId_jd' in df_rk.columns
     True
     """
     row_key_cols = retrieve_row_key_cols()
