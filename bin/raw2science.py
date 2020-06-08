@@ -29,6 +29,7 @@ import argparse
 import time
 import json
 
+from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
@@ -36,6 +37,7 @@ from fink_broker.filters import apply_user_defined_filter
 from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+from fink_science import __version__ as fsvsn
 from fink_science.xmatch.processor import cdsxmatch
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
@@ -131,6 +133,13 @@ def main():
 
     # Drop temp columns
     df = df.drop(*expanded)
+
+    # Add librarys versions
+    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
+        .withColumn('fink_science_version', F.lit(fsvsn))
+
+    # Switch publisher
+    df = df.withColumn('publisher', F.lit('Fink'))
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)
