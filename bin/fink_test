@@ -108,6 +108,9 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start check_science_portal -c $conf
 fi
 
+# Fire another stream
+fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+
 # Run the test suite on the modules assuming the integration
 # tests have been run (to build the databases)
 for i in ${FINK_HOME}/fink_broker/*.py

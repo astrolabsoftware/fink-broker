@@ -125,7 +125,7 @@ def return_flatten_names(
 
     Examples
     -------
-    >>> df = spark.read.format("parquet").load("archive/raw")
+    >>> df = spark.read.format("parquet").load("ztf_alerts/raw")
     >>> flatten_schema = return_flatten_names(df)
     >>> assert("candidate.candid" in flatten_schema)
     """

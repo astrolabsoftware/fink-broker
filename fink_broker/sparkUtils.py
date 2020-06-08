@@ -297,7 +297,7 @@ def connect_to_raw_database(
     Examples
     ----------
     >>> dfstream_tmp = connect_to_raw_database(
-    ...   "archive/raw", "archive/raw/*", True)
+    ...   "ztf_alerts/raw", "ztf_alerts/raw/*", True)
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -341,7 +341,7 @@ def load_parquet_files(path: str) -> DataFrame:
 
     Examples
     ----------
-    >>> df = load_parquet_files("archive/raw")
+    >>> df = load_parquet_files("ztf_alerts/raw")
     """
     # Grab the running Spark Session
     spark = SparkSession \
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "schemas/template_schema_ZTF_3p3.avro")
+        root, "ztf_alerts/raw")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=True)
