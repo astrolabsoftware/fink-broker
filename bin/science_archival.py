@@ -27,6 +27,7 @@ import argparse
 import time
 import json
 
+from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
@@ -38,12 +39,17 @@ from fink_broker.hbaseUtils import construct_schema_row
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+from fink_science import __version__ as fsvsn
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="science_archival", shuffle_partitions=2)
+    spark = init_sparksession(
+        name="science_archival_{}".format(args.night),
+        shuffle_partitions=2
+    )
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -60,7 +66,7 @@ def main():
     df = load_parquet_files(path)
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day').drop('hour')
+    df = df.drop('year').drop('month').drop('day')
 
     # Load column names to use in the science portal
     cols_i, cols_d, cols_b = load_science_portal_column_names()
@@ -99,7 +105,7 @@ def main():
         df_schema = construct_schema_row(
             df,
             rowkeyname=schema_row_key_name,
-            version='schema_v0')
+            version='{}_{}'.format(fbvsn, fsvsn))
 
         # construct the hbase catalog for the schema
         hbcatalog_schema = construct_hbase_catalog_from_flatten_schema(
