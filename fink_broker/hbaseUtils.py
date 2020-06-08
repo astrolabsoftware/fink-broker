@@ -149,10 +149,7 @@ def attach_rowkey(df, sep='_'):
     Examples
     ----------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data
-    >>> df = df_raw.select("decoded.*")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> df = df.select(['objectId', 'candidate.*'])
 
@@ -203,17 +200,14 @@ def construct_hbase_catalog_from_flatten_schema(
     Examples
     --------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data and Kafka publication timestamp
-    >>> df_ok = df_raw.select("decoded.*", "timestamp")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
 
-    >>> cf = assign_column_family_names(df_ok, cols_i, [], [])
+    >>> cf = assign_column_family_names(df, cols_i, [], [])
 
     # Flatten the DataFrame
-    >>> df_flat = df_ok.select(cols_i)
+    >>> df_flat = df.select(cols_i)
 
     Attach the row key
     >>> df_rk, row_key_name = attach_rowkey(df_flat)
@@ -290,10 +284,7 @@ def construct_schema_row(df, rowkeyname, version):
     Examples
     --------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data and Kafka publication timestamp
-    >>> df = df_raw.select("decoded.*", "timestamp")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
     >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid'])
@@ -448,7 +439,7 @@ if __name__ == "__main__":
     globs["ztf_alert_sample"] = os.path.join(
         root, "schemas/template_schema_ZTF_3p3.avro")
 
-    globs["ztf_alert_sample_rawdatabase"] = os.path.join(
+    globs["ztf_alert_sample_scidatabase"] = os.path.join(
         root, "ztf_alerts/science")
 
     # Run the Spark test suite
