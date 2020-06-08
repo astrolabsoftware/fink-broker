@@ -139,7 +139,7 @@ def main():
         .withColumn('fink_science_version', F.lit(fsvsn))
 
     # Switch publisher
-    df = df.withColumn('publisher', lit('Fink'))
+    df = df.withColumn('publisher', F.lit('Fink'))
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)
