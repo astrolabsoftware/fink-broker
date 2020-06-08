@@ -61,8 +61,8 @@ def load_science_portal_column_names():
         'cdsxmatch',
         'rfscore',
         'snnscore',
-        'mulens.class_band_1',
-        'mulens.class_band_2',
+        col('mulens.class_1').alias('mulens_class_1'),
+        col('mulens.class_2').alias('mulens_class_2'),
         'roid'
     ]
 
