@@ -8,6 +8,7 @@ Fink is a broker infrastructure enabling a wide range of applications and servic
 
 # Latest News
 
+* 06/20: Fink broker [0.6](https://github.com/astrolabsoftware/fink-broker/pull/386).
 * 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year.
 * 04/20: New broker release [0.5](https://github.com/astrolabsoftware/fink-broker/pull/354). Plenty of new features!
 * 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
