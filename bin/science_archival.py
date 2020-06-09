@@ -105,7 +105,7 @@ def main():
         df_schema = construct_schema_row(
             df,
             rowkeyname=schema_row_key_name,
-            version='{}_{}'.format(fbvsn, fsvsn))
+            version='schema_{}_{}'.format(fbvsn, fsvsn))
 
         # construct the hbase catalog for the schema
         hbcatalog_schema = construct_hbase_catalog_from_flatten_schema(
