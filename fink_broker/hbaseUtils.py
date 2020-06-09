@@ -44,23 +44,29 @@ def load_science_portal_column_names():
     --------
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
     >>> print(len(cols_d))
-    2
+    6
     """
     # Column family i
     cols_i = [
         'objectId',
         'schemavsn',
         'publisher',
+        'fink_broker_version',
+        'fink_science_version',
         'candidate.*'
     ]
 
     # Column family d
     cols_d = [
         'cdsxmatch',
-        'rfscore'
+        'rfscore',
+        'snnscore',
+        col('mulens.class_1').alias('mulens_class_1'),
+        col('mulens.class_2').alias('mulens_class_2'),
+        'roid'
     ]
 
-    # Column family b
+    # Column family image/fits
     cols_b = [
         col('cutoutScience.stampData').alias('cutoutScience'),
         col('cutoutTemplate.stampData').alias('cutoutTemplate'),
@@ -75,7 +81,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     There are currently 3 column families:
         - i: for column that identify the alert (original alert)
         - d: for column that further describe the alert (Fink added value)
-        - b: for binary blob (FITS image)
+        - fits: for binary gzipped FITS image
 
     The split is done in `load_science_portal_column_names`.
 
@@ -96,7 +102,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     """
     cf = {i: 'i' for i in df.select(cols_i).columns}
     cf.update({i: 'd' for i in df.select(cols_d).columns})
-    cf.update({i: 'b' for i in df.select(cols_b).columns})
+    cf.update({i: 'fits' for i in df.select(cols_b).columns})
 
     return cf
 
@@ -112,12 +118,10 @@ def retrieve_row_key_cols():
     --------
     row_key_cols: list of string
     """
-    # build the row key: objectId_jd_ra_dec
+    # build the row key: objectId_jd
     row_key_cols = [
         'objectId',
-        'jd',
-        'ra',
-        'dec'
+        'jd'
     ]
     return row_key_cols
 
@@ -145,16 +149,13 @@ def attach_rowkey(df, sep='_'):
     Examples
     ----------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data
-    >>> df = df_raw.select("decoded.*")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> df = df.select(['objectId', 'candidate.*'])
 
     >>> df_rk, row_key_name = attach_rowkey(df)
 
-    >>> 'objectId_jd_ra_dec' in df_rk.columns
+    >>> 'objectId_jd' in df_rk.columns
     True
     """
     row_key_cols = retrieve_row_key_cols()
@@ -199,17 +200,14 @@ def construct_hbase_catalog_from_flatten_schema(
     Examples
     --------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data and Kafka publication timestamp
-    >>> df_ok = df_raw.select("decoded.*", "timestamp")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
 
-    >>> cf = assign_column_family_names(df_ok, cols_i, [], [])
+    >>> cf = assign_column_family_names(df, cols_i, [], [])
 
     # Flatten the DataFrame
-    >>> df_flat = df_ok.select(cols_i)
+    >>> df_flat = df.select(cols_i)
 
     Attach the row key
     >>> df_rk, row_key_name = attach_rowkey(df_flat)
@@ -286,10 +284,7 @@ def construct_schema_row(df, rowkeyname, version):
     Examples
     --------
     # Read alert from the raw database
-    >>> df_raw = spark.read.format("parquet").load(ztf_alert_sample_rawdatabase)
-
-    # Select alert data and Kafka publication timestamp
-    >>> df = df_raw.select("decoded.*", "timestamp")
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
     >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid'])
@@ -444,8 +439,8 @@ if __name__ == "__main__":
     globs["ztf_alert_sample"] = os.path.join(
         root, "schemas/template_schema_ZTF_3p3.avro")
 
-    globs["ztf_alert_sample_rawdatabase"] = os.path.join(
-        root, "schemas/template_schema_ZTF_rawdatabase.parquet")
+    globs["ztf_alert_sample_scidatabase"] = os.path.join(
+        root, "ztf_alerts/science")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

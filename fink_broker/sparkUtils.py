@@ -49,7 +49,7 @@ def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
 
     Examples
     ----------
-    >>> _, _, alert_schema_json = get_schemas_from_avro(ztf_alert_sample)
+    >>> _, _, alert_schema_json = get_schemas_from_avro(ztf_avro_sample)
 
     >>> df_decoded = dfstream.select(
     ...   from_avro(dfstream["value"], alert_schema_json).alias("decoded"))
@@ -297,7 +297,7 @@ def connect_to_raw_database(
     Examples
     ----------
     >>> dfstream_tmp = connect_to_raw_database(
-    ...   "archive/raw", "archive/raw/*", True)
+    ...   "ztf_alerts/raw", "ztf_alerts/raw/*", True)
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -341,7 +341,7 @@ def load_parquet_files(path: str) -> DataFrame:
 
     Examples
     ----------
-    >>> df = load_parquet_files("archive/raw")
+    >>> df = load_parquet_files(ztf_alert_sample)
     """
     # Grab the running Spark Session
     spark = SparkSession \
@@ -376,7 +376,7 @@ def get_schemas_from_avro(
     Examples
     ----------
     >>> df_schema, alert_schema, alert_schema_json = get_schemas_from_avro(
-    ...   ztf_alert_sample)
+    ...   ztf_avro_sample)
     >>> print(type(df_schema))
     <class 'pyspark.sql.types.StructType'>
 
@@ -408,6 +408,9 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
+        root, "ztf_alerts/raw")
+
+    globs["ztf_avro_sample"] = os.path.join(
         root, "schemas/template_schema_ZTF_3p3.avro")
 
     # Run the Spark test suite
