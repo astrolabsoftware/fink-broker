@@ -318,7 +318,7 @@ def construct_schema_row(df, rowkeyname, version):
 
     # binary types are too vague, so assign manually a description
     names = np.array([(c.jsonValue()['name']) for c in df.schema])
-    mask = np.where(names == 'stampData')[0]
+    mask = np.array(['cutout' in i for i in names])
     data[mask] = 'fits/image'
 
     index = np.where(np.array(df.columns) == rowkeyname)[0][0]
