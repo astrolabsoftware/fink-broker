@@ -292,15 +292,15 @@ def construct_schema_row(df, rowkeyname, version):
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
-    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', 'cutoutScience.stampData'])
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', col('cutoutScience.stampData').alias('cutoutScience')])
     >>> df = df.withColumn('schema_version', lit(''))
     >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
     >>> df.show()
-    +--------+------+------+----------+--------------+
-    |objectId|    jd|candid| stampData|schema_version|
-    +--------+------+------+----------+--------------+
-    |  string|double|  long|fits/image|     schema_v0|
-    +--------+------+------+----------+--------------+
+    +--------+------+------+-------------+--------------+
+    |objectId|    jd|candid|cutoutScience|schema_version|
+    +--------+------+------+-------------+--------------+
+    |  string|double|  long|   fits/image|     schema_v0|
+    +--------+------+------+-------------+--------------+
     <BLANKLINE>
     """
     # Grab the running Spark Session,
