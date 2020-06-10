@@ -228,12 +228,13 @@ def construct_hbase_catalog_from_flatten_schema(
         'columns': {{
     """).format(catalogname, rowkeyname)
 
+    sep = ","
     for column in schema_columns:
         # Last entry should not have comma (malformed json)
-        if schema_columns.index(column) != len(schema_columns) - 1:
-            sep = ","
-        else:
-            sep = ""
+        # if schema_columns.index(column) != len(schema_columns) - 1:
+        #     sep = ","
+        # else:
+        #     sep = ""
 
         # Deal with array
         if type(column["type"]) == dict:
@@ -256,6 +257,9 @@ def construct_hbase_catalog_from_flatten_schema(
                 column["type"],
                 sep
             )
+
+    # Last entry should not have comma (malformed json)
+    catalog = catalog[:-1]
     catalog += """
         }
     }
