@@ -68,9 +68,9 @@ def load_science_portal_column_names():
 
     # Column family binary
     cols_b = [
-        col('cutoutScience.stampData').alias('cutoutScience'),
-        col('cutoutTemplate.stampData').alias('cutoutTemplate'),
-        col('cutoutDifference.stampData').alias('cutoutDifference')
+        col('cutoutScience.stampData').alias('cutoutScience_stampData'),
+        col('cutoutTemplate.stampData').alias('cutoutTemplate_stampData'),
+        col('cutoutDifference.stampData').alias('cutoutDifference_stampData')
     ]
 
     return cols_i, cols_d, cols_b
@@ -292,15 +292,15 @@ def construct_schema_row(df, rowkeyname, version):
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
-    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', col('cutoutScience.stampData').alias('cutoutScience')])
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', col('cutoutScience.stampData').alias('cutoutScience_stampData')])
     >>> df = df.withColumn('schema_version', lit(''))
     >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
     >>> df.show()
-    +--------+------+------+-------------+--------------+
-    |objectId|    jd|candid|cutoutScience|schema_version|
-    +--------+------+------+-------------+--------------+
-    |  string|double|  long|   fits/image|     schema_v0|
-    +--------+------+------+-------------+--------------+
+    +--------+------+------+-----------------------+--------------+
+    |objectId|    jd|candid|cutoutScience_stampData|schema_version|
+    +--------+------+------+-----------------------+--------------+
+    |  string|double|  long|             fits/image|     schema_v0|
+    +--------+------+------+-----------------------+--------------+
     <BLANKLINE>
     """
     # Grab the running Spark Session,
