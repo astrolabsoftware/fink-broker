@@ -258,12 +258,8 @@ def construct_hbase_catalog_from_flatten_schema(
                 sep
             )
 
-    # Last entry should not have separator (malformed json)
-    last_sep = catalog.rindex(',')
-    tmp = list(catalog)
-    tmp[last_sep] = ''
-    catalog = ''.join(tmp)
-
+    # Push an empty column family 'a' for later annotations
+    catalog += "'annotation': {'cf': 'a', 'col': '', 'type': 'string'}"
     catalog += """
         }
     }
