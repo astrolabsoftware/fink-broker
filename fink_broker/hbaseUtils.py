@@ -259,7 +259,11 @@ def construct_hbase_catalog_from_flatten_schema(
             )
 
     # Last entry should not have separator (malformed json)
-    catalog = catalog[:-1]
+    last_sep = catalog.rindex(',')
+    tmp = list(catalog)
+    tmp[last_sep] = ''
+    catalog = ''.join(tmp)
+
     catalog += """
         }
     }
