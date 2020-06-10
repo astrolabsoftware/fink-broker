@@ -258,7 +258,7 @@ def construct_hbase_catalog_from_flatten_schema(
                 sep
             )
 
-    # Last entry should not have comma (malformed json)
+    # Last entry should not have separator (malformed json)
     catalog = catalog[:-1]
     catalog += """
         }
@@ -292,7 +292,7 @@ def construct_schema_row(df, rowkeyname, version):
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
-    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', 'cutout.stampData'])
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', 'cutoutScience.stampData'])
     >>> df = df.withColumn('schema_version', lit(''))
     >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
     >>> df.show()
