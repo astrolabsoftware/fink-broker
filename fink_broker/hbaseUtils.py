@@ -66,7 +66,7 @@ def load_science_portal_column_names():
         'roid'
     ]
 
-    # Column family image/fits
+    # Column family binary
     cols_b = [
         col('cutoutScience.stampData').alias('cutoutScience'),
         col('cutoutTemplate.stampData').alias('cutoutTemplate'),
@@ -81,7 +81,8 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     There are currently 3 column families:
         - i: for column that identify the alert (original alert)
         - d: for column that further describe the alert (Fink added value)
-        - fits: for binary gzipped FITS image
+        - b: for binary types. It currently contains:
+            - binary gzipped FITS image
 
     The split is done in `load_science_portal_column_names`.
 
@@ -102,7 +103,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     """
     cf = {i: 'i' for i in df.select(cols_i).columns}
     cf.update({i: 'd' for i in df.select(cols_d).columns})
-    cf.update({i: 'fits' for i in df.select(cols_b).columns})
+    cf.update({i: 'b' for i in df.select(cols_b).columns})
 
     return cf
 
@@ -287,15 +288,15 @@ def construct_schema_row(df, rowkeyname, version):
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
-    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid'])
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', 'cutout.stampData'])
     >>> df = df.withColumn('schema_version', lit(''))
     >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
     >>> df.show()
-    +--------+------+------+--------------+
-    |objectId|    jd|candid|schema_version|
-    +--------+------+------+--------------+
-    |  string|double|  long|     schema_v0|
-    +--------+------+------+--------------+
+    +--------+------+------+----------+--------------+
+    |objectId|    jd|candid| stampData|schema_version|
+    +--------+------+------+----------+--------------+
+    |  string|double|  long|fits/image|     schema_v0|
+    +--------+------+------+----------+--------------+
     <BLANKLINE>
     """
     # Grab the running Spark Session,
@@ -305,13 +306,18 @@ def construct_schema_row(df, rowkeyname, version):
         .getOrCreate()
 
     # Original df columns, but values are types.
-    data = [(c.jsonValue()['type']) for c in df.schema]
+    data = np.array([(c.jsonValue()['type']) for c in df.schema], dtype='<U75')
+
+    # binary types are too vague, so assign manually a description
+    names = np.array([(c.jsonValue()['name']) for c in df.schema])
+    mask = np.where(names == 'stampData')[0]
+    data[mask] = 'fits/image'
 
     index = np.where(np.array(df.columns) == rowkeyname)[0][0]
     data[index] = version
 
     # Create the DataFrame
-    df_schema = spark.createDataFrame([data], df.columns)
+    df_schema = spark.createDataFrame([data.tolist()], df.columns)
 
     return df_schema
 
