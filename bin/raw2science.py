@@ -127,7 +127,7 @@ def main():
     def mulens_wrapper(fid, magpsf, sigmapsf, magnr, sigmagnr, magzpsci, isdiffpos):
         """ Wrapper to mulens pass broadcasted values from this scope
         """
-        mulens(
+        return mulens(
             fid, magpsf, sigmapsf, magnr,
             sigmagnr, magzpsci, isdiffpos,
             rfbcast.value, pcabcast.value)
