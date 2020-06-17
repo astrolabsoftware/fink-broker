@@ -28,6 +28,7 @@ from pyspark.sql import functions as F
 import argparse
 import time
 import json
+import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
