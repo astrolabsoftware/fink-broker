@@ -28,6 +28,7 @@ from pyspark.sql import functions as F
 import argparse
 import time
 import json
+import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
@@ -38,6 +39,7 @@ from fink_broker.filters import apply_user_defined_processors
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science import __version__ as fsvsn
+from fink_science import __file__ as fspath
 from fink_science.xmatch.processor import cdsxmatch
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
@@ -47,6 +49,7 @@ from fink_science.snn.processor import snn_ia
 
 from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
+from fink_science.microlensing.classifier import load_external_model
 
 from fink_science.asteroids.processor import roid_catcher
 
@@ -114,11 +117,26 @@ def main():
     # Apply level one processor: microlensing
     logger.info("New processor: microlensing")
 
+    # broadcast models
+    curdir = os.path.dirname(os.path.abspath(fspath))
+    model_path = curdir + '/data/models/'
+    rf, pca = load_external_model(model_path)
+    rfbcast = spark.sparkContext.broadcast(rf)
+    pcabcast = spark.sparkContext.broadcast(pca)
+
+    def mulens_wrapper(fid, magpsf, sigmapsf, magnr, sigmagnr, magzpsci, isdiffpos):
+        """ Wrapper to mulens pass broadcasted values from this scope
+        """
+        return mulens(
+            fid, magpsf, sigmapsf, magnr,
+            sigmagnr, magzpsci, isdiffpos,
+            rfbcast.value, pcabcast.value)
+
     # Retrieve schema
     schema = load_mulens_schema_twobands()
 
     # Create standard UDF
-    mulens_udf = F.udf(mulens, schema)
+    mulens_udf = F.udf(mulens_wrapper, schema)
 
     # Required alert columns - already computed for SN
     mulens_args = [
