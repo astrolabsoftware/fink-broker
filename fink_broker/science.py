@@ -31,7 +31,7 @@ from fink_science.microlensing.classifier import load_external_model
 from fink_science.asteroids.processor import roid_catcher
 
 
-def apply_science_modules(df: DataFrame, looger: Logger) -> DataFrame:
+def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
     Parameters
