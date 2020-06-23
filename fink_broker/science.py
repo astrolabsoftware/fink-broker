@@ -21,15 +21,14 @@ import os
 
 from fink_science.utilities import concat_col
 
+from fink_science import __file__ as fspath
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import cdsxmatch
 from fink_science.snn.processor import snn_ia
 from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
 from fink_science.microlensing.classifier import load_external_model
-
 from fink_science.asteroids.processor import roid_catcher
-
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content

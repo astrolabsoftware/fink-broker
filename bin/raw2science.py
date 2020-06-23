@@ -39,7 +39,6 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.science import apply_science_modules
 
 from fink_science import __version__ as fsvsn
-from fink_science import __file__ as fspath
 
 qualitycuts = 'fink_broker.filters.qualitycuts'
 
