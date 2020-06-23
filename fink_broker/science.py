@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
@@ -102,6 +103,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     curdir = os.path.dirname(os.path.abspath(fspath))
     model_path = curdir + '/data/models/'
     rf, pca = load_external_model(model_path)
+    spark = SparkSession.builder.getOrCreate()
     rfbcast = spark.sparkContext.broadcast(rf)
     pcabcast = spark.sparkContext.broadcast(pca)
 
