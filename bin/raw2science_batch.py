@@ -13,14 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Update the (tmp) science database from the raw database alert data.
-
-Step 1: Connect to the raw database
-Step 2: Filter alerts based on instrumental or environmental criteria.
-Step 3: Run processors (aka science modules) on alerts to generate added value.
-Step 4: Push alert data into the tmp science database (parquet)
-
-See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
+"""Batch version of raw2science.py to re-process data of one night
 """
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
@@ -47,7 +40,9 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science", shuffle_partitions=2)
+    spark = init_sparksession(
+        name="raw2science_{}".format(args.night),
+        shuffle_partitions=2)
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -55,17 +50,28 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    df = connect_to_raw_database(
-        args.rawdatapath, args.rawdatapath + "/*", latestfirst=False)
+    year = args.night[:4]
+    month = args.night[4:6]
+    day = args.night[6:8]
 
-    # Apply quality cuts
+    print('Processing {}/{}/{}'.format(year, month, day))
+
+    input_raw = 'ztf_alerts/raw/year={}/month={}/day={}'.format(
+        year, month, day)
+
+    # basepath
+    output_science = 'ztf_alerts/science_reprocessed'
+
+    df = spark.read.format('parquet').load(input_raw)
+
+    # Apply level one filters
     logger.info(qualitycuts)
     df = apply_user_defined_filter(df, qualitycuts)
 
     # Apply science modules
     df = apply_science_modules(df, logger)
 
-    # Add library versions
+    # Add librarys versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
         .withColumn('fink_science_version', F.lit(fsvsn))
 
@@ -74,29 +80,14 @@ def main():
 
     # re-create partitioning columns.
     # Partitioned data doesn't preserve type information (cast as int...)
-    df_partitionedby = df\
+    df\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))
-
-    # Append new rows in the tmp science database
-    countquery = df_partitionedby\
-        .writeStream\
-        .outputMode("append") \
-        .format("parquet") \
-        .option("checkpointLocation", args.checkpointpath_sci_tmp) \
-        .option("path", args.scitmpdatapath)\
-        .partitionBy("year", "month", "day") \
-        .start()
-
-    # Keep the Streaming running until something or someone ends it!
-    if args.exit_after is not None:
-        time.sleep(args.exit_after)
-        countquery.stop()
-        logger.info("Exiting the raw2science service normally...")
-    else:
-        # Wait for the end of queries
-        spark.streams.awaitAnyTermination()
+        .withColumn("day", F.date_format("timestamp", "dd"))\
+        .write\
+        .mode("append") \
+        .partitionBy("year", "month", "day")\
+        .parquet(output_science)
 
 
 if __name__ == "__main__":
