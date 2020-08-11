@@ -30,6 +30,7 @@ from fink_science.microlensing.processor import mulens
 from fink_science.microlensing.classifier import load_mulens_schema_twobands
 from fink_science.microlensing.classifier import load_external_model
 from fink_science.asteroids.processor import roid_catcher
+from fink_science.nalerthist.processor import nalerthist
 
 from fink_broker.tester import spark_unit_tests
 
@@ -95,8 +96,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: superNNova
     logger.info("New processor: supernnova")
 
-    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
-    df = df.withColumn('snnscore', snn_ia(*snn_args))
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf', F.lit('snn_snia_vs_nonia')]
+    df = df.withColumn('snn_snia_vs_nonia', snn_ia(*snn_args))
+
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf', F.lit('snn_sn_vs_all')]
+    df = df.withColumn('snn_sn_vs_all', snn_ia(*snn_args))
 
     # Apply level one processor: microlensing
     logger.info("New processor: microlensing")
@@ -133,8 +137,15 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: asteroids
     logger.info("New processor: asteroids")
-    args_roid = ['cfid', 'cmagpsf', 'candidate.ssdistnr']
+    args_roid = [
+        'cjd', 'cmagpsf',
+        'candidate.ndethist', 'candidate.sgscore1',
+        'candidate.ssdistnr', 'candidate.distpsnr1']
     df = df.withColumn('roid', roid_catcher(*args_roid))
+
+    # Apply level one processor: nalerthist
+    logger.info("New processor: nalerthist")
+    df = df.withColumn('nalerthist', nalerthist(df['cmagpsf']))
 
     # Drop temp columns
     df = df.drop(*expanded)
