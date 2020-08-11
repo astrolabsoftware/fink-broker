@@ -44,7 +44,7 @@ def load_science_portal_column_names():
     --------
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
     >>> print(len(cols_d))
-    6
+    8
     """
     # Column family i
     cols_i = [
@@ -60,10 +60,12 @@ def load_science_portal_column_names():
     cols_d = [
         'cdsxmatch',
         'rfscore',
-        'snnscore',
+        'snn_snia_vs_nonia',
+        'snn_sn_vs_all',
         col('mulens.class_1').alias('mulens_class_1'),
         col('mulens.class_2').alias('mulens_class_2'),
-        'roid'
+        'roid',
+        'nalerthist'
     ]
 
     # Column family binary
