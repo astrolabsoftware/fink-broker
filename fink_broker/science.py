@@ -143,6 +143,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         'candidate.ssdistnr', 'candidate.distpsnr1']
     df = df.withColumn('roid', roid_catcher(*args_roid))
 
+    # Apply level one processor: nalerthist
+    logger.info("New processor: nalerthist")
+    df = df.withColumn('nalerthist', nalerthist(df['cmagpsf']))
+
     # Drop temp columns
     df = df.drop(*expanded)
 
