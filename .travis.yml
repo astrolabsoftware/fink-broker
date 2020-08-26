@@ -46,7 +46,7 @@ install:
 
   # Python deps
   - pip install --upgrade pip setuptools wheel
-  - ./install_python_deps.sh 
+  - source install_python_deps.sh 
 
   # Install fink-alert-simulator
   - git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
