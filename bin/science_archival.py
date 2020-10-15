@@ -86,9 +86,18 @@ def main():
 
     # construct the time view
     time_row_key_name = 't_jd_objectId'
-    df_time = df.select(concat_ws('_', lit('t_'), df['jd'], df['objectId']).alias(time_row_key_name))
 
-    # construct the hbase catalog
+    # HBase needs at least one column other than the rowkey...
+    # So I'm adding objectId
+    # https://stackoverflow.com/questions/56073332/why-hbase-client-put-object-expecting-at-least-a-column-to-be-added-before-subm
+    df_time = df.select(
+        [
+            concat_ws('_', lit('t'), df['jd'], df['objectId']).alias(time_row_key_name),
+            'objectId'
+        ]
+    )
+
+    # construct the time catalog
     hbcatalog_time = construct_hbase_catalog_from_flatten_schema(
         df_time.schema, args.science_db_name, rowkeyname=time_row_key_name, cf=cf)
 
@@ -106,6 +115,7 @@ def main():
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 
+        # Push time order
         df_time.write\
             .options(catalog=hbcatalog_time, newtable=5)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\

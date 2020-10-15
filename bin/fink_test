@@ -103,7 +103,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # merge and clean data
   fink start merge_and_clean -c conf/fink.conf.travis --night "20190903"
 
-  fink start science_archival -c $conf
+  fink start science_archival -c $conf --night 20190903
 
   fink start check_science_portal -c $conf
 fi
