@@ -21,7 +21,7 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-from pyspark.sql.functions import lit
+from pyspark.sql.functions import lit, concat_ws
 
 import argparse
 import time
@@ -84,6 +84,14 @@ def main():
     hbcatalog = construct_hbase_catalog_from_flatten_schema(
         df.schema, args.science_db_name, rowkeyname=row_key_name, cf=cf)
 
+    # construct the time view
+    time_row_key_name = 't_jd_objectId'
+    df_time = df.select(concat_ws('_', lit('t_'), df['jd'], df['objectId']).alias(time_row_key_name))
+
+    # construct the hbase catalog
+    hbcatalog_time = construct_hbase_catalog_from_flatten_schema(
+        df_time.schema, args.science_db_name, rowkeyname=time_row_key_name, cf=cf)
+
     # Save the catalog on disk (local)
     with open(args.science_db_catalog, 'w') as json_file:
         json.dump(hbcatalog, json_file)
@@ -95,6 +103,11 @@ def main():
         # Push the data using the shc connector
         df.write\
             .options(catalog=hbcatalog, newtable=5)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .save()
+
+        df_time.write\
+            .options(catalog=hbcatalog_time, newtable=5)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 
