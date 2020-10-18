@@ -92,11 +92,11 @@ def main():
     # https://stackoverflow.com/questions/56073332/why-hbase-client-put-object-expecting-at-least-a-column-to-be-added-before-subm
     df_time = df.select(
         [
-            concat_ws('_', lit('t'), df['jd'], df['objectId']).alias(time_row_key_name),
+            concat_ws('_', df['jd'], df['objectId']).alias(time_row_key_name),
             'objectId',
             'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
             'roid', 'mulens_class_1',
-            'mulens_class_1', 'snn_snia_vs_nonia',
+            'mulens_class_2', 'snn_snia_vs_nonia',
             'snn_sn_vs_all', 'rfscore'
         ]
     )
