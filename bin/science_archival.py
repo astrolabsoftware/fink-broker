@@ -93,13 +93,17 @@ def main():
     df_time = df.select(
         [
             concat_ws('_', lit('t'), df['jd'], df['objectId']).alias(time_row_key_name),
-            'objectId'
+            'objectId',
+            'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
+            'roid', 'mulens_class_1',
+            'mulens_class_1', 'snn_snia_vs_nonia',
+            'snn_sn_vs_all', 'rfscore'
         ]
     )
 
     # construct the time catalog
     hbcatalog_time = construct_hbase_catalog_from_flatten_schema(
-        df_time.schema, args.science_db_name, rowkeyname=time_row_key_name, cf=cf)
+        df_time.schema, args.science_db_name + '.jd', rowkeyname=time_row_key_name, cf=cf)
 
     # Save the catalog on disk (local)
     with open(args.science_db_catalog, 'w') as json_file:
@@ -145,6 +149,28 @@ def main():
         # Push the data using the shc connector
         df_schema.write\
             .options(catalog=hbcatalog_schema, newtable=5)\
+            .format("org.apache.spark.sql.execution.datasources.hbase")\
+            .save()
+
+        # Construct the schema row - inplace replacement
+        schema_row_key_name = 'schema_version'
+        df_time = df_time.withColumnRenamed(time_row_key_name, schema_row_key_name)
+
+        df_time_schema = construct_schema_row(
+            df_time,
+            rowkeyname=schema_row_key_name,
+            version='schema_{}_{}'.format(fbvsn, fsvsn))
+
+        # construct the hbase catalog for the schema
+        hbcatalog_time_schema = construct_hbase_catalog_from_flatten_schema(
+            df_time_schema.schema,
+            args.science_db_name + '.jd',
+            rowkeyname=schema_row_key_name,
+            cf=cf)
+
+        # Push the data using the shc connector
+        df_time_schema.write\
+            .options(catalog=hbcatalog_time_schema, newtable=5)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 
