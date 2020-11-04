@@ -240,6 +240,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         data on HBase. Default is False.
         [SAVE_SCIENCE_DB_CATALOG_ONLY]
         """)
+    parser.add_argument(
+        '-index_table', type=str, default='',
+        help="""
+        Name of the rowkey for index table
+        [INDEXTABLE]
+        """)
     args = parser.parse_args(None)
     return args
 
