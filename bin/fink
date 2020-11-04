@@ -324,6 +324,18 @@ elif [[ $service == "science_archival" ]]; then
   ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "index_archival" ]]; then
+  # Read configuration for hbase
+  source ${FINK_HOME}/conf/fink.conf.hbase
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/index_archival.py ${HELP_ON_SERVICE} \
+  -science_db_name ${SCIENCE_DB_NAME} \
+  -science_db_catalog ${SCIENCE_DB_CATALOG} \
+  ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
+  -night ${NIGHT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "check_science_portal" ]]; then
   # Read configuration for hbase
   source ${FINK_HOME}/conf/fink.conf.hbase
