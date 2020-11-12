@@ -48,7 +48,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="index_archival_{}".format(args.night),
+        name="index_archival_{}_{}".format(args.index_table, args.night),
         shuffle_partitions=2
     )
 
@@ -59,9 +59,10 @@ def main():
     inspect_application(logger)
 
     # Push data monthly
-    path = 'ztf_alerts/science_reprocessed/year={}/month={}'.format(
+    path = 'ztf_alerts/science_reprocessed/year={}/month={}/day={}'.format(
         args.night[:4],
         args.night[4:6],
+        args.night[6:8]
     )
     df = load_parquet_files(path)
 
@@ -81,14 +82,15 @@ def main():
     df, row_key_name = attach_rowkey(df)
 
     # construct the index view
-    index_row_key_name = args.index_name
+    index_row_key_name = args.index_table
     columns = index_row_key_name.split('_')
+    names = [col(i) for i in columns]
     index_name = '.' + columns[0] # = 'jd'
 
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
             [
-                concat_ws('_', col('pixel'), col(columns[1])).alias(index_row_key_name),
+                concat_ws('_', *names).alias(index_row_key_name),
                 'objectId',
                 'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
                 'roid', 'mulens_class_1',
@@ -97,9 +99,9 @@ def main():
             ]
         )
     elif columns[0] == 'class':
-        df_index = df.withColumn('class', extract_fink_classification(cdsxmatch, roid, mulens_class_1, mulens_class_2, snn_snia_vs_nonia, snn_sn_vs_all)).select(
+        df_index = df.withColumn('class', extract_fink_classification(df['cdsxmatch'], df['roid'], df['mulens_class_1'], df['mulens_class_2'], df['snn_snia_vs_nonia'], df['snn_sn_vs_all'])).select(
             [
-                concat_ws('_', col('class'), col(columns[1])).alias(index_row_key_name),
+                concat_ws('_', *names).alias(index_row_key_name),
                 'objectId',
                 'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
                 'roid', 'mulens_class_1',
@@ -110,7 +112,7 @@ def main():
     else:
         df_index = df.select(
             [
-                concat_ws('_', df[columns[0]], df[columns[1]]).alias(index_row_key_name),
+                concat_ws('_', *names).alias(index_row_key_name),
                 'objectId',
                 'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
                 'roid', 'mulens_class_1',
