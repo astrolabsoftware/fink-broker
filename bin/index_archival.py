@@ -22,6 +22,7 @@
 4. Push data (single shot)
 """
 from pyspark.sql.functions import lit, concat_ws, col
+from pyspark.sql.functions import arrays_zip, explode
 
 import argparse
 import time
@@ -109,6 +110,36 @@ def main():
                 'snn_sn_vs_all', 'rfscore',
             ]
         )
+    elif columns[0] == 'upper':
+        # This case is the same as the main table
+        # but we keep only upper limit measurements.
+        index_row_key_name = 'objectId_jd'
+        # select only a subset of all columns
+        df_sub = df.select(
+            [
+                'objectId',
+                'prv_candidates.jd',
+                'prv_candidates.magpsf',
+                'prv_candidates.sigmapsf',
+                'prv_candidates.diffmaglim'
+            ]
+        )
+
+        # explode
+        df_ex = df_sub.withColumn(
+            "tmp",
+            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd")
+        ).withColumn("tmp", explode("tmp")).select(
+            concat_ws('_', 'objectId', 'jd').alias(index_row_key_name),
+            "objectId",
+            col("tmp.jd"),
+            col("tmp.magpsf"),
+            col("tmp.sigmapsf"),
+            col("tmp.diffmaglim")
+        )
+
+        # take only upper limits
+        df_index = df_ex.filter(~df_ex['magpsf'].isNotNull())
     else:
         df_index = df.select(
             [
