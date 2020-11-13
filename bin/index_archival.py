@@ -77,7 +77,17 @@ def main():
     cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
 
     # Restrict the input DataFrame to the subset of wanted columns.
-    df = df.select(cols_i + cols_d + cols_b)
+    if 'upper' in args.index_table:
+        df = df.select(
+                'objectId',
+                'prv_candidates.jd',
+                'prv_candidates.fid',
+                'prv_candidates.magpsf',
+                'prv_candidates.sigmapsf',
+                'prv_candidates.diffmaglim'
+            )
+    else:
+        df = df.select(cols_i + cols_d + cols_b)
 
     # Create and attach the rowkey
     df, row_key_name = attach_rowkey(df)
@@ -114,25 +124,15 @@ def main():
         # This case is the same as the main table
         # but we keep only upper limit measurements.
         index_row_key_name = 'objectId_jd'
-        # select only a subset of all columns
-        df_sub = df.select(
-            [
-                'objectId',
-                'prv_candidates.jd',
-                'prv_candidates.magpsf',
-                'prv_candidates.sigmapsf',
-                'prv_candidates.diffmaglim'
-            ]
-        )
-
         # explode
-        df_ex = df_sub.withColumn(
+        df_ex = df.withColumn(
             "tmp",
-            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd")
+            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
         ).withColumn("tmp", explode("tmp")).select(
-            concat_ws('_', 'objectId', 'jd').alias(index_row_key_name),
+            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
             "objectId",
             col("tmp.jd"),
+            col("tmp.fid"),
             col("tmp.magpsf"),
             col("tmp.sigmapsf"),
             col("tmp.diffmaglim")
@@ -140,6 +140,8 @@ def main():
 
         # take only upper limits
         df_index = df_ex.filter(~df_ex['magpsf'].isNotNull())
+        # drop NaN columns
+        df_index = df_index.drop(*['magpsf', 'sigmapsf'])
     else:
         df_index = df.select(
             [
