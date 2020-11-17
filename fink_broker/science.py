@@ -188,13 +188,50 @@ def extract_fink_classification(cdsxmatch, roid, mulens_class_1, mulens_class_2,
     classification = pd.Series(['Unknown'] * len(cdsxmatch))
     ambiguity = pd.Series([0] * len(cdsxmatch))
 
+    # Microlensing classification
     f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML')
-    f_sn = (snn_snia_vs_nonia.astype(float) > 0.5) & (snn_sn_vs_all.astype(float) > 0.5)
+
+    # SN Ia
+    snn1 = snn_snia_vs_nonia.astype(float) > 0.5
+    snn2 = snn_sn_vs_all.astype(float) > 0.5
+    active_learn = rfscore.astype(float) > 0.5
+    low_ndethist = ndethist.astype(int) < 400
+    high_drb = drb.astype(float) > 0.5
+    high_classtar = classtar.astype(float) > 0.4
+
+    list_simbad_galaxies = [
+        "galaxy",
+        "Galaxy",
+        "EmG",
+        "Seyfert",
+        "Seyfert_1",
+        "Seyfert_2",
+        "BlueCompG",
+        "StarburstG",
+        "LSB_G",
+        "HII_G",
+        "High_z_G",
+        "GinPair",
+        "GinGroup",
+        "BClG",
+        "GinCl",
+        "PartofG",
+    ]
+    keep_cds = \
+        ["Unknown", "Candidate_SN*", "SN", "Transient"] + list_simbad_galaxies
+
+    f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
+    f_sn_early = (active_learn) & f_sn
+
+    # Solar System Objects
     f_roid = roid.astype(int).isin([2, 3])
-    f_simbad = ~cdsxmatch.isin(['Unknown', 'Transient'])
+
+    # Simbad xmatch
+    f_simbad = ~cdsxmatch.isin(['Unknown', 'Transient', 'Fail'])
 
     classification.mask(f_mulens.values, 'Microlensing candidate', inplace=True)
     classification.mask(f_sn.values, 'SN candidate', inplace=True)
+    classification.mask(f_sn_early.values, 'Early SN candidate', inplace=True)
     classification.mask(f_roid.values, 'Solar System', inplace=True)
 
     # If several flags are up, we cannot rely on the classification
