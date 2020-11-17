@@ -337,7 +337,6 @@ elif [[ $service == "index_archival" ]]; then
   ${FINK_HOME}/bin/index_archival.py ${HELP_ON_SERVICE} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
-  ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
   -night ${NIGHT} \
   -index_table ${INDEXTABLE} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
