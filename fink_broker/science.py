@@ -182,8 +182,13 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     return df
 
 @pandas_udf(StringType(), PandasUDFType.SCALAR)
-def extract_fink_classification(cdsxmatch, roid, mulens_class_1, mulens_class_2, snn_snia_vs_nonia, snn_sn_vs_all):
+def extract_fink_classification(
+        cdsxmatch, roid, mulens_class_1, mulens_class_2,
+        snn_snia_vs_nonia, snn_sn_vs_all, rfscore,
+        ndethist, drb, classtar):
     """ Extract the classification of an alert based on module outputs
+
+    See https://arxiv.org/abs/2009.10185 for more information
     """
     classification = pd.Series(['Unknown'] * len(cdsxmatch))
     ambiguity = pd.Series([0] * len(cdsxmatch))
