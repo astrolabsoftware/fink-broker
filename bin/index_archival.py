@@ -79,13 +79,13 @@ def main():
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
         df = df.select(
-                'objectId',
-                'prv_candidates.jd',
-                'prv_candidates.fid',
-                'prv_candidates.magpsf',
-                'prv_candidates.sigmapsf',
-                'prv_candidates.diffmaglim'
-            )
+            'objectId',
+            'prv_candidates.jd',
+            'prv_candidates.fid',
+            'prv_candidates.magpsf',
+            'prv_candidates.sigmapsf',
+            'prv_candidates.diffmaglim'
+        )
     else:
         df = df.select(cols_i + cols_d + cols_b)
 
@@ -96,29 +96,29 @@ def main():
     index_row_key_name = args.index_table
     columns = index_row_key_name.split('_')
     names = [col(i) for i in columns]
-    index_name = '.' + columns[0] # = 'jd'
+    index_name = '.' + columns[0]
 
+    common_cols = [
+        'objectId',
+        'ra', 'dec', 'jd', 'fid',
+        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
+        'cdsxmatch',
+        'roid',
+        'mulens_class_1', 'mulens_class_2',
+        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
+        'classtar', 'drb', 'ndethist'
+    ]
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
             [
-                concat_ws('_', *names).alias(index_row_key_name),
-                'objectId',
-                'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
-                'roid', 'mulens_class_1',
-                'mulens_class_2', 'snn_snia_vs_nonia',
-                'snn_sn_vs_all', 'rfscore',
-            ]
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
         )
     elif columns[0] == 'class':
         df_index = df.withColumn('class', extract_fink_classification(df['cdsxmatch'], df['roid'], df['mulens_class_1'], df['mulens_class_2'], df['snn_snia_vs_nonia'], df['snn_sn_vs_all'])).select(
             [
-                concat_ws('_', *names).alias(index_row_key_name),
-                'objectId',
-                'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
-                'roid', 'mulens_class_1',
-                'mulens_class_2', 'snn_snia_vs_nonia',
-                'snn_sn_vs_all', 'rfscore',
-            ]
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
         )
     elif columns[0] == 'upper':
         # This case is the same as the main table
@@ -145,18 +145,17 @@ def main():
     else:
         df_index = df.select(
             [
-                concat_ws('_', *names).alias(index_row_key_name),
-                'objectId',
-                'ra', 'dec', 'jd', 'cdsxmatch', 'ndethist',
-                'roid', 'mulens_class_1',
-                'mulens_class_2', 'snn_snia_vs_nonia',
-                'snn_sn_vs_all', 'rfscore'
-            ]
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
         )
 
     # construct the time catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
-        df_index.schema, args.science_db_name + index_name, rowkeyname=index_row_key_name, cf=cf)
+        df_index.schema,
+        args.science_db_name + index_name,
+        rowkeyname=index_row_key_name,
+        cf=cf
+    )
 
     # Push index table
     df_index.write\
@@ -166,7 +165,10 @@ def main():
 
     # Construct the schema row - inplace replacement
     schema_row_key_name = 'schema_version'
-    df_index = df_index.withColumnRenamed(index_row_key_name, schema_row_key_name)
+    df_index = df_index.withColumnRenamed(
+        index_row_key_name,
+        schema_row_key_name
+    )
 
     df_index_schema = construct_schema_row(
         df_index,
