@@ -115,7 +115,21 @@ def main():
             ] + common_cols
         )
     elif columns[0] == 'class':
-        df_index = df.withColumn('class', extract_fink_classification(df['cdsxmatch'], df['roid'], df['mulens_class_1'], df['mulens_class_2'], df['snn_snia_vs_nonia'], df['snn_sn_vs_all'])).select(
+        df_index = df.withColumn(
+            'class',
+            extract_fink_classification(
+                df['cdsxmatch'],
+                df['roid'],
+                df['mulens_class_1'],
+                df['mulens_class_2'],
+                df['snn_snia_vs_nonia'],
+                df['snn_sn_vs_all'],
+                df['rfscore'],
+                df['ndethist'],
+                df['drb'],
+                df['classtar']
+            )
+        ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols
