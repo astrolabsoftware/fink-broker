@@ -203,6 +203,7 @@ def extract_fink_classification(
     low_ndethist = ndethist.astype(int) < 400
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
+    early_ndethist = ndethist.astype(int) <= 20
 
     list_simbad_galaxies = [
         "galaxy",
@@ -226,7 +227,7 @@ def extract_fink_classification(
         ["Unknown", "Candidate_SN*", "SN", "Transient"] + list_simbad_galaxies
 
     f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
-    f_sn_early = (active_learn) & f_sn
+    f_sn_early = early_ndethist & active_learn & f_sn
 
     # Solar System Objects
     f_roid = roid.astype(int).isin([2, 3])
