@@ -21,10 +21,7 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-from pyspark.sql.functions import lit
-
 import argparse
-import time
 import json
 
 from fink_broker import __version__ as fbvsn
@@ -94,7 +91,7 @@ def main():
     else:
         # Push the data using the shc connector
         df.write\
-            .options(catalog=hbcatalog, newtable=5)\
+            .options(catalog=hbcatalog, newtable=50)\
             .format("org.apache.spark.sql.execution.datasources.hbase")\
             .save()
 

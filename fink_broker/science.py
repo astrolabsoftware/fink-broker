@@ -15,6 +15,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+from pyspark.sql.functions import pandas_udf, PandasUDFType, lit
+from pyspark.sql.types import StringType, LongType
+
+import pandas as pd
 
 from logging import Logger
 import json
@@ -33,6 +37,31 @@ from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 
 from fink_broker.tester import spark_unit_tests
+
+import numpy as np
+import healpy as hp
+
+def dec2theta(dec: float) -> float:
+    """ Convert Dec (deg) to theta (rad)
+    """
+    return np.pi / 2.0 - np.pi / 180.0 * dec
+
+def ra2phi(ra: float) -> float:
+    """ Convert RA (deg) to phi (rad)
+    """
+    return np.pi / 180.0 * ra
+
+@pandas_udf(LongType(), PandasUDFType.SCALAR)
+def ang2pix(ra, dec, nside):
+    """
+    """
+    return pd.Series(
+        hp.ang2pix(
+            nside.values[0],
+            dec2theta(dec.values),
+            ra2phi(ra.values)
+        )
+    )
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
@@ -151,6 +180,76 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.drop(*expanded)
 
     return df
+
+@pandas_udf(StringType(), PandasUDFType.SCALAR)
+def extract_fink_classification(
+        cdsxmatch, roid, mulens_class_1, mulens_class_2,
+        snn_snia_vs_nonia, snn_sn_vs_all, rfscore,
+        ndethist, drb, classtar):
+    """ Extract the classification of an alert based on module outputs
+
+    See https://arxiv.org/abs/2009.10185 for more information
+    """
+    classification = pd.Series(['Unknown'] * len(cdsxmatch))
+    ambiguity = pd.Series([0] * len(cdsxmatch))
+
+    # Microlensing classification
+    f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML')
+
+    # SN Ia
+    snn1 = snn_snia_vs_nonia.astype(float) > 0.5
+    snn2 = snn_sn_vs_all.astype(float) > 0.5
+    active_learn = rfscore.astype(float) > 0.5
+    low_ndethist = ndethist.astype(int) < 400
+    high_drb = drb.astype(float) > 0.5
+    high_classtar = classtar.astype(float) > 0.4
+    early_ndethist = ndethist.astype(int) <= 20
+
+    list_simbad_galaxies = [
+        "galaxy",
+        "Galaxy",
+        "EmG",
+        "Seyfert",
+        "Seyfert_1",
+        "Seyfert_2",
+        "BlueCompG",
+        "StarburstG",
+        "LSB_G",
+        "HII_G",
+        "High_z_G",
+        "GinPair",
+        "GinGroup",
+        "BClG",
+        "GinCl",
+        "PartofG",
+    ]
+    keep_cds = \
+        ["Unknown", "Candidate_SN*", "SN", "Transient"] + list_simbad_galaxies
+
+    f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
+    f_sn_early = early_ndethist & active_learn & f_sn
+
+    # Solar System Objects
+    f_roid = roid.astype(int).isin([2, 3])
+
+    # Simbad xmatch
+    f_simbad = ~cdsxmatch.isin(['Unknown', 'Transient', 'Fail'])
+
+    classification.mask(f_mulens.values, 'Microlensing candidate', inplace=True)
+    classification.mask(f_sn.values, 'SN candidate', inplace=True)
+    classification.mask(f_sn_early.values, 'Early SN candidate', inplace=True)
+    classification.mask(f_roid.values, 'Solar System', inplace=True)
+
+    # If several flags are up, we cannot rely on the classification
+    ambiguity[f_mulens.values] += 1
+    ambiguity[f_sn.values] += 1
+    ambiguity[f_roid.values] += 1
+    f_ambiguity = ambiguity > 1
+    classification.mask(f_ambiguity.values, 'Ambiguous', inplace=True)
+
+    classification = np.where(f_simbad, cdsxmatch, classification)
+
+    return pd.Series(classification)
 
 
 if __name__ == "__main__":

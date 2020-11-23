@@ -242,7 +242,7 @@ def construct_hbase_catalog_from_flatten_schema(
         if type(column["type"]) == dict:
             column["type"] = "string" # column["type"]["type"]
 
-        if type(column["type"]) == 'timestamp':
+        if column["type"] == 'timestamp':
             column["type"] = "string" # column["type"]["type"]
 
         if column["name"] == rowkeyname:
