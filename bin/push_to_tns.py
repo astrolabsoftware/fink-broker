@@ -16,6 +16,8 @@
 
 """Push early SN candidates to TNS
 """
+import argparse
+
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 from fink_broker.science import extract_fink_classification
