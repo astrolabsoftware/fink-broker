@@ -252,6 +252,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Folder to store logs and keys for TNS submission
         [TNS_FOLDER]
         """)
+    parser.add_argument(
+        '--tns_sandbox', action='store_true',
+        help="""
+        If True, push to TNS sandbox. Default is False.
+        [TNS_SANDBOX]
+        """)
     args = parser.parse_args(None)
     return args
 
