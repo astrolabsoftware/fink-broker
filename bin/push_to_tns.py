@@ -44,7 +44,7 @@ def main():
     inspect_application(logger)
 
     # Push data monthly
-    path = 'ztf_alerts/science/year={}/month={}/day={}'.format(
+    path = 'ztf_alerts/science_reprocessed/year={}/month={}/day={}'.format(
         args.night[:4],
         args.night[4:6],
         args.night[6:8]
