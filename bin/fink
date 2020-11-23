@@ -114,6 +114,10 @@ while [ "$#" -gt 0 ]; do
       TNS_FOLDER="$2"
       shift 2
       ;;
+    --tns_sandbox)
+      TNS_SANDBOX=true
+      shift 1
+      ;;
     --exit_after)
         EXIT_AFTER="-exit_after $2"
         shift 2
@@ -345,13 +349,19 @@ elif [[ $service == "index_archival" ]]; then
   -index_table ${INDEXTABLE} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "push_to_tns" ]]; then
-  # Read configuration for hbase
+  # Check if we just need to test
+  if [[ $TNS_SANDBOX = true ]] ; then
+    TNS_SANDBOX="--tns_sandbox"
+  else
+    TNS_SANDBOX=""
+  fi
+
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/push_to_tns.py ${HELP_ON_SERVICE} \
   -night ${NIGHT} \
-  -tns_folder ${TNS_FOLDER} \
+  -tns_folder ${TNS_FOLDER} ${TNS_SANDBOX} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "check_science_portal" ]]; then
   # Read configuration for hbase

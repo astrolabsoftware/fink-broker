@@ -51,11 +51,10 @@ def main():
     )
     df = load_parquet_files(path)
 
-    sandbox = True
-    if not sandbox:
+    if not args.tns_sandbox:
         print("WARNING: submitting to real (not sandbox) TNS website")
 
-    if sandbox:
+    if args.tns_sandbox:
         url_tns_api = "https://sandbox-tns.weizmann.ac.il/api"
         with open('{}/sandbox-tns_api.key'.format(args.tns_folder)) as f:
             # remove line break...
