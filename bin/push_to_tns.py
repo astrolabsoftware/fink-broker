@@ -55,12 +55,12 @@ def main():
 
     if sandbox:
         url_tns_api = "https://sandbox-tns.weizmann.ac.il/api"
-        with open('sandbox-tns_api.key') as f:
+        with open('{}/sandbox-tns_api.key'.format(args.tns_folder)) as f:
             # remove line break...
             key = f.read().replace('\n', '')
     else:
         url_tns_api = "https://wis-tns.weizmann.ac.il/api"
-        with open('tns_api.key') as f:
+        with open('{}/tns_api.key'.format(args.tns_folder)) as f:
             # remove line break...
             key = f.read().replace('\n', '')
 
@@ -86,7 +86,7 @@ def main():
     check_tns = False
     for index, row in enumerate(pdf.iterrows()):
         alert = row[1]
-        past_ids = read_past_ids('tns_logs')
+        past_ids = read_past_ids(args.tns_folder)
         if alert['objectId'] in past_ids.values:
             print('{} already sent!'.format(alert['objectId']))
             continue
@@ -115,7 +115,7 @@ def main():
                 args.night[4:6],
                 args.night[6:8]
             ),
-            folder='tns_logs',
+            folder=args.tns_folder,
             ids=ids,
             report=report
         )

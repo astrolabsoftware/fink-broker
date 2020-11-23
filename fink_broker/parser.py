@@ -246,6 +246,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Name of the rowkey for index table
         [INDEXTABLE]
         """)
+    parser.add_argument(
+        '-tns_folder', type=str, default='',
+        help="""
+        Folder to store logs and keys for TNS submission
+        [TNS_FOLDER]
+        """)
     args = parser.parse_args(None)
     return args
 
