@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan, Julien Peloton
+# Copyright 2020 AstroLab Software
+# Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
