@@ -21,6 +21,7 @@ The Fink distribution schema is the input ZTF alert schema plus additional field
 |:--------|:-------|:-------|:-------|
 | Jul 2019 - Jan 2020 | version 0.1 | -- | `cdsxmatch` |
 | Jan 2020 - now | version 0.2 | [commit](https://github.com/astrolabsoftware/fink-broker/commit/bc5a03ae42513841c8c071a49f17bae1978e0e94) | `rfscore` |
+| Aug 2020 - now | version 0.3 | [commit](https://github.com/astrolabsoftware/fink-broker/commit/6385288158eeafe74a4a1d69b8ee857dc95f4c71) | `snn_snia_vs_nonia`, `snn_sn_vs_all`, `mulens.*`, `roid`, `nalerthist`, `fink_broker_version`, `fink_science_version` |
 
 ## Simulator vs live streams
 
