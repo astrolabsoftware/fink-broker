@@ -106,6 +106,10 @@ while [ "$#" -gt 0 ]; do
       NIGHT="$2"
       shift 2
       ;;
+    --topic)
+      KAFKA_TOPIC="$2"
+      shift 2
+      ;;
     --index_table)
       INDEXTABLE="$2"
       shift 2

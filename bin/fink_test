@@ -85,11 +85,8 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Fire a stream
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
-  # Check the stream is there
-  #fink start checkstream --exit_after 30 --simulator -c $conf
-
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf
+  fink start stream2raw --exit_after 60 --simulator -c $conf --topic "ztf-stream-sim"
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
