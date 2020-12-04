@@ -110,7 +110,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start check_science_portal -c $conf
 
   # clean tmp files
-  fink clean -c $conf
+  fink start clean -c $conf
 fi
 
 # Fire another stream
