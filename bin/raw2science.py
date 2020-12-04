@@ -47,7 +47,7 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science", shuffle_partitions=2)
+    spark = init_sparksession(name="raw2science_{}".format(args.night), shuffle_partitions=2)
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -56,7 +56,18 @@ def main():
     inspect_application(logger)
 
     df = connect_to_raw_database(
-        args.rawdatapath, args.rawdatapath + "/*", latestfirst=False)
+        args.rawdatapath + "/year={}/month={}/day={}".format(
+            args.night[0:4],
+            args.night[4:6],
+            args.night[6:8]
+        ),
+        args.rawdatapath + "/year={}/month={}/day={}".format(
+            args.night[0:4],
+            args.night[4:6],
+            args.night[6:8]
+        ),
+        latestfirst=False
+    )
 
     # Apply quality cuts
     logger.info(qualitycuts)
@@ -87,6 +98,7 @@ def main():
         .option("checkpointLocation", args.checkpointpath_sci_tmp) \
         .option("path", args.scitmpdatapath)\
         .partitionBy("year", "month", "day") \
+        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
         .start()
 
     # Keep the Streaming running until something or someone ends it!
