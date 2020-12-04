@@ -91,15 +91,16 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
 
-  # Start the distribution service
+  # Connect to the distribution service
   fink start distribution_test --exit_after 30 -c $conf &
 
-  # Connect to distribution service
+  # Start the distribution service
   fink start distribution --exit_after 30 -c $conf --night "20190903"
 
-  # merge and clean data
-  fink start merge_and_clean -c conf/fink.conf.travis --night "20190903"
+  # merge data
+  fink start merge -c conf/fink.conf.travis --night "20190903"
 
+  # Update science portal
   fink start science_archival -c $conf --night 20190903
   fink start index_archival -c $conf --night 20190903 --index_table jd_objectId
   fink start index_archival -c $conf --night 20190903 --index_table pixel_jd
@@ -108,6 +109,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
 
   fink start check_science_portal -c $conf
 
+  # clean tmp files
   fink clean -c $conf
 fi
 
