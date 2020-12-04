@@ -279,6 +279,8 @@ elif [[ $service == "raw2science" ]]; then
     -rawdatapath ${FINK_ALERT_PATH} \
     -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
     -checkpointpath_sci_tmp ${FINK_ALERT_CHECKPOINT_SCI_TMP} \
+    -tinterval ${FINK_TRIGGER_UPDATE} \
+    -night ${NIGHT} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Read configuration for redistribution
