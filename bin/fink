@@ -300,6 +300,8 @@ elif [[ $service == "distribution" ]]; then
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
+  -tinterval ${FINK_TRIGGER_UPDATE} \
+  -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "merge_and_clean" ]]; then
   spark-submit --master ${SPARK_MASTER} \
