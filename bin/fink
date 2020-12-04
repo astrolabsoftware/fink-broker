@@ -402,6 +402,11 @@ elif [[ $service == "save_schema" ]]; then
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -night ${NIGHT} -log_level ${LOG_LEVEL}
+elif [[ $service == "clean" ]]; then
+  if [[ $FS_KIND == "local" ]]; then
+    rm -r ${DATA_PREFIX}
+  elif [[ $FS_KIND == "hdfs" ]]; then
+    hdfs dfs -rm -r ${DATA_PREFIX}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2
