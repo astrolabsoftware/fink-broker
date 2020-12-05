@@ -72,7 +72,7 @@ source $conf
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
-export KAFKA_TOPIC=$KAFKA_TOPIC
+export KAFKA_TOPIC="ztf-stream-sim"
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -86,7 +86,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf --topic "ztf-stream-sim"
+  fink start stream2raw --exit_after 60 --simulator -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
