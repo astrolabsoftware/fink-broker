@@ -22,9 +22,6 @@ KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 # Must match the one used for the Producer
 KAFKA_IPPORT=""
 
-# Topic name for the producer
-KAFKA_TOPIC="ztf-stream-sim"
-
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
 # offset available), or a number (see Spark Kafka integration).
