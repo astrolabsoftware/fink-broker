@@ -17,6 +17,8 @@
 """Push early SN candidates to TNS
 """
 import argparse
+import requests
+import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
@@ -122,6 +124,23 @@ def main():
         )
         r = send_json_report(key, url_tns_api, json_report)
         print(r.json())
+
+        # post to slack
+        slacktxt = ' \n '.join(['http://134.158.75.151:24000/{}'.format(i) for i in ids])
+        slacktxt = '{} \n '.format(args.night) + slacktxt
+        r = requests.post(
+            os.environ['TNSWEBHOOK'],
+            json={'text': slacktxt, "username": "VirtualData"},
+            headers={'Content-Type': 'application/json'}
+        )
+        print(r.status_code)
+    else:
+        slacktxt = '{} \n No new sources'.format(args.night)
+        r = requests.post(
+            os.environ['TNSWEBHOOK'],
+            json={'text': slacktxt, "username": "VirtualData"},
+            headers={'Content-Type': 'application/json'}
+        )
 
 
 if __name__ == "__main__":
