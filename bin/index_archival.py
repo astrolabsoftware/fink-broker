@@ -99,8 +99,10 @@ def main():
     index_name = '.' + columns[0]
 
     common_cols = [
-        'objectId',
-        'ra', 'dec', 'jd', 'fid',
+        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
+        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
+        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
+        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
         'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
         'cdsxmatch',
         'roid',
