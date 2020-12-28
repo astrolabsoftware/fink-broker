@@ -57,12 +57,12 @@ def main():
         print("WARNING: submitting to real (not sandbox) TNS website")
 
     if args.tns_sandbox:
-        url_tns_api = "https://sandbox-tns.weizmann.ac.il/api"
+        url_tns_api = "https://sandbox.wis-tns.org/api"
         with open('{}/sandbox-tns_api.key'.format(args.tns_folder)) as f:
             # remove line break...
             key = f.read().replace('\n', '')
     else:
-        url_tns_api = "https://wis-tns.weizmann.ac.il/api"
+        url_tns_api = "https://www.wis-tns.org/api"
         with open('{}/tns_api.key'.format(args.tns_folder)) as f:
             # remove line break...
             key = f.read().replace('\n', '')
