@@ -106,6 +106,10 @@ while [ "$#" -gt 0 ]; do
       NIGHT="$2"
       shift 2
       ;;
+    --topic)
+      KAFKA_TOPIC="$2"
+      shift 2
+      ;;
     --index_table)
       INDEXTABLE="$2"
       shift 2
@@ -279,6 +283,8 @@ elif [[ $service == "raw2science" ]]; then
     -rawdatapath ${FINK_ALERT_PATH} \
     -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
     -checkpointpath_sci_tmp ${FINK_ALERT_CHECKPOINT_SCI_TMP} \
+    -tinterval ${FINK_TRIGGER_UPDATE} \
+    -night ${NIGHT} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
   # Read configuration for redistribution
@@ -298,8 +304,10 @@ elif [[ $service == "distribution" ]]; then
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
+  -tinterval ${FINK_TRIGGER_UPDATE} \
+  -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
-elif [[ $service == "merge_and_clean" ]]; then
+elif [[ $service == "merge" ]]; then
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
@@ -308,7 +316,6 @@ elif [[ $service == "merge_and_clean" ]]; then
   -rawdatapath ${FINK_ALERT_PATH} \
   -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
   -night ${NIGHT} \
-  -fs ${FS_KIND} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "reprocess_night" ]]; then
   spark-submit --master ${SPARK_MASTER} \
@@ -394,6 +401,12 @@ elif [[ $service == "save_schema" ]]; then
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -night ${NIGHT} -log_level ${LOG_LEVEL}
+elif [[ $service == "clean" ]]; then
+  if [[ $FS_KIND == "local" ]]; then
+    rm -r ${DATA_PREFIX}
+  elif [[ $FS_KIND == "hdfs" ]]; then
+    hdfs dfs -rm -r ${DATA_PREFIX}
+  fi
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

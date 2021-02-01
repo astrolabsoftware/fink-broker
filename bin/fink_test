@@ -72,7 +72,7 @@ source $conf
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
-export KAFKA_TOPIC=$KAFKA_TOPIC
+export KAFKA_TOPIC="ztf-stream-sim"
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -85,24 +85,22 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Fire a stream
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
-  # Check the stream is there
-  #fink start checkstream --exit_after 30 --simulator -c $conf
-
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf
+  fink start stream2raw --exit_after 60 --simulator -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 60 -c $conf
+  fink start raw2science --exit_after 60 -c $conf --night "20190903"
 
-  # Start the distribution service
+  # Connect to the distribution service
   fink start distribution_test --exit_after 30 -c $conf &
 
-  # Connect to distribution service
-  fink start distribution --exit_after 30 -c $conf
+  # Start the distribution service
+  fink start distribution --exit_after 30 -c $conf --night "20190903"
 
-  # merge and clean data
-  fink start merge_and_clean -c conf/fink.conf.travis --night "20190903"
+  # merge data
+  fink start merge -c conf/fink.conf.travis --night "20190903"
 
+  # Update science portal
   fink start science_archival -c $conf --night 20190903
   fink start index_archival -c $conf --night 20190903 --index_table jd_objectId
   fink start index_archival -c $conf --night 20190903 --index_table pixel_jd
@@ -110,6 +108,9 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start index_archival -c $conf --night 20190903 --index_table upper_objectId_jd
 
   fink start check_science_portal -c $conf
+
+  # clean tmp files
+  fink start clean -c $conf
 fi
 
 # Fire another stream

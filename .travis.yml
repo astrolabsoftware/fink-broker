@@ -21,6 +21,7 @@ addons:
       secure: "Q4ntGTDH7XnNe7t5r9tDrppY2lDnni5Mlpo0jKRDnyRuFcDvqTdcni1Vs3UghczI+qaoD/3zyfazHPV7OwIOGacgce8zsntt3g/8KeCoWvdKSVejhyHtjyA5NovwMr0otvvzyvPS4c+SuXbA9OJZNijARhOZ0aAYcNiuWsr9zOhCzTz0A5pt5T0rign1C2Fh5OZJQtfId6TZtvqQLeNei9z0v+d/SNOLLr59IT5IobXqnFmOPTnRkbGi+zzLm+eh+ifg/4pEtKeZfAe7Pbjd35R6vCFOhTs0z1IVsPPwVq0hXiwVDWB+mku0w+hiG0pNQzxkj1mcbF3i8szRlIih4kr1PuCJnsLe+lkMBSUUASt6kCBDPUDLylQDGWnEFA61BBQbeOY9WecfwFEphvJ9grzAyreUwxOQ1HD39i4I1UySyaBKtpiL02z7NzDWbzON41x99PG/V+U+uTpYq9qX3gIqwqE9vcZ0Nclr91ElKkMK+t1baO0Jibb8xGe0+/ilmrdKeOyJ2FUKE4b2MBnfOvIDMfH3TbmD1/bR87IZNfZoVjrv2krg0xVPszKthUPPHPOPLiow+GWRca40AVGaXw9hDG0nX7Yzm8WtwiYnCD/s3Oc+WXVhJY4bt4w6D+Z5ocYzOCZWXcWWmAUFUqwti0WPO9A6PKIE440pAcIms7Y="
 
 before_install:
+  - export ORIGINAL_JAVA_HOME=$JAVA_HOME
   - export FINK_HOME="/home/travis/build/${TRAVIS_REPO_SLUG}"
   # Install Java 8 for Xenial
   - source conf/java8_for_xenial.sh
@@ -73,6 +74,9 @@ script:
   # Scan with sonarqube only if internal PR (i.e. no fork)
   # Note: this is unsatisfactory...
   - if [ $TRAVIS_REPO_SLUG == "astrolabsoftware/fink-broker" ]; then
+    # restore java 11 before running sonar
+    export JAVA_HOME=$ORIGINAL_JAVA_HOME
+    echo $JAVA_HOME
     coverage xml -i;
     sonar-scanner;
     fi
