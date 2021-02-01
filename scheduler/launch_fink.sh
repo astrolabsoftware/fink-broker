@@ -23,7 +23,7 @@ LEASETIME=82800
 nohup fink start stream2raw -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw --topic "ztf_${NIGHT}.*" --exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 
 # raw2science
-nohup ${FINK_HOME}/science_service.sh > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
+nohup ${FINK_HOME}/scheduler/science_service.sh > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
 
 # disrtribute
-nohup ${FINK_HOME}/distribution_service.sh > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
+nohup ${FINK_HOME}/scheduler/distribution_service.sh > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
