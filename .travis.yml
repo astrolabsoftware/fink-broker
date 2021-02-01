@@ -76,6 +76,7 @@ script:
   - if [ $TRAVIS_REPO_SLUG == "astrolabsoftware/fink-broker" ]; then
     # restore java 11 before running sonar
     export JAVA_HOME=$ORIGINAL_JAVA_HOME
+    echo $JAVA_HOME
     coverage xml -i;
     sonar-scanner;
     fi
