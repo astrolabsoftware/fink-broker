@@ -4,12 +4,10 @@ dist: xenial
 
 # Check against N & N-1 Spark versions
 env:
-  - SPARK_VERSION=2.4.4
-  - SPARK_VERSION=2.4.5
+  - SPARK_VERSION=2.4.7
 
 python:
   - "3.6"
-  - "3.7"
 
 addons:
   apt:
