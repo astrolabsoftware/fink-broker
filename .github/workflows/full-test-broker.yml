@@ -57,8 +57,8 @@ jobs:
         source conf/install_kafka.sh
     - name: Install Spark 2.4.7
       run: |
-        "[ -f spark ] || mkdir spark && cd spark && axel --quiet http://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz && cd .."
-        tar -xf ./spark/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
+        axel --quiet http://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
+        tar -xf spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
     - name: Download test data
       run: |
