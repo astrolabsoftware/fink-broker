@@ -32,6 +32,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install add-ons
+      run: |
+        sudo apt-get install axel
     - name: Set up env [1/2]
       run: |
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
@@ -47,7 +50,7 @@ jobs:
         echo "KAFKA_HOME=$FINK_HOME/kafka" >> $GITHUB_ENV
     - name: Install Spark 2.4.7
       run: |
-        wget https://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz -O spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
+        axel -n10 --quiet https://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         tar -xf spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
     - name: Download test data
@@ -67,6 +70,14 @@ jobs:
         echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
         echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+    - name: Check env
+      run: |
+        echo 'FINK_HOME: $FINK_HOME'
+        echo 'SPARK_HOME: $SPARK_HOME'
+        echo 'SPARKLIB: $SPARKLIB'
+        echo 'FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR'
+        echo 'KAFKA_HOME: $KAFKA_HOME'
+        echo 'PYTHONPATH: $PYTHONPATH'
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
