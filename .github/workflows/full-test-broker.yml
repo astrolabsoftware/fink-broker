@@ -83,6 +83,14 @@ jobs:
         echo "KAFKA_HOME: $KAFKA_HOME"
         echo "PYTHONPATH: $PYTHONPATH"
     - name: Run test suites
+      run: |
+        git fetch --unshallow --quiet
+        fink init -c ${FINK_HOME}/conf/fink.conf.travis
+        fink_kafka start
+        fink_kafka --create-topic fink_outstream
+        fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+        fink_test
+        bash <(curl -s https://codecov.io/bash)
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
