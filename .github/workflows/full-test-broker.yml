@@ -72,12 +72,12 @@ jobs:
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
     - name: Check env
       run: |
-        echo 'FINK_HOME: $FINK_HOME'
-        echo 'SPARK_HOME: $SPARK_HOME'
-        echo 'SPARKLIB: $SPARKLIB'
-        echo 'FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR'
-        echo 'KAFKA_HOME: $KAFKA_HOME'
-        echo 'PYTHONPATH: $PYTHONPATH'
+        echo "FINK_HOME: $FINK_HOME"
+        echo "SPARK_HOME: $SPARK_HOME"
+        echo "SPARKLIB: $SPARKLIB"
+        echo "FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR"
+        echo "KAFKA_HOME: $KAFKA_HOME'
+        echo "PYTHONPATH: $PYTHONPATH"
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
