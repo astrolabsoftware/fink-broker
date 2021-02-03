@@ -1,0 +1,46 @@
+name: Sentinel
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check HBase 2.2.6 availability
+        run: |
+          wget --spider http://www-us.apache.org/dist/hbase/2.2.6/hbase-2.2.6-bin.tar.gz
+      - name: Check Kafka 2.6.1 availability
+        run: |
+          wget --spider https://www.apache.org/dist/kafka/2.6.1/kafka_2.12-2.6.1.tgz
+      - name: Check Spark 2.4.7 availability
+        run: |
+          wget --spider http://archive.apache.org/dist/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz
+  test-suite:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+        spark-version: [2.4.4, 2.4.7]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Step1.1
+      run: |
+        echo `python -V`
+        echo ${{ matrix.spark-version }}
+  clean:
+    needs: test-suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: final
+        run: |
+          echo `python -V`
+          echo ${{ matrix.spark-version }}
