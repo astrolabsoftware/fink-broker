@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,6 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
-from pyspark.sql.functions import lit
-
 import argparse
 import time
 

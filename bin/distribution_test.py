@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Abhishek Chauhan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,6 @@ Consume the distributed alerts from the Kafka Server.
 2. Deserialize the avro data using the pre-defined schema
 3. Carry out operations on the obtained DataFrame
 """
-from pyspark.sql.functions import col
-
 import argparse
 import time
 

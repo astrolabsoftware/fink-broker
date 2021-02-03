@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import os
 import slack
 from fink_broker.tester import spark_unit_tests
@@ -200,6 +199,7 @@ def send_slack_alerts(df: DataFrame, channels: str):
             slack_alert = "```\n" + alert_text + "```"
 
             finkSlack.send_message(channel_name, slack_alert)
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """

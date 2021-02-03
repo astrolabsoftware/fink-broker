@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,13 @@
 # limitations under the License.
 """Batch version of raw2science.py to re-process data of one night
 """
-from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
 import argparse
-import time
-import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 

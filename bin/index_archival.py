@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,6 @@ from pyspark.sql.functions import lit, concat_ws, col
 from pyspark.sql.functions import arrays_zip, explode
 
 import argparse
-import time
-import json
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs

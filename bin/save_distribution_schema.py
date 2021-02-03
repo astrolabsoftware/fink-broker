@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Save distribution schema on disk
 """
-from pyspark.sql.functions import lit
-
 import argparse
 from time import time
 import subprocess
@@ -26,7 +23,6 @@ import json
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
-from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -68,9 +64,6 @@ def main():
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
 
     df_kafka = df.selectExpr(cnames)
-
-    # # Get the DataFrame for publishing to Kafka (avro serialized)
-    # df_kafka = get_kafka_df(df, '')
 
     path_for_avro = 'new_schema_{}.avro'.format(time())
     df_kafka.limit(1).write.format("avro").save(path_for_avro)

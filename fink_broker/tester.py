@@ -17,6 +17,7 @@ import sys
 import doctest
 import numpy as np
 
+
 def regular_unit_tests(global_args: dict = None, verbose: bool = False):
     """ Base commands for the regular unit test suite
 
@@ -51,6 +52,7 @@ def regular_unit_tests(global_args: dict = None, verbose: bool = False):
         np.set_printoptions(legacy="1.13")
 
     sys.exit(doctest.testmod(globs=global_args, verbose=verbose)[0])
+
 
 def spark_unit_tests(
         global_args: dict = None, verbose: bool = False,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,12 +22,10 @@ Step 4: Push alert data into the tmp science database (parquet)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
-from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
 import argparse
 import time
-import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
