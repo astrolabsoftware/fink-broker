@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  setup:
+  install-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Check HBase 2.2.6 availability
@@ -18,7 +18,7 @@ jobs:
           wget --spider https://www.apache.org/dist/kafka/2.6.1/kafka_2.12-2.6.1.tgz
       - name: Check Spark 2.4.7 availability
         run: |
-          wget --spider http://archive.apache.org/dist/spark/spark-2.4.80/spark-2.4.7-bin-hadoop2.7.tgz
+          wget --spider http://archive.apache.org/dist/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz
   test-suite:
     needs: setup
     runs-on: ubuntu-latest
@@ -32,10 +32,24 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Step1.1
+    - name: set up env
       run: |
-        echo `python -V`
-        echo ${{ matrix.spark-version }}
+        echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+    - name: Install add-ons
+      run: |
+        sudo apt-get install axel
+    - name: Install Java 8
+      run: |
+        source conf/java8_for_xenial.sh
+        echo "$HOME/.local/bin:${FINK_HOME}/bin" >> $GITHUB_PATH
+    - name: Install HBase 2.2.6
+      run: |
+        source conf/install_hbase.sh
+    - name: Download test data
+      run: |
+        cd datasim
+        source download_ztf_alert_data.sh
+        cd ..
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
