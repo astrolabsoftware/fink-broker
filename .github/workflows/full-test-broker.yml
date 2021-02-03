@@ -67,9 +67,13 @@ jobs:
         echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip" >> $GITHUB_ENV
         echo "$HOME/.local/bin:${FINK_HOME}/bin" >> $GITHUB_PATH
         echo "${SPARK_HOME}/bin:${SPARK_HOME}/sbin" >> $GITHUB_PATH
-        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
         echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip setuptools wheel
+        source ./install_python_deps.sh
+        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
     - name: Check env
       run: |
         echo "FINK_HOME: $FINK_HOME"
@@ -78,6 +82,7 @@ jobs:
         echo "FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR"
         echo "KAFKA_HOME: $KAFKA_HOME"
         echo "PYTHONPATH: $PYTHONPATH"
+    - name: Run test suites
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
