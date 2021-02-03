@@ -73,7 +73,7 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         source ./install_python_deps.sh
-        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
+        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_ALERT_SIMULATOR}"" >> $GITHUB_ENV
     - name: Check env
       run: |
         echo "FINK_HOME: $FINK_HOME"
