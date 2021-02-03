@@ -15,13 +15,12 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-from pyspark.sql.functions import pandas_udf, PandasUDFType, lit
+from pyspark.sql.functions import pandas_udf, PandasUDFType
 from pyspark.sql.types import StringType, LongType
 
 import pandas as pd
 
 from logging import Logger
-import json
 import os
 
 from fink_science.utilities import concat_col

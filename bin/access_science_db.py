@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 """Access the science database, and read alerts. HBase must be installed.
 """
 import argparse
-import time
 import json
 
 from fink_broker.parser import getargs

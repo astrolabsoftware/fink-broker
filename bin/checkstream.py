@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 # limitations under the License.
 """Monitor Kafka stream received by Spark
 """
-from pyspark.sql import SparkSession
-
 import argparse
 import time
 

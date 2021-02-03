@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import concat_ws, col, lit
+from pyspark.sql.functions import concat_ws, col
 from pyspark.mllib.common import _java2py
 from pyspark.sql import SparkSession
 
@@ -240,10 +240,12 @@ def construct_hbase_catalog_from_flatten_schema(
 
         # Deal with array
         if type(column["type"]) == dict:
-            column["type"] = "string" # column["type"]["type"]
+            # column["type"]["type"]
+            column["type"] = "string"
 
         if column["type"] == 'timestamp':
-            column["type"] = "string" # column["type"]["type"]
+            # column["type"]["type"]
+            column["type"] = "string"
 
         if column["name"] == rowkeyname:
             catalog += """
@@ -291,6 +293,7 @@ def construct_schema_row(df, rowkeyname, version):
     Examples
     --------
     # Read alert from the raw database
+    >>> from pyspark.sql.functions import lit
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement

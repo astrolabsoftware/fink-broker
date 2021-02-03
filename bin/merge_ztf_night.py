@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2021 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +15,9 @@
 # limitations under the License.
 """Retrieve one ZTF day, and merge small files into larger ones.
 """
-from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
 import argparse
-import time
-import json
-import subprocess
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession

@@ -17,7 +17,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
-from pyspark.sql.functions import col, struct
 
 import os
 import json
@@ -85,6 +84,7 @@ def to_avro(dfcol: Column) -> Column:
 
     Examples
     ----------
+    >>> from pyspark.sql.functions import col, struct
     >>> avro_example_schema = '''
     ... {
     ...     "type" : "record",

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import json
 import os
 import glob
@@ -20,9 +19,9 @@ import shutil
 import time
 
 from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.sparkUtils import get_spark_context, to_avro, from_avro
+from fink_broker.sparkUtils import to_avro, from_avro
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import struct, col, lit
+from pyspark.sql.functions import struct
 from fink_broker.tester import spark_unit_tests
 
 def get_kafka_df(
@@ -183,6 +182,7 @@ def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
 
     Examples
     ----------
+    >>> from pyspark.sql.functions import col
     >>> df = spark.sparkContext.parallelize(zip(
     ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
     ...     [697251923115015002, 697251921215010004],
@@ -388,11 +388,11 @@ def group_df_into_struct(df: DataFrame, colfamily: str, key: str) -> DataFrame:
 
     pos = len(colfamily) + 1
 
-    for col in df.columns:
-        if col.startswith(colfamily + "_"):
-            struct_cols.append(col)
+    for col_ in df.columns:
+        if col_.startswith(colfamily + "_"):
+            struct_cols.append(col_)
         else:
-            flat_cols.append(col)
+            flat_cols.append(col_)
 
     # dataframe with columns other than 'columnFamily_*'
     df1 = df.select(flat_cols)

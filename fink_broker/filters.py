@@ -16,7 +16,6 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType, col
 from pyspark.sql.types import BooleanType
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
-from pyspark.sql.functions import struct
 
 import os
 import xml.etree.ElementTree as ET
@@ -52,6 +51,7 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
 
     Examples
     -------
+    >>> from pyspark.sql.functions import struct
     >>> colnames = ["nbad", "rb", "magdiff"]
     >>> df = spark.sparkContext.parallelize(zip(
     ...   [0, 1, 0, 0],
@@ -171,6 +171,7 @@ def apply_user_defined_filter(df: DataFrame, toapply: str) -> DataFrame:
 
     Examples
     -------
+    >>> from pyspark.sql.functions import struct
     >>> colnames = ["cdsxmatch", "rb", "magdiff"]
     >>> df = spark.sparkContext.parallelize(zip(
     ...   ['RRLyr', 'Unknown', 'Star', 'SN1a'],
@@ -264,6 +265,7 @@ def apply_user_defined_processors(df: DataFrame, processor_names: list):
 
     Examples
     -------
+    >>> from pyspark.sql.functions import struct
     >>> df = spark.sparkContext.parallelize(zip(
     ...   [26.8566983, 26.24497],
     ...   [-26.9677112, -26.7569436],
