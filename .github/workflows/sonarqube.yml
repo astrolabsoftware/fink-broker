@@ -16,6 +16,13 @@ jobs:
         fetch-depth: 0
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
+      with:
+        args: >
+          -Dsonar.organization=astrolabsoftware
+          -Dsonar.projectKey=finkbroker
+          -Dsonar.sources=fink_broker/,bin/
+          -Dsonar.test.exclusions=fink_broker/htmlcov,fink_broker/slackUtils.py
+          -Dsonar.verbose=true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
