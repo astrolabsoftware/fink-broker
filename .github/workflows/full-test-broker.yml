@@ -20,7 +20,7 @@ jobs:
         run: |
           wget --spider http://archive.apache.org/dist/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz
   test-suite:
-    needs: setup
+    needs: install-checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
