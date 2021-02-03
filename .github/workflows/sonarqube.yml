@@ -9,8 +9,6 @@ on:
 jobs:
   sonarcloud:
     runs-on: ubuntu-latest
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -28,7 +26,3 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    - uses: act10ns/slack@v1
-      with:
-        status: ${{ job.status }}
-      if: always()
