@@ -1,8 +1,11 @@
 # <img src=".github/Fink_PrimaryLogo_WEB.png" width=150 />
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=alert_status)](https://sonarcloud.io/dashboard?id=finkbroker) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=finkbroker)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=alert_status)](https://sonarcloud.io/dashboard?id=finkbroker)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=finkbroker)
 [![Sentinel](https://github.com/astrolabsoftware/fink-broker/workflows/Sentinel/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3ASentinel)
-[![PEP8](https://github.com/astrolabsoftware/fink-broker/workflows/PEP8/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3APEP8)[![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker) [![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
+[![PEP8](https://github.com/astrolabsoftware/fink-broker/workflows/PEP8/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3APEP8)
+[![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
+[![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
 Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
 
