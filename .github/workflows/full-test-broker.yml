@@ -32,20 +32,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: set up env
+    - name: Set up env [1/2]
       run: |
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
-        echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip" >> $GITHUB_ENV
-        echo "KAFKA_HOME=$FINK_HOME/kafka" >> $GITHUB_ENV
-        echo "FINK_ALERT_SIMULATOR=${GITHUB_WORKSPACE}/fink-alert-simulator" >> $GITHUB_ENV
-        echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
-        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
-        echo "$HOME/.local/bin:${FINK_HOME}/bin" >> $GITHUB_PATH
-        echo "${SPARK_HOME}/bin:${SPARK_HOME}/sbin" >> $GITHUB_PATH
-    - name: Install add-ons
-      run: |
-        sudo apt-get install axel
     - name: Install Java 8
       run: |
         source conf/java8_for_xenial.sh
@@ -55,19 +44,29 @@ jobs:
     - name: Install Kafka 2.6.1
       run: |
         source conf/install_kafka.sh
+        echo "KAFKA_HOME=$FINK_HOME/kafka" >> $GITHUB_ENV
     - name: Install Spark 2.4.7
       run: |
-        axel --quiet http://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
+        wget https://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz -O spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         tar -xf spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
-        echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+        echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
     - name: Download test data
       run: |
         cd datasim
         source download_ztf_alert_data.sh
         cd ..
+        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
     - name: Download simulator
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
+    - name: Set up env [2/2]
+      run: |
+        echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip" >> $GITHUB_ENV
+        echo "$HOME/.local/bin:${FINK_HOME}/bin" >> $GITHUB_PATH
+        echo "${SPARK_HOME}/bin:${SPARK_HOME}/sbin" >> $GITHUB_PATH
+        echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}"" >> $GITHUB_ENV
+        echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
+        echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
   clean:
     needs: test-suite
     runs-on: ubuntu-latest
