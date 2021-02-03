@@ -26,6 +26,8 @@ jobs:
       matrix:
         python-version: [3.6]
         spark-version: [2.4.7]
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -91,11 +93,7 @@ jobs:
         fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
         fink_test
         bash <(curl -s https://codecov.io/bash)
-  clean:
-    needs: test-suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: final
-        run: |
-          echo `python -V`
-          echo ${{ matrix.spark-version }}
+    - uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+      if: always()
