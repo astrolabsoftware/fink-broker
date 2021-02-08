@@ -21,6 +21,7 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
+import pyspark.sql.functions as F
 from pyspark.sql.functions import lit, concat_ws, col
 from pyspark.sql.functions import arrays_zip, explode
 
@@ -88,7 +89,7 @@ def main():
         df = df.select(cols_i + cols_d + cols_b)
 
     # Create and attach the rowkey
-    df, row_key_name = attach_rowkey(df)
+    df, _ = attach_rowkey(df)
 
     # construct the index view
     index_row_key_name = args.index_table
@@ -134,6 +135,23 @@ def main():
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols
         )
+    elif columns[0] == 'ssnamenr':
+        # TODO: Computation of SSO flags was bugged.
+        # Ideally, we would have to filter on the `roid==3` field, but
+        # there was a bug in its computation (see https://github.com/astrolabsoftware/fink-science/issues/85)
+        # Hence, as long as we the data is not recomputed, we use this condition
+        # to flag known SSO (which is actually used since 02/2021).
+        df_index = df\
+            .filter(df['ssnamenr'] != 'null')\
+            .filter(df['ssdistnr'] >= 0)\
+            .filter(df['ssdistnr'] < 5)\
+            .filter((F.abs(df['distpsnr1']) - df['ssdistnr']) > 0.0)\
+            .filter(df['ndethist'] <= 2)\
+            .select(
+                [
+                    concat_ws('_', *names).alias(index_row_key_name)
+                ] + common_cols
+            )
     elif columns[0] == 'upper':
         # This case is the same as the main table
         # but we keep only upper limit measurements.
