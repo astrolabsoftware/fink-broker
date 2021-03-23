@@ -223,7 +223,7 @@ def extract_fink_classification(
         "PartofG",
     ]
     keep_cds = \
-        ["Unknown", "Candidate_SN*", "SN", "Transient"] + list_simbad_galaxies
+        ["Unknown", "Candidate_SN*", "SN", "Transient", "Fail"] + list_simbad_galaxies
 
     f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
     f_sn_early = early_ndethist & active_learn & f_sn

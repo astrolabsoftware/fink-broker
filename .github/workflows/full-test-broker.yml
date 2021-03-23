@@ -43,6 +43,7 @@ jobs:
     - name: Install Java 8
       run: |
         source conf/java8_for_xenial.sh
+        echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
     - name: Install HBase 2.2.6
       run: |
         source conf/install_hbase.sh
@@ -84,6 +85,8 @@ jobs:
         echo "FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR"
         echo "KAFKA_HOME: $KAFKA_HOME"
         echo "PYTHONPATH: $PYTHONPATH"
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo `python -V`
     - name: Run test suites
       run: |
         git fetch --unshallow --quiet
