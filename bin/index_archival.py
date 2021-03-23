@@ -174,6 +174,26 @@ def main():
         df_index = df_ex.filter(~df_ex['magpsf'].isNotNull())
         # drop NaN columns
         df_index = df_index.drop(*['magpsf', 'sigmapsf'])
+    elif columns[0] == 'uppervalid':
+        # This case is the same as the main table
+        # but we keep only upper limit measurements.
+        index_row_key_name = 'objectId_jd'
+        # explode
+        df_ex = df.withColumn(
+            "tmp",
+            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
+        ).withColumn("tmp", explode("tmp")).select(
+            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
+            "objectId",
+            col("tmp.jd"),
+            col("tmp.fid"),
+            col("tmp.magpsf"),
+            col("tmp.sigmapsf"),
+            col("tmp.diffmaglim")
+        )
+
+        # take only valid measurements from the history
+        df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
     else:
         df_index = df.select(
             [
