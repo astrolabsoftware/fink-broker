@@ -24,7 +24,7 @@ from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import struct
+from pyspark.sql.functions import struct, lit
 
 from fink_broker.tester import spark_unit_tests
 
@@ -76,7 +76,7 @@ def get_kafka_df(
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
 
     # Add a key based on schema versions
-    df_kafka = df_kafka.withColumn('key', '{}_{}'.format(fbvsn, fsvsn))
+    df_kafka = df_kafka.withColumn('key', lit('{}_{}'.format(fbvsn, fsvsn)))
 
     if saveschema:
         # Harcoded path that corresponds to the schema used
