@@ -107,7 +107,7 @@ def main():
         'roid',
         'mulens_class_1', 'mulens_class_2',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
-        'classtar', 'drb', 'ndethist'
+        'classtar', 'drb', 'ndethist', 'knscore'
     ]
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
