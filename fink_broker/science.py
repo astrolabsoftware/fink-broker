@@ -34,6 +34,7 @@ from fink_science.microlensing.classifier import load_mulens_schema_twobands
 from fink_science.microlensing.classifier import load_external_model
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
+from fink_science.kilonova.processor import knscore
 
 from fink_broker.tester import spark_unit_tests
 
@@ -174,6 +175,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: nalerthist
     logger.info("New processor: nalerthist")
     df = df.withColumn('nalerthist', nalerthist(df['cmagpsf']))
+
+    # Apply level one processor: kilonova
+    logger.info("New processor: kilonova")
+    knscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    df = df.withColumn('knscore', knscore(*knscore_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
