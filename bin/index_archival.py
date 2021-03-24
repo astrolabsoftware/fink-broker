@@ -128,7 +128,9 @@ def main():
                 df['rfscore'],
                 df['ndethist'],
                 df['drb'],
-                df['classtar']
+                df['classtar'],
+                df['jd'],
+                df['jdstarthist']
             )
         ).select(
             [

@@ -190,7 +190,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 def extract_fink_classification(
         cdsxmatch, roid, mulens_class_1, mulens_class_2,
         snn_snia_vs_nonia, snn_sn_vs_all, rfscore,
-        ndethist, drb, classtar):
+        ndethist, drb, classtar, jd, jdstarthist):
     """ Extract the classification of an alert based on module outputs
 
     See https://arxiv.org/abs/2009.10185 for more information
@@ -205,10 +205,16 @@ def extract_fink_classification(
     snn1 = snn_snia_vs_nonia.astype(float) > 0.5
     snn2 = snn_sn_vs_all.astype(float) > 0.5
     active_learn = rfscore.astype(float) > 0.5
+
+    # KN
+    high_knscore = knscore.astype(float) > 0.5
+
+    # Others
     low_ndethist = ndethist.astype(int) < 400
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
-    early_ndethist = ndethist.astype(int) <= 20
+    early_ndethist = ndethist.astype(int) < 20
+    new_detection = jd.astype(float) - jdstarthist.astype(float) < 20
 
     list_simbad_galaxies = [
         "galaxy",
@@ -234,6 +240,13 @@ def extract_fink_classification(
     f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
     f_sn_early = early_ndethist & active_learn & f_sn
 
+    # Kilonova
+    keep_cds = \
+        ["Unknown", "Transient", "Fail"] + list_simbad_galaxies
+
+    f_kn = high_knscore & high_drb & high_classtar & new_detection
+    f_kn = f_kn & early_ndethist & cdsxmatch.isin(keep_cds)
+
     # Solar System Objects
     f_roid = roid.astype(int).isin([2, 3])
 
@@ -243,6 +256,7 @@ def extract_fink_classification(
     classification.mask(f_mulens.values, 'Microlensing candidate', inplace=True)
     classification.mask(f_sn.values, 'SN candidate', inplace=True)
     classification.mask(f_sn_early.values, 'Early SN candidate', inplace=True)
+    classification.mask(f_kn.values, 'Kilonova candidate', inplace=True)
     classification.mask(f_roid.values, 'Solar System', inplace=True)
 
     # If several flags are up, we cannot rely on the classification
