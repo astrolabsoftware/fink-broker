@@ -35,7 +35,8 @@ userfilters = [
     'fink_filters.filter_early_sn_candidates.filter.early_sn_candidates',
     'fink_filters.filter_sn_candidates.filter.sn_candidates',
     'fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates',
-    'fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates'
+    'fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates',
+    'fink_filters.filter_kn_candidates.filter.kn_candidates'
 ]
 # does not work because of nested args
 # 'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
