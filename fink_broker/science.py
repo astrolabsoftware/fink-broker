@@ -242,7 +242,7 @@ def extract_fink_classification(
 
     # Kilonova
     keep_cds = \
-        ["Unknown", "Transient","Fail"] + list_simbad_galaxies
+        ["Unknown", "Transient", "Fail"] + list_simbad_galaxies
 
     f_kn = high_knscore & high_drb & high_classtar & new_detection
     f_kn = f_kn & early_ndethist & cdsxmatch.isin(keep_cds)
