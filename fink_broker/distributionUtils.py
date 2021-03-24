@@ -20,8 +20,12 @@ import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import to_avro, from_avro
+from fink_broker import __version__ as fbvsn
+from fink_science import __version__ as fsvsn
+
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct
+
 from fink_broker.tester import spark_unit_tests
 
 def get_kafka_df(
@@ -70,6 +74,9 @@ def get_kafka_df(
 
     # Convert into avro and save the schema
     df_kafka = df_struct.select(to_avro("struct").alias("value"))
+
+    # Add a key based on schema versions
+    df_kafka = df_kafka.withColumn('key', '{}_{}'.format(fbvsn, fsvsn))
 
     if saveschema:
         # Harcoded path that corresponds to the schema used
