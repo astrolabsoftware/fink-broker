@@ -11,6 +11,7 @@ Fink is a broker infrastructure enabling a wide range of applications and servic
 
 # Latest News
 
+* 03/21: Fink broker [1.1](https://github.com/astrolabsoftware/fink-broker/pull/429)
 * 02/21: Fink broker [1.0](https://github.com/astrolabsoftware/fink-broker/pull/416)
 * 08/20: Fink broker [0.7](https://github.com/astrolabsoftware/fink-broker/pull/396)
 * 06/20: Fink broker [0.6](https://github.com/astrolabsoftware/fink-broker/pull/386).
