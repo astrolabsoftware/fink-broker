@@ -190,7 +190,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 def extract_fink_classification(
         cdsxmatch, roid, mulens_class_1, mulens_class_2,
         snn_snia_vs_nonia, snn_sn_vs_all, rfscore,
-        ndethist, drb, classtar, jd, jdstarthist):
+        ndethist, drb, classtar, jd, jdstarthist, knscore_):
     """ Extract the classification of an alert based on module outputs
 
     See https://arxiv.org/abs/2009.10185 for more information
@@ -207,7 +207,7 @@ def extract_fink_classification(
     active_learn = rfscore.astype(float) > 0.5
 
     # KN
-    high_knscore = knscore.astype(float) > 0.5
+    high_knscore = knscore_.astype(float) > 0.5
 
     # Others
     low_ndethist = ndethist.astype(int) < 400
