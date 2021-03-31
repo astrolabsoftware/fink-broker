@@ -23,6 +23,8 @@
 """
 import argparse
 import time
+import requests
+import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
@@ -99,6 +101,17 @@ def main():
             .option("checkpointLocation", args.checkpointpath_kafka + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
+                
+        # Send kn candidates to Slack  
+        if userfilter=='fink_filters.filter_kn_candidates.filter.kn_candidates':
+            kn_candidates_id = df.filter(df_tmp==True).select(['objectId']).toPandas()
+            for alertID in kn_candidates_id:
+                slacktext = f'new kilonova candidate alert: \n<http://134.158.75.151:24000/{alertID}>'
+                requests.post(
+                    os.environ['KNWEBHOOK'], # to define
+                    json={'text':slacktext, 'username':'kilonova_bot'},
+                    headers={'Content-Type': 'application/json'},
+                )   
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
