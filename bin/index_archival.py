@@ -282,7 +282,7 @@ def main():
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols + ['tns']
         ).cache()
-        df_index = df.filter(df['tns'] != '')
+        df_index = df.filter(df['tns'] != '').drop('tns')
         n = df_index.count() # trigger the cache
         print('TNS objects: {}'.format(n))
     else:
