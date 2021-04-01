@@ -24,6 +24,8 @@
 import pyspark.sql.functions as F
 from pyspark.sql.functions import lit, concat_ws, col
 from pyspark.sql.functions import arrays_zip, explode
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.types import StringType
 
 import argparse
 
@@ -38,9 +40,57 @@ from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import ang2pix, extract_fink_classification
 
+from fink_tns.utils import download_catalog
+
+from astropy.time import Time
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science import __version__ as fsvsn
+
+@pandas_udf(StringType(), PandasUDFType.SCALAR)
+def crossmatch_with_tns(objectid, ra, dec):
+    # TNS
+    pdf = pdf_tns_filt_b.value
+    ra2, dec2, type2 = pdf['ra'], pdf['declination'], pdf['type']
+
+    # create catalogs
+    catalog_ztf = SkyCoord(
+        ra=np.array(ra, dtype=np.float) * u.degree,
+        dec=np.array(dec, dtype=np.float) * u.degree
+    )
+    catalog_tns = SkyCoord(
+        ra=np.array(ra2, dtype=np.float) * u.degree,
+        dec=np.array(dec2, dtype=np.float) * u.degree
+    )
+
+    # cross-match
+    idx, d2d, d3d = catalog_tns.match_to_catalog_sky(catalog_ztf)
+    sep_constraint = d2d.degree < 1.5 / 3600
+
+    sub_pdf = pd.DataFrame({
+        'objectId': objectid.values[idx],
+        'ra': ra.values[idx],
+        'dec': dec.values[idx],
+    })
+
+    # cross-match
+    idx2, d2d2, d3d2 = catalog_ztf.match_to_catalog_sky(catalog_tns)
+
+    # set separation length
+    sep_constraint2 = d2d2.degree < 1.5/3600
+
+    sub_pdf['TNS'] = [''] * len(sub_pdf)
+    sub_pdf['TNS'][idx2[sep_constraint2]] = type2.values[idx2[sep_constraint2]]
+
+    to_return = objectid.apply(
+        lambda x: '' if x not in sub_pdf['objectId'].values
+        else sub_pdf['TNS'][sub_pdf['objectId'] == x].values[0]
+    )
+
+    return to_return
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -197,6 +247,36 @@ def main():
 
         # take only valid measurements from the history
         df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
+    elif columns[0] == 'tns':
+        pdf_tns = download_catalog(tns_api_key_path)
+
+        # Filter TNS confirmed data
+        f1 = pdf_tns['type'] == pdf_tns['type']
+
+        # Filter TNS data for the last 30 days
+        jdmin = df.agg({"jd": "min"}).collect()[0][0]
+        f2 = pdf_tns['discoverydate'] > Time(jdmin - 30, format='jd').iso
+        f3 = pdf_tns['discoverydate'] <= Time(jdmin, format='jd').iso
+
+        pdf_tns_filt = pdf_tns[f1 & f2 & f3]
+
+        pdf_tns_filt_b = spark.sparkContext.broadcast(pdf_tns_filt)
+
+        df = df.withColumn(
+            'tns',
+            crossmatch_with_tns(
+                df['objectId'],
+                df['ra'],
+                df['dec']
+            )
+        ).select(
+            [
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
+        ).cache()
+        df = df.filter(df['tns'] != '')
+        n = df.count() # trigger the cache
+        print('TNS object: {}'.format(n))
     else:
         df_index = df.select(
             [
