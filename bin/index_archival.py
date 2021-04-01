@@ -130,7 +130,8 @@ def main():
                 df['drb'],
                 df['classtar'],
                 df['jd'],
-                df['jdstarthist']
+                df['jdstarthist'],
+                df['knscore']
             )
         ).select(
             [
