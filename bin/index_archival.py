@@ -28,6 +28,7 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType
 from pyspark.sql.types import StringType
 
 import argparse
+import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
@@ -248,7 +249,7 @@ def main():
         # take only valid measurements from the history
         df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
     elif columns[0] == 'tns':
-        pdf_tns = download_catalog(tns_api_key_path)
+        pdf_tns = download_catalog(os.environ['TNS_API_KEY'])
 
         # Filter TNS confirmed data
         f1 = pdf_tns['type'] == pdf_tns['type']
@@ -276,7 +277,7 @@ def main():
         ).cache()
         df = df.filter(df['tns'] != '')
         n = df.count() # trigger the cache
-        print('TNS object: {}'.format(n))
+        print('TNS objects: {}'.format(n))
     else:
         df_index = df.select(
             [
