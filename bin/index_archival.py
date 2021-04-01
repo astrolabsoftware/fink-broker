@@ -121,6 +121,11 @@ def main():
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
         'classtar', 'drb', 'ndethist', 'knscore'
     ]
+
+    # to account for schema migration
+    if 'knscore' not in df.columns:
+        df = df.withColumn('knscore', lit(-1.0))
+
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
             [
