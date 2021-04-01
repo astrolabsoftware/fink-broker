@@ -29,6 +29,8 @@ from pyspark.sql.types import StringType
 
 import argparse
 import os
+import numpy as np
+import pandas as pd
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
