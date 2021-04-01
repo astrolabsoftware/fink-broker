@@ -283,7 +283,8 @@ def main():
             ] + common_cols + ['tns']
         ).cache()
         df_index = df.filter(df['tns'] != '').drop('tns')
-        n = df_index.count() # trigger the cache
+        # trigger the cache - not the cache might be a killer for LSST...
+        n = df_index.count()
         print('TNS objects: {}'.format(n))
     else:
         df_index = df.select(
