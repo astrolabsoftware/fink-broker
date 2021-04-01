@@ -78,6 +78,10 @@ def main():
     )
     df = load_parquet_files(path)
 
+    # to account for schema migration
+    if 'knscore' not in df.columns:
+        df = df.withColumn('knscore', lit(-1.0))
+
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
@@ -121,10 +125,6 @@ def main():
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
         'classtar', 'drb', 'ndethist', 'knscore'
     ]
-
-    # to account for schema migration
-    if 'knscore' not in df.columns:
-        df = df.withColumn('knscore', lit(-1.0))
 
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
@@ -247,7 +247,6 @@ def main():
 
             # cross-match
             idx, d2d, d3d = catalog_tns.match_to_catalog_sky(catalog_ztf)
-            sep_constraint = d2d.degree < 1.5 / 3600
 
             sub_pdf = pd.DataFrame({
                 'objectId': objectid.values[idx],
@@ -259,7 +258,7 @@ def main():
             idx2, d2d2, d3d2 = catalog_ztf.match_to_catalog_sky(catalog_tns)
 
             # set separation length
-            sep_constraint2 = d2d2.degree < 1.5/3600
+            sep_constraint2 = d2d2.degree < 1.5 / 3600
 
             sub_pdf['TNS'] = [''] * len(sub_pdf)
             sub_pdf['TNS'][idx2[sep_constraint2]] = type2.values[idx2[sep_constraint2]]
