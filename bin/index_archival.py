@@ -219,13 +219,7 @@ def main():
 
         # Filter TNS confirmed data
         f1 = pdf_tns['type'] == pdf_tns['type']
-
-        # Filter TNS data for the last 30 days
-        jdmin = df.agg({"jd": "min"}).collect()[0][0]
-        f2 = pdf_tns['discoverydate'] > Time(jdmin - 30, format='jd').iso
-        f3 = pdf_tns['discoverydate'] <= Time(jdmin, format='jd').iso
-
-        pdf_tns_filt = pdf_tns[f1 & f2 & f3]
+        pdf_tns_filt = pdf_tns[f1]
 
         pdf_tns_filt_b = spark.sparkContext.broadcast(pdf_tns_filt)
 
