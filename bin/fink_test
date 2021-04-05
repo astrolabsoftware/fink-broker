@@ -108,6 +108,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start index_archival -c $conf --night 20190903 --index_table upper_objectId_jd
   fink start index_archival -c $conf --night 20190903 --index_table uppervalid_objectId_jd
   fink start index_archival -c $conf --night 20190903 --index_table ssnamenr_jd
+  fink start index_archival -c $conf --night 20190903 --index_table tns_jd
 
   fink start check_science_portal -c $conf
 
