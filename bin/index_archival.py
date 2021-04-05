@@ -217,7 +217,7 @@ def main():
         pdf_tns = download_catalog(os.environ['TNS_API_KEY'])
 
         # Filter TNS confirmed data
-        f1 = pdf_tns['type'] == pdf_tns['type']
+        f1 = ~pdf_tns['type'].isna()
         pdf_tns_filt = pdf_tns[f1]
 
         pdf_tns_filt_b = spark.sparkContext.broadcast(pdf_tns_filt)
