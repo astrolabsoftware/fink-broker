@@ -45,7 +45,6 @@ from fink_broker.science import ang2pix, extract_fink_classification
 
 from fink_tns.utils import download_catalog
 
-from astropy.time import Time
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
