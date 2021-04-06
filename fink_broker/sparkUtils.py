@@ -348,9 +348,11 @@ def load_parquet_files(path: str) -> DataFrame:
         .builder \
         .getOrCreate()
 
+    # TODO: add mergeSchema option
     df = spark \
         .read \
         .format("parquet") \
+        .option('mergeSchema', "true") \
         .load(path)
 
     return df

@@ -24,8 +24,13 @@
 import pyspark.sql.functions as F
 from pyspark.sql.functions import lit, concat_ws, col
 from pyspark.sql.functions import arrays_zip, explode
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.types import StringType
 
 import argparse
+import os
+import numpy as np
+import pandas as pd
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
@@ -38,9 +43,15 @@ from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import ang2pix, extract_fink_classification
 
+from fink_tns.utils import download_catalog
+
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science import __version__ as fsvsn
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -65,6 +76,10 @@ def main():
         args.night[6:8]
     )
     df = load_parquet_files(path)
+
+    # to account for schema migration
+    if 'knscore' not in df.columns:
+        df = df.withColumn('knscore', lit(-1.0))
 
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
@@ -109,6 +124,7 @@ def main():
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
         'classtar', 'drb', 'ndethist', 'knscore'
     ]
+
     if columns[0] == 'pixel':
         df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
             [
@@ -197,6 +213,72 @@ def main():
 
         # take only valid measurements from the history
         df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
+    elif columns[0] == 'tns':
+        pdf_tns = download_catalog(os.environ['TNS_API_KEY'])
+
+        # Filter TNS confirmed data
+        f1 = ~pdf_tns['type'].isna()
+        pdf_tns_filt = pdf_tns[f1]
+
+        pdf_tns_filt_b = spark.sparkContext.broadcast(pdf_tns_filt)
+
+        @pandas_udf(StringType(), PandasUDFType.SCALAR)
+        def crossmatch_with_tns(objectid, ra, dec):
+            # TNS
+            pdf = pdf_tns_filt_b.value
+            ra2, dec2, type2 = pdf['ra'], pdf['declination'], pdf['type']
+
+            # create catalogs
+            catalog_ztf = SkyCoord(
+                ra=np.array(ra, dtype=np.float) * u.degree,
+                dec=np.array(dec, dtype=np.float) * u.degree
+            )
+            catalog_tns = SkyCoord(
+                ra=np.array(ra2, dtype=np.float) * u.degree,
+                dec=np.array(dec2, dtype=np.float) * u.degree
+            )
+
+            # cross-match
+            idx, d2d, d3d = catalog_tns.match_to_catalog_sky(catalog_ztf)
+
+            sub_pdf = pd.DataFrame({
+                'objectId': objectid.values[idx],
+                'ra': ra.values[idx],
+                'dec': dec.values[idx],
+            })
+
+            # cross-match
+            idx2, d2d2, d3d2 = catalog_ztf.match_to_catalog_sky(catalog_tns)
+
+            # set separation length
+            sep_constraint2 = d2d2.degree < 1.5 / 3600
+
+            sub_pdf['TNS'] = [''] * len(sub_pdf)
+            sub_pdf['TNS'][idx2[sep_constraint2]] = type2.values[idx2[sep_constraint2]]
+
+            to_return = objectid.apply(
+                lambda x: '' if x not in sub_pdf['objectId'].values
+                else sub_pdf['TNS'][sub_pdf['objectId'] == x].values[0]
+            )
+
+            return to_return
+
+        df = df.withColumn(
+            'tns',
+            crossmatch_with_tns(
+                df['objectId'],
+                df['ra'],
+                df['dec']
+            )
+        ).select(
+            [
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols + ['tns']
+        ).cache()
+        df_index = df.filter(df['tns'] != '').drop('tns')
+        # trigger the cache - not the cache might be a killer for LSST...
+        n = df_index.count()
+        print('TNS objects: {}'.format(n))
     else:
         df_index = df.select(
             [
