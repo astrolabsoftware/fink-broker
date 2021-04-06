@@ -199,7 +199,8 @@ def extract_fink_classification(
     ambiguity = pd.Series([0] * len(cdsxmatch))
 
     # Microlensing classification
-    f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML')
+    medium_ndethist = ndethist.astype(int) < 100
+    f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML') & medium_ndethist
 
     # SN Ia
     snn1 = snn_snia_vs_nonia.astype(float) > 0.5
