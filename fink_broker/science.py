@@ -264,7 +264,8 @@ def extract_fink_classification(
     # If several flags are up, we cannot rely on the classification
     ambiguity[f_mulens.values] += 1
     ambiguity[f_sn.values] += 1
-    ambiguity[f_roid.values] += 1
+    ambiguity[f_roid_2.values] += 1
+    ambiguity[f_roid_3.values] += 1
     f_ambiguity = ambiguity > 1
     classification.mask(f_ambiguity.values, 'Ambiguous', inplace=True)
 
