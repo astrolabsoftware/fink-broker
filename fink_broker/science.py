@@ -199,7 +199,8 @@ def extract_fink_classification(
     ambiguity = pd.Series([0] * len(cdsxmatch))
 
     # Microlensing classification
-    f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML')
+    medium_ndethist = ndethist.astype(int) < 100
+    f_mulens = (mulens_class_1 == 'ML') & (mulens_class_2 == 'ML') & medium_ndethist
 
     # SN Ia
     snn1 = snn_snia_vs_nonia.astype(float) > 0.5
@@ -248,7 +249,8 @@ def extract_fink_classification(
     f_kn = f_kn & early_ndethist & cdsxmatch.isin(keep_cds)
 
     # Solar System Objects
-    f_roid = roid.astype(int).isin([2, 3])
+    f_roid_2 = roid.astype(int) == 2
+    f_roid_3 = roid.astype(int) == 3
 
     # Simbad xmatch
     f_simbad = ~cdsxmatch.isin(['Unknown', 'Transient', 'Fail'])
@@ -257,12 +259,14 @@ def extract_fink_classification(
     classification.mask(f_sn.values, 'SN candidate', inplace=True)
     classification.mask(f_sn_early.values, 'Early SN candidate', inplace=True)
     classification.mask(f_kn.values, 'Kilonova candidate', inplace=True)
-    classification.mask(f_roid.values, 'Solar System', inplace=True)
+    classification.mask(f_roid_2.values, 'Solar System candidate', inplace=True)
+    classification.mask(f_roid_3.values, 'Solar System MPC', inplace=True)
 
     # If several flags are up, we cannot rely on the classification
     ambiguity[f_mulens.values] += 1
     ambiguity[f_sn.values] += 1
-    ambiguity[f_roid.values] += 1
+    ambiguity[f_roid_2.values] += 1
+    ambiguity[f_roid_3.values] += 1
     f_ambiguity = ambiguity > 1
     classification.mask(f_ambiguity.values, 'Ambiguous', inplace=True)
 
