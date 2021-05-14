@@ -102,7 +102,9 @@ def main():
         .withColumn("day", date_format("timestamp", "dd"))
 
     # Append new rows every `tinterval` seconds
+    # and drop duplicates see fink-broker/issues/443
     countquery_tmp = df_partitionedby\
+        .dropDuplicates(["candid"])\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
