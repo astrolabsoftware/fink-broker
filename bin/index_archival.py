@@ -131,6 +131,12 @@ def main():
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols
         )
+    elif columns[0] == 'pixel4096':
+        df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(4096))).select(
+            [
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
+        )
     elif columns[0] == 'class':
         df_index = df.withColumn(
             'class',
