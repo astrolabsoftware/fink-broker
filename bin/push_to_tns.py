@@ -53,6 +53,9 @@ def main():
     )
     df = load_parquet_files(path)
 
+    with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
+        tns_marker = f.read().replace('\n', '')
+
     if not args.tns_sandbox:
         print("WARNING: submitting to real (not sandbox) TNS website")
 
@@ -95,7 +98,7 @@ def main():
             print('{} already sent!'.format(alert['objectId']))
             continue
         if check_tns:
-            groupid = retrieve_groupid(key, alert['objectId'])
+            groupid = retrieve_groupid(key, tns_marker, alert['objectId'])
             if groupid > 0:
                 print("{} already reported by {}".format(
                     alert['objectId'],
@@ -123,7 +126,7 @@ def main():
             ids=ids,
             report=report
         )
-        r = send_json_report(key, url_tns_api, json_report)
+        r = send_json_report(key, url_tns_api, json_report, tns_marker)
         print(r.json())
 
         # post to slack
