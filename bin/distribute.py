@@ -30,6 +30,8 @@ from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+from fink_science.utilities import concat_col
+
 # User-defined topics
 userfilters = [
     'fink_filters.filter_early_sn_candidates.filter.early_sn_candidates',
@@ -73,6 +75,17 @@ def main():
     cnames[cnames.index('mulens')] = 'struct(mulens.*) as mulens'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
+
+    # Retrieve time-series information
+    to_expand = [
+        'jd', 'fid', 'magpsf', 'sigmapsf',
+        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+    ]
+
+    # Append temp columns with historical + current measurements
+    prefix = 'c'
+    for colname in to_expand:
+        df = concat_col(df, colname, prefix=prefix)
 
     broker_list = args.distribution_servers
     for userfilter in userfilters:
