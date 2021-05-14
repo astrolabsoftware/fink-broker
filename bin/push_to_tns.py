@@ -53,7 +53,7 @@ def main():
     )
     df = load_parquet_files(path)
 
-    with open('{}/tns_marker.txt') as f:
+    with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
         tns_marker = f.read().replace('\n', '')
 
     if not args.tns_sandbox:
