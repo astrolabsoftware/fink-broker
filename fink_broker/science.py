@@ -53,7 +53,34 @@ def ra2phi(ra: float) -> float:
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
 def ang2pix(ra, dec, nside):
-    """
+    """ Compute pixel number at given nside
+
+    Parameters
+    ----------
+    ra: float
+        Spark column containing RA (float)
+    dec: float
+        Spark column containing RA (float)
+    nside: int
+        Spark column containing nside
+
+    Returns
+    ----------
+    out: long
+        Spark column containing pixel number
+
+    Examples
+    ----------
+    >>> from fink_broker.sparkUtils import load_parquet_files
+    >>> df = load_parquet_files(ztf_alert_sample)
+
+    >>> nsides =
+    >>> df_index = df.withColumn(
+    ...     'p',
+    ...     ang2pix(df['candidate.ra'], df['candidate.dec'], lit(256))
+    ... )
+    >>> df_index.select('p').take(1)[0][0] > 0
+    True
     """
     return pd.Series(
         hp.ang2pix(
@@ -62,6 +89,54 @@ def ang2pix(ra, dec, nside):
             ra2phi(ra.values)
         )
     )
+
+@pandas_udf(StringType(), PandasUDFType.SCALAR)
+def ang2pix_array(ra, dec, nside: list):
+    """ Return a col string with the pixel numbers corresponding to the nsides
+
+    pix@nside[0]_pix@nside[1]_...etc
+
+    Parameters
+    ----------
+    ra: float
+        Spark column containing RA (float)
+    dec: float
+        Spark column containing RA (float)
+    nside: list
+        Spark column containing list of nside
+
+    Returns
+    ----------
+    out: str
+        Spark column containing _ separated pixel values
+
+    Examples
+    ----------
+    >>> from fink_broker.sparkUtils import load_parquet_files
+    >>> df = load_parquet_files(ztf_alert_sample)
+
+    >>> nsides = F.array([lit(256), lit(4096), lit(131072)])
+    >>> df_index = df.withColumn(
+    ...     'p',
+    ...     ang2pix_array(df['candidate.ra'], df['candidate.dec'], nsides)
+    ... )
+    >>> l = len(df_index.select('p').take(1)[0][0].split('_'))
+    >>> print(l)
+    3
+    """
+    pixs = [
+        hp.ang2pix(
+            int(nside_),
+            dec2theta(dec.values),
+            ra2phi(ra.values)
+        ) for nside_ in nside.values[0]
+    ]
+
+    to_return = [
+        '_'.join(list(np.array(i, dtype=str))) for i in np.transpose(pixs)
+    ]
+
+    return pd.Series(to_return)
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
