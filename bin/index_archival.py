@@ -137,8 +137,8 @@ def main():
         df_index = df.withColumn(
             'pixels',
             ang2pix_array(
-                df['candidate.ra'],
-                df['candidate.dec'],
+                df['ra'],
+                df['dec'],
                 F.array([lit(128), lit(4096), lit(131072)])
             )
         ).select(
