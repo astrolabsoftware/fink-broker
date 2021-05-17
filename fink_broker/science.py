@@ -74,10 +74,9 @@ def ang2pix(ra, dec, nside):
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
-    >>> nsides =
     >>> df_index = df.withColumn(
     ...     'p',
-    ...     ang2pix(df['candidate.ra'], df['candidate.dec'], lit(256))
+    ...     ang2pix(df['candidate.ra'], df['candidate.dec'], F.lit(256))
     ... )
     >>> df_index.select('p').take(1)[0][0] > 0
     True
@@ -115,7 +114,7 @@ def ang2pix_array(ra, dec, nside: list):
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
-    >>> nsides = F.array([lit(256), lit(4096), lit(131072)])
+    >>> nsides = F.array([F.lit(256), F.lit(4096), F.lit(131072)])
     >>> df_index = df.withColumn(
     ...     'p',
     ...     ang2pix_array(df['candidate.ra'], df['candidate.dec'], nsides)
