@@ -346,7 +346,7 @@ elif [[ $service == "science_archival" ]]; then
 elif [[ $service == "index_archival" ]]; then
   # Set dummy location if TNS_FOLDER was not provided
   # This is only needed by the tns_jd table
-  if [[ $TNS_FOLDER == ""]]; then
+  if [[ $TNS_FOLDER == "" ]]; then
     TNS_FOLDER="/tmp"
   fi
   # Read configuration for hbase
