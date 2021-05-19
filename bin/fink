@@ -344,6 +344,11 @@ elif [[ $service == "science_archival" ]]; then
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "index_archival" ]]; then
+  # Set dummy location if TNS_FOLDER was not provided
+  # This is only needed by the tns_jd table
+  if [[ $TNS_FOLDER == ""]]; then
+    TNS_FOLDER="/tmp"
+  fi
   # Read configuration for hbase
   source ${FINK_HOME}/conf/fink.conf.hbase
   spark-submit --master ${SPARK_MASTER} \
@@ -354,6 +359,7 @@ elif [[ $service == "index_archival" ]]; then
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -night ${NIGHT} \
   -index_table ${INDEXTABLE} \
+  -tns_folder ${TNS_FOLDER} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "push_to_tns" ]]; then
   # Check if we just need to test

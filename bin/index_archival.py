@@ -229,7 +229,10 @@ def main():
         # take only valid measurements from the history
         df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
     elif columns[0] == 'tns':
-        pdf_tns = download_catalog(os.environ['TNS_API_KEY'])
+        with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
+            tns_marker = f.read().replace('\n', '')
+
+        pdf_tns = download_catalog(os.environ['TNS_API_KEY'], tns_marker)
 
         # Filter TNS confirmed data
         f1 = ~pdf_tns['type'].isna()
