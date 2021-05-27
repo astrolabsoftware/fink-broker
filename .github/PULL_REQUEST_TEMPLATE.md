@@ -1,5 +1,5 @@
 **IMPORTANT: Please create an issue first before opening a Pull Request.**
-Linked to issue(s): _put link_
+Linked to issue(s): Closes _put link_
 
 ## What changes were proposed in this pull request?
 
