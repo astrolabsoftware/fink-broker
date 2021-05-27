@@ -41,7 +41,8 @@ from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
-from fink_broker.science import ang2pix, extract_fink_classification
+from fink_broker.science import extract_fink_classification
+from fink_broker.science import ang2pix, ang2pix_array
 
 from fink_tns.utils import download_catalog
 
@@ -131,6 +132,20 @@ def main():
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols
         )
+    elif columns[0] == 'pixels':
+        # degree/arcmin/arcsec scale
+        df_index = df.withColumn(
+            'pixels',
+            ang2pix_array(
+                df['ra'],
+                df['dec'],
+                F.array([lit(128), lit(4096), lit(131072)])
+            )
+        ).select(
+            [
+                concat_ws('_', *names).alias(index_row_key_name)
+            ] + common_cols
+        )
     elif columns[0] == 'class':
         df_index = df.withColumn(
             'class',
@@ -214,7 +229,10 @@ def main():
         # take only valid measurements from the history
         df_index = df_ex.filter(df_ex['magpsf'].isNotNull())
     elif columns[0] == 'tns':
-        pdf_tns = download_catalog(os.environ['TNS_API_KEY'])
+        with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
+            tns_marker = f.read().replace('\n', '')
+
+        pdf_tns = download_catalog(os.environ['TNS_API_KEY'], tns_marker)
 
         # Filter TNS confirmed data
         f1 = ~pdf_tns['type'].isna()
