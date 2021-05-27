@@ -285,7 +285,7 @@ def extract_fink_classification(
     high_knscore = knscore_.astype(float) > 0.5
 
     # Others
-    sn_history = jd.astype(float) - jdstarthist.astype(float) <= 21
+    sn_history = jd.astype(float) - jdstarthist.astype(float) <= 90
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
     early_ndethist = ndethist.astype(int) < 20
