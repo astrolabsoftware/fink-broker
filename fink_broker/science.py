@@ -285,7 +285,7 @@ def extract_fink_classification(
     high_knscore = knscore_.astype(float) > 0.5
 
     # Others
-    low_ndethist = ndethist.astype(int) < 400
+    sn_history = jd.astype(float) - jdstarthist.astype(float) <= 21
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
     early_ndethist = ndethist.astype(int) < 20
@@ -312,7 +312,7 @@ def extract_fink_classification(
     keep_cds = \
         ["Unknown", "Candidate_SN*", "SN", "Transient", "Fail"] + list_simbad_galaxies
 
-    f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & low_ndethist & high_drb & high_classtar
+    f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & sn_history & high_drb & high_classtar
     f_sn_early = early_ndethist & active_learn & f_sn
 
     # Kilonova
