@@ -88,6 +88,10 @@ def main():
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
 
+    # quick fix for #
+    for colname in to_expand:
+        df = df.withColumnRenamed('c'+colname, 'c'+colname+'c')
+
     broker_list = args.distribution_servers
     for userfilter in userfilters:
         # The topic name is the filter name
