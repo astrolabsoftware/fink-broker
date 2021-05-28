@@ -88,9 +88,9 @@ def main():
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
 
-    # quick fix for #
+    # quick fix for https://github.com/astrolabsoftware/fink-broker/issues/457
     for colname in to_expand:
-        df = df.withColumnRenamed('c'+colname, 'c'+colname+'c')
+        df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
 
     broker_list = args.distribution_servers
     for userfilter in userfilters:
