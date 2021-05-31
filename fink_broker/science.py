@@ -294,6 +294,8 @@ def extract_fink_classification(
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
     early_ndethist = ndethist.astype(int) < 20
+    no_mpc = roid.astype(int) != 3
+    no_first_det = ndethist.astype(int) > 1
 
     list_simbad_galaxies = [
         "galaxy",
@@ -316,7 +318,7 @@ def extract_fink_classification(
     keep_cds = \
         ["Unknown", "Candidate_SN*", "SN", "Transient", "Fail"] + list_simbad_galaxies
 
-    base_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & high_drb & high_classtar
+    base_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & high_drb & high_classtar & no_mpc & no_first_det
     f_sn = base_sn & sn_history
     f_sn_early = base_sn & early_ndethist & active_learn
 
