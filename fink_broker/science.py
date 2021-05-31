@@ -285,11 +285,15 @@ def extract_fink_classification(
     high_knscore = knscore_.astype(float) > 0.5
 
     # Others
+    # Note jdstarthist is not really reliable...
+    # see https://github.com/astrolabsoftware/fink-science-portal/issues/163
+    # KN & SN candidate still affected (not Early SN Ia candidate)
+    # Perhaps something to report to ZTF
     sn_history = jd.astype(float) - jdstarthist.astype(float) <= 90
+    new_detection = jd.astype(float) - jdstarthist.astype(float) < 20
     high_drb = drb.astype(float) > 0.5
     high_classtar = classtar.astype(float) > 0.4
     early_ndethist = ndethist.astype(int) < 20
-    new_detection = jd.astype(float) - jdstarthist.astype(float) < 20
 
     list_simbad_galaxies = [
         "galaxy",
@@ -312,8 +316,9 @@ def extract_fink_classification(
     keep_cds = \
         ["Unknown", "Candidate_SN*", "SN", "Transient", "Fail"] + list_simbad_galaxies
 
-    f_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & sn_history & high_drb & high_classtar
-    f_sn_early = early_ndethist & active_learn & f_sn
+    base_sn = (snn1 | snn2) & cdsxmatch.isin(keep_cds) & high_drb & high_classtar
+    f_sn = base_sn & sn_history
+    f_sn_early = base_sn & early_ndethist & active_learn
 
     # Kilonova
     keep_cds = \
