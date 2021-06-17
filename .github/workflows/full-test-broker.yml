@@ -10,9 +10,9 @@ jobs:
   install-checks:
     runs-on: ubuntu-latest
     steps:
-      - name: Check HBase 2.2.6 availability
+      - name: Check HBase 2.2.7 availability
         run: |
-          wget --spider http://www-us.apache.org/dist/hbase/2.2.6/hbase-2.2.6-bin.tar.gz
+          wget --spider http://www-us.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
       - name: Check Kafka 2.8.0 availability
         run: |
           wget --spider https://www.apache.org/dist/kafka/2.8.0/kafka_2.12-2.8.0.tgz
@@ -44,7 +44,7 @@ jobs:
       run: |
         source conf/java8_for_xenial.sh
         echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-    - name: Install HBase 2.2.6
+    - name: Install HBase 2.2.7
       run: |
         source conf/install_hbase.sh
     - name: Install Kafka 2.6.1
