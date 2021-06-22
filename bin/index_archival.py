@@ -130,7 +130,7 @@ def main():
         nside = int(columns[0].split('pixel')[1])
 
         df_index = df.withColumn(
-            'pixel',
+            columns[0],
             ang2pix(
                 df['ra'],
                 df['dec'],
