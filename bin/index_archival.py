@@ -42,7 +42,7 @@ from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import extract_fink_classification
-from fink_broker.science import ang2pix, ang2pix_array
+from fink_broker.science import ang2pix
 
 from fink_tns.utils import download_catalog
 
