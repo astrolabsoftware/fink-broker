@@ -42,7 +42,7 @@ from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import extract_fink_classification
-from fink_broker.science import ang2pix, ang2pix_array
+from fink_broker.science import ang2pix
 
 from fink_tns.utils import download_catalog
 
@@ -126,25 +126,20 @@ def main():
         'classtar', 'drb', 'ndethist', 'knscore'
     ]
 
-    if columns[0] == 'pixel':
-        df_index = df.withColumn('pixel', ang2pix(df['ra'], df['dec'], lit(131072))).select(
-            [
-                concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
-        )
-    elif columns[0] == 'pixels':
-        # degree/arcmin/arcsec scale
+    if columns[0].startswith('pixel'):
+        nside = int(columns[0].split('pixel')[1])
+
         df_index = df.withColumn(
-            'pixels',
-            ang2pix_array(
+            columns[0],
+            ang2pix(
                 df['ra'],
                 df['dec'],
-                F.array([lit(128), lit(4096), lit(131072)])
+                lit(nside)
             )
         ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
+            ] + ['objectId']
         )
     elif columns[0] == 'class':
         df_index = df.withColumn(
