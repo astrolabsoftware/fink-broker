@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Check HBase 2.2.7 availability
         run: |
-          wget --spider http://www-us.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
+          wget --spider https://archive.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
       - name: Check Kafka 2.8.0 availability
         run: |
           wget --spider https://www.apache.org/dist/kafka/2.8.0/kafka_2.12-2.8.0.tgz
