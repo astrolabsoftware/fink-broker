@@ -29,6 +29,8 @@ from fink_tns.utils import read_past_ids, retrieve_groupid
 from fink_tns.report import extract_discovery_photometry, build_report
 from fink_tns.report import save_logs_and_return_json_report, send_json_report
 
+from pyspark.sql import functions as F
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -55,10 +57,10 @@ def main():
 
     # to account for schema migration
     if 'knscore' not in df.columns:
-        df = df.withColumn('knscore', lit(-1.0))
+        df = df.withColumn('knscore', F.lit(-1.0))
     # 12/08/2021
     if 'tracklet' not in df.columns:
-        df = df.withColumn('tracklet', lit(''))
+        df = df.withColumn('tracklet', F.lit(''))
 
     with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
         tns_marker = f.read().replace('\n', '')
