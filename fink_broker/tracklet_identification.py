@@ -96,8 +96,10 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     >>> df_tracklet.select('tracklet').take(1)[0][0]
     'TRCK1615_00'
     """
+    # Select potential candidates
     df_filt = apply_tracklet_cuts(df)
 
+    # Initialise `tracklet` column
     df_filt_tracklet = df_filt.withColumn(
         'tracklet',
         F.lit('')
@@ -217,6 +219,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
 
         return pdf.assign(tracklet=tracklet_numbers)
 
+    # extract tracklet information - beware there could be duplicated rows
+    # so we use dropDuplicates to avoid these.
     df_trck = df_filt_tracklet\
         .cache()\
         .groupBy('nid')\
@@ -225,6 +229,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         .filter(F.col('tracklet') != '')\
         .dropDuplicates(['candid'])
 
+    # join back information to the initial dataframe
     df_out = df\
         .join(
             df_trck.select(['candid', 'tracklet']),
