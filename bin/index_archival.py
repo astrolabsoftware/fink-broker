@@ -81,6 +81,9 @@ def main():
     # to account for schema migration
     if 'knscore' not in df.columns:
         df = df.withColumn('knscore', lit(-1.0))
+    # 12/08/2021
+    if 'tracklet' not in df.columns:
+        df = df.withColumn('tracklet', lit(''))
 
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
@@ -123,7 +126,7 @@ def main():
         'roid',
         'mulens_class_1', 'mulens_class_2',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
-        'classtar', 'drb', 'ndethist', 'knscore'
+        'classtar', 'drb', 'ndethist', 'knscore', 'tracklet'
     ]
 
     if columns[0].startswith('pixel'):
@@ -157,7 +160,8 @@ def main():
                 df['classtar'],
                 df['jd'],
                 df['jdstarthist'],
-                df['knscore']
+                df['knscore'],
+                df['tracklet']
             )
         ).select(
             [
