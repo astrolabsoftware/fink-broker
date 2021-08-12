@@ -185,6 +185,14 @@ def main():
                     concat_ws('_', *names).alias(index_row_key_name)
                 ] + common_cols
             )
+    elif columns[0] == 'tracklet':
+        df_index = df\
+            .filter(df['tracklet'] != 'null')\
+            .select(
+                [
+                    concat_ws('_', *names).alias(index_row_key_name)
+                ] + common_cols
+            )
     elif columns[0] == 'upper':
         # This case is the same as the main table
         # but we keep only upper limit measurements.
