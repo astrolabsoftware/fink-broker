@@ -103,6 +103,9 @@ def spark_unit_tests(
         .config(conf=conf)\
         .getOrCreate()
 
+    # Reduce the number of suffled partitions
+    spark.conf.set("spark.sql.shuffle.partitions", 2)
+
     global_args["spark"] = spark
 
     if withstreaming:
