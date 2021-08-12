@@ -18,7 +18,6 @@
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import StringType
 
 import os
 import numpy as np
