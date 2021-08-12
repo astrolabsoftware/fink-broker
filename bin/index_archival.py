@@ -78,13 +78,6 @@ def main():
     )
     df = load_parquet_files(path)
 
-    # to account for schema migration
-    if 'knscore' not in df.columns:
-        df = df.withColumn('knscore', lit(-1.0))
-    # 12/08/2021
-    if 'tracklet' not in df.columns:
-        df = df.withColumn('tracklet', lit(''))
-
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
