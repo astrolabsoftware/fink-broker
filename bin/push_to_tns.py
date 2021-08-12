@@ -53,6 +53,13 @@ def main():
     )
     df = load_parquet_files(path)
 
+    # to account for schema migration
+    if 'knscore' not in df.columns:
+        df = df.withColumn('knscore', lit(-1.0))
+    # 12/08/2021
+    if 'tracklet' not in df.columns:
+        df = df.withColumn('tracklet', lit(''))
+
     with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
         tns_marker = f.read().replace('\n', '')
 
@@ -74,7 +81,7 @@ def main():
         'cdsxmatch', 'roid', 'mulens.class_1', 'mulens.class_2',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
         'candidate.ndethist', 'candidate.drb', 'candidate.classtar',
-        'candidate.jd', 'candidate.jdstarthist', 'knscore'
+        'candidate.jd', 'candidate.jdstarthist', 'knscore', 'tracklet'
     ]
     df = df.withColumn('class', extract_fink_classification(*cols))
 
