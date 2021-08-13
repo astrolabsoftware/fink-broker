@@ -71,8 +71,9 @@ def main():
     print('Science data processing....')
 
     df_science = spark.read.format('parquet').load(input_science)
+    npart_after = int(numPart(df_science))
     print('Num partitions before: ', df_science.rdd.getNumPartitions())
-    print('Num partitions after : ', numPart(df_science))
+    print('Num partitions after : ', npart_after)
 
     # Add tracklet information before merging
     df_science_ = add_tracklet_information(df_science)
@@ -81,7 +82,7 @@ def main():
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\
-        .coalesce(numPart(df_science_))\
+        .coalesce(npart_after)\
         .write\
         .mode("append") \
         .partitionBy("year", "month", "day")\
