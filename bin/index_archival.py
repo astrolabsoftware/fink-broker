@@ -93,7 +93,7 @@ def main():
         df = df.drop('roid')
 
         # Retrieve time-series information
-        to_expand = ['jd']
+        to_expand = ['jd', 'magpsf']
 
         # Append temp columns with historical + current measurements
         prefix = 'c'
