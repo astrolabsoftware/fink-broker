@@ -44,6 +44,8 @@ from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import extract_fink_classification
 from fink_broker.science import ang2pix
 
+from fink_science.utilities import concat_col
+
 from fink_tns.utils import download_catalog
 
 from astropy.coordinates import SkyCoord
@@ -78,6 +80,32 @@ def main():
     )
     df = load_parquet_files(path)
 
+    # construct the index view
+    index_row_key_name = args.index_table
+    columns = index_row_key_name.split('_')
+    names = [col(i) for i in columns]
+    index_name = '.' + columns[0]
+
+    if columns[0] == 'class':
+        # There was a bug in the SSO classification prior to 02/2021
+        # This piece of code is temporary, just the time to recompute data
+        df = df.drop('roid')
+
+        # Retrieve time-series information
+        to_expand = ['jd']
+
+        # Append temp columns with historical + current measurements
+        prefix = 'c'
+        for colname in to_expand:
+            df = concat_col(df, colname, prefix=prefix)
+
+        # recompute asteroid classification
+        args_roid = [
+            'cjd', 'cmagpsf',
+            'candidate.ndethist', 'candidate.sgscore1',
+            'candidate.ssdistnr', 'candidate.distpsnr1']
+        df = df.withColumn('roid', roid_catcher(*args_roid))
+
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
@@ -102,12 +130,6 @@ def main():
 
     # Create and attach the rowkey
     df, _ = attach_rowkey(df)
-
-    # construct the index view
-    index_row_key_name = args.index_table
-    columns = index_row_key_name.split('_')
-    names = [col(i) for i in columns]
-    index_name = '.' + columns[0]
 
     common_cols = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
@@ -179,8 +201,11 @@ def main():
                 ] + common_cols
             )
     elif columns[0] == 'tracklet':
+        # For data < 2021-08-10, no tracklet means ''
+        # For data >= 2021-08-10, no tracklet means 'null'
         df_index = df\
             .filter(df['tracklet'] != 'null')\
+            .filter(df['tracklet'] != '')\
             .select(
                 [
                     concat_ws('_', *names).alias(index_row_key_name)
