@@ -45,6 +45,7 @@ from fink_broker.science import extract_fink_classification
 from fink_broker.science import ang2pix
 
 from fink_science.utilities import concat_col
+from fink_science.asteroids.processor import roid_catcher
 
 from fink_tns.utils import download_catalog
 
