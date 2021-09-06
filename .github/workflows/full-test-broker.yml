@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Check HBase 2.2.7 availability
         run: |
-          wget --spider http://www-us.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
+          wget --spider https://archive.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
       - name: Check Kafka 2.8.0 availability
         run: |
           wget --spider https://www.apache.org/dist/kafka/2.8.0/kafka_2.12-2.8.0.tgz
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6]
+        python-version: [3.7]
         spark-version: [2.4.7]
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -72,6 +72,7 @@ jobs:
         echo "${SPARK_HOME}/bin:${SPARK_HOME}/sbin" >> $GITHUB_PATH
         echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+        echo "ARROW_PRE_0_15_IPC_FORMAT=1" > ${SPARK_HOME}/conf/spark-env.sh
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
