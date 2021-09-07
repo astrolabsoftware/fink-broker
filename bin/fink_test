@@ -91,10 +91,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
 
-  ls ${FINK_HOME}/archive
-  ls ${FINK_HOME}/archive/science
-  ls ${FINK_HOME}/archive/science/*
-  ls ${FINK_HOME}/archive/science/*/*
+  cat ${FINK_HOME}/archive/science/_spark_metadata/0
 
   # Connect to the distribution service
   fink start distribution_test --exit_after 30 -c $conf &
