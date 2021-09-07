@@ -73,7 +73,7 @@ jobs:
         echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
         echo "ARROW_PRE_0_15_IPC_FORMAT=1" > ${SPARK_HOME}/conf/spark-env.sh
-        echo "ARROW_PRE_0_15_IPC_FORMAT=1" > ${SPARK_HOME}/conf/spark-defaults.conf
+        echo "spark.executorEnv.ARROW_PRE_0_15_IPC_FORMAT 1" > ${SPARK_HOME}/conf/spark-defaults.conf
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
