@@ -193,7 +193,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             # sine distance from the great circle, NxN
             sindists = np.einsum('vi,ki->vk', circles[i], xyz, optimize=True)
             # Good distances from great circles, NxN
-            sin_idx = np.abs(sindists) < 1 / 206265
+            sin_idx = np.abs(sindists) < 5 / 206265
 
             # The same but only for circles formed by pairs distant enough
             good_idx = norm_idx[i, :, np.newaxis] & sin_idx
@@ -217,21 +217,97 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         index_tracklet = 0
         for cidx in uniq[aidx]:
             # First we need to reject the tracklets
-            # mostly superceded by longer ones
+            # mostly superseded by longer ones
             if np.sum(cidx[~used]) < 5:
                 # TODO: should we try to greedily merge the extra points
                 # into already known tracks?
                 continue
 
-            tracklet_positions = cidx
+            # Quick and dirty way to sort the tracklet consecutively, in the
+            # direction defined by its two first points
+
+            # great circles formed by first point of a tracklet and and all other points
+            scircles = np.einsum('ijk,j,vk->vi', eijk, xyz[cidx][0], xyz, optimize=True)
+            # dot products between (0-1) circle of a tracklet and all others, we will
+            # use it as a sort of distance along the great circle
+            dots = np.einsum('i,vi->v', scircles[cidx][1], scircles, optimize=True)
+            # sort the tracklet in increasing order
+            aidx = np.argsort(dots[cidx])
+
+            # circle formed by first and last points of a sorted tracklet
+            circle0 = np.cross(xyz[cidx][aidx[0]], xyz[cidx][aidx[-1]])
+            circle0 /= np.sqrt(np.sum(circle0*circle0)) # Normalized circle
+
+            # Sine distances of all points from that circle
+            sindists = np.dot(xyz, circle0)
+
+            # Greedily capture more (or restrict to less) points using polynomial correction
+            # and smaller acceptable residuals from corrected (curved) trail
+            for iter in range(10):
+                p = np.polyfit(dots[cidx], sindists[cidx], 2) # TODO: robust fitting here?..
+                model = np.polyval(p, dots)
+
+                new_cidx = np.abs(sindists - model) < 1 / 206265
+
+                if np.sum(new_cidx) > 1:
+                    # Exclude the cases when first or last point is too much separated from the rest
+                    sort_idx = np.argsort(dots[new_cidx])
+                    sort_ids = np.where(new_cidx)[0][sort_idx]
+                    dists = np.arccos(
+                        np.einsum('vi,vi->v',
+                                  xyz[new_cidx][sort_idx][1:,:],
+                                  xyz[new_cidx][sort_idx][:-1,:])
+                    ) # Pairwise distances
+
+                    # Here we check whether first/last distance is more than 10 times
+                    # longer than the rest
+                    if dists[0] > 10/11*np.sum(dists):
+                        # Exclude first point
+                        new_cidx[sort_ids[0]] = False
+                    elif dists[-1] > 10/11*np.sum(dists):
+                        # Exclude last point
+                        new_cidx[sort_ids[-1]] = False
+
+                if np.all(new_cidx == cidx):
+                    break
+                else:
+                    # Greedily extend the tracklet, never dropping any point
+                    # cidx |= new_cidx
+                    # Conservatively extend the tracklet, excluding points too far from the fit
+                    cidx = new_cidx
+
+                if np.sum(cidx) < 3:
+                    # We do not have enough points, meaning the fit diverged
+                    break
+
+            merge = None
+            if np.sum(cidx) < 5:
+                # The tracklet is too short after applying smaller acceptable residuals, let's reject it
+                continue
+            elif np.sum(cidx & used) > 2:
+                # More than 2 common points with some existing trail - let's merge?..
+                # TODO: something more clever for merge strategy?..
+                merge = tracklet_names[cidx & used].unique()[0]
+            elif np.sum(cidx & used):
+                # Looks like two crossing tracklets, no need to merge
+                pass
+
+            # We will claim for new tracklet only points unused by existing
+            # ones, thus making point assignment unique
+            # unused_cidx = cidx & ~used
 
             used[cidx] = True
 
-            tracklet_names[tracklet_positions] = 'TRCK_{}_{:02d}'.format(
-                time_str,
-                index_tracklet
-            )
-            index_tracklet += 1
+            tracklet_positions = cidx
+
+            if merge is not None:
+                tracklet_names[tracklet_positions] = merge
+            else:
+                tracklet_names[tracklet_positions] = 'TRCK_{}_{:02d}'.format(
+                    time_str,
+                    index_tracklet
+                )
+                index_tracklet += 1
 
         return pdf.assign(tracklet=tracklet_names)
 
