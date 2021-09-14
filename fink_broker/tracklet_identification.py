@@ -113,6 +113,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         [
             'candid',
             'candidate.jd',
+            'candidate.xpos',
+            'candidate.ypos',
             'candidate.nid',
             'tracklet',
             'candidate.ra',
@@ -315,11 +317,11 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     # so we use dropDuplicates to avoid these.
     df_trck = df_filt_tracklet\
         .cache()\
+        .dropDuplicates(['jd', 'xpos', 'ypos'])\
         .groupBy('jd')\
         .apply(extract_tracklet_number)\
         .select(['candid', 'tracklet'])\
-        .filter(F.col('tracklet') != '')\
-        .dropDuplicates(['candid'])
+        .filter(F.col('tracklet') != '')
 
     # join back information to the initial dataframe
     df_out = df\
