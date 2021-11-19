@@ -23,6 +23,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.partitioning import jd_to_datetime, numPart
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.tracklet_identification import add_tracklet_information
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -70,14 +71,18 @@ def main():
     print('Science data processing....')
 
     df_science = spark.read.format('parquet').load(input_science)
+    npart_after = int(numPart(df_science))
     print('Num partitions before: ', df_science.rdd.getNumPartitions())
-    print('Num partitions after : ', numPart(df_science))
+    print('Num partitions after : ', npart_after)
 
-    df_science.withColumn('timestamp', jd_to_datetime(df_science['candidate.jd']))\
+    # Add tracklet information before merging
+    df_science_ = add_tracklet_information(df_science)
+
+    df_science_.withColumn('timestamp', jd_to_datetime(df_science_['candidate.jd']))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\
-        .coalesce(numPart(df_science))\
+        .coalesce(npart_after)\
         .write\
         .mode("append") \
         .partitionBy("year", "month", "day")\
