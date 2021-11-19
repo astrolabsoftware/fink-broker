@@ -99,8 +99,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     ----------
     >>> df = spark.read.format('parquet').load(ztf_alert_sample)
     >>> df_tracklet = add_tracklet_information(df)
-    >>> df_tracklet.select('tracklet').take(1)[0][0]
-    'TRCK1615_00'
+    >>> df_tracklet.select('tracklet').take(2)[1][0]
+    'TRCK_20210604_093609_00'
     """
     # Select potential candidates
     df_filt = apply_tracklet_cuts(df)

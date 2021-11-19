@@ -13,9 +13,9 @@ jobs:
       - name: Check HBase 2.2.7 availability
         run: |
           wget --spider https://archive.apache.org/dist/hbase/2.2.7/hbase-2.2.7-bin.tar.gz
-      - name: Check Kafka 2.8.0 availability
+      - name: Check Kafka 2.8.1 availability
         run: |
-          wget --spider https://www.apache.org/dist/kafka/2.8.0/kafka_2.12-2.8.0.tgz
+          wget --spider https://www.apache.org/dist/kafka/2.8.1/kafka_2.12-2.8.1.tgz
       - name: Check Spark 2.4.7 availability
         run: |
           wget --spider http://archive.apache.org/dist/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz

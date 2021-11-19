@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-KAFKA_VERSION=2.8.0
+KAFKA_VERSION=2.8.1
 
 wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
 mkdir -p kafka
