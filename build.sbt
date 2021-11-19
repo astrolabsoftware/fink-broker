@@ -22,7 +22,7 @@ resolvers += "Hortonworks Repository" at "http://repo.hortonworks.com/content/re
 lazy val root = (project in file(".")).
  settings(
    inThisBuild(List(
-     version      := "1.1"
+     version      := "1.2"
    )),
    // Name of the application
    name := "fink-broker",
