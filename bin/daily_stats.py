@@ -17,13 +17,21 @@
 """
 import argparse
 
+import pandas as pd
+
 import pyspark.sql.functions as F
 
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import load_parquet_files
 
+from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
+from fink_broker.hbaseUtils import construct_schema_row
+
 from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+
+from fink_broker import __version__ as fbvsn
+from fink_science import __version__ as fsvsn
 
 from fink_broker.science import extract_fink_classification
 
@@ -154,7 +162,70 @@ def main():
 
     out_dic['night'] = 'ztf_{}'.format(args.night)
 
-    print(out_dic)
+    # rowkey is the night YYYYMMDD
+    index_row_key_name = 'night'
+
+    # Columns to use
+    cols_basic = [
+        'raw',
+        'sci',
+        'night',
+        'n_g',
+        'n_r',
+        'exposures',
+        'fields'
+    ]
+
+    cols_class_ = np.transpose(out_class_)[0]
+    cols_class = np.concatenate((cols_class_, ['simbad_tot', 'simbad_gal']))
+
+    # column families
+    cf = {i: 'basic' for i in df.select(cols_basic).columns}
+    cf.update({i: 'class' for i in df.select(cols_class).columns})
+
+    pdf = pd.DataFrame([out_dic])
+
+    df_hbase = spark.createDataFrame(pdf)
+
+    # construct the time catalog
+    hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
+        df_hbase.schema,
+        'statistics_class',
+        rowkeyname=index_row_key_name,
+        cf=cf
+    )
+
+    # Push index table
+    df_hbase.write\
+        .options(catalog=hbcatalog_index, newtable=50)\
+        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .save()
+
+    # Construct the schema row - inplace replacement
+    schema_row_key_name = 'schema_version'
+    df_hbase = df_hbase.withColumnRenamed(
+        index_row_key_name,
+        schema_row_key_name
+    )
+
+    df_hbase_schema = construct_schema_row(
+        df_hbase,
+        rowkeyname=schema_row_key_name,
+        version='schema_{}_{}'.format(fbvsn, fsvsn))
+
+    # construct the hbase catalog for the schema
+    hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
+        df_hbase_schema.schema,
+        'statistics_class',
+        rowkeyname=schema_row_key_name,
+        cf=cf)
+
+    # Push the data using the shc connector
+    df_hbase_schema.write\
+        .options(catalog=hbcatalog_index_schema, newtable=50)\
+        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .save()
+
 
 
 if __name__ == "__main__":
