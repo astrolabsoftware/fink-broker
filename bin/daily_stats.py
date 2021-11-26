@@ -151,3 +151,7 @@ def main():
     out_dic['night'] = 'ztf_{}'.format(args.night)
 
     print(out_dic)
+
+
+if __name__ == "__main__":
+    main()
