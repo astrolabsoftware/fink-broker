@@ -17,7 +17,6 @@
 """
 import pyspark.sql.functions as F
 
-from fink_broker.sparkUtils import format_night
 from fink_broker.sparkUtils import init_sparksession
 
 from fink_broker.parser import getargs
@@ -148,5 +147,7 @@ def main():
     n_exp = df_raw.select('candidate.jd').distinct().count()
 
     out_dic['exposures'] = n_exp
+
+    out_dic['night'] = 'ztf_{}'.format(args.night)
 
     print(out_dic)
