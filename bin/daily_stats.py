@@ -20,6 +20,7 @@ import argparse
 import pyspark.sql.functions as F
 
 from fink_broker.sparkUtils import init_sparksession
+from fink_broker.sparkUtils import load_parquet_files
 
 from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
