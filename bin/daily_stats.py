@@ -51,9 +51,9 @@ def main():
     print('Statistics for {}/{}/{}'.format(year, month, day))
 
     input_raw = '{}/year={}/month={}/day={}'.format(
-        'ztf_alerts/raw', year, month, day)
+        args.rawdatapath, year, month, day)
     input_science = '{}/year={}/month={}/day={}'.format(
-        'ztf_alerts/science_reprocessed', year, month, day)
+        args.scitmpdatapath, year, month, day)
 
     df_raw = load_parquet_files(input_raw)
     df_sci = load_parquet_files(input_science)

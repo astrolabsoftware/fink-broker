@@ -15,7 +15,7 @@
 # limitations under the License.
 set -e
 
-message_service="Available services are: checkstream, stream2raw, raw2science, distribution, science_archival, check_science_portal"
+message_service="Available services are: checkstream, stream2raw, raw2science, distribution, science_archival, check_science_portal, stats"
 message_conf="Typical configuration would be $PWD/conf/fink.conf"
 message_help="""
 Handle Kafka stream received by Apache Spark\n\n
@@ -323,6 +323,8 @@ elif [[ $service == "stats" ]]; then
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/daily_stats.py ${HELP_ON_SERVICE} \
   -night ${NIGHT} \
+  -rawdatapath ${FINK_ALERT_PATH} \
+  -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "reprocess_night" ]]; then
   spark-submit --master ${SPARK_MASTER} \
