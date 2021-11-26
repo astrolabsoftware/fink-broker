@@ -185,8 +185,8 @@ def main():
     cols_class = np.concatenate((cols_class_, ['simbad_tot', 'simbad_gal']))
 
     # column families
-    cf = {i: 'basic' for i in df_hbase.select(cols_basic).columns}
-    cf.update({i: 'class' for i in df_hbase.select(cols_class).columns})
+    cf = {i: 'basic' for i in df_hbase.select(*cols_basic).columns}
+    cf.update({i: 'class' for i in df_hbase.select(*cols_class).columns})
 
     # construct the time catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
@@ -226,7 +226,6 @@ def main():
         .options(catalog=hbcatalog_index_schema, newtable=50)\
         .format("org.apache.spark.sql.execution.datasources.hbase")\
         .save()
-
 
 
 if __name__ == "__main__":
