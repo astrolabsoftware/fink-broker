@@ -36,7 +36,10 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="statistics_{}".format(args.night))
+    spark = init_sparksession(
+        name="statistics_{}".format(args.night),
+        shuffle_partitions=2
+    )
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
