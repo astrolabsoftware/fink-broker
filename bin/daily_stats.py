@@ -27,9 +27,6 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_broker.science import extract_fink_classification
 
-from fink_science.utilities import concat_col
-from fink_science.asteroids.processor import roid_catcher
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
