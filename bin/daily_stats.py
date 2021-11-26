@@ -68,6 +68,7 @@ def main():
     n_raw_alert = df_raw.count()
     n_sci_alert = df_sci.count()
 
+    out_dic = {}
     out_dic['raw'] = n_raw_alert
     out_dic['sci'] = n_sci_alert
 
