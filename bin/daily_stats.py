@@ -99,26 +99,6 @@ def main():
 
     out_dic['simbad_gal'] = n_simbad_gal
 
-    # MPC
-    # There was a bug in the SSO classification prior to 02/2021
-    # This piece of code is temporary, just the time to recompute data
-    df_sci = df_sci.drop('roid')
-
-    # Retrieve time-series information
-    to_expand = ['jd', 'magpsf']
-
-    # Append temp columns with historical + current measurements
-    prefix = 'c'
-    for colname in to_expand:
-        df_sci = concat_col(df_sci, colname, prefix=prefix)
-
-    # recompute asteroid classification
-    args_roid = [
-        'cjd', 'cmagpsf',
-        'candidate.ndethist', 'candidate.sgscore1',
-        'candidate.ssdistnr', 'candidate.distpsnr1']
-    df_sci = df_sci.withColumn('roid', roid_catcher(*args_roid))
-
     # to account for schema migration
     if 'knscore' not in df_sci.columns:
         df_sci = df_sci.withColumn('knscore', F.lit(-1.0))
@@ -146,21 +126,11 @@ def main():
         )
     )
 
-    n_unknown = df_class.filter(df_class['class'] == 'Unknown').count()
-    n_mpc = df_class.filter(df_class['class'] == 'Solar System MPC').count()
-    n_sso = df_class.filter(df_class['class'] == 'Solar System candidate').count()
-    n_trck = df_class.filter(df_class['class'] == 'Tracklet').count()
-    n_snia = df_class.filter(df_class['class'] == 'Early SN candidate').count()
-    n_sn = df_class.filter(df_class['class'] == 'SN candidate').count()
-    n_kn = df_class.filter(df_class['class'] == 'Kilonova candidate').count()
-
-    out_dic['Unknown'] = n_unknown
-    out_dic['Solar System MPC'] = n_mpc
-    out_dic['Solar System candidate'] = n_sso
-    out_dic['SN candidate'] = n_sn
-    out_dic['Early SN candidate'] = n_snia
-    out_dic['Kilonova candidate'] = n_kn
-    out_dic['Tracklet'] = n_trck
+    out_class = df_class.groupBy('class').count().collect()
+    out_class_ = [o.asDict() for o in out_class]
+    out_class_ = [list(o.values()) for o in out_class_]
+    for kv in out_class_:
+        out_dic[kv[0]] = kv[1]
 
     # Number of fields
     n_field = df_raw.select('candidate.field').distinct().count()
