@@ -17,6 +17,7 @@
 """
 import argparse
 
+import numpy as np
 import pandas as pd
 
 import pyspark.sql.functions as F
@@ -162,6 +163,10 @@ def main():
 
     out_dic['night'] = 'ztf_{}'.format(args.night)
 
+    # make a Spark DataFrame
+    pdf = pd.DataFrame([out_dic])
+    df_hbase = spark.createDataFrame(pdf)
+
     # rowkey is the night YYYYMMDD
     index_row_key_name = 'night'
 
@@ -180,12 +185,8 @@ def main():
     cols_class = np.concatenate((cols_class_, ['simbad_tot', 'simbad_gal']))
 
     # column families
-    cf = {i: 'basic' for i in df.select(cols_basic).columns}
-    cf.update({i: 'class' for i in df.select(cols_class).columns})
-
-    pdf = pd.DataFrame([out_dic])
-
-    df_hbase = spark.createDataFrame(pdf)
+    cf = {i: 'basic' for i in df_hbase.select(cols_basic).columns}
+    cf.update({i: 'class' for i in df_hbase.select(cols_class).columns})
 
     # construct the time catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
