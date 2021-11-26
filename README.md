@@ -7,14 +7,17 @@
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
 [![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
-Fink is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
+[Fink](https://fink-broker.org) is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
 
 # Latest News
 
-* 03/21: Fink broker [1.1](https://github.com/astrolabsoftware/fink-broker/pull/429)
-* 02/21: Fink broker [1.0](https://github.com/astrolabsoftware/fink-broker/pull/416)
-* 08/20: Fink broker [0.7](https://github.com/astrolabsoftware/fink-broker/pull/396)
-* 06/20: Fink broker [0.6](https://github.com/astrolabsoftware/fink-broker/pull/386).
+* 11/21: Release [1.3](https://github.com/astrolabsoftware/fink-broker/pull/495)
+* 11/21: Release [1.2](https://github.com/astrolabsoftware/fink-broker/pull/492)
+* 08/21: Fink selected as [Rubin Observatory Alert Broker](https://www.lsst.org/scientists/alert-brokers).
+* 03/21: Release [1.1](https://github.com/astrolabsoftware/fink-broker/pull/429)
+* 02/21: Release [1.0](https://github.com/astrolabsoftware/fink-broker/pull/416)
+* 08/20: Release [0.7](https://github.com/astrolabsoftware/fink-broker/pull/396)
+* 06/20: Release [0.6](https://github.com/astrolabsoftware/fink-broker/pull/386).
 * 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year.
 * 04/20: New broker release [0.5](https://github.com/astrolabsoftware/fink-broker/pull/354). Plenty of new features!
 * 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
@@ -39,3 +42,7 @@ Learning Fink is easy whether you are a developer or a scientist:
 ## Documentation
 
 Fink's documentation is hosted [here](https://fink-broker.rtfd.io).
+
+## Science Portal
+
+You can explore all Fink data at [https://fink-portal.org](https://fink-portal.org).

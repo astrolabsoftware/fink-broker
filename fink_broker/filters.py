@@ -28,7 +28,7 @@ from fink_broker.tester import spark_unit_tests
 from fink_broker.loggingUtils import get_fink_logger
 
 @pandas_udf(BooleanType(), PandasUDFType.SCALAR)
-def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
+def qualitycuts(nbad: Any, rb: Any) -> pd.Series:
     """ Apply simple quality cuts to the alert stream to select only
     alerts with good quality.
 
@@ -40,8 +40,6 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
         Column containing the nbad values
     rb: Spark DataFrame Column
         Column containing the rb values
-    magdiff: Spark DataFrame Column
-        Column containing the magdiff values
 
     Returns
     ----------
@@ -52,20 +50,19 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     Examples
     -------
     >>> from pyspark.sql.functions import struct
-    >>> colnames = ["nbad", "rb", "magdiff"]
+    >>> colnames = ["nbad", "rb"]
     >>> df = spark.sparkContext.parallelize(zip(
     ...   [0, 1, 0, 0],
-    ...   [0.01, 0.02, 0.6, 0.01],
-    ...   [0.02, 0.05, 0.1, 0.01])).toDF(colnames)
+    ...   [0.01, 0.02, 0.6, 0.01])).toDF(colnames)
     >>> df.show() # doctest: +NORMALIZE_WHITESPACE
-    +----+----+-------+
-    |nbad|  rb|magdiff|
-    +----+----+-------+
-    |   0|0.01|   0.02|
-    |   1|0.02|   0.05|
-    |   0| 0.6|    0.1|
-    |   0|0.01|   0.01|
-    +----+----+-------+
+    +----+----+
+    |nbad|  rb|
+    +----+----+
+    |   0|0.01|
+    |   1|0.02|
+    |   0| 0.6|
+    |   0|0.01|
+    +----+----+
     <BLANKLINE>
 
     Nest the DataFrame as for alerts
@@ -76,17 +73,16 @@ def qualitycuts(nbad: Any, rb: Any, magdiff: Any) -> pd.Series:
     >>> filtername = 'fink_broker.filters.qualitycuts'
     >>> df = apply_user_defined_filter(df, filtername)
     >>> df.select("decoded.candidate.*").show() # doctest: +NORMALIZE_WHITESPACE
-    +----+---+-------+
-    |nbad| rb|magdiff|
-    +----+---+-------+
-    |   0|0.6|    0.1|
-    +----+---+-------+
+    +----+---+
+    |nbad| rb|
+    +----+---+
+    |   0|0.6|
+    +----+---+
     <BLANKLINE>
 
     """
     mask = nbad.values == 0
     mask *= rb.values >= 0.55
-    mask *= abs(magdiff.values) <= 0.1
 
     return pd.Series(mask)
 
