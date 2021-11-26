@@ -15,6 +15,8 @@
 # limitations under the License.
 """Compute statistics for a given observing night
 """
+import argparse
+
 import pyspark.sql.functions as F
 
 from fink_broker.sparkUtils import init_sparksession
