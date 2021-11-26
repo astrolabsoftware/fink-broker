@@ -83,7 +83,7 @@ def main():
         .filter(df_sci['cdsxmatch'] != 'Unknown')\
         .count()
 
-    out_dic['simbad'] = n_simbad
+    out_dic['simbad_tot'] = n_simbad
 
     # Alerts with a close-by candidate host-galaxy
     list_simbad_galaxies = [
