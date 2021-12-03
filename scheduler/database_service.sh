@@ -36,5 +36,8 @@ if [[ $? == 0 ]]; then
     echo "Push TNS candidates"
     fink start push_to_tns -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/tns_${NIGHT}.log 2>&1
 
+    echo "Update statistics"
+    fink start stats -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT}
+
     exit
 fi
