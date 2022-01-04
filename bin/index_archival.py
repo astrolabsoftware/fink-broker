@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2021 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,8 +73,9 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    # Push data monthly
-    path = 'ztf_alerts/science/year={}/month={}/day={}'.format(
+    # Connect to the aggregated science database
+    path = '{}/science/year={}/month={}/day={}'.format(
+        args.agg_data_prefix,
         args.night[:4],
         args.night[4:6],
         args.night[6:8]
