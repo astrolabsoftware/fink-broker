@@ -66,6 +66,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [ONLINE_DATA_PREFIX]
         """)
     parser.add_argument(
+        '-agg_data_prefix', type=str, default='',
+        help="""Path prefix to store archive data, e.g. /path/to/archive.
+        This would then contain automatically {raw, science}/year=/month=/day=
+        [AGG_DATA_PREFIX]
+        """)
+    parser.add_argument(
         '-science_db_name', type=str, default='',
         help="""
         The name of the HBase table
