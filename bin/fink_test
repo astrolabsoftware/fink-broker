@@ -80,7 +80,6 @@ export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
-  fink start dashboard -c $conf
 
   # Fire a stream
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
