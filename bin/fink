@@ -309,8 +309,6 @@ elif [[ $service == "reprocess_night" ]]; then
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL}
 elif [[ $service == "science_archival" ]]; then
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
   # Check if the use wants to just drop the catalog on disk
   if [[ "$SAVE_SCIENCE_DB_CATALOG_ONLY" = true ]] ; then
     SAVE_SCIENCE_DB_CATALOG_ONLY="--save_science_db_catalog_only"
@@ -334,8 +332,6 @@ elif [[ $service == "index_archival" ]]; then
   if [[ $TNS_FOLDER == "" ]]; then
     TNS_FOLDER="/tmp"
   fi
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
@@ -364,9 +360,6 @@ elif [[ $service == "push_to_tns" ]]; then
   -tns_folder ${TNS_FOLDER} ${TNS_SANDBOX} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "check_science_portal" ]]; then
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
-
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \

@@ -72,8 +72,9 @@ ONLINE_DATA_PREFIX=${FINK_HOME}/online
 AGG_DATA_PREFIX=${FINK_HOME}/archive
 
 # The name of the HBase table
-SCIENCE_DB_NAME="test_travis"
-SCIENCE_DB_CATALOG=${FINK_HOME}/catalog.json
+SCIENCE_DB_NAME="test_portal"
+SCIENCE_DB_CATALOG=${FINK_HOME}/catalog_hbase.json
+SAVE_SCIENCE_DB_CATALOG_ONLY=false
 
 # HBase configuration file - must be under ${SPARK_HOME}/conf
 # You can find an example in ${FINK_HOME}/conf
@@ -86,16 +87,6 @@ LOG_LEVEL=INFO
 # If set to false, it will assume the fink_broker is in your PYTHONPATH
 # otherwise it will package it, and send it to the executors.
 DEPLOY_FINK_PYTHON=false
-
-######################################
-# Dashboard
-# Where the web data will be posted and retrieved by the UI.
-# For small files, you can keep this location.
-# If you plan on having large files, change to a better suited location.
-FINK_UI_PATH=${FINK_HOME}/web/data
-
-# The UI will listen on this port
-FINK_UI_PORT=5000
 
 ######################################
 # Slack
