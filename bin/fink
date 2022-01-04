@@ -379,6 +379,7 @@ elif [[ $service == "push_to_tns" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/push_to_tns.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -tns_folder ${TNS_FOLDER} ${TNS_SANDBOX} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
