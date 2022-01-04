@@ -413,6 +413,7 @@ elif [[ $service == "save_schema" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} -log_level ${LOG_LEVEL}
 elif [[ $service == "clean" ]]; then
   if [[ $FS_KIND == "local" ]]; then
