@@ -366,7 +366,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "ztf_alerts/raw")
+        root, "online/raw")
 
     # Run the Spark test suite
     spark_unit_tests(globs)

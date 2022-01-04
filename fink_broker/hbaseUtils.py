@@ -457,7 +457,7 @@ if __name__ == "__main__":
         root, "schemas/template_schema_ZTF_3p3.avro")
 
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
-        root, "ztf_alerts/science")
+        root, "online/science")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)
