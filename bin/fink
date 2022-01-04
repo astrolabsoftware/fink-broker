@@ -156,13 +156,13 @@ if [[ "$INITPATH" = true ]] ; then
     echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs}"
     exit 1
   fi
-  $finkdir $DATA_PREFIX
-  $finkdir $FINK_ALERT_PATH
-  $finkdir $FINK_ALERT_PATH_SCI_TMP
-  $finkdir $FINK_ALERT_CHECKPOINT_RAW
-  $finkdir $FINK_ALERT_CHECKPOINT_SCI_TMP
-  $finkdir $FINK_ALERT_CHECKPOINT_SCI
-  echo "Data will be stored under $DATA_PREFIX"
+  $finkdir $ONLINE_DATA_PREFIX
+  $finkdir $ONLINE_DATA_PREFIX/raw
+  $finkdir $ONLINE_DATA_PREFIX/science
+  $finkdir $ONLINE_DATA_PREFIX/raw_checkpoint
+  $finkdir $ONLINE_DATA_PREFIX/science_checkpoint
+  $finkdir $ONLINE_DATA_PREFIX/kafka_checkpoint
+  echo "Data will be stored under $ONLINE_DATA_PREFIX"
   exit
 fi
 
@@ -223,7 +223,7 @@ if [[ $MODE == "stop" ]]; then
   exit 1
 fi
 
-# Start services
+# Start services -- TO BE REMOVED?
 mkdir -p ${FINK_HOME}/web/data
 
 # Grab Fink and Python version numbers
@@ -269,7 +269,7 @@ elif [[ $service == "stream2raw" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-    -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
@@ -280,9 +280,7 @@ elif [[ $service == "raw2science" ]]; then
     ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
-    -rawdatapath ${FINK_ALERT_PATH} \
-    -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
-    -checkpointpath_sci_tmp ${FINK_ALERT_CHECKPOINT_SCI_TMP} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -night ${NIGHT} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
@@ -298,8 +296,7 @@ elif [[ $service == "distribution" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
-  -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
-  -checkpointpath_kafka ${FINK_ALERT_CHECKPOINT_KAFKA} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \

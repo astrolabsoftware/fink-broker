@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,10 @@ def main():
 
     # debug statements
     inspect_application(logger)
+
+    # data path
+    rawdatapath = args.online_data_prefix + '/raw'
+    checkpointpath_raw = args.online_data_prefix + '/raw_checkpoint'
 
     # Create a streaming dataframe pointing to a Kafka stream
     kerberos = 'public2.alerts.ztf' in args.servers
@@ -108,8 +112,8 @@ def main():
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
-        .option("checkpointLocation", args.checkpointpath_raw) \
-        .option("path", args.rawdatapath)\
+        .option("checkpointLocation", checkpointpath_raw) \
+        .option("path", rawdatapath)\
         .partitionBy("year", "month", "day")
 
     # Fixed interval micro-batches or ASAP

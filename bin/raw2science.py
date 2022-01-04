@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2021 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,13 +53,18 @@ def main():
     # debug statements
     inspect_application(logger)
 
+    # data path
+    rawdatapath = args.online_data_prefix + '/raw'
+    scitmpdatapath = args.online_data_prefix + '/science'
+    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint'
+
     df = connect_to_raw_database(
-        args.rawdatapath + "/year={}/month={}/day={}".format(
+        rawdatapath + "/year={}/month={}/day={}".format(
             args.night[0:4],
             args.night[4:6],
             args.night[6:8]
         ),
-        args.rawdatapath + "/year={}/month={}/day={}".format(
+        rawdatapath + "/year={}/month={}/day={}".format(
             args.night[0:4],
             args.night[4:6],
             args.night[6:8]
@@ -93,8 +98,8 @@ def main():
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
-        .option("checkpointLocation", args.checkpointpath_sci_tmp) \
-        .option("path", args.scitmpdatapath)\
+        .option("checkpointLocation", checkpointpath_sci_tmp) \
+        .option("path", scitmpdatapath)\
         .partitionBy("year", "month", "day") \
         .trigger(processingTime='{} seconds'.format(args.tinterval)) \
         .start()
