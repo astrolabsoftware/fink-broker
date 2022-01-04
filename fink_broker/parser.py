@@ -60,56 +60,10 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [KAFKA_STARTING_OFFSET]
         """)
     parser.add_argument(
-        '-rawdatapath', type=str, default='',
-        help="""
-        Directory on disk for saving raw alert data.
-        [FINK_ALERT_PATH]
-        """)
-    parser.add_argument(
-        '-scitmpdatapath', type=str, default='',
-        help="""
-        Directory on disk for tmp scientific alerts.
-        [FINK_ALERT_PATH_SCI_TMP]
-        """)
-    parser.add_argument(
-        '-checkpointpath_raw', type=str, default='',
-        help="""
-        The location where the system will write all the checkpoint information
-        for the raw datable. This should be a directory in an HDFS-compatible
-        fault-tolerant file system.
-        See conf/fink.conf & https://spark.apache.org/docs/latest/
-        structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT_RAW]
-        """)
-    parser.add_argument(
-        '-checkpointpath_sci_tmp', type=str, default='',
-        help="""
-        The location where the system will write all the checkpoint information
-        for the TMP science datable. This should be a directory in an
-        HDFS-compatible fault-tolerant file system.
-        See conf/fink.conf & https://spark.apache.org/docs/latest/
-        structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT_SCI_TMP]
-        """)
-    parser.add_argument(
-        '-checkpointpath_sci', type=str, default='',
-        help="""
-        The location where the system will write all the checkpoint information
-        for the science datable. This should be a directory in an
-        HDFS-compatible fault-tolerant file system.
-        See conf/fink.conf & https://spark.apache.org/docs/latest/
-        structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT_SCI]
-        """)
-    parser.add_argument(
-        '-checkpointpath_kafka', type=str, default='',
-        help="""
-        The location where the system will write all the checkpoint information
-        for the distribution module. This should be a directory in an
-        HDFS-compatible fault-tolerant file system.
-        See conf/fink.conf & https://spark.apache.org/docs/latest/
-        structured-streaming-programming-guide.html#starting-streaming-queries
-        [FINK_ALERT_CHECKPOINT_KAFKA]
+        '-online_data_prefix', type=str, default='',
+        help="""Path prefix to store online data, e.g. /path/to/online.
+        This would then contain automatically {raw, science}/year=/month=/day=
+        [ONLINE_DATA_PREFIX]
         """)
     parser.add_argument(
         '-science_db_name', type=str, default='',
