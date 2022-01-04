@@ -67,7 +67,6 @@ while [ "$#" -gt 0 ]; do
         ps aux | head -1
         ps aux | grep -i 'fink start' | grep -v grep
         echo "Use <fink stop service_name> to stop a service."
-        echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
         ;;
     "init")
@@ -193,9 +192,6 @@ if [[ $MODE == "stop" ]]; then
       echo "Stopping all services..."
       kill -s $SIGNAL $PIDS
     fi
-  elif [[ $service == "dashboard" ]]; then
-    # PID=$(lsof -t -i :${FINKUIPORT})
-    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
 
@@ -223,9 +219,6 @@ if [[ $MODE == "stop" ]]; then
   exit 1
 fi
 
-# Start services -- TO BE REMOVED?
-mkdir -p ${FINK_HOME}/web/data
-
 # Grab Fink and Python version numbers
 FINK_VERSION=`fink --version`
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
@@ -240,20 +233,7 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-if [[ $service == "dashboard" ]]; then
-  # Launch the UI
-  export is_docker=`command -v docker-compose`
-  if [[ -f $is_docker ]]; then
-    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
-  else
-    echo "docker-compose not found, using python -m http.server"
-    echo "This is a workaround and work only from the repo root."
-    cd ${FINK_HOME}/web
-    python -m http.server ${FINK_UI_PORT}
-    cd -
-  fi
-  echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
-elif [[ $service == "checkstream" ]]; then
+if [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
