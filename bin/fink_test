@@ -113,10 +113,13 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # fink start index_archival -c $conf --night 20190903 --index_table tns_jd
 
   fink start check_science_portal -c $conf
-fi
+else
+  # Fire another stream
+  fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
-# Fire another stream
-fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+  # Connect the service to build the raw database from the stream
+  fink start stream2raw --exit_after 30 --simulator -c $conf --topic $KAFKA_TOPIC
+fi
 
 # Run the test suite on the modules assuming the integration
 # tests have been run (to build the databases)
