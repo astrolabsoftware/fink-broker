@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2021 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,14 +44,16 @@ def main():
 
     print('Processing {}/{}/{}'.format(year, month, day))
 
-    input_raw = '{}/year={}/month={}/day={}'.format(
-        args.rawdatapath, year, month, day)
-    input_science = '{}/year={}/month={}/day={}'.format(
-        args.scitmpdatapath, year, month, day)
+    input_raw = '{}/raw/year={}/month={}/day={}'.format(
+        args.online_data_prefix, year, month, day)
+    input_science = '{}/science/year={}/month={}/day={}'.format(
+        args.online_data_prefix, year, month, day)
 
     # basepath
-    output_raw = 'ztf_alerts/raw'
-    output_science = 'ztf_alerts/science'
+    output_raw = '{}/raw/year={}/month={}/day={}'.format(
+        args.agg_data_prefix, year, month, day)
+    output_science = '{}/science/year={}/month={}/day={}'.format(
+        args.agg_data_prefix, year, month, day)
 
     print('Raw data processing....')
     df_raw = spark.read.format('parquet').load(input_raw)

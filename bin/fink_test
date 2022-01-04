@@ -80,7 +80,6 @@ export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 # Integration tests
 if [[ "$NO_INTEGRATION" = false ]] ; then
-  fink start dashboard -c $conf
 
   # Fire a stream
   fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
@@ -114,13 +113,16 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # fink start index_archival -c $conf --night 20190903 --index_table tns_jd
 
   fink start check_science_portal -c $conf
+else
+  # Fire another stream
+  fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
-  # clean tmp files
-  fink start clean -c $conf
+  # Connect the service to build the raw database from the stream
+  fink start stream2raw --exit_after 30 --simulator -c $conf --topic $KAFKA_TOPIC
+
+  # Connect the service to build the science database from the raw one
+  fink start raw2science --exit_after 40 -c $conf --night "20190903"
 fi
-
-# Fire another stream
-fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
 # Run the test suite on the modules assuming the integration
 # tests have been run (to build the databases)

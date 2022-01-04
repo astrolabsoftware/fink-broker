@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,6 @@ while [ "$#" -gt 0 ]; do
         ps aux | head -1
         ps aux | grep -i 'fink start' | grep -v grep
         echo "Use <fink stop service_name> to stop a service."
-        echo "Use <fink start dashboard> to start the dashboard or check its status."
         exit
         ;;
     "init")
@@ -156,13 +155,13 @@ if [[ "$INITPATH" = true ]] ; then
     echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs}"
     exit 1
   fi
-  $finkdir $DATA_PREFIX
-  $finkdir $FINK_ALERT_PATH
-  $finkdir $FINK_ALERT_PATH_SCI_TMP
-  $finkdir $FINK_ALERT_CHECKPOINT_RAW
-  $finkdir $FINK_ALERT_CHECKPOINT_SCI_TMP
-  $finkdir $FINK_ALERT_CHECKPOINT_SCI
-  echo "Data will be stored under $DATA_PREFIX"
+  $finkdir $ONLINE_DATA_PREFIX
+  $finkdir $ONLINE_DATA_PREFIX/raw
+  $finkdir $ONLINE_DATA_PREFIX/science
+  $finkdir $ONLINE_DATA_PREFIX/raw_checkpoint
+  $finkdir $ONLINE_DATA_PREFIX/science_checkpoint
+  $finkdir $ONLINE_DATA_PREFIX/kafka_checkpoint
+  echo "Data will be stored under $ONLINE_DATA_PREFIX"
   exit
 fi
 
@@ -193,9 +192,6 @@ if [[ $MODE == "stop" ]]; then
       echo "Stopping all services..."
       kill -s $SIGNAL $PIDS
     fi
-  elif [[ $service == "dashboard" ]]; then
-    # PID=$(lsof -t -i :${FINKUIPORT})
-    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml down
   else
     SIGNAL=${SIGNAL:-TERM}
 
@@ -223,9 +219,6 @@ if [[ $MODE == "stop" ]]; then
   exit 1
 fi
 
-# Start services
-mkdir -p ${FINK_HOME}/web/data
-
 # Grab Fink and Python version numbers
 FINK_VERSION=`fink --version`
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
@@ -240,20 +233,7 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-if [[ $service == "dashboard" ]]; then
-  # Launch the UI
-  export is_docker=`command -v docker-compose`
-  if [[ -f $is_docker ]]; then
-    FINK_HOME=${FINK_HOME} FINK_UI_PORT=${FINK_UI_PORT} docker-compose -p dashboardnet -f ${FINK_HOME}/docker/docker-compose-ui.yml up -d
-  else
-    echo "docker-compose not found, using python -m http.server"
-    echo "This is a workaround and work only from the repo root."
-    cd ${FINK_HOME}/web
-    python -m http.server ${FINK_UI_PORT}
-    cd -
-  fi
-  echo "Dashboard served at http://localhost:${FINK_UI_PORT}"
-elif [[ $service == "checkstream" ]]; then
+if [[ $service == "checkstream" ]]; then
   # Monitor the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
@@ -269,7 +249,7 @@ elif [[ $service == "stream2raw" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-    -rawdatapath ${FINK_ALERT_PATH} -checkpointpath_raw ${FINK_ALERT_CHECKPOINT_RAW} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
 
@@ -280,9 +260,7 @@ elif [[ $service == "raw2science" ]]; then
     ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/raw2science.py ${HELP_ON_SERVICE} \
-    -rawdatapath ${FINK_ALERT_PATH} \
-    -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
-    -checkpointpath_sci_tmp ${FINK_ALERT_CHECKPOINT_SCI_TMP} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -night ${NIGHT} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
@@ -298,8 +276,7 @@ elif [[ $service == "distribution" ]]; then
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
-  -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
-  -checkpointpath_kafka ${FINK_ALERT_CHECKPOINT_KAFKA} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
@@ -312,9 +289,8 @@ elif [[ $service == "merge" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/merge_ztf_night.py ${HELP_ON_SERVICE} \
-  -datapath ${DATA_PREFIX} \
-  -rawdatapath ${FINK_ALERT_PATH} \
-  -scitmpdatapath ${FINK_ALERT_PATH_SCI_TMP} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "stats" ]]; then
@@ -329,11 +305,10 @@ elif [[ $service == "reprocess_night" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/raw2science_batch.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL}
 elif [[ $service == "science_archival" ]]; then
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
   # Check if the use wants to just drop the catalog on disk
   if [[ "$SAVE_SCIENCE_DB_CATALOG_ONLY" = true ]] ; then
     SAVE_SCIENCE_DB_CATALOG_ONLY="--save_science_db_catalog_only"
@@ -345,6 +320,7 @@ elif [[ $service == "science_archival" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/science_archival.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
@@ -356,12 +332,11 @@ elif [[ $service == "index_archival" ]]; then
   if [[ $TNS_FOLDER == "" ]]; then
     TNS_FOLDER="/tmp"
   fi
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/index_archival.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -night ${NIGHT} \
@@ -380,13 +355,11 @@ elif [[ $service == "push_to_tns" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/push_to_tns.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -tns_folder ${TNS_FOLDER} ${TNS_SANDBOX} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "check_science_portal" ]]; then
-  # Read configuration for hbase
-  source ${FINK_HOME}/conf/fink.conf.hbase
-
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
@@ -413,13 +386,8 @@ elif [[ $service == "save_schema" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} -log_level ${LOG_LEVEL}
-elif [[ $service == "clean" ]]; then
-  if [[ $FS_KIND == "local" ]]; then
-    rm -r ${DATA_PREFIX}
-  elif [[ $FS_KIND == "hdfs" ]]; then
-    hdfs dfs -rm -r ${DATA_PREFIX}
-  fi
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2021 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,10 +57,14 @@ def main():
     # debug statements
     inspect_application(logger)
 
+    # data path
+    scitmpdatapath = args.online_data_prefix + '/science'
+    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint'
+
     # Connect to the TMP science database
     df = connect_to_raw_database(
-        args.scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
-        args.scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
+        scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
+        scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
         latestfirst=False
     )
 
@@ -114,7 +118,7 @@ def main():
             .option("kafka.security.protocol", "SASL_PLAINTEXT")\
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("topic", topicname)\
-            .option("checkpointLocation", args.checkpointpath_kafka + topicname)\
+            .option("checkpointLocation", checkpointpath_kafka + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
 

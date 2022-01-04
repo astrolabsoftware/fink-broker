@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2021 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,15 +39,15 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    # Connect to the TMP science database
+    # Connect to the aggregated science database
     year = args.night[:4]
     month = args.night[4:6]
     day = args.night[6:8]
 
     print('Processing {}/{}/{}'.format(year, month, day))
 
-    input_science = 'current/science/year={}/month={}/day={}'.format(
-        year, month, day)
+    input_science = '{}/science/year={}/month={}/day={}'.format(
+        args.agg_data_prefix, year, month, day)
     df = load_parquet_files(input_science)
 
     # Drop partitioning columns
