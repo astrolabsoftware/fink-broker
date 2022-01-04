@@ -95,7 +95,7 @@ jobs:
         fink_kafka start
         fink_kafka --create-topic fink_outstream
         fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
-        fink_test
+        fink_test --without-integration
         bash <(curl -s https://codecov.io/bash)
     - uses: act10ns/slack@v1
       with:
