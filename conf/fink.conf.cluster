@@ -1,4 +1,4 @@
-# Copyright 2018 AstroLab Software
+# Copyright 2018-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,15 +68,8 @@ FINK_ALERT_SCHEMA="${FINK_HOME}/schemas/template_schema_ZTF_3p3.avro"
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
 FS_KIND=hdfs
-DATA_PREFIX=""
-
-# Internal. Do not touch unless you know what you are doing
-FINK_ALERT_PATH=${DATA_PREFIX}/raw
-FINK_ALERT_PATH_SCI_TMP=${DATA_PREFIX}/science
-FINK_ALERT_CHECKPOINT_RAW=${DATA_PREFIX}/raw_checkpoint
-FINK_ALERT_CHECKPOINT_SCI_TMP=${DATA_PREFIX}/science_checkpoint
-FINK_ALERT_CHECKPOINT_SCI=${DATA_PREFIX}/alerts_sci_checkpoint
-FINK_ALERT_CHECKPOINT_KAFKA=${DATA_PREFIX}/kafka_checkpoint
+ONLINE_DATA_PREFIX=/user/julien.peloton/online
+AGG_DATA_PREFIX=/user/julien.peloton/archive
 
 # The name of the HBase table
 SCIENCE_DB_NAME=""
