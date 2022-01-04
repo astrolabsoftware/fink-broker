@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
 [![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
-[Fink](https://fink-broker.org) is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world.
+[Fink](https://fink-broker.org) is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world. You can check the white paper at https://doi.org/10.1093/mnras/staa3602.
 
 # Latest News
 
