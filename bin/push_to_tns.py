@@ -22,8 +22,9 @@ import os
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
-from fink_broker.science import extract_fink_classification
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+
+from fink_filters.classification import extract_fink_classification
 
 from fink_tns.utils import read_past_ids, retrieve_groupid
 from fink_tns.report import extract_discovery_photometry, build_report
