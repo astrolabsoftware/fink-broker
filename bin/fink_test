@@ -112,6 +112,8 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Need API KEY
   # fink start index_archival -c $conf --night 20190903 --index_table tns_jd
 
+  fink start stats -c $conf --night 20190903
+
   fink start check_science_portal -c $conf
 else
   # Fire another stream
