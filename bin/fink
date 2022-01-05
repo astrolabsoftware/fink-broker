@@ -298,6 +298,7 @@ elif [[ $service == "stats" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/daily_stats.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "reprocess_night" ]]; then

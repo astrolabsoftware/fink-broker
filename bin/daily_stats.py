@@ -59,10 +59,10 @@ def main():
 
     print('Statistics for {}/{}/{}'.format(year, month, day))
 
-    input_raw = '{}/year={}/month={}/day={}'.format(
-        '/user/fink/ztf_alerts/raw', year, month, day)
-    input_science = '{}/year={}/month={}/day={}'.format(
-        '/user/fink/ztf_alerts/science_reprocessed', year, month, day)
+    input_raw = '{}/raw/year={}/month={}/day={}'.format(
+        args.agg_data_prefix, year, month, day)
+    input_science = '{}/science/year={}/month={}/day={}'.format(
+        args.agg_data_prefix, year, month, day)
 
     df_raw = load_parquet_files(input_raw)
     df_sci = load_parquet_files(input_science)
