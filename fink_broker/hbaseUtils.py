@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,14 +59,14 @@ def load_science_portal_column_names():
     # Column family d
     cols_d = [
         'cdsxmatch',
-        'rfscore',
+        'rf_snia_vs_nonia',
         'snn_snia_vs_nonia',
         'snn_sn_vs_all',
         col('mulens.class_1').alias('mulens_class_1'),
         col('mulens.class_2').alias('mulens_class_2'),
         'roid',
         'nalerthist',
-        'knscore',
+        'rf_kn_vs_nonkn',
         'tracklet'
     ]
 

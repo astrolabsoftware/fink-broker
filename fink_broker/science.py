@@ -1,4 +1,4 @@
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -185,14 +185,14 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cdsxmatch', cdsxmatch(*colnames))
 
     # Apply level one processor: rfscore
-    logger.info("New processor: rfscore")
+    logger.info("New processor: Active Learning")
 
     # Perform the fit + classification.
     # Note we can omit the model_path argument, and in that case the
     # default model `data/models/default-model.obj` will be used.
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     df = df.withColumn(
-        'rfscore',
+        'rf_snia_vs_nonia',
         rfscore_sigmoid_full(*rfscore_args)
     )
 
@@ -253,7 +253,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: kilonova detection
     logger.info("New processor: kilonova")
     knscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
-    df = df.withColumn('knscore', knscore(*knscore_args))
+    df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
