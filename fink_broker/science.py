@@ -184,13 +184,21 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     ]
     df = df.withColumn('cdsxmatch', cdsxmatch(*colnames))
 
-    # Apply level one processor: rfscore
+    # Apply level one processor: asteroids
+    logger.info("New processor: asteroids")
+    args_roid = [
+        'cjd', 'cmagpsf',
+        'candidate.ndethist', 'candidate.sgscore1',
+        'candidate.ssdistnr', 'candidate.distpsnr1']
+    df = df.withColumn('roid', roid_catcher(*args_roid))
+
     logger.info("New processor: Active Learning")
 
     # Perform the fit + classification.
     # Note we can omit the model_path argument, and in that case the
     # default model `data/models/default-model.obj` will be used.
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    rfscore_args += [F.col('cdsxmatch'), F.col('candidate.ndethist')]
     df = df.withColumn(
         'rf_snia_vs_nonia',
         rfscore_sigmoid_full(*rfscore_args)
@@ -199,10 +207,18 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: superNNova
     logger.info("New processor: supernnova")
 
-    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf', F.lit('snn_snia_vs_nonia')]
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    snn_args += [
+        F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')
+    ]
+    snn_args += [F.lit('snn_snia_vs_nonia')]
     df = df.withColumn('snn_snia_vs_nonia', snn_ia(*snn_args))
 
-    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf', F.lit('snn_sn_vs_all')]
+    snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    snn_args += [
+        F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')
+    ]
+    snn_args += [F.lit('snn_sn_vs_all')]
     df = df.withColumn('snn_sn_vs_all', snn_ia(*snn_args))
 
     # Apply level one processor: microlensing
@@ -238,14 +254,6 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
     df = df.withColumn('mulens', mulens_udf(*mulens_args))
 
-    # Apply level one processor: asteroids
-    logger.info("New processor: asteroids")
-    args_roid = [
-        'cjd', 'cmagpsf',
-        'candidate.ndethist', 'candidate.sgscore1',
-        'candidate.ssdistnr', 'candidate.distpsnr1']
-    df = df.withColumn('roid', roid_catcher(*args_roid))
-
     # Apply level one processor: nalerthist
     logger.info("New processor: nalerthist")
     df = df.withColumn('nalerthist', nalerthist(df['cmagpsf']))
@@ -253,6 +261,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: kilonova detection
     logger.info("New processor: kilonova")
     knscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    knscore_args += [
+        F.col('candidate.jdstarthist'),
+        F.col('cdsxmatch'),
+        F.col('candidate.ndethist')
+    ]
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     # Drop temp columns
