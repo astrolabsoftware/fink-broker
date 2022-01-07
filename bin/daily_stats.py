@@ -127,13 +127,13 @@ def main():
             df_sci['mulens.class_2'],
             df_sci['snn_snia_vs_nonia'],
             df_sci['snn_sn_vs_all'],
-            df_sci['rfscore'],
+            df_sci['rf_snia_vs_nonia'],
             df_sci['candidate.ndethist'],
             df_sci['candidate.drb'],
             df_sci['candidate.classtar'],
             df_sci['candidate.jd'],
             df_sci['candidate.jdstarthist'],
-            df_sci['knscore'],
+            df_sci['rf_kn_vs_nonkn'],
             df_sci['tracklet']
         )
     )

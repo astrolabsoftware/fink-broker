@@ -74,9 +74,9 @@ def main():
 
     cols = [
         'cdsxmatch', 'roid', 'mulens.class_1', 'mulens.class_2',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
+        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
         'candidate.ndethist', 'candidate.drb', 'candidate.classtar',
-        'candidate.jd', 'candidate.jdstarthist', 'knscore', 'tracklet'
+        'candidate.jd', 'candidate.jdstarthist', 'rf_kn_vs_nonkn', 'tracklet'
     ]
     df = df.withColumn('class', extract_fink_classification(*cols))
 

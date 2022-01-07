@@ -143,8 +143,8 @@ def main():
         'cdsxmatch',
         'roid',
         'mulens_class_1', 'mulens_class_2',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rfscore',
-        'classtar', 'drb', 'ndethist', 'knscore', 'tracklet'
+        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
+        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet'
     ]
 
     if columns[0].startswith('pixel'):
@@ -172,13 +172,13 @@ def main():
                 df['mulens_class_2'],
                 df['snn_snia_vs_nonia'],
                 df['snn_sn_vs_all'],
-                df['rfscore'],
+                df['rf_snia_vs_nonia'],
                 df['ndethist'],
                 df['drb'],
                 df['classtar'],
                 df['jd'],
                 df['jdstarthist'],
-                df['knscore'],
+                df['rf_kn_vs_nonkn'],
                 df['tracklet']
             )
         ).select(
