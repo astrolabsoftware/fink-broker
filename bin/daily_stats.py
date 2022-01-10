@@ -123,8 +123,7 @@ def main():
         extract_fink_classification(
             df_sci['cdsxmatch'],
             df_sci['roid'],
-            df_sci['mulens.class_1'],
-            df_sci['mulens.class_2'],
+            df_sci['mulens'],
             df_sci['snn_snia_vs_nonia'],
             df_sci['snn_sn_vs_all'],
             df_sci['rf_snia_vs_nonia'],

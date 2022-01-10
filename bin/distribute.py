@@ -77,7 +77,6 @@ def main():
     cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
     cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
-    cnames[cnames.index('mulens')] = 'struct(mulens.*) as mulens'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
 

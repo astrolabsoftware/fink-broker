@@ -142,7 +142,7 @@ def main():
         'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
         'cdsxmatch',
         'roid',
-        'mulens_class_1', 'mulens_class_2',
+        'mulens',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
         'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet'
     ]
@@ -168,8 +168,7 @@ def main():
             extract_fink_classification(
                 df['cdsxmatch'],
                 df['roid'],
-                df['mulens_class_1'],
-                df['mulens_class_2'],
+                df['mulens'],
                 df['snn_snia_vs_nonia'],
                 df['snn_sn_vs_all'],
                 df['rf_snia_vs_nonia'],
