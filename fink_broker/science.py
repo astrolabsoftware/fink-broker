@@ -30,8 +30,6 @@ from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import cdsxmatch
 from fink_science.snn.processor import snn_ia
 from fink_science.microlensing.processor import mulens
-from fink_science.microlensing.classifier import load_mulens_schema_twobands
-from fink_science.microlensing.classifier import load_external_model
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
@@ -224,35 +222,13 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: microlensing
     logger.info("New processor: microlensing")
 
-    # broadcast models
-    curdir = os.path.dirname(os.path.abspath(fspath))
-    model_path = curdir + '/data/models/'
-    rf, pca = load_external_model(model_path)
-    spark = SparkSession.builder.getOrCreate()
-    rfbcast = spark.sparkContext.broadcast(rf)
-    pcabcast = spark.sparkContext.broadcast(pca)
-
-    def mulens_wrapper(fid, magpsf, sigmapsf, magnr, sigmagnr, magzpsci, isdiffpos):
-        """ Wrapper to pass broadcasted values from this scope to mulens
-
-        see `fink_science.mulens.processor`
-        """
-        return mulens(
-            fid, magpsf, sigmapsf, magnr,
-            sigmagnr, magzpsci, isdiffpos,
-            rfbcast.value, pcabcast.value)
-
-    # Retrieve schema
-    schema = load_mulens_schema_twobands()
-
-    # Create standard UDF
-    mulens_udf = F.udf(mulens_wrapper, schema)
-
     # Required alert columns - already computed for SN
     mulens_args = [
         'cfid', 'cmagpsf', 'csigmapsf',
-        'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
-    df = df.withColumn('mulens', mulens_udf(*mulens_args))
+        'cmagnr', 'csigmagnr', 'cmagzpsci',
+        'cisdiffpos', 'candidate.ndethist'
+    ]
+    df = df.withColumn('mulens', mulens(*mulens_args))
 
     # Apply level one processor: nalerthist
     logger.info("New processor: nalerthist")
