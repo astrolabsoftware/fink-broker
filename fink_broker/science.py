@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
@@ -25,7 +24,6 @@ import os
 
 from fink_science.utilities import concat_col
 
-from fink_science import __file__ as fspath
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import cdsxmatch
 from fink_science.snn.processor import snn_ia
