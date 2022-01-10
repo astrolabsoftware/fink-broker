@@ -137,6 +137,51 @@ def ang2pix_array(ra, dec, nside: list):
 
     return pd.Series(to_return)
 
+def apply_mulens(df):
+    """ Wrapper to apply microlensing on a DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Input Spark DataFrame with alert data
+
+    Returns
+    ----------
+    df: Spark DataFrame
+        Input Spark DataFrame with a new field `mulens` (struct)
+    """
+    # broadcast models
+    curdir = os.path.dirname(os.path.abspath(fspath))
+    model_path = curdir + '/data/models/'
+    rf, pca = load_external_model(model_path)
+    spark = SparkSession.builder.getOrCreate()
+    rfbcast = spark.sparkContext.broadcast(rf)
+    pcabcast = spark.sparkContext.broadcast(pca)
+
+    def mulens_wrapper(fid, magpsf, sigmapsf, magnr, sigmagnr, magzpsci, isdiffpos):
+        """ Wrapper to pass broadcasted values from this scope to mulens
+
+        see `fink_science.mulens.processor`
+        """
+        return mulens(
+            fid, magpsf, sigmapsf, magnr,
+            sigmagnr, magzpsci, isdiffpos,
+            rfbcast.value, pcabcast.value)
+
+    # Retrieve schema
+    schema = load_mulens_schema_twobands()
+
+    # Create standard UDF
+    mulens_udf = F.udf(mulens_wrapper, schema)
+
+    # Required alert columns - already computed for SN
+    mulens_args = [
+        'cfid', 'cmagpsf', 'csigmapsf',
+        'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
+    df = df.withColumn('mulens', mulens_udf(*mulens_args))
+
+    return df
+
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
@@ -223,36 +268,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: microlensing
     logger.info("New processor: microlensing")
-
-    # broadcast models
-    curdir = os.path.dirname(os.path.abspath(fspath))
-    model_path = curdir + '/data/models/'
-    rf, pca = load_external_model(model_path)
-    spark = SparkSession.builder.getOrCreate()
-    rfbcast = spark.sparkContext.broadcast(rf)
-    pcabcast = spark.sparkContext.broadcast(pca)
-
-    def mulens_wrapper(fid, magpsf, sigmapsf, magnr, sigmagnr, magzpsci, isdiffpos):
-        """ Wrapper to pass broadcasted values from this scope to mulens
-
-        see `fink_science.mulens.processor`
-        """
-        return mulens(
-            fid, magpsf, sigmapsf, magnr,
-            sigmagnr, magzpsci, isdiffpos,
-            rfbcast.value, pcabcast.value)
-
-    # Retrieve schema
-    schema = load_mulens_schema_twobands()
-
-    # Create standard UDF
-    mulens_udf = F.udf(mulens_wrapper, schema)
-
-    # Required alert columns - already computed for SN
-    mulens_args = [
-        'cfid', 'cmagpsf', 'csigmapsf',
-        'cmagnr', 'csigmagnr', 'cmagzpsci', 'cisdiffpos']
-    df = df.withColumn('mulens', mulens_udf(*mulens_args))
+    df = apply_mulens(df)
 
     # Apply level one processor: nalerthist
     logger.info("New processor: nalerthist")
