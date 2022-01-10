@@ -73,7 +73,7 @@ def main():
             key = f.read().replace('\n', '')
 
     cols = [
-        'cdsxmatch', 'roid', 'mulens.class_1', 'mulens.class_2',
+        'cdsxmatch', 'roid', 'mulens',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
         'candidate.ndethist', 'candidate.drb', 'candidate.classtar',
         'candidate.jd', 'candidate.jdstarthist', 'rf_kn_vs_nonkn', 'tracklet'
