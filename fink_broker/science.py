@@ -267,8 +267,8 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('snn_sn_vs_all', snn_ia(*snn_args))
 
     # Apply level one processor: microlensing
-    logger.info("New processor: microlensing")
-    df = apply_mulens(df)
+    # logger.info("New processor: microlensing")
+    # df = apply_mulens(df)
 
     # Apply level one processor: nalerthist
     logger.info("New processor: nalerthist")

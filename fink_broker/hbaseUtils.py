@@ -62,8 +62,6 @@ def load_science_portal_column_names():
         'rf_snia_vs_nonia',
         'snn_snia_vs_nonia',
         'snn_sn_vs_all',
-        col('mulens.class_1').alias('mulens_class_1'),
-        col('mulens.class_2').alias('mulens_class_2'),
         'roid',
         'nalerthist',
         'rf_kn_vs_nonkn',
