@@ -84,15 +84,15 @@ def main():
 
     if "year" not in df.columns:
         df = df\
-            .withColumn("year", date_format("timestamp", "yyyy"))
+            .withColumn("year", F.date_format("timestamp", "yyyy"))
 
     if "month" not in df.columns:
         df = df\
-            .withColumn("month", date_format("timestamp", "MM"))
+            .withColumn("month", F.date_format("timestamp", "MM"))
 
     if "day" not in df.columns:
         df = df\
-            .withColumn("day", date_format("timestamp", "dd"))
+            .withColumn("day", F.date_format("timestamp", "dd"))
 
     df.write\
         .mode("append") \
