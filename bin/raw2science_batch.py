@@ -58,8 +58,7 @@ def main():
         year, month, day)
 
     # basepath
-    output_science = args.agg_data_prefix + '/science/year={}/month={}/day={}'.format(
-        year, month, day)
+    output_science = args.agg_data_prefix + '/science'
 
     df = spark.read.format('parquet').load(input_raw)
 
