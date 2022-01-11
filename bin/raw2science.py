@@ -33,6 +33,7 @@ from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.partitioning import jd_to_datetime
 
 from fink_broker.science import apply_science_modules
 
@@ -86,15 +87,25 @@ def main():
     # Switch publisher
     df = df.withColumn('publisher', F.lit('Fink'))
 
-    # re-create partitioning columns.
-    # Partitioned data doesn't preserve type information (cast as int...)
-    df_partitionedby = df\
-        .withColumn("year", F.date_format("timestamp", "yyyy"))\
-        .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))
+    # re-create partitioning columns if needed.
+    if 'timestamp' not in df.columns:
+        df = df\
+            .withColumn("timestamp", jd_to_datetime(df['candidate.jd']))
+
+    if "year" not in df.columns:
+        df = df\
+            .withColumn("year", date_format("timestamp", "yyyy"))
+
+    if "month" not in df.columns:
+        df = df\
+            .withColumn("month", date_format("timestamp", "MM"))
+
+    if "day" not in df.columns:
+        df = df\
+            .withColumn("day", date_format("timestamp", "dd"))
 
     # Append new rows in the tmp science database
-    countquery = df_partitionedby\
+    countquery = df\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
