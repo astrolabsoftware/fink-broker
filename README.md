@@ -11,6 +11,7 @@
 
 # Latest News
 
+* 01/22: Release [1.4](https://github.com/astrolabsoftware/fink-broker/pull/518)
 * 11/21: Release [1.3](https://github.com/astrolabsoftware/fink-broker/pull/495)
 * 11/21: Release [1.2](https://github.com/astrolabsoftware/fink-broker/pull/492)
 * 08/21: Fink selected as [Rubin Observatory Alert Broker](https://www.lsst.org/scientists/alert-brokers).
