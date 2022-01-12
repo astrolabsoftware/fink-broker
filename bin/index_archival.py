@@ -89,26 +89,6 @@ def main():
     names = [col(i) for i in columns]
     index_name = '.' + columns[0]
 
-    if columns[0] == 'class':
-        # There was a bug in the SSO classification prior to 02/2021
-        # This piece of code is temporary, just the time to recompute data
-        df = df.drop('roid')
-
-        # Retrieve time-series information
-        to_expand = ['jd', 'magpsf']
-
-        # Append temp columns with historical + current measurements
-        prefix = 'c'
-        for colname in to_expand:
-            df = concat_col(df, colname, prefix=prefix)
-
-        # recompute asteroid classification
-        args_roid = [
-            'cjd', 'cmagpsf',
-            'candidate.ndethist', 'candidate.sgscore1',
-            'candidate.ssdistnr', 'candidate.distpsnr1']
-        df = df.withColumn('roid', roid_catcher(*args_roid))
-
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
@@ -186,17 +166,9 @@ def main():
             ] + common_cols
         )
     elif columns[0] == 'ssnamenr':
-        # TODO: Computation of SSO flags was bugged.
-        # Ideally, we would have to filter on the `roid==3` field, but
-        # there was a bug in its computation (see https://github.com/astrolabsoftware/fink-science/issues/85)
-        # Hence, as long as we the data is not recomputed, we use this condition
-        # to flag known SSO (which is actually used since 02/2021).
+        # Flag only objects with likely counterpart in MPC
         df_index = df\
-            .filter(df['ssnamenr'] != 'null')\
-            .filter(df['ssdistnr'] >= 0)\
-            .filter(df['ssdistnr'] < 5)\
-            .filter((F.abs(df['distpsnr1']) - df['ssdistnr']) > 0.0)\
-            .filter(df['ndethist'] <= 2)\
+            .filter(df['roid'] == 3)\
             .select(
                 [
                     concat_ws('_', *names).alias(index_row_key_name)
