@@ -356,7 +356,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     #         how='outer'
     #     )
 
-    return df_out
+    return df_trck
 
 
 if __name__ == "__main__":
