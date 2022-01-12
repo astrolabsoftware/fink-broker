@@ -356,13 +356,6 @@ def load_parquet_files(path: str) -> DataFrame:
         .option('mergeSchema', "true") \
         .load(path)
 
-    # to account for schema migration
-    if 'knscore' not in df.columns:
-        df = df.withColumn('knscore', F.lit(-1.0))
-    # 12/08/2021
-    if 'tracklet' not in df.columns:
-        df = df.withColumn('tracklet', F.lit(''))
-
     return df
 
 def get_schemas_from_avro(

@@ -111,13 +111,6 @@ def main():
 
     out_dic['simbad_gal'] = n_simbad_gal
 
-    # to account for schema migration
-    if 'knscore' not in df_sci.columns:
-        df_sci = df_sci.withColumn('knscore', F.lit(-1.0))
-    # 12/08/2021
-    if 'tracklet' not in df_sci.columns:
-        df_sci = df_sci.withColumn('tracklet', F.lit(''))
-
     df_class = df_sci.withColumn(
         'class',
         extract_fink_classification(
