@@ -348,13 +348,13 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         .select(['candid', 'tracklet'])\
         .filter(F.col('tracklet') != '')
 
-    # join back information to the initial dataframe
-    df_out = df\
-        .join(
-            df_trck.select(['candid', 'tracklet']),
-            on='candid',
-            how='outer'
-        )
+    # # join back information to the initial dataframe
+    # df_out = df\
+    #     .join(
+    #         df_trck.select(['candid', 'tracklet']),
+    #         on='candid',
+    #         how='outer'
+    #     )
 
     return df_out
 

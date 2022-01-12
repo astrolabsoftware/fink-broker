@@ -70,7 +70,16 @@ def main():
     df = apply_science_modules(df, logger)
 
     # Add tracklet information
-    df = add_tracklet_information(df)
+    df_trck = spark.read.format('parquet').load(input_raw)
+    df_trck = add_tracklet_information(df_trck)
+
+    # join back information to the initial dataframe
+    df = df\
+        .join(
+            df_trck.select(['candid', 'tracklet']),
+            on='candid',
+            how='outer'
+        )
 
     # Add librarys versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
