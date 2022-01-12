@@ -78,9 +78,17 @@ def main():
     print('Num partitions after : ', npart_after)
 
     # Add tracklet information before merging
-    df_science_ = add_tracklet_information(df_science)
+    df_trck = add_tracklet_information(df_science)
 
-    df_science_.withColumn('timestamp', jd_to_datetime(df_science_['candidate.jd']))\
+    # join back information to the initial dataframe
+    df_science = df_science\
+        .join(
+            F.broadcast(df_trck.select(['candid', 'tracklet'])),
+            on='candid',
+            how='outer'
+        )
+
+    df_science.withColumn('timestamp', jd_to_datetime(df_science['candidate.jd']))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\
