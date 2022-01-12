@@ -20,8 +20,6 @@ import argparse
 import numpy as np
 import pandas as pd
 
-import pyspark.sql.functions as F
-
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import load_parquet_files
 
