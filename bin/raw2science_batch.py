@@ -22,10 +22,9 @@ import argparse
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import jd_to_datetime
-
+from fink_broker.tracklet_identification import add_tracklet_information
 from fink_broker.science import apply_science_modules
 
 from fink_science import __version__ as fsvsn
@@ -39,7 +38,7 @@ def main():
     # Initialise Spark session
     spark = init_sparksession(
         name="raw2science_{}".format(args.night),
-        shuffle_partitions=2)
+        shuffle_partitions=None)
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -61,13 +60,27 @@ def main():
     output_science = args.agg_data_prefix + '/science'
 
     df = spark.read.format('parquet').load(input_raw)
+    npart = df.rdd.getNumPartitions()
 
     # Apply level one filters
     logger.info(qualitycuts)
-    df = apply_user_defined_filter(df, qualitycuts)
+    df = df.filter(df['candidate.nbad'] == 0).filter(df['candidate.rb'] >= 0.55)
 
     # Apply science modules
     df = apply_science_modules(df, logger)
+
+    # Add tracklet information
+    df_trck = spark.read.format('parquet').load(input_raw)
+    df_trck = df_trck.filter(df_trck['candidate.nbad'] == 0).filter(df_trck['candidate.rb'] >= 0.55)
+    df_trck = add_tracklet_information(df_trck)
+
+    # join back information to the initial dataframe
+    df = df\
+        .join(
+            F.broadcast(df_trck.select(['candid', 'tracklet'])),
+            on='candid',
+            how='outer'
+        )
 
     # Add librarys versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
@@ -93,7 +106,7 @@ def main():
         df = df\
             .withColumn("day", F.date_format("timestamp", "dd"))
 
-    df.write\
+    df.coalesce(npart).write\
         .mode("append") \
         .partitionBy("year", "month", "day")\
         .parquet(output_science)
