@@ -24,6 +24,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.partitioning import jd_to_datetime
 
 from fink_broker.science import apply_science_modules
 
@@ -57,8 +58,7 @@ def main():
         year, month, day)
 
     # basepath
-    output_science = args.agg_data_prefix + '/science/year={}/month={}/day={}'.format(
-        year, month, day)
+    output_science = args.agg_data_prefix + '/science'
 
     df = spark.read.format('parquet').load(input_raw)
 
@@ -76,13 +76,24 @@ def main():
     # Switch publisher
     df = df.withColumn('publisher', F.lit('Fink'))
 
-    # re-create partitioning columns.
-    # Partitioned data doesn't preserve type information (cast as int...)
-    df\
-        .withColumn("year", F.date_format("timestamp", "yyyy"))\
-        .withColumn("month", F.date_format("timestamp", "MM"))\
-        .withColumn("day", F.date_format("timestamp", "dd"))\
-        .write\
+    # re-create partitioning columns if needed.
+    if 'timestamp' not in df.columns:
+        df = df\
+            .withColumn("timestamp", jd_to_datetime(df['candidate.jd']))
+
+    if "year" not in df.columns:
+        df = df\
+            .withColumn("year", F.date_format("timestamp", "yyyy"))
+
+    if "month" not in df.columns:
+        df = df\
+            .withColumn("month", F.date_format("timestamp", "MM"))
+
+    if "day" not in df.columns:
+        df = df\
+            .withColumn("day", F.date_format("timestamp", "dd"))
+
+    df.write\
         .mode("append") \
         .partitionBy("year", "month", "day")\
         .parquet(output_science)
