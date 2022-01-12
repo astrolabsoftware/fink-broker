@@ -44,8 +44,6 @@ from fink_broker.science import ang2pix
 
 from fink_filters.classification import extract_fink_classification
 
-from fink_science.utilities import concat_col
-
 from fink_tns.utils import download_catalog
 
 from astropy.coordinates import SkyCoord
