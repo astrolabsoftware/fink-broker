@@ -71,6 +71,7 @@ def main():
 
     # Add tracklet information
     df_trck = spark.read.format('parquet').load(input_raw)
+    df_trck = apply_user_defined_filter(df_trck, qualitycuts)
     df_trck = add_tracklet_information(df_trck)
 
     # join back information to the initial dataframe
