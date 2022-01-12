@@ -17,7 +17,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
-import pyspark.sql.functions as F
 
 import os
 import json
