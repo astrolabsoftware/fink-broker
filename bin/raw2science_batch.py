@@ -25,7 +25,7 @@ from fink_broker.sparkUtils import init_sparksession
 from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import jd_to_datetime
-
+from fink_broker.tracklet_identification import add_tracklet_information
 from fink_broker.science import apply_science_modules
 
 from fink_science import __version__ as fsvsn
@@ -68,6 +68,9 @@ def main():
 
     # Apply science modules
     df = apply_science_modules(df, logger)
+
+    # Add tracklet information
+    df = add_tracklet_information(df)
 
     # Add librarys versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
