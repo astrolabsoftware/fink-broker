@@ -17,7 +17,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
-import pyspark.sql.functions as F
 
 import os
 import json
@@ -355,13 +354,6 @@ def load_parquet_files(path: str) -> DataFrame:
         .format("parquet") \
         .option('mergeSchema', "true") \
         .load(path)
-
-    # to account for schema migration
-    if 'knscore' not in df.columns:
-        df = df.withColumn('knscore', F.lit(-1.0))
-    # 12/08/2021
-    if 'tracklet' not in df.columns:
-        df = df.withColumn('tracklet', F.lit(''))
 
     return df
 
