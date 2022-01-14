@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.sparkUtils import load_parquet_files
 
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.hbaseUtils import construct_schema_row
@@ -62,10 +61,9 @@ def main():
     input_science = '{}/science/year={}/month={}/day={}'.format(
         args.agg_data_prefix, year, month, day)
 
-    df_raw = load_parquet_files(input_raw)
-    df_sci = load_parquet_files(input_science)
+    df_raw = spark.read.format('parquet').load(input_raw)
+    df_sci = spark.read.format('parquet').load(input_science)
 
-    df_raw = df_raw.cache()
     df_sci = df_sci.cache()
 
     # Number of alerts
@@ -135,7 +133,7 @@ def main():
         out_dic[kv[0]] = kv[1]
 
     # Number of fields
-    n_field = df_raw.select('candidate.field').distinct().count()
+    n_field = df_sci.select('candidate.field').distinct().count()
 
     out_dic['fields'] = n_field
 
@@ -147,7 +145,7 @@ def main():
     out_dic['n_r'] = n_r
 
     # Number of exposures
-    n_exp = df_raw.select('candidate.jd').distinct().count()
+    n_exp = df_sci.select('candidate.jd').distinct().count()
 
     out_dic['exposures'] = n_exp
 
