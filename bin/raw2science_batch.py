@@ -29,8 +29,6 @@ from fink_broker.science import apply_science_modules
 
 from fink_science import __version__ as fsvsn
 
-qualitycuts = 'fink_broker.filters.qualitycuts'
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -63,7 +61,7 @@ def main():
     npart = df.rdd.getNumPartitions()
 
     # Apply level one filters
-    logger.info(qualitycuts)
+    logger.info("Applying quality cuts")
     df = df.filter(df['candidate.nbad'] == 0).filter(df['candidate.rb'] >= 0.55)
 
     # Apply science modules
