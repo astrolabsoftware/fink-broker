@@ -16,7 +16,6 @@ from pyspark.sql.functions import col
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
-import os
 import importlib
 
 from fink_broker.tester import spark_unit_tests
