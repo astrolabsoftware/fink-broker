@@ -69,7 +69,9 @@ def main():
 
     # Add tracklet information
     df_trck = spark.read.format('parquet').load(input_raw)
-    df_trck = df_trck.filter(df_trck['candidate.nbad'] == 0).filter(df_trck['candidate.rb'] >= 0.55)
+    df_trck = df_trck\
+        .filter(df_trck['candidate.nbad'] == 0)\
+        .filter(df_trck['candidate.rb'] >= 0.55)
     df_trck = add_tracklet_information(df_trck)
 
     # join back information to the initial dataframe
@@ -87,24 +89,12 @@ def main():
     # Switch publisher
     df = df.withColumn('publisher', F.lit('Fink'))
 
-    # re-create partitioning columns if needed.
-    if 'timestamp' not in df.columns:
-        df = df\
-            .withColumn("timestamp", jd_to_datetime(df['candidate.jd']))
-
-    if "year" not in df.columns:
-        df = df\
-            .withColumn("year", F.date_format("timestamp", "yyyy"))
-
-    if "month" not in df.columns:
-        df = df\
-            .withColumn("month", F.date_format("timestamp", "MM"))
-
-    if "day" not in df.columns:
-        df = df\
-            .withColumn("day", F.date_format("timestamp", "dd"))
-
-    df.coalesce(npart).write\
+    df.coalesce(npart)\
+        .withColumn("timestamp", jd_to_datetime(df['candidate.jd']))\
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))\
+        .write\
         .mode("append") \
         .partitionBy("year", "month", "day")\
         .parquet(output_science)
