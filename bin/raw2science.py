@@ -31,15 +31,12 @@ from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
-from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import jd_to_datetime
 
 from fink_broker.science import apply_science_modules
 
 from fink_science import __version__ as fsvsn
-
-qualitycuts = 'fink_broker.filters.qualitycuts'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -74,8 +71,10 @@ def main():
     )
 
     # Apply quality cuts
-    logger.info(qualitycuts)
-    df = apply_user_defined_filter(df, qualitycuts)
+    logger.info("Applying quality cuts")
+    df = df\
+        .filter(df['candidate.nbad'] == 0)\
+        .filter(df['candidate.rb'] >= 0.55)
 
     # Apply science modules
     df = apply_science_modules(df, logger)
