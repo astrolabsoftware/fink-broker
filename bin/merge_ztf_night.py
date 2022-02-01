@@ -50,10 +50,8 @@ def main():
         args.online_data_prefix, year, month, day)
 
     # basepath
-    output_raw = '{}/raw/year={}/month={}/day={}'.format(
-        args.agg_data_prefix, year, month, day)
-    output_science = '{}/science/year={}/month={}/day={}'.format(
-        args.agg_data_prefix, year, month, day)
+    output_raw = '{}/raw'.format(args.agg_data_prefix)
+    output_science = '{}/science'.format(args.agg_data_prefix)
 
     print('Raw data processing....')
     df_raw = spark.read.format('parquet').load(input_raw)
