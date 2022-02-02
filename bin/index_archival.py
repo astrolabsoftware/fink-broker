@@ -96,10 +96,10 @@ def main():
         df = df.select(
             'objectId',
             'prv_candidates.jd',
-            'prv_candidates.fid',
-            'prv_candidates.magpsf',
-            'prv_candidates.sigmapsf',
-            'prv_candidates.diffmaglim'
+            col('prv_candidates.fid').cast('array<int>'),
+            col('prv_candidates.magpsf').cast('array<float>'),
+            col('prv_candidates.sigmapsf').cast('array<float>'),
+            col('prv_candidates.diffmaglim').cast('array<float>')
         )
     else:
         df = df.select(cols_i + cols_d + cols_b)
