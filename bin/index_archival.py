@@ -91,9 +91,6 @@ def main():
     # Load column names to use in the science portal
     cols_i, cols_d, cols_b = load_science_portal_column_names()
 
-    # Assign each column to a specific column family
-    cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
-
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
         df = df.select(
@@ -108,20 +105,7 @@ def main():
         df = df.select(cols_i + cols_d + cols_b)
 
     # Create and attach the rowkey
-    df, _ = attach_rowkey(df)
-
-    common_cols = [
-        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
-        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
-        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
-        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
-        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
-        'cdsxmatch',
-        'roid',
-        'mulens',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet'
-    ]
+    df, rowkey_main = attach_rowkey(df)
 
     if columns[0].startswith('pixel'):
         nside = int(columns[0].split('pixel')[1])
@@ -136,7 +120,7 @@ def main():
         ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + ['objectId']
+            ] + [rowkey_main]
         )
     elif columns[0] == 'class':
         df_index = df.withColumn(
@@ -298,6 +282,8 @@ def main():
                 concat_ws('_', *names).alias(index_row_key_name)
             ] + common_cols
         )
+
+    cf = {i: 'i' for i in df_index.columns}
 
     # construct the time catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
