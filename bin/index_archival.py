@@ -37,7 +37,6 @@ from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
 from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.hbaseUtils import load_science_portal_column_names
-from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import construct_schema_row
 from fink_broker.science import ang2pix
