@@ -143,7 +143,7 @@ def main():
         ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
+            ] + [rowkey_main]
         )
     elif columns[0] == 'ssnamenr':
         # Flag only objects with likely counterpart in MPC
@@ -152,7 +152,7 @@ def main():
             .select(
                 [
                     concat_ws('_', *names).alias(index_row_key_name)
-                ] + common_cols
+                ] + [rowkey_main]
             )
     elif columns[0] == 'tracklet':
         # For data < 2021-08-10, no tracklet means ''
@@ -163,7 +163,7 @@ def main():
             .select(
                 [
                     concat_ws('_', *names).alias(index_row_key_name)
-                ] + common_cols
+                ] + [rowkey_main]
             )
     elif columns[0] == 'upper':
         # This case is the same as the main table
@@ -270,7 +270,7 @@ def main():
         ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols + ['tns']
+            ] + [rowkey_main]
         ).cache()
         df_index = df.filter(df['tns'] != '').drop('tns')
         # trigger the cache - not the cache might be a killer for LSST...
@@ -280,7 +280,7 @@ def main():
         df_index = df.select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
+            ] + [rowkey_main]
         )
 
     cf = {i: 'i' for i in df_index.columns}
