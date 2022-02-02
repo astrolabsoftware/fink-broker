@@ -269,7 +269,7 @@ def main():
         ).select(
             [
                 concat_ws('_', *names).alias(index_row_key_name)
-            ] + [rowkey_main]
+            ] + [rowkey_main] + ['tns']
         ).cache()
         df_index = df.filter(df['tns'] != '').drop('tns')
         # trigger the cache - not the cache might be a killer for LSST...
