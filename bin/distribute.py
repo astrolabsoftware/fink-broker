@@ -98,7 +98,7 @@ def main():
     broker_list = args.distribution_servers
     for userfilter in userfilters:
         # The topic name is the filter name
-        topicname = 'fink_' + userfilter.split('.')[-1] + '_ztf'
+        topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
 
         # Apply user-defined filter
         df_tmp = apply_user_defined_filter(df, userfilter)

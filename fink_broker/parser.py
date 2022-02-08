@@ -219,7 +219,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [TNS_SANDBOX]
         """)
     parser.add_argument(
-        '-substream_prefix', type=str, default='',
+        '-substream_prefix', type=str, default='fink_',
         help="""
         Prefix for outgoing substreams
         [SUBSTREAM_PREFIX]
