@@ -218,6 +218,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         If True, push to TNS sandbox. Default is False.
         [TNS_SANDBOX]
         """)
+    parser.add_argument(
+        '-substream_prefix', type=str, default='',
+        help="""
+        Prefix for outgoing substreams
+        [SUBSTREAM_PREFIX]
+        """)
     args = parser.parse_args(None)
     return args
 
