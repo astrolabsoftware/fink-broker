@@ -56,16 +56,15 @@ kafka_broker_logs[2]="${FINK_HOME}/fink_kafka_logs/broker2"
 # Kafka topic to publish on
 DISTRIBUTION_TOPIC="rrlyr,snialike"
 
+# Kafka topic prefix
+SUBSTREAM_PREFIX="fink_"
+
 # The path where to store the avro distribution schema
 DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema_0p2.avsc
 
 # Offset for reading the science database
 DISTRIBUTION_OFFSET="latest"
 DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset
-
-# Path of XML rule file for redistribution
-# DISTRIBUTION_RULES_XML=${FINK_HOME}/conf/distribution-rules.xml
-DISTRIBUTION_RULES_XML=''
 
 # Authentication
 # path of jaas files for Authentication

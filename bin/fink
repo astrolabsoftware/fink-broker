@@ -278,9 +278,8 @@ elif [[ $service == "distribution" ]]; then
   ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
   -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
-  -distribution_topic ${DISTRIBUTION_TOPIC} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
-  -distribution_rules_xml "${DISTRIBUTION_RULES_XML}" \
+  -substream_prefix ${SUBSTREAM_PREFIX} \
   -tinterval ${FINK_TRIGGER_UPDATE} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
