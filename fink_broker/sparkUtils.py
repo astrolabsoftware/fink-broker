@@ -163,7 +163,7 @@ def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession
     >>> conf = spark_tmp.sparkContext.getConf().getAll()
     >>> name = [i[1] for i in conf if i[0] == "spark.app.name"][0]
     >>> print(name)
-    test
+    fink_test
     """
     # Grab the running Spark Session,
     # otherwise create it.
