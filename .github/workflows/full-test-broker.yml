@@ -82,7 +82,6 @@ jobs:
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
         echo "ARROW_PRE_0_15_IPC_FORMAT=1" > ${SPARK_HOME}/conf/spark-env.sh
     - name: Install Python dependencies
-      if: steps.cache-python.outputs.cache-hit != 'true'
       run: |
         pip install --upgrade pip setuptools wheel
         source ./install_python_deps.sh --astronet-token ${{ secrets.ASTRONET_TOKEN }}
