@@ -132,7 +132,7 @@ def main():
         print(r.json())
 
         # post to slack
-        slacktxt = ' \n '.join(['https://fink-portal/{}'.format(i) for i in ids])
+        slacktxt = ' \n '.join(['https://fink-portal.org/{}'.format(i) for i in ids])
         slacktxt = '{} \n '.format(args.night) + slacktxt
         r = requests.post(
             os.environ['TNSWEBHOOK'],
