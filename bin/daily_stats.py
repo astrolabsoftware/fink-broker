@@ -187,7 +187,8 @@ def main():
     # Push index table
     df_hbase.write\
         .options(catalog=hbcatalog_index, newtable=50)\
-        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
         .save()
 
     # Construct the schema row - inplace replacement
@@ -212,7 +213,8 @@ def main():
     # Push the data using the shc connector
     df_hbase_schema.write\
         .options(catalog=hbcatalog_index_schema, newtable=50)\
-        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
         .save()
 
 
