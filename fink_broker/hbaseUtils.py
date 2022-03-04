@@ -14,14 +14,12 @@
 # limitations under the License.
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import concat_ws, col
-from pyspark.mllib.common import _java2py
 from pyspark.sql import SparkSession
 
 import numpy as np
 
 import os
 
-from fink_broker.sparkUtils import get_spark_context
 from fink_broker.tester import spark_unit_tests
 
 def load_science_portal_column_names():
@@ -330,121 +328,6 @@ def construct_schema_row(df, rowkeyname, version):
     df_schema = spark.createDataFrame([data.tolist()], df.columns)
 
     return df_schema
-
-def flattenstruct(df: DataFrame, columnname: str) -> DataFrame:
-    """ From a nested column (struct of primitives),
-    create one column per struct element.
-
-    The routine accesses the JVM under the hood, and calls the
-    Scala routine flattenStruct. Make sure you have the fink_broker jar
-    in your classpath.
-
-    Example:
-    |-- candidate: struct (nullable = true)
-    |    |-- jd: double (nullable = true)
-    |    |-- fid: integer (nullable = true)
-
-    Would become:
-    |-- candidate_jd: double (nullable = true)
-    |-- candidate_fid: integer (nullable = true)
-
-    Parameters
-    ----------
-    df : DataFrame
-        Nested Spark DataFrame
-    columnname : str
-        The name of the column to flatten.
-
-    Returns
-    -------
-    DataFrame
-        Spark DataFrame with new columns from the input column.
-
-    Examples
-    -------
-    >>> df = spark.read.format("avro").load(ztf_alert_sample)
-
-    # Candidate is nested
-    >>> s = df.schema
-    >>> typeOf = {i.name: i.dataType.typeName() for  i in s.fields}
-    >>> typeOf['candidate'] == 'struct'
-    True
-
-    # Flatten it
-    >>> df_flat = flattenstruct(df, "candidate")
-    >>> "candidate_ra" in df_flat.schema.fieldNames()
-    True
-
-    # Each new column contains array element
-    >>> s_flat = df_flat.schema
-    >>> typeOf = {i.name: i.dataType.typeName() for  i in s_flat.fields}
-    >>> typeOf['candidate_ra'] == 'double'
-    True
-    """
-    sc = get_spark_context()
-    obj = sc._jvm.com.astrolabsoftware.fink_broker.catalogUtils
-    _df = obj.flattenStruct(df._jdf, columnname)
-    df_flatten = _java2py(sc, _df)
-    return df_flatten
-
-def explodearrayofstruct(df: DataFrame, columnname: str) -> DataFrame:
-    """From a nested column (array of struct),
-    create one column per array element.
-
-    The routine accesses the JVM under the hood, and calls the
-    Scala routine explodeArrayOfStruct. Make sure you have the fink_broker jar
-    in your classpath.
-
-    Example:
-    |    |-- prv_candidates: array (nullable = true)
-    |    |    |-- element: struct (containsNull = true)
-    |    |    |    |-- jd: double (nullable = true)
-    |    |    |    |-- fid: integer (nullable = true)
-
-    Would become:
-    |-- prv_candidates_jd: array (nullable = true)
-    |    |-- element: double (containsNull = true)
-    |-- prv_candidates_fid: array (nullable = true)
-    |    |-- element: integer (containsNull = true)
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input nested Spark DataFrame
-    columnname : str
-        The name of the column to explode
-
-    Returns
-    -------
-    DataFrame
-        Spark DataFrame with new columns from the input column.
-
-    Examples
-    -------
-    >>> df = spark.read.format("avro").load(ztf_alert_sample)
-
-    # Candidate is nested
-    >>> s = df.schema
-    >>> typeOf = {i.name: i.dataType.typeName() for  i in s.fields}
-    >>> typeOf['prv_candidates'] == 'array'
-    True
-
-    # Flatten it
-    >>> df_flat = explodearrayofstruct(df, "prv_candidates")
-    >>> "prv_candidates_ra" in df_flat.schema.fieldNames()
-    True
-
-    # Each new column contains array element cast to string
-    >>> s_flat = df_flat.schema
-    >>> typeOf = {i.name: i.dataType.typeName() for  i in s_flat.fields}
-    >>> typeOf['prv_candidates_ra'] == 'string'
-    True
-    """
-    sc = get_spark_context()
-    obj = sc._jvm.com.astrolabsoftware.fink_broker.catalogUtils
-    _df = obj.explodeArrayOfStruct(df._jdf, columnname)
-    df_flatten = _java2py(sc, _df)
-    return df_flatten
 
 
 if __name__ == "__main__":
