@@ -14,7 +14,8 @@
 # limitations under the License.
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-from pyspark.sql.functions import pandas_udf
+from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.types import StringType
 
 import pandas as pd
 
@@ -46,7 +47,7 @@ def ra2phi(ra: float) -> float:
     """
     return np.pi / 180.0 * ra
 
-@pandas_udf("long")
+@pandas_udf(StringType(), PandasUDFType.SCALAR)
 def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """ Compute pixel number at given nside
 
@@ -84,7 +85,7 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
         )
     )
 
-@pandas_udf("string")
+@pandas_udf(StringType(), PandasUDFType.SCALAR)
 def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """ Return a col string with the pixel numbers corresponding to the nsides
 
