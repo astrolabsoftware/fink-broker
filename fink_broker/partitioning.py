@@ -1,4 +1,4 @@
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import TimestampType
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql import SparkSession
 
 import numpy as np
@@ -22,8 +21,8 @@ from astropy.time import Time
 
 from fink_broker.tester import spark_unit_tests
 
-@pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def jd_to_datetime(jd: float):
+@pandas_udf("timestamp")
+def jd_to_datetime(jd: pd.Series) -> pd.Series:
     """ Convert Julian date into datetime (timestamp)
 
     Parameters
