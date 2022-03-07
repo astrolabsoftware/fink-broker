@@ -9,6 +9,8 @@ on:
 jobs:
   basic:
     runs-on: ubuntu-latest
+    container:
+      image: centos:centos8
     strategy:
       matrix:
         python-version: [3.7]
