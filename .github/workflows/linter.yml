@@ -1,32 +1,32 @@
-name: PEP8
-
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-
-jobs:
-  build:
-
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.6, 3.7]
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8
-    - name: fink-broker
-      run: |
-        flake8 fink_broker/*.py --count --show-source --statistics --ignore=E302,E501
-    - name: bin
-      run: |
-        flake8 bin/*.py --count --show-source --statistics --ignore=E302,E501
+# name: PEP8
+#
+# on:
+#   push:
+#     branches:
+#       - master
+#   pull_request:
+#
+# jobs:
+#   build:
+#
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         python-version: [3.6, 3.7]
+#
+#     steps:
+#     - uses: actions/checkout@v2
+#     - name: Set up Python ${{ matrix.python-version }}
+#       uses: actions/setup-python@v2
+#       with:
+#         python-version: ${{ matrix.python-version }}
+#     - name: Install dependencies
+#       run: |
+#         python -m pip install --upgrade pip
+#         pip install flake8
+#     - name: fink-broker
+#       run: |
+#         flake8 fink_broker/*.py --count --show-source --statistics --ignore=E302,E501
+#     - name: bin
+#       run: |
+#         flake8 bin/*.py --count --show-source --statistics --ignore=E302,E501
