@@ -27,10 +27,11 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
 from fink_broker.distributionUtils import get_kafka_df
-from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_science.utilities import concat_col
+
+from fink_filters.utilities import apply_user_defined_filter
 
 # User-defined topics
 userfilters = [
@@ -101,7 +102,7 @@ def main():
         topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
 
         # Apply user-defined filter
-        df_tmp = apply_user_defined_filter(df, userfilter)
+        df_tmp = apply_user_defined_filter(df, userfilter, logger)
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
