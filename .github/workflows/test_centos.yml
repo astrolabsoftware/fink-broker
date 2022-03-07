@@ -23,4 +23,4 @@ jobs:
     - name: Check Java installation
       run: java -version
     - name: What OS is running
-      run: uname -a
+      run: cat /etc/centos-release
