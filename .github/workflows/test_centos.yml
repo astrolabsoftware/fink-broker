@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install add-ons
       run: |
-        sudo yum install axel
+        yum install axel
     - name: Check Java installation
       run: java -version
     - name: What OS is running
