@@ -10,7 +10,7 @@ jobs:
   basic:
     runs-on: ubuntu-latest
     container:
-      image: centos:centos8
+      image: quay.io/centos/centos:stream9
     strategy:
       matrix:
         python-version: [3.7]
