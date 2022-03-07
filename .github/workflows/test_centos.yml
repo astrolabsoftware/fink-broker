@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install add-ons
       run: |
-        yum install -y wget
+        dnf install -y wget java-11-openjdk
     - name: Check Java installation
       run: java -version
     - name: What OS is running
