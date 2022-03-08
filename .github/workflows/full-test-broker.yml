@@ -43,6 +43,7 @@ jobs:
     - name: Install add-ons
       run: |
         dnf install -y which git wget java-11-openjdk
+        dnf -y groupinstall "Development Tools"
         echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
     - name: Set up miniconda for Python ${{ matrix.python-version }}
       run: |
