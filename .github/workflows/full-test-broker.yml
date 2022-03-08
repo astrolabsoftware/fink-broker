@@ -103,7 +103,6 @@ jobs:
     - name: Run test suites
       run: |
         cd $FINK_HOME
-        git fetch --unshallow --quiet
         fink init -c ${FINK_HOME}/conf/fink.conf.travis
         fink_kafka start
         fink_kafka --create-topic fink_outstream
