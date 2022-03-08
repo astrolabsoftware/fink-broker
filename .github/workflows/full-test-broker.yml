@@ -102,6 +102,7 @@ jobs:
         echo `python -V`
     - name: Run test suites
       run: |
+        cd $FINK_HOME
         git fetch --unshallow --quiet
         fink init -c ${FINK_HOME}/conf/fink.conf.travis
         fink_kafka start
