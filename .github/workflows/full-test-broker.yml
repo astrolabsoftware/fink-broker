@@ -65,6 +65,10 @@ jobs:
         wget --quiet https://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         tar -xf spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
+    - name: Install docker compose
+      run: |
+        curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
     - name: Download test data
       run: |
         cd $FINK_HOME/datasim
@@ -83,8 +87,6 @@ jobs:
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
     - name: Install Python dependencies
       run: |
-        echo `python -V`
-        echo `which python`
         pip install --upgrade pip setuptools wheel
         source ./install_python_deps.sh --astronet-token ${{ secrets.ASTRONET_TOKEN }}
     - name: Set up env [3/3]
