@@ -22,8 +22,8 @@ mkdir -p kafka
 tar -xzf kafka.tgz -C kafka --strip-components 1
 rm kafka.tgz
 
-kafka/bin/zookeeper-server-start.sh config/zookeeper.properties &
+kafka/bin/zookeeper-server-start.sh kafka/config/zookeeper.properties &
 
 sleep 5
 
-kafka/bin/kafka-server-start.sh config/server.properties &
+kafka/bin/kafka-server-start.sh kafka/config/server.properties &
