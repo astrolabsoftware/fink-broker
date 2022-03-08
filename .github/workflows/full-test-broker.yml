@@ -65,17 +65,13 @@ jobs:
         echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
     - name: Download test data
       run: |
-        echo $PWD
-        ls
-        ls *
         cd $FINK_HOME/datasim
-        echo $PWD
-        source download_ztf_alert_data.sh
+        source $FINK_HOME/datasim/download_ztf_alert_data.sh
         cd $FINK_HOME
-        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
     - name: Download simulator
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
+        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
     - name: Set up env [2/3]
       run: |
         echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9-src.zip" >> $GITHUB_ENV
