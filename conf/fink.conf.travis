@@ -15,7 +15,7 @@
 ######################################
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
-KAFKA_PORT_SIM=29092
+KAFKA_PORT_SIM=9092
 KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 
 # Cluster mode - you need a Kafka cluster installed with write mode.
