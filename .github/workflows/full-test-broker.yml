@@ -65,11 +65,13 @@ jobs:
         echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
     - name: Download test data
       run: |
-        cd datasim
+        echo $PWD
         ls
-        pwd
+        ls *
+        cd $FINK_HOME/datasim
+        echo $PWD
         source download_ztf_alert_data.sh
-        cd ..
+        cd $FINK_HOME
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
     - name: Download simulator
       run: |
