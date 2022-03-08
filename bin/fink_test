@@ -82,10 +82,10 @@ export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 if [[ "$NO_INTEGRATION" = false ]] ; then
 
   # Fire a stream
-  fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+  fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf --topic $KAFKA_TOPIC
+  fink start stream2raw --exit_after 60 -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
