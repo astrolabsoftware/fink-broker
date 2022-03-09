@@ -47,4 +47,4 @@ Fink's documentation is hosted at [https://fink-broker.rtfd.io](https://fink-bro
 
 ## Science Portal
 
-You can explore all Fink data at [https://fink-portal.org](https://fink-portal.org).
+You can explore all Fink data in the dedicated Portal: [https://fink-portal.org](https://fink-portal.org).
