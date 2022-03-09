@@ -42,7 +42,7 @@ DISTRIBUTION_SERVERS=${kafka_servers#,}
 
 # Store logs for zk and brokers:
 cd ${FINK_HOME}
-[[ -d fink_kafka_logs ]] || mkdir fink_kafka_logs
+[[ -d fink_kafka_logs ]] || mkdir -p fink_kafka_logs
 
 # log file for zk
 zk_logs="${FINK_HOME}/fink_kafka_logs/zklogs"
