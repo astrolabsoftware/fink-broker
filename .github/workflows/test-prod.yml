@@ -85,7 +85,8 @@ jobs:
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
-        source ./install_python_deps.sh --astronet-token ${{ secrets.ASTRONET_TOKEN }}
+        source ./install_python_deps.sh
+        # --astronet-token ${{ secrets.ASTRONET_TOKEN }}
     - name: Set up env [3/3]
       run: |
         echo "PYTHONPATH="${SPARKLIB}:${FINK_HOME}:${FINK_ALERT_SIMULATOR}"" >> $GITHUB_ENV

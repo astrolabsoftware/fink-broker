@@ -149,12 +149,19 @@ if [[ "$NO_UNITS" = false ]] ; then
 
   # Combine individual reports in one
   coverage combine
+
+  unset KAFKA_IPPORT_SIM
+  unset KAFKA_TOPIC
+  unset COVERAGE_PROCESS_START
+  unset FINK_PACKAGES
+  unset FINK_JARS
+
   coverage report
   coverage html
+else
+  unset KAFKA_IPPORT_SIM
+  unset KAFKA_TOPIC
+  unset COVERAGE_PROCESS_START
+  unset FINK_PACKAGES
+  unset FINK_JARS
 fi
-
-unset KAFKA_IPPORT_SIM
-unset KAFKA_TOPIC
-unset COVERAGE_PROCESS_START
-unset FINK_PACKAGES
-unset FINK_JARS
