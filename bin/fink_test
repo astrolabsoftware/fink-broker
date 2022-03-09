@@ -146,22 +146,16 @@ if [[ "$NO_UNITS" = false ]] ; then
           --rcfile ${FINK_HOME}/.coveragerc $i
     fi
   done
-
-  # Combine individual reports in one
-  coverage combine
-
-  unset KAFKA_IPPORT_SIM
-  unset KAFKA_TOPIC
-  unset COVERAGE_PROCESS_START
-  unset FINK_PACKAGES
-  unset FINK_JARS
-
-  coverage report
-  coverage html
-else
-  unset KAFKA_IPPORT_SIM
-  unset KAFKA_TOPIC
-  unset COVERAGE_PROCESS_START
-  unset FINK_PACKAGES
-  unset FINK_JARS
 fi
+
+# Combine individual reports in one
+coverage combine
+
+unset KAFKA_IPPORT_SIM
+unset KAFKA_TOPIC
+unset COVERAGE_PROCESS_START
+unset FINK_PACKAGES
+unset FINK_JARS
+
+coverage report
+coverage html
