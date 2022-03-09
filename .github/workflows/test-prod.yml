@@ -104,7 +104,7 @@ jobs:
         cd $FINK_HOME
         fink init -c ${FINK_HOME}/conf/fink.conf.prod
         fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
-        fink_test
+        fink_test -c conf/fink.conf.prod
         bash <(curl -s https://codecov.io/bash)
     - uses: act10ns/slack@v1
       with:
