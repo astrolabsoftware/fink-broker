@@ -1,4 +1,4 @@
-name: Sentinel
+name: Sentinel - Prod
 
 on:
   push:
@@ -16,18 +16,18 @@ jobs:
       - name: Check Kafka 2.8.1 availability
         run: |
           wget --spider https://www.apache.org/dist/kafka/2.8.1/kafka_2.12-2.8.1.tgz
-      - name: Check Spark 3.1.3 availability
+      - name: Check Spark 2.4.7 availability
         run: |
-          wget --spider http://archive.apache.org/dist/spark/spark-3.1.3/spark-3.1.3-bin-hadoop2.7.tgz
+          wget --spider http://archive.apache.org/dist/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz
   test-suite:
     needs: install-checks
     runs-on: ubuntu-latest
     container:
-      image: quay.io/centos/centos:stream9
+      image: centos:centos7
     strategy:
       matrix:
         python-version: [py37_4.11.0]
-        spark-version: [3.1.3]
+        spark-version: [2.4.7]
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
@@ -42,7 +42,7 @@ jobs:
           ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/install_python_deps.sh') }}
     - name: Install add-ons
       run: |
-        dnf install -y lsof which git wget java-11-openjdk
+        dnf install -y lsof which git wget java-8-openjdk
         dnf -y groupinstall "Development Tools"
         echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
     - name: Set up miniconda for Python ${{ matrix.python-version }}
@@ -65,10 +65,6 @@ jobs:
         wget --quiet https://archive.apache.org/dist/spark/spark-${{ matrix.spark-version }}/spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         tar -xf spark-${{ matrix.spark-version }}-bin-hadoop2.7.tgz
         echo "SPARK_HOME=$FINK_HOME/spark-${{ matrix.spark-version }}-bin-hadoop2.7" >> $GITHUB_ENV
-    - name: Install docker compose
-      run: |
-        curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-        chmod +x /usr/local/bin/docker-compose
     - name: Download test data
       run: |
         cd $FINK_HOME/datasim
@@ -80,11 +76,12 @@ jobs:
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
     - name: Set up env [2/3]
       run: |
-        echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9-src.zip" >> $GITHUB_ENV
+        echo "SPARKLIB=${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip" >> $GITHUB_ENV
         echo "$HOME/.local/bin:${FINK_HOME}/bin" >> $GITHUB_PATH
         echo "${SPARK_HOME}/bin:${SPARK_HOME}/sbin" >> $GITHUB_PATH
         echo "$FINK_ALERT_SIMULATOR/bin" >> $GITHUB_PATH
         echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
+        echo "ARROW_PRE_0_15_IPC_FORMAT=1" > ${SPARK_HOME}/conf/spark-env.sh
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
@@ -105,7 +102,7 @@ jobs:
     - name: Run test suites
       run: |
         cd $FINK_HOME
-        fink init -c ${FINK_HOME}/conf/fink.conf.travis
+        fink init -c ${FINK_HOME}/conf/fink.conf.prod
         fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
         fink_test
         bash <(curl -s https://codecov.io/bash)
