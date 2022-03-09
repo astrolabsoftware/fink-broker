@@ -105,7 +105,6 @@ jobs:
         fink init -c ${FINK_HOME}/conf/fink.conf.dev
         fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
         fink_test -c conf/fink.conf.dev --without-units
-        bash <(curl -s https://codecov.io/bash)
     - uses: act10ns/slack@v1
       with:
         status: ${{ job.status }}
