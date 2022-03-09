@@ -42,7 +42,7 @@ jobs:
           ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/install_python_deps.sh') }}
     - name: Install add-ons
       run: |
-        yum install -y lsof which git wget java-8-openjdk
+        yum install -y lsof which git wget java-1.8.0-openjdk
         yum -y groupinstall "Development Tools"
         echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
     - name: Set up miniconda for Python ${{ matrix.python-version }}
