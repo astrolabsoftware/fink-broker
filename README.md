@@ -43,7 +43,7 @@ Learning Fink is easy whether you are a developer or a scientist:
 
 ## Documentation
 
-Fink's documentation is hosted [here](https://fink-broker.rtfd.io).
+Fink's documentation is hosted at [https://fink-broker.rtfd.io](https://fink-broker.rtfd.io).
 
 ## Science Portal
 
