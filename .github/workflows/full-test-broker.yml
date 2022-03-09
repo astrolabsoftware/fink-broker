@@ -32,6 +32,8 @@ jobs:
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
+    -name: echo
+      run: echo ${{ github.event.head_commit.message }}
     - uses: actions/checkout@v2
     - name: Cache Python dependencies
       id: cache-python
