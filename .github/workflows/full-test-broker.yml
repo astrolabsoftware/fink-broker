@@ -34,7 +34,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Print me
-      run: echo "${{toJSON(github.event)}}"
+      run: echo ${{ github.event.head_commit.message }}
     - name: Cache Python dependencies
       id: cache-python
       uses: actions/cache@v2
