@@ -244,15 +244,9 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     # Apply level one processor: snad (light curve features)
-    # Adds a lot of feature columns with prefix 'lc_'
     logger.info("New processor: snad")
-    snad_base_col = 'lc_features'
     snad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
-    df = df.withColumn(snad_base_col, extract_features_snad(*snad_args))
-    for index, name in enumerate(lc_columns):
-        df = df.withColumn("fid_1_" + name, df[snad_base_col][index])
-        df = df.withColumn("fid_2_" + name, df[snad_base_col][index + lc_columns_count])
-    df = df.drop(snad_base_col)
+    df = df.withColumn('lc_features', extract_features_snad(*snad_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
