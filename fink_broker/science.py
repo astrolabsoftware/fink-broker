@@ -31,7 +31,7 @@ from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
-from fink_science.snad.processor import extract_features_snad, column_names as lc_columns, columns_count as lc_columns_count
+from fink_science.snad.processor import extract_features_snad
 
 from fink_broker.tester import spark_unit_tests
 
