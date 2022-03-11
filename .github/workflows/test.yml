@@ -1,0 +1,83 @@
+name: Sentinel
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        container: ["julienpeloton/fink-ci:prod", "julienpeloton/fink-ci:dev"]
+
+    container:
+      image: ${{ matrix.container }}
+
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up env from container variables
+      run: |
+        echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
+        echo "${BINPATH}" >> $GITHUB_PATH
+
+    - name: Download test data
+      run: |
+        cd $FINK_HOME/datasim
+        source $FINK_HOME/datasim/download_ztf_alert_data.sh
+        cd $FINK_HOME
+
+    - name: Download simulator
+      run: |
+        git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
+        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
+
+    - name: Set up env [2/2]
+      run: |
+        echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
+        echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
+
+    - name: Check env
+      run: |
+        echo "FINK_HOME: $FINK_HOME"
+        echo "SPARK_HOME: $SPARK_HOME"
+        echo "SPARKLIB: $SPARKLIB"
+        echo "FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR"
+        echo "KAFKA_HOME: $KAFKA_HOME"
+        echo "PYTHONPATH: $PYTHONPATH"
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo `python -V`
+
+    - name: Run test suites [dev]
+      if: matrix.container == 'julienpeloton/fink-ci:dev'
+      run: |
+        cd $USRLIBS
+        source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
+        cd $FINK_HOME
+        fink init -c ${FINK_HOME}/conf/fink.conf.dev
+        fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+        fink_test -c conf/fink.conf.dev --without-units
+
+    - name: Run test suites [prod]
+      if: matrix.container == 'julienpeloton/fink-ci:prod'
+      run: |
+        cd $USRLIBS
+        source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
+        cd $FINK_HOME
+        fink init -c ${FINK_HOME}/conf/fink.conf.prod
+        fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+        fink_test -c conf/fink.conf.prod
+        curl -s https://codecov.io/bash | bash
+
+    - uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+      if: always()
