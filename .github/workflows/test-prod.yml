@@ -16,9 +16,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up env [1/3]
+    - name: Set up env from container variables
       run: |
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
+        echo "${BINPATH}" >> $GITHUB_PATH
 
     - name: Download test data
       run: |
@@ -30,7 +32,7 @@ jobs:
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
 
-    - name: Set up env
+    - name: Set up env [2/2]
       run: |
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
@@ -47,15 +49,15 @@ jobs:
         echo "JAVA_HOME: $JAVA_HOME"
         echo `python -V`
 
-    # - name: Run test suites
-    #   run: |
-    #     cd $FINK_HOME
-    #     fink init -c ${FINK_HOME}/conf/fink.conf.prod
-    #     fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
-    #     fink_test -c conf/fink.conf.prod
-    #     curl -s https://codecov.io/bash | bash
-    #
-    # - uses: act10ns/slack@v1
-    #   with:
-    #     status: ${{ job.status }}
-    #   if: always()
+    - name: Run test suites
+      run: |
+        cd $FINK_HOME
+        fink init -c ${FINK_HOME}/conf/fink.conf.prod
+        fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+        fink_test -c conf/fink.conf.prod
+        curl -s https://codecov.io/bash | bash
+
+    - uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+      if: always()
