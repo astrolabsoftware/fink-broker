@@ -1,6 +1,6 @@
 #!/bin/bash
-# Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan
+# Copyright 2019-2022 AstroLab Software
+# Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,13 @@ set -e
 
 KAFKA_VERSION=2.8.1
 
-wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
+wget --no-check-certificate https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz
 mkdir -p kafka
 tar -xzf kafka.tgz -C kafka --strip-components 1
 rm kafka.tgz
+
+kafka/bin/zookeeper-server-start.sh kafka/config/zookeeper.properties &
+
+sleep 5
+
+kafka/bin/kafka-server-start.sh kafka/config/server.properties &

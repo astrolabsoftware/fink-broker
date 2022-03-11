@@ -15,7 +15,7 @@
 ######################################
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
-KAFKA_PORT_SIM=29092
+KAFKA_PORT_SIM=9092
 KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 
 # Cluster mode - you need a Kafka cluster installed with write mode.
@@ -47,8 +47,8 @@ org.apache.hbase:hbase-shaded-mapreduce:2.4.9
 
 # Other dependencies (incl. Scala part of Fink)
 FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-1.2.jar,\
-${FINK_HOME}/libs/hbase-spark-1.0.1-SNAPSHOT.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-1.0.1-SNAPSHOT.jar
+${FINK_HOME}/libs/hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.

@@ -16,7 +16,7 @@
 # Configurations for Alert Redistribution
 
 # Zookeeper
-ZK_IPPORT="localhost:2182"
+ZK_IPPORT="localhost:2181"
 
 # Kafka Brokers / Servers
 # Array with Broker addresses (IP and Port)
@@ -42,7 +42,7 @@ DISTRIBUTION_SERVERS=${kafka_servers#,}
 
 # Store logs for zk and brokers:
 cd ${FINK_HOME}
-[[ -d fink_kafka_logs ]] || mkdir fink_kafka_logs
+[[ -d fink_kafka_logs ]] || mkdir -p fink_kafka_logs
 
 # log file for zk
 zk_logs="${FINK_HOME}/fink_kafka_logs/zklogs"
