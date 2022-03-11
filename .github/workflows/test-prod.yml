@@ -31,10 +31,10 @@ jobs:
     - name: Download simulator
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
+        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
 
     - name: Set up env [2/2]
       run: |
-        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator" >> $GITHUB_ENV
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
         echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
 
