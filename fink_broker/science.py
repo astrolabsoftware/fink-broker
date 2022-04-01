@@ -22,7 +22,7 @@ import pandas as pd
 from logging import Logger
 import os
 
-from fink_science.utilities import concat_col
+from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import cdsxmatch

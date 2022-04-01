@@ -23,9 +23,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Python add-ons
-      run: pip install fink-filters --upgrade
-
     - name: Set up env from container variables
       run: |
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
