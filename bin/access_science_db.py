@@ -43,7 +43,8 @@ def main():
     catalog_dic = json.loads(catalog)
 
     df = spark.read.option("catalog", catalog)\
-        .format("org.apache.spark.sql.execution.datasources.hbase")\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
         .load()
 
     print("Number of entries in {}: ".format(

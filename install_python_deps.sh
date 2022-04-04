@@ -43,7 +43,7 @@ done
 pip install -r requirements.txt
 
 # Installation of torch without GPU support (lighter)
-pip install torch==1.6.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==1.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
 # Installation of astronet
 if [[ $TOKEN != "" ]]; then

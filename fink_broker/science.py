@@ -22,7 +22,7 @@ import pandas as pd
 from logging import Logger
 import os
 
-from fink_science.utilities import concat_col
+from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import cdsxmatch
@@ -48,7 +48,7 @@ def ra2phi(ra: float) -> float:
     return np.pi / 180.0 * ra
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
-def ang2pix(ra, dec, nside):
+def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """ Compute pixel number at given nside
 
     Parameters
@@ -86,7 +86,7 @@ def ang2pix(ra, dec, nside):
     )
 
 @pandas_udf(StringType(), PandasUDFType.SCALAR)
-def ang2pix_array(ra, dec, nside: list):
+def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """ Return a col string with the pixel numbers corresponding to the nsides
 
     pix@nside[0]_pix@nside[1]_...etc

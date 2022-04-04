@@ -19,20 +19,26 @@ set -e
 message_help="""
 Run the test suite of Fink\n\n
 Usage:\n
-    \tfink_test [--without-integration] [-h] [-c <conf>]\n\n
+    \tfink_test [--without-integration] [--without-units] [-h] [-c <conf>]\n\n
 
 By default, both unit tests and integration tests will be run.\n
 You can disable the integration tests by specifying --without-integration.\n
-You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.travis) will be used.\n
+You can disable the unit tests by specifying --without-units.\n
+You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.prod) will be used.\n
 Use -h to display this help.
 """
 
 # Grab the command line arguments
 NO_INTEGRATION=false
+NO_UNITS=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --without-integration)
         NO_INTEGRATION=true
+        shift 1
+        ;;
+    --without-units)
+        NO_UNITS=true
         shift 1
         ;;
     -h)
@@ -62,7 +68,7 @@ done
 if [[ -f $conf ]]; then
   echo "Reading custom test configuration file from " $conf
 else
-  conf=${FINK_HOME}/conf/fink.conf.travis
+  conf=${FINK_HOME}/conf/fink.conf.prod
   echo "Reading the default test configuration file from " $conf
 fi
 
@@ -82,10 +88,10 @@ export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 if [[ "$NO_INTEGRATION" = false ]] ; then
 
   # Fire a stream
-  fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+  fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf --topic $KAFKA_TOPIC
+  fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
@@ -97,7 +103,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start distribution --exit_after 30 -c $conf --night "20190903"
 
   # merge data
-  fink start merge -c conf/fink.conf.travis --night "20190903"
+  fink start merge -c $conf --night "20190903"
 
   # Update science portal
   fink start science_archival -c $conf --night 20190903
@@ -127,18 +133,20 @@ else
   fink start raw2science --exit_after 40 -c $conf --night "20190903"
 fi
 
-# Run the test suite on the modules assuming the integration
-# tests have been run (to build the databases)
-for i in ${FINK_HOME}/fink_broker/*.py
-do
-  if [[ ${i##*/} = 'monitoring' ]] ; then
-      echo "skip {i}"
-  else
-    coverage run \
-        --source=${FINK_HOME} \
-        --rcfile ${FINK_HOME}/.coveragerc $i
-  fi
-done
+if [[ "$NO_UNITS" = false ]] ; then
+  # Run the test suite on the modules assuming the integration
+  # tests have been run (to build the databases)
+  for i in ${FINK_HOME}/fink_broker/*.py
+  do
+    if [[ ${i##*/} = 'monitoring' ]] ; then
+        echo "skip {i}"
+    else
+      coverage run \
+          --source=${FINK_HOME} \
+          --rcfile ${FINK_HOME}/.coveragerc $i
+    fi
+  done
+fi
 
 # Combine individual reports in one
 coverage combine
