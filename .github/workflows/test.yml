@@ -1,6 +1,9 @@
 name: Sentinel
 
 on:
+  schedule:
+    # 05:00 UTC (6 or 7 Paris Time)
+    - cron:  '0 5 * * *'
   push:
     branches:
       - master
