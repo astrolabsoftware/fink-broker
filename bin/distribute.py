@@ -31,7 +31,7 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
 
-from fink_filters.utilities import apply_user_defined_filter
+from fink_utils.spark.utils import apply_user_defined_filter
 
 # User-defined topics
 userfilters = [
