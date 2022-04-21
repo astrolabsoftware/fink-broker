@@ -11,7 +11,7 @@
 
 # Latest News
 
-* 04/22: Release [2.0](https://github.com/astrolabsoftware/fink-broker/milestone/7?closed=1)
+* 04/22: Release [2.0](https://github.com/astrolabsoftware/fink-broker/milestone/7?closed=1), [2.1](https://github.com/astrolabsoftware/fink-broker/milestone/8?closed=1)
 * 01/22: Release [1.4](https://github.com/astrolabsoftware/fink-broker/pull/518)
 * 11/21: Release [1.3](https://github.com/astrolabsoftware/fink-broker/pull/495)
 * 11/21: Release [1.2](https://github.com/astrolabsoftware/fink-broker/pull/492)
