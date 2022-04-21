@@ -40,15 +40,15 @@ SECURED_KAFKA_CONFIG=''
 # Change the version according to your Spark version.
 # NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.11:2.4.7,\
-org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.7,\
-org.apache.spark:spark-avro_2.11:2.4.7,\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.1.3,\
+org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.3,\
+org.apache.spark:spark-avro_2.12:3.1.3,\
 org.apache.hbase:hbase-shaded-mapreduce:2.2.7
 
 # Other dependencies (incl. Scala part of Fink)
 FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-1.2.jar,\
-${FINK_HOME}/libs/hbase-spark-hbase2.2_spark2_scala2.11_hadoop2.7.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.2_spark2_scala2.11_hadoop2.7.jar
+${FINK_HOME}/libs/hbase-spark-hbase2.2_spark3_scala2.11_hadoop2.7.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.2_spark3_scala2.11_hadoop2.7.jar
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
