@@ -42,7 +42,8 @@ userfilters = [
     'fink_filters.filter_kn_candidates.filter.kn_candidates',
     'fink_filters.filter_early_kn_candidates.filter.early_kn_candidates',
     'fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates',
-    'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates'
+    'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
+    'fink_filters.filter_yso_candidates.filter.yso_candidates'
 ]
 
 def main():
