@@ -35,6 +35,7 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import jd_to_datetime
 
 from fink_broker.science import apply_science_modules
+from fink_broker.science import apply_science_modules_elasticc
 
 from fink_science import __version__ as fsvsn
 
@@ -77,7 +78,10 @@ def main():
         .filter(df['candidate.rb'] >= 0.55)
 
     # Apply science modules
-    df = apply_science_modules(df, logger)
+    if 'candidate' in df.columns:
+        df = apply_science_modules(df, logger)
+    elif 'diaSource' in df.columns:
+        df = apply_science_modules_elasticc(df, logger)
 
     # Add library versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\

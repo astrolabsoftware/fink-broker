@@ -25,8 +25,10 @@ import os
 from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.xmatch.processor import cdsxmatch
 from fink_science.snn.processor import snn_ia
+from fink_science.snn.processor import snn_ia_elasticc
 from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
@@ -135,6 +137,8 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
+
+    Focus on ZTF stream
 
     Parameters
     ----------
@@ -247,6 +251,80 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     return df
 
+def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
+    """Load and apply Fink science modules to enrich alert content
+
+    Focus on ELAsTICC stream
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark (Streaming or SQL) DataFrame containing raw alert data
+    logger: Logger
+        Fink logger
+
+    Returns
+    ----------
+    df: DataFrame
+        Spark (Streaming or SQL) DataFrame containing enriched alert data
+
+    Examples
+    ----------
+    >>> from fink_broker.sparkUtils import load_parquet_files
+    >>> from fink_broker.loggingUtils import get_fink_logger
+    >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')
+    >>> df = load_parquet_files(elasticc_alert_sample)
+    >>> df = apply_science_modules_elasticc(df, logger)
+
+    # apply_science_modules is lazy, so trigger the computation
+    >>> an_alert = df.take(1)
+    """
+    # Required alert columns
+    what = ['midPointTai', 'filterName', 'psFlux', 'psFluxErr']
+
+    # Use for creating temp name
+    prefix = 'c'
+    what_prefix = [prefix + i for i in what]
+
+    # Append temp columns with historical + current measurements
+    for colname in what:
+        df = concat_col(
+            df, colname, prefix=prefix,
+            current='diaSource', history='prvDiaSources'
+        )
+
+    logger.info("New processor: xmatch (random positions)")
+    # Assuming random positions
+    df = df.withColumn('cdsxmatch', F.lit('Unknown'))
+
+    logger.info("New processor: asteroids (random positions)")
+    df = df.withColumn('roid', F.lit(0))
+
+    logger.info("New processor: Active Learning")
+    # Perform the fit + classification (default model)
+    args = [F.col(i) for i in what_prefix]
+    args += [F.col('cdsxmatch'), F.col('diaSource.nobs')]
+    df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
+
+    # Apply level one processor: superNNova
+    logger.info("New processor: supernnova")
+    args = [F.col('diaSource.diaSourceId')]
+    args += [F.col(i) for i in what_prefix]
+    args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
+    args += [F.lit('snn_snia_vs_nonia')]
+    df = df.withColumn('snn_snia_vs_nonia', snn_ia_elasticc(*args))
+
+    args = [F.col('diaSource.diaSourceId')]
+    args += [F.col(i) for i in what_prefix]
+    args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
+    args += [F.lit('snn_sn_vs_all')]
+    df = df.withColumn('snn_sn_vs_all', snn_ia_elasticc(*args))
+
+    # Drop temp columns
+    df = df.drop(*expanded)
+
+    return df
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
@@ -255,6 +333,9 @@ if __name__ == "__main__":
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
         root, "online/raw")
+
+    globs['elasticc_alert_sample'] = = os.path.join(
+        root, "elasticc_alert_sample")
 
     # Run the Spark test suite
     spark_unit_tests(globs)
