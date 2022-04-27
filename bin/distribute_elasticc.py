@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Distribute the elasticc alerts
 
 1. Use the Alert data that is stored in the Science TMP database (Parquet)
@@ -23,6 +22,8 @@
 """
 import argparse
 import time
+
+from pyspark.sql import functions as F
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
@@ -64,9 +65,9 @@ def format_df_to_elasticc(df):
     df = df.withColumn(
         'classifications',
         F.array(
-            F.struct('rf_snia_vs_nonia', 'coucou', 10, df['rf_snia_vs_nonia']),
-            F.struct('snn_snia_vs_nonia', 'coucou', 10, df['snn_snia_vs_nonia']),
-            F.struct('snn_sn_vs_all', 'coucou', 10, df['snn_sn_vs_all']),
+            F.struct('rf_snia_vs_nonia_{}'.format(fsvsn), 'coucou', 10, df['rf_snia_vs_nonia']),
+            F.struct('snn_snia_vs_nonia_{}'.format(fsvsn), 'coucou', 10, df['snn_snia_vs_nonia']),
+            F.struct('snn_sn_vs_all_{}'.format(fsvsn), 'coucou', 10, df['snn_sn_vs_all']),
         )
     )
 
