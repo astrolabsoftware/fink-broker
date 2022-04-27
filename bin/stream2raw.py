@@ -104,6 +104,12 @@ def main():
     elif 'diaSource' in df_decoded.columns:
         timecol = 'diaSource.midPointTai'
 
+        # Add ingestion timestamp
+        df = df.withColumn(
+            'brokerIngestTimestamp',
+            F.unix_timestamp(F.current_timestamp())
+        )
+
     df_partitionedby = df_decoded\
         .withColumn("timestamp", jd_to_datetime(df_decoded[timecol]))\
         .withColumn("year", date_format("timestamp", "yyyy"))\
