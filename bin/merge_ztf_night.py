@@ -21,7 +21,7 @@ import argparse
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.partitioning import jd_to_datetime, numPart
+from fink_broker.partitioning import convert_to_datetime, numPart
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.tracklet_identification import add_tracklet_information
 
@@ -58,7 +58,7 @@ def main():
     print('Num partitions before: ', df_raw.rdd.getNumPartitions())
     print('Num partitions after : ', numPart(df_raw))
 
-    df_raw.withColumn('timestamp', jd_to_datetime(df_raw['candidate.jd']))\
+    df_raw.withColumn('timestamp', convert_to_datetime(df_raw['candidate.jd'], format='jd'))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\

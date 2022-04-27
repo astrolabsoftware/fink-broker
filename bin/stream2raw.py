@@ -38,7 +38,7 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import jd_to_datetime
+from fink_broker.partitioning import convert_to_datetime
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -100,17 +100,19 @@ def main():
     # Partition the data hourly
     if 'candidate' in df_decoded.columns:
         timecol = 'candidate.jd'
+        converter = lambda x: convert_to_datetime(x, format='jd')
     elif 'diaSource' in df_decoded.columns:
         timecol = 'diaSource.midPointTai'
+        converter = lambda x: convert_to_datetime(x, format='mjd')
 
         # Add ingestion timestamp
-        df = df.withColumn(
+        df_decoded = df_decoded.withColumn(
             'brokerIngestTimestamp',
             F.unix_timestamp(F.current_timestamp())
         )
 
     df_partitionedby = df_decoded\
-        .withColumn("timestamp", jd_to_datetime(df_decoded[timecol]))\
+        .withColumn("timestamp", converter(df_decoded[timecol]))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))
