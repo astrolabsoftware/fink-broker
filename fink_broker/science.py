@@ -280,18 +280,19 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     >>> an_alert = df.take(1)
     """
     # Required alert columns
-    what = ['midPointTai', 'filterName', 'psFlux', 'psFluxErr']
+    to_expand = ['midPointTai', 'filterName', 'psFlux', 'psFluxErr']
 
     # Use for creating temp name
     prefix = 'c'
-    what_prefix = [prefix + i for i in what]
+    what_prefix = [prefix + i for i in to_expand]
 
     # Append temp columns with historical + current measurements
-    for colname in what:
+    for colname in to_expand:
         df = concat_col(
             df, colname, prefix=prefix,
             current='diaSource', history='prvDiaSources'
         )
+    expanded = [prefix + i for i in to_expand]
 
     logger.info("New processor: xmatch (random positions)")
     # Assuming random positions
