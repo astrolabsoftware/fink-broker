@@ -58,7 +58,7 @@ def main():
     print('Num partitions before: ', df_raw.rdd.getNumPartitions())
     print('Num partitions after : ', numPart(df_raw))
 
-    df_raw.withColumn('timestamp', convert_to_datetime(df_raw['candidate.jd'], F.lit('jd')))\
+    df_raw.withColumn('timestamp', convert_to_datetime(df_raw['candidate.jd']))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\
@@ -86,7 +86,7 @@ def main():
             how='outer'
         )
 
-    df_science.withColumn('timestamp', convert_to_datetime(df_science['candidate.jd'], F.lit('jd')))\
+    df_science.withColumn('timestamp', convert_to_datetime(df_science['candidate.jd']))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\

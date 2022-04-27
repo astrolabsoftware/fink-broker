@@ -90,7 +90,7 @@ def main():
     df = df.withColumn('publisher', F.lit('Fink'))
 
     df.coalesce(npart)\
-        .withColumn("timestamp", convert_to_datetime(df['candidate.jd'], F.lit('jd')))\
+        .withColumn("timestamp", convert_to_datetime(df['candidate.jd']))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\

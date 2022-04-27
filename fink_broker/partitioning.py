@@ -23,7 +23,7 @@ from astropy.time import Time
 from fink_broker.tester import spark_unit_tests
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def convert_to_datetime(jd: pd.Series, format='jd') -> pd.Series:
+def convert_to_datetime(jd: pd.Series, format=None, scale=None) -> pd.Series:
     """ Convert date into datetime (timestamp)
 
     Parameters
@@ -32,6 +32,8 @@ def convert_to_datetime(jd: pd.Series, format='jd') -> pd.Series:
         Julian date
     format: str
         Astropy time format, e.g. jd, mjd, ...
+    scale: str
+        Time scale: utc, tai, ...
 
     Returns
     ----------
@@ -43,8 +45,19 @@ def convert_to_datetime(jd: pd.Series, format='jd') -> pd.Series:
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("online/raw")
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
+    >>> pdf = df.select('datetime').toPandas()
     """
-    return pd.Series(Time(jd.values, format=format.values[0]).to_datetime())
+    if format is None:
+        formatval = 'jd'
+    else:
+        formatval = format.values[0]
+
+    if scale is None:
+        scaleval = 'utc'
+    else:
+        scaleval = scale.values[0]
+
+    return pd.Series(Time(jd.values, format=formatval, scale=scaleval).to_datetime())
 
 def numPart(df, partition_size=128.):
     """ Compute the idle number of partitions of a DataFrame

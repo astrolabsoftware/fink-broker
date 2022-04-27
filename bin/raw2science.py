@@ -81,11 +81,11 @@ def main():
     if 'candidate' in df.columns:
         df = apply_science_modules(df, logger)
         timecol = 'candidate.jd'
-        converter = lambda x: convert_to_datetime(x, F.lit('jd'))
+        converter = lambda x: convert_to_datetime(x)
     elif 'diaSource' in df.columns:
         df = apply_science_modules_elasticc(df, logger)
         timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+        converter = lambda x: convert_to_datetime(x, F.lit('mjd'), F.lit('tai'))
 
     # Add library versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
