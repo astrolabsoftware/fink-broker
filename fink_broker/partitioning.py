@@ -26,6 +26,20 @@ from fink_broker.tester import spark_unit_tests
 def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     """ Convert date into datetime (timestamp)
 
+    Be careful if you are using this outside Fink. First, you need to check
+    you timezone defined in Spark:
+
+    ```
+    spark.conf.get("spark.sql.session.timeZone")
+    ```
+
+    If this is something else than UTC, then change it:
+
+    ```
+    spark.conf.set("spark.sql.session.timeZone", 'UTC')
+    ```
+
+
     Parameters
     ----------
     jd: double
@@ -50,7 +64,7 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     else:
         formatval = format.values[0]
 
-    return pd.Series(Time(jd.values, format=formatval, scale='utc').to_datetime(timezone='utc'))
+    return pd.Series(Time(jd.values, format=formatval).to_datetime())
 
 def numPart(df, partition_size=128.):
     """ Compute the idle number of partitions of a DataFrame

@@ -103,7 +103,7 @@ def main():
         converter = lambda x: convert_to_datetime(x)
     elif 'diaSource' in df_decoded.columns:
         timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'), F.lit('tai'))
+        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
 
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
