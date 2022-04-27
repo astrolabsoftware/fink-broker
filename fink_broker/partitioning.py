@@ -57,7 +57,7 @@ def convert_to_datetime(jd: pd.Series, format=None, scale=None) -> pd.Series:
     else:
         scaleval = scale.values[0]
 
-    return pd.Series(Time(jd.values, format=formatval, scale=scaleval).to_datetime())
+    return pd.Series(Time(jd.values, format=formatval, scale=scaleval).to_datetime(timezone=scaleval))
 
 def numPart(df, partition_size=128.):
     """ Compute the idle number of partitions of a DataFrame
