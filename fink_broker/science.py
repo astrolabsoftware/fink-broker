@@ -334,7 +334,7 @@ if __name__ == "__main__":
     globs["ztf_alert_sample"] = os.path.join(
         root, "online/raw")
 
-    globs['elasticc_alert_sample'] = = os.path.join(
+    globs['elasticc_alert_sample'] = os.path.join(
         root, "elasticc_alert_sample")
 
     # Run the Spark test suite
