@@ -86,7 +86,7 @@ def main():
             how='outer'
         )
 
-    df_science.withColumn('timestamp', jd_to_datetime(df_science['candidate.jd']))\
+    df_science.withColumn('timestamp', convert_to_datetime(df_science['candidate.jd'], format='jd'))\
         .withColumn("year", F.date_format("timestamp", "yyyy"))\
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))\

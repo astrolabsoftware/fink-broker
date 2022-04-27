@@ -26,7 +26,7 @@ jobs:
         pip install flake8
     - name: fink-broker
       run: |
-        flake8 fink_broker/*.py --count --show-source --statistics --ignore=E302,E501
+        flake8 fink_broker/*.py --count --show-source --statistics --ignore=E302,E501,E731
     - name: bin
       run: |
-        flake8 bin/*.py --count --show-source --statistics --ignore=E302,E501
+        flake8 bin/*.py --count --show-source --statistics --ignore=E302,E501,E731

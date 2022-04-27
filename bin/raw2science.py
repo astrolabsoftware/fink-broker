@@ -97,7 +97,7 @@ def main():
     # re-create partitioning columns if needed.
     if 'timestamp' not in df.columns:
         df = df\
-            .withColumn("timestamp", convert_to_datetime(df[timecol]))
+            .withColumn("timestamp", converter(df[timecol]))
 
     if "year" not in df.columns:
         df = df\
