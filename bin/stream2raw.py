@@ -99,16 +99,26 @@ def main():
     df_decoded = df_decoded.selectExpr(cnames)
 
     # Partition the data hourly
+    if 'candidate' in df_decoded.columns:
+        timecol = 'candidate.jd'
+    elif 'diaSource' in df_decoded.columns:
+        timecol = 'diaSource.midPointTai'
+
     df_partitionedby = df_decoded\
-        .withColumn("timestamp", jd_to_datetime(df_decoded['candidate.jd']))\
+        .withColumn("timestamp", jd_to_datetime(df_decoded[timecol]))\
         .withColumn("year", date_format("timestamp", "yyyy"))\
         .withColumn("month", date_format("timestamp", "MM"))\
         .withColumn("day", date_format("timestamp", "dd"))
 
     # Append new rows every `tinterval` seconds
     # and drop duplicates see fink-broker/issues/443
+    if 'candid' in df_decoded.columns:
+        idcol = 'candid'
+    elif 'diaSource' in df_decoded.columns:
+        idcol = 'diaSource.diaSourceId'
+
     countquery_tmp = df_partitionedby\
-        .dropDuplicates(["candid"])\
+        .dropDuplicates([idcol])\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
