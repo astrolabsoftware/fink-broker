@@ -336,7 +336,7 @@ if __name__ == "__main__":
         root, "online/raw")
 
     globs['elasticc_alert_sample'] = os.path.join(
-        root, "elasticc_alert_sample")
+        root, "elasticc_parquet")
 
     # Run the Spark test suite
     spark_unit_tests(globs)
