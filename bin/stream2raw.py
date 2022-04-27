@@ -25,8 +25,7 @@ in an HDFS-compatible fault-tolerant file system.
 See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
-from pyspark.sql.functions import udf
-from pyspark.sql.functions import date_format
+from pyspark.sql import functions as F
 
 import fastavro
 import argparse
@@ -81,7 +80,7 @@ def main():
         )
     elif 'public2.alerts.ztf' in args.servers:
         # Decode on-the-fly using fastavro
-        f = udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
+        f = F.udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
         df_decoded = df.select(
             [
                 f(df['value']).alias("decoded")
@@ -112,9 +111,9 @@ def main():
 
     df_partitionedby = df_decoded\
         .withColumn("timestamp", jd_to_datetime(df_decoded[timecol]))\
-        .withColumn("year", date_format("timestamp", "yyyy"))\
-        .withColumn("month", date_format("timestamp", "MM"))\
-        .withColumn("day", date_format("timestamp", "dd"))
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))
 
     # Append new rows every `tinterval` seconds
     # and drop duplicates see fink-broker/issues/443
