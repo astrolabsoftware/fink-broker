@@ -119,11 +119,9 @@ def main():
     # and drop duplicates see fink-broker/issues/443
     if 'candid' in df_decoded.columns:
         idcol = 'candid'
-    elif 'diaSource' in df_decoded.columns:
-        idcol = 'diaSource.diaSourceId'
+        df_partitionedby = df_partitionedby.dropDuplicates([idcol])
 
     countquery_tmp = df_partitionedby\
-        .dropDuplicates([idcol])\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \
