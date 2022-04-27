@@ -100,10 +100,10 @@ def main():
     # Partition the data hourly
     if 'candidate' in df_decoded.columns:
         timecol = 'candidate.jd'
-        converter = lambda x: convert_to_datetime(x, format='jd')
+        converter = lambda x: convert_to_datetime(x, F.lit('jd'))
     elif 'diaSource' in df_decoded.columns:
         timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, format='mjd')
+        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
 
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(

@@ -44,7 +44,7 @@ def convert_to_datetime(jd: pd.Series, format='jd') -> pd.Series:
     >>> df = load_parquet_files("online/raw")
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
     """
-    return pd.Series(Time(jd.values, format=format).to_datetime())
+    return pd.Series(Time(jd.values, format=format.values[0]).to_datetime())
 
 def numPart(df, partition_size=128.):
     """ Compute the idle number of partitions of a DataFrame
