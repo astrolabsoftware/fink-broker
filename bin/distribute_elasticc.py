@@ -24,6 +24,7 @@ import argparse
 import time
 
 from pyspark.sql import functions as F
+from pyspark.sql import SQLContext
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
@@ -37,7 +38,7 @@ from fink_broker.partitioning import convert_to_datetime
 from pyspark.sql.types import StructField, StructType, ArrayType
 from pyspark.sql.types import LongType, StringType, FloatType, IntegerType
 
-def format_df_to_elasticc(df):
+def format_df_to_elasticc(spark, df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
 
     Comments:
@@ -136,6 +137,7 @@ def format_df_to_elasticc(df):
     df = df.selectExpr(cnames)
 
     # Need to find something better...
+    sqlContext = SQLContext(spark.sparkContext)
     return sqlContext.createDataFrame(df.rdd, elasticc_schema)
 
 def main():
@@ -176,7 +178,7 @@ def main():
     df = df.filter(f1 | f2 | f3)
 
     # Wrap alert data
-    df = format_df_to_elasticc(df)
+    df = format_df_to_elasticc(spark, df)
 
     # Get the DataFrame for publishing to Kafka (avro serialized)
     df_kafka = get_kafka_df(df, '')
