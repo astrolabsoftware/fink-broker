@@ -71,14 +71,14 @@ def main():
         latestfirst=False
     )
 
-    # Apply quality cuts
-    logger.info("Applying quality cuts")
-    df = df\
-        .filter(df['candidate.nbad'] == 0)\
-        .filter(df['candidate.rb'] >= 0.55)
-
     # Apply science modules
     if 'candidate' in df.columns:
+        # Apply quality cuts
+        logger.info("Applying quality cuts")
+        df = df\
+            .filter(df['candidate.nbad'] == 0)\
+            .filter(df['candidate.rb'] >= 0.55)
+
         df = apply_science_modules(df, logger)
         timecol = 'candidate.jd'
         converter = lambda x: convert_to_datetime(x)
