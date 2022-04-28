@@ -80,7 +80,7 @@ def get_kafka_df(
         jsonschema = open(
             '/home/julien.peloton/plasticc_alerts/Examples/plasticc_schema/elasticc.v0_9.brokerClassification.avsc',
             'r'
-        )
+        ).read()
         df_kafka = df_struct.select(to_avro("struct", jsonschema).alias("value"))
     else:
         df_kafka = df_struct.select(to_avro("struct").alias("value"))
