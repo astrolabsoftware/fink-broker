@@ -75,9 +75,9 @@ def format_df_to_elasticc(df):
         .withColumn(
             'scores',
             F.array(
-                df['rf_snia_vs_nonia'],
-                df['snn_snia_vs_nonia'],
-                df['snn_sn_vs_all']
+                df['rf_snia_vs_nonia'].astype('float'),
+                df['snn_snia_vs_nonia'].astype('float'),
+                df['snn_sn_vs_all'].astype('float')
             )
         ).withColumn(
             'classifications',
