@@ -32,6 +32,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
 from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.partitioning import convert_to_datetime
 
 def format_df_to_elasticc(df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
@@ -51,25 +52,41 @@ def format_df_to_elasticc(df):
         DataFrame containing data with the ELAsTICC schema 0.9
     """
     cnames = [
-        'alertId', 'diaSourceId',
+        'alertId', 'diaSource.diaSourceId',
         'elasticcPublishTimestamp', 'brokerIngestTimestamp',
         'brokerName', 'brokerVersion', 'explode(array(classifications)) as classifications'
     ]
 
     # Add non existing columns
-    df = df.withColumn('elasticcPublishTimestamp', df['diaSource.midPointTai'])
+    df = df.withColumn(
+        'elasticcPublishTimestamp',
+        F.unix_timestamp(
+            convert_to_datetime(
+                df['diaSource.midPointTai'],
+                F.lit('mjd')
+            )
+        )
+    )
     df = df.withColumn('brokerName', F.lit('Fink'))
     df = df.withColumn('brokerVersion', F.lit('{}'.format(fbvsn)))
 
     # Schema is struct("classifierName", "classifierParams", "classId", "probability")
-    df = df.withColumn(
-        'classifications',
-        F.array(
-            F.struct('rf_snia_vs_nonia_{}'.format(fsvsn), 'coucou', 10, df['rf_snia_vs_nonia']),
-            F.struct('snn_snia_vs_nonia_{}'.format(fsvsn), 'coucou', 10, df['snn_snia_vs_nonia']),
-            F.struct('snn_sn_vs_all_{}'.format(fsvsn), 'coucou', 10, df['snn_sn_vs_all']),
-        )
-    )
+    df = df\
+        .withColumn(
+            'scores',
+            F.array(
+                df['rf_snia_vs_nonia'],
+                df['snn_snia_vs_nonia'],
+                df['snn_sn_vs_all']
+            )
+        ).withColumn(
+            'classifications',
+            F.array(
+                F.struct(F.lit('rf_snia_vs_nonia_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(0)),
+                F.struct(F.lit('snn_snia_vs_nonia_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(1)),
+                F.struct(F.lit('snn_sn_vs_all_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(2)),
+            )
+        ).drop("scores")
 
     return df.selectExpr(cnames)
 
@@ -94,15 +111,7 @@ def main():
     checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint'
 
     # Connect to the TMP science database
-    df = connect_to_raw_database(
-        scitmpdatapath + "/year={}/month={}/day={}".format(
-            args.night[0:4], args.night[4:6], args.night[6:8]
-        ),
-        scitmpdatapath + "/year={}/month={}/day={}".format(
-            args.night[0:4], args.night[4:6], args.night[6:8]
-        ),
-        latestfirst=False
-    )
+    df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
 
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
@@ -113,9 +122,9 @@ def main():
     topicname = args.substream_prefix + 'desc_elasticc'
 
     # Apply user-defined filter -- dummy
-    f1 = df['rf_snia_vs_nonia'] >= 0
-    f2 = df['snn_snia_vs_nonia'] >= 0
-    f3 = df['snn_sn_vs_all'] >= 0
+    f1 = df['rf_snia_vs_nonia'] > 0
+    f2 = df['snn_snia_vs_nonia'] > 0
+    f3 = df['snn_sn_vs_all'] > 0
     df = df.filter(f1 | f2 | f3)
 
     # Wrap alert data
