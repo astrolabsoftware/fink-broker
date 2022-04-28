@@ -185,7 +185,7 @@ def main():
     df = df.filter(f1 | f2 | f3)
 
     # Wrap alert data
-    df = format_df_to_elasticc(spark, df)
+    df = format_df_to_elasticc(df)
 
     # Get the DataFrame for publishing to Kafka (avro serialized)
     df_kafka = get_kafka_df(df, '')
