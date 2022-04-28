@@ -64,11 +64,9 @@ def format_df_to_elasticc(df):
     # Add non existing columns
     df = df.withColumn(
         'elasticcPublishTimestamp',
-        F.unix_timestamp(
-            convert_to_datetime(
-                df['diaSource.midPointTai'],
-                F.lit('mjd')
-            )
+        convert_to_datetime(
+            df['diaSource.midPointTai'],
+            F.lit('mjd')
         )
     )
     df = df.withColumn('brokerName', F.lit('Fink'))
@@ -108,45 +106,7 @@ def format_df_to_elasticc(df):
             ).cast(classifications_schema)
         ).drop("scores")
 
-    elasticc_schema = StructType(
-        [
-            StructField('alertId', LongType(), nullable=False),
-            StructField('diaSourceId', LongType(), nullable=False),
-            StructField('elasticcPublishTimestamp', LongType(), nullable=False),
-            StructField('brokerIngestTimestamp', LongType(), nullable=True),
-            StructField('brokerName', StringType(), nullable=False),
-            StructField('brokerVersion', StringType(), nullable=False),
-            StructField(
-                'classifications',
-                ArrayType(
-                    StructType(
-                        [
-                            StructField('classifierName', StringType(), nullable=False),
-                            StructField('classifierParams', StringType(), nullable=False),
-                            StructField('classId', IntegerType(), nullable=False),
-                            StructField('probability', FloatType(), nullable=False)
-                        ]
-                    )
-                ),
-                nullable=False
-            )
-        ]
-    )
-
-    df = df.selectExpr(cnames)
-
-    # Nullability of columns
-    df.schema['alertId'].nullable = False
-    df.schema['diaSourceId'].nullable = False
-    df.schema['elasticcPublishTimestamp'].nullable = False
-    df.schema['brokerName'].nullable = False
-    df.schema['brokerVersion'].nullable = False
-    df.schema['classifications'].nullable = False
-    for index in range(len(df.schema['classifications'].dataType.elementType)):
-        df.schema['classifications'].dataType.elementType[index].nullable = False
-
-    # Need to find something better...
-    return df
+    return df.selectExpr(cnames)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

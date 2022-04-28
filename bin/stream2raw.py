@@ -108,7 +108,7 @@ def main():
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
             'brokerIngestTimestamp',
-            F.unix_timestamp(F.current_timestamp())
+            F.current_timestamp()
         )
 
     df_partitionedby = df_decoded\
