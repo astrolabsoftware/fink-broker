@@ -24,7 +24,6 @@ import argparse
 import time
 
 from pyspark.sql import functions as F
-from pyspark.sql import SQLContext
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
@@ -38,7 +37,7 @@ from fink_broker.partitioning import convert_to_datetime
 from pyspark.sql.types import StructField, StructType, ArrayType
 from pyspark.sql.types import LongType, StringType, FloatType, IntegerType
 
-def format_df_to_elasticc(spark, df):
+def format_df_to_elasticc(df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
 
     Comments:
@@ -136,9 +135,17 @@ def format_df_to_elasticc(spark, df):
 
     df = df.selectExpr(cnames)
 
+    # Nullability of columns
+    df.schema['alertId'].nullable = False
+    df.schema['diaSourceId'].nullable = False
+    df.schema['elasticcPublishTimestamp'].nullable = False
+    df.schema['brokerName'].nullable = False
+    df.schema['brokerVersion'].nullable = False
+    for index in range(len(df.schema['classifications'].dataType.elementType)):
+        df.schema['classifications'].dataType.elementType[index].nullable = False
+
     # Need to find something better...
-    sqlContext = SQLContext(spark.sparkContext)
-    return sqlContext.createDataFrame(df.rdd, elasticc_schema)
+    return df
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
