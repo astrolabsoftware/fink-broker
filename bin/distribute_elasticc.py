@@ -34,6 +34,9 @@ from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime
 
+from pyspark.sql.types import StructField, StructType, ArrayType
+from pyspark.sql.types import LongType, StringType, FloatType, IntegerType
+
 def format_df_to_elasticc(df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
 
@@ -105,7 +108,35 @@ def format_df_to_elasticc(df):
             ).cast(classifications_schema)
         ).drop("scores")
 
-    return df.selectExpr(cnames)
+    elasticc_schema = StructType(
+        [
+            StructField('alertId', LongType(), nullable=False),
+            StructField('diaSourceId', LongType(), nullable=False),
+            StructField('elasticcPublishTimestamp', LongType(), nullable=False),
+            StructField('brokerIngestTimestamp', LongType(), nullable=True),
+            StructField('brokerName', StringType(), nullable=False),
+            StructField('brokerVersion', StringType(), nullable=False),
+            StructField(
+                'classifications',
+                ArrayType(
+                    StructType(
+                        [
+                            StructField('classifierName', StringType(), nullable=False),
+                            StructField('classifierParams', StringType(), nullable=False),
+                            StructField('classId', IntegerType(), nullable=False),
+                            StructField('probability', FloatType(), nullable=False)
+                        ]
+                    )
+                ),
+                nullable=False
+            )
+        ]
+    )
+
+    df = df.selectExpr(cnames)
+
+    # Need to find something better...
+    return sqlContext.createDataFrame(df.rdd, elasticc_schema)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
