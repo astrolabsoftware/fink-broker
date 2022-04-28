@@ -54,7 +54,8 @@ def format_df_to_elasticc(df):
     cnames = [
         'alertId', 'diaSource.diaSourceId',
         'elasticcPublishTimestamp', 'brokerIngestTimestamp',
-        'brokerName', 'brokerVersion', 'explode(array(classifications)) as classifications'
+        'brokerName', 'brokerVersion',
+        'explode(array(classifications)) as classifications'
     ]
 
     # Add non existing columns
@@ -71,6 +72,7 @@ def format_df_to_elasticc(df):
     df = df.withColumn('brokerVersion', F.lit('{}'.format(fbvsn)))
 
     # Schema is struct("classifierName", "classifierParams", "classId", "probability")
+    classifications_schema = "array<struct<classifierName:string,classifierParams:string,classId:int,probability:float>>"
     df = df\
         .withColumn(
             'scores',
@@ -82,10 +84,25 @@ def format_df_to_elasticc(df):
         ).withColumn(
             'classifications',
             F.array(
-                F.struct(F.lit('rf_snia_vs_nonia_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(0)),
-                F.struct(F.lit('snn_snia_vs_nonia_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(1)),
-                F.struct(F.lit('snn_sn_vs_all_{}'.format(fsvsn)), F.lit('coucou'), F.lit(10), F.col("scores").getItem(2)),
-            )
+                F.struct(
+                    F.lit('rf_snia_vs_nonia_{}'.format(fsvsn)),
+                    F.lit('coucou'),
+                    F.lit(10),
+                    F.col("scores").getItem(0)
+                ),
+                F.struct(
+                    F.lit('snn_snia_vs_nonia_{}'.format(fsvsn)),
+                    F.lit('coucou'),
+                    F.lit(10),
+                    F.col("scores").getItem(1)
+                ),
+                F.struct(
+                    F.lit('snn_sn_vs_all_{}'.format(fsvsn)),
+                    F.lit('coucou'),
+                    F.lit(10),
+                    F.col("scores").getItem(2)
+                ),
+            ).cast(classifications_schema)
         ).drop("scores")
 
     return df.selectExpr(cnames)
