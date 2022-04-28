@@ -13,7 +13,7 @@ DAY=${NIGHT:6:2}
 
 #NIGHT=${YEAR}${MONTH}${DAY}
 
-$(hdfs dfs -test -d /user/julien.peloton/current/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+$(hdfs dfs -test -d /user/julien.peloton/online/science/year=${YEAR}/month=${MONTH}/day=${DAY})
 if [[ $? == 0 ]]; then
     echo "merge_and_clean"
     fink start merge -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_high --night ${NIGHT} > ${FINK_HOME}/broker_logs/merge_and_clean_${NIGHT}.log 2>&1
@@ -39,5 +39,11 @@ if [[ $? == 0 ]]; then
     echo "Update statistics"
     fink start stats -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT}
 
-    exit
+fi
+
+# Check if data is on the archive
+# If yes, delete temp ones
+$(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+if [[ $? == 0 ]]; then
+  hdfs dfs -rm -r /user/julien.peloton/online
 fi

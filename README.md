@@ -2,7 +2,7 @@
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=alert_status)](https://sonarcloud.io/dashboard?id=finkbroker)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=finkbroker&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=finkbroker)
-[![Sentinel](https://github.com/astrolabsoftware/fink-broker/workflows/Sentinel/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3ASentinel)
+[![Sentinel](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml)
 [![PEP8](https://github.com/astrolabsoftware/fink-broker/workflows/PEP8/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3APEP8)
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
 [![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
@@ -11,6 +11,7 @@
 
 # Latest News
 
+* 04/22: Release [2.0](https://github.com/astrolabsoftware/fink-broker/milestone/7?closed=1), [2.1](https://github.com/astrolabsoftware/fink-broker/milestone/8?closed=1)
 * 01/22: Release [1.4](https://github.com/astrolabsoftware/fink-broker/pull/518)
 * 11/21: Release [1.3](https://github.com/astrolabsoftware/fink-broker/pull/495)
 * 11/21: Release [1.2](https://github.com/astrolabsoftware/fink-broker/pull/492)
@@ -42,8 +43,8 @@ Learning Fink is easy whether you are a developer or a scientist:
 
 ## Documentation
 
-Fink's documentation is hosted [here](https://fink-broker.rtfd.io).
+Fink's documentation is hosted at [https://fink-broker.rtfd.io](https://fink-broker.rtfd.io).
 
 ## Science Portal
 
-You can explore all Fink data at [https://fink-portal.org](https://fink-portal.org).
+You can explore all Fink data in the dedicated Portal: [https://fink-portal.org](https://fink-portal.org).

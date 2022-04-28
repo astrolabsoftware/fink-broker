@@ -1,4 +1,4 @@
-# Copyright 2020 AstroLab Software
+# Copyright 2020-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ from astropy.time import Time
 from fink_broker.tester import spark_unit_tests
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def jd_to_datetime(jd: float):
+def jd_to_datetime(jd: pd.Series) -> pd.Series:
     """ Convert Julian date into datetime (timestamp)
 
     Parameters

@@ -27,10 +27,11 @@ import time
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
 from fink_broker.distributionUtils import get_kafka_df
-from fink_broker.filters import apply_user_defined_filter
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
-from fink_science.utilities import concat_col
+from fink_utils.spark.utils import concat_col
+
+from fink_utils.spark.utils import apply_user_defined_filter
 
 # User-defined topics
 userfilters = [
@@ -39,10 +40,11 @@ userfilters = [
     'fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates',
     'fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates',
     'fink_filters.filter_kn_candidates.filter.kn_candidates',
-    'fink_filters.filter_early_kn_candidates.filter.early_kn_candidates'
+    'fink_filters.filter_early_kn_candidates.filter.early_kn_candidates',
+    'fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates',
+    'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
+    'fink_filters.filter_yso_candidates.filter.yso_candidates'
 ]
-# does not work because of nested args
-# 'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -98,10 +100,10 @@ def main():
     broker_list = args.distribution_servers
     for userfilter in userfilters:
         # The topic name is the filter name
-        topicname = 'fink_' + userfilter.split('.')[-1] + '_ztf'
+        topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
 
         # Apply user-defined filter
-        df_tmp = apply_user_defined_filter(df, userfilter)
+        df_tmp = apply_user_defined_filter(df, userfilter, logger)
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
