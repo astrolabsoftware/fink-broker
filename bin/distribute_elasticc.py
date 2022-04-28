@@ -149,7 +149,7 @@ def main():
     df = format_df_to_elasticc(df)
 
     # Get the DataFrame for publishing to Kafka (avro serialized)
-    df_kafka = get_kafka_df(df, '')
+    df_kafka = get_kafka_df(df, '', elasticc=True)
 
     # Ensure that the topic(s) exist on the Kafka Server)
     disquery = df_kafka\
