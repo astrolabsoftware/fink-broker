@@ -141,6 +141,7 @@ def format_df_to_elasticc(df):
     df.schema['elasticcPublishTimestamp'].nullable = False
     df.schema['brokerName'].nullable = False
     df.schema['brokerVersion'].nullable = False
+    df.schema['classifications'].nullable = False
     for index in range(len(df.schema['classifications'].dataType.elementType)):
         df.schema['classifications'].dataType.elementType[index].nullable = False
 
