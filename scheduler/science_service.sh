@@ -22,7 +22,7 @@ while true; do
         #echo "fink start raw2science -c conf_cluster/fink.conf.ztf_raw2science --night ${NIGHT} --exit_after ${LEASETIME}"
 
         # LEASETIME must be computed by taking the difference between now and max end (9pm CE(S)T)
-        LEASETIME=$(( `date +'%s' -d '21:00 today'` - `date +'%s' -d 'now'` ))
+        LEASETIME=$(( `date +'%s' -d '17:00 today'` - `date +'%s' -d 'now'` ))
 
         ${FINK_HOME}/bin/fink start raw2science -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_raw2science --night ${NIGHT} --exit_after ${LEASETIME} #> ${FINK_HOME}/raw2science_${NIGHT}.log 2>&1 &
         exit
