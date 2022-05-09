@@ -34,9 +34,6 @@ from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime
 
-from pyspark.sql.types import StructField, StructType, ArrayType
-from pyspark.sql.types import LongType, StringType, FloatType, IntegerType
-
 def format_df_to_elasticc(df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
 
