@@ -20,7 +20,7 @@ while true; do
         echo "Launching service"
 
         # LEASETIME must be computed by taking the difference between now and max end (9pm CEST)
-        LEASETIME=$(( `date +'%s' -d '21:00 today'` - `date +'%s' -d 'now'` ))
+        LEASETIME=$(( `date +'%s' -d '17:00 today'` - `date +'%s' -d 'now'` ))
 
         ${FINK_HOME}/bin/fink start distribution -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_distribute --night ${NIGHT} --exit_after ${LEASETIME} #> ${FINK_HOME}/raw2science_${NIGHT}.log 2>&1 &
         exit
