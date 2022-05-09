@@ -117,7 +117,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start index_archival -c $conf --night 20190903 --index_table ssnamenr_jd
   fink start index_archival -c $conf --night 20190903 --index_table tracklet_objectId
   # Need API KEY
-  # fink start index_archival -c $conf --night 20190903 --index_table tns_jd
+  # fink start index_archival -c $conf --night 20190903 --index_table tns_jd_objectId
 
   fink start stats -c $conf --night 20190903
 
