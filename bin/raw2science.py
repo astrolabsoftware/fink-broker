@@ -32,9 +32,10 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import jd_to_datetime
+from fink_broker.partitioning import convert_to_datetime
 
 from fink_broker.science import apply_science_modules
+from fink_broker.science import apply_science_modules_elasticc
 
 from fink_science import __version__ as fsvsn
 
@@ -70,14 +71,21 @@ def main():
         latestfirst=False
     )
 
-    # Apply quality cuts
-    logger.info("Applying quality cuts")
-    df = df\
-        .filter(df['candidate.nbad'] == 0)\
-        .filter(df['candidate.rb'] >= 0.55)
-
     # Apply science modules
-    df = apply_science_modules(df, logger)
+    if 'candidate' in df.columns:
+        # Apply quality cuts
+        logger.info("Applying quality cuts")
+        df = df\
+            .filter(df['candidate.nbad'] == 0)\
+            .filter(df['candidate.rb'] >= 0.55)
+
+        df = apply_science_modules(df, logger)
+        timecol = 'candidate.jd'
+        converter = lambda x: convert_to_datetime(x)
+    elif 'diaSource' in df.columns:
+        df = apply_science_modules_elasticc(df, logger)
+        timecol = 'diaSource.midPointTai'
+        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
 
     # Add library versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
@@ -89,7 +97,7 @@ def main():
     # re-create partitioning columns if needed.
     if 'timestamp' not in df.columns:
         df = df\
-            .withColumn("timestamp", jd_to_datetime(df['candidate.jd']))
+            .withColumn("timestamp", converter(df[timecol]))
 
     if "year" not in df.columns:
         df = df\

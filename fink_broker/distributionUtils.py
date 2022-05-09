@@ -25,11 +25,12 @@ from fink_science import __version__ as fsvsn
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
+from pyspark.sql.avro.functions import to_avro as to_avro_native
 
 from fink_broker.tester import spark_unit_tests
 
 def get_kafka_df(
-        df: DataFrame, schema_path: str, saveschema: bool = False) -> DataFrame:
+        df: DataFrame, schema_path: str, saveschema: bool = False, elasticc: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -73,7 +74,16 @@ def get_kafka_df(
     df_struct = df.select(struct(df.columns).alias("struct"))
 
     # Convert into avro and save the schema
-    df_kafka = df_struct.select(to_avro("struct").alias("value"))
+    if elasticc:
+        # The idea is to force the output schema
+        # Need better handling of this though...
+        jsonschema = open(
+            '/home/julien.peloton/plasticc_alerts/Examples/plasticc_schema/elasticc.v0_9.brokerClassification.avsc',
+            'r'
+        ).read()
+        df_kafka = df_struct.select(to_avro_native("struct", jsonschema).alias("value"))
+    else:
+        df_kafka = df_struct.select(to_avro("struct").alias("value"))
 
     # Add a key based on schema versions
     df_kafka = df_kafka.withColumn('key', lit('{}_{}'.format(fbvsn, fsvsn)))

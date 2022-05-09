@@ -173,6 +173,9 @@ def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession
     if shuffle_partitions is not None:
         spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
 
+    # Set the time to UTC
+    spark.conf.set("spark.sql.session.timeZone", "UTC")
+
     # Set spark log level to WARN
     spark.sparkContext.setLogLevel("WARN")
 

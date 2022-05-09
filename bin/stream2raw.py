@@ -25,8 +25,7 @@ in an HDFS-compatible fault-tolerant file system.
 See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
-from pyspark.sql.functions import udf
-from pyspark.sql.functions import date_format
+from pyspark.sql import functions as F
 
 import fastavro
 import argparse
@@ -39,7 +38,7 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import jd_to_datetime
+from fink_broker.partitioning import convert_to_datetime
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -81,7 +80,7 @@ def main():
         )
     elif 'public2.alerts.ztf' in args.servers:
         # Decode on-the-fly using fastavro
-        f = udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
+        f = F.udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
         df_decoded = df.select(
             [
                 f(df['value']).alias("decoded")
@@ -99,16 +98,32 @@ def main():
     df_decoded = df_decoded.selectExpr(cnames)
 
     # Partition the data hourly
+    if 'candidate' in df_decoded.columns:
+        timecol = 'candidate.jd'
+        converter = lambda x: convert_to_datetime(x)
+    elif 'diaSource' in df_decoded.columns:
+        timecol = 'diaSource.midPointTai'
+        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+
+        # Add ingestion timestamp
+        df_decoded = df_decoded.withColumn(
+            'brokerIngestTimestamp',
+            F.current_timestamp()
+        )
+
     df_partitionedby = df_decoded\
-        .withColumn("timestamp", jd_to_datetime(df_decoded['candidate.jd']))\
-        .withColumn("year", date_format("timestamp", "yyyy"))\
-        .withColumn("month", date_format("timestamp", "MM"))\
-        .withColumn("day", date_format("timestamp", "dd"))
+        .withColumn("timestamp", converter(df_decoded[timecol]))\
+        .withColumn("year", F.date_format("timestamp", "yyyy"))\
+        .withColumn("month", F.date_format("timestamp", "MM"))\
+        .withColumn("day", F.date_format("timestamp", "dd"))
 
     # Append new rows every `tinterval` seconds
     # and drop duplicates see fink-broker/issues/443
+    if 'candid' in df_decoded.columns:
+        idcol = 'candid'
+        df_partitionedby = df_partitionedby.dropDuplicates([idcol])
+
     countquery_tmp = df_partitionedby\
-        .dropDuplicates(["candid"])\
         .writeStream\
         .outputMode("append") \
         .format("parquet") \

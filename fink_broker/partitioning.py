@@ -23,26 +23,48 @@ from astropy.time import Time
 from fink_broker.tester import spark_unit_tests
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def jd_to_datetime(jd: pd.Series) -> pd.Series:
-    """ Convert Julian date into datetime (timestamp)
+def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
+    """ Convert date into datetime (timestamp)
+
+    Be careful if you are using this outside Fink. First, you need to check
+    you timezone defined in Spark:
+
+    ```
+    spark.conf.get("spark.sql.session.timeZone")
+    ```
+
+    If this is something else than UTC, then change it:
+
+    ```
+    spark.conf.set("spark.sql.session.timeZone", 'UTC')
+    ```
+
 
     Parameters
     ----------
     jd: double
         Julian date
+    format: str
+        Astropy time format, e.g. jd, mjd, ...
 
     Returns
     ----------
     out: datetime
-        Datetime object
+        Datetime object in UTC
 
     Examples
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("online/raw")
-    >>> df = df.withColumn('datetime', jd_to_datetime(df['candidate.jd']))
+    >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
+    >>> pdf = df.select('datetime').toPandas()
     """
-    return pd.Series(Time(jd.values, format='jd').to_datetime())
+    if format is None:
+        formatval = 'jd'
+    else:
+        formatval = format.values[0]
+
+    return pd.Series(Time(jd.values, format=formatval).to_datetime())
 
 def numPart(df, partition_size=128.):
     """ Compute the idle number of partitions of a DataFrame

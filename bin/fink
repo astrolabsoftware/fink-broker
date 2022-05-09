@@ -121,6 +121,10 @@ while [ "$#" -gt 0 ]; do
       TNS_SANDBOX=true
       shift 1
       ;;
+    --elasticc)
+      ELASTICC=true
+      shift 1
+      ;;
     --exit_after)
         EXIT_AFTER="-exit_after $2"
         shift 2
@@ -265,6 +269,11 @@ elif [[ $service == "raw2science" ]]; then
     -night ${NIGHT} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution" ]]; then
+  if [[ $ELASTICC == true ]]; then
+    SCRIPT=${FINK_HOME}/bin/distribute_elasticc.py
+  else
+    SCRIPT=${FINK_HOME}/bin/distribute.py
+  fi
   # Read configuration for redistribution
   source ${FINK_HOME}/conf/fink.conf.distribution
   # Start the Spark Producer
@@ -275,7 +284,7 @@ elif [[ $service == "distribution" ]]; then
   --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
-  ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
+  $SCRIPT ${HELP_ON_SERVICE} \
   -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
