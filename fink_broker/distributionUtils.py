@@ -25,6 +25,7 @@ from fink_science import __version__ as fsvsn
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
+from pyspark.sql.avro.functions import to_avro as to_avro_native
 
 from fink_broker.tester import spark_unit_tests
 
@@ -76,12 +77,11 @@ def get_kafka_df(
     if elasticc:
         # The idea is to force the output schema
         # Need better handling of this though...
-        from pyspark.sql.avro.functions import to_avro
         jsonschema = open(
             '/home/julien.peloton/plasticc_alerts/Examples/plasticc_schema/elasticc.v0_9.brokerClassification.avsc',
             'r'
         ).read()
-        df_kafka = df_struct.select(to_avro("struct", jsonschema).alias("value"))
+        df_kafka = df_struct.select(to_avro_native("struct", jsonschema).alias("value"))
     else:
         df_kafka = df_struct.select(to_avro("struct").alias("value"))
 
