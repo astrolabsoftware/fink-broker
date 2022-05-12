@@ -72,6 +72,7 @@ jobs:
     - name: Run test suites [prod]
       if: matrix.container == 'julienpeloton/fink-ci:prod'
       run: |
+        pip install -e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect --upgrade
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
