@@ -162,6 +162,8 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
+
+    >>> pdf = df.select('rf_kn_vs_nonkn').toPandas()
     """
     # Retrieve time-series information
     to_expand = [
