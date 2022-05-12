@@ -335,7 +335,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "online/raw")
+        root, "datatest")
 
     globs['elasticc_alert_sample'] = os.path.join(
         root, "elasticc_parquet")
