@@ -31,7 +31,7 @@ from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
-from fink_science.snad.processor import extract_features_snad
+from fink_science.ad_features.processor import extract_features_ad
 
 from fink_broker.tester import spark_unit_tests
 
@@ -244,9 +244,9 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     # Apply level one processor: snad (light curve features)
-    logger.info("New processor: snad")
-    snad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
-    df = df.withColumn('lc_features', extract_features_snad(*snad_args))
+    logger.info("New processor: ad_features")
+    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
+    df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
