@@ -33,6 +33,11 @@ if [[ $? == 0 ]]; then
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tns_jd --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/index_tns_jd_${NIGHT}.log 2>&1
 
+    echo "Call to Fink-Fat"
+    fink_fat associations candidates --config custom_cand.conf > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
+    fink_fat solve_orbit candidates local --config custom_cand.conf > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
+    # push to HBase
+
     echo "Push TNS candidates"
     fink start push_to_tns -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/tns_${NIGHT}.log 2>&1
 
