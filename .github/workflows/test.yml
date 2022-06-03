@@ -58,7 +58,6 @@ jobs:
         echo "PYTHONPATH: $PYTHONPATH"
         echo "JAVA_HOME: $JAVA_HOME"
         echo `python -V`
-        
     - name: Run test suites [dev]
       if: matrix.container == 'julienpeloton/fink-ci:dev'
       run: |
