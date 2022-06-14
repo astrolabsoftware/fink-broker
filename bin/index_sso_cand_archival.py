@@ -20,10 +20,10 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-from pyspark.sql.functions import lit, concat_ws, col
+from pyspark.sql.functions import lit, concat_ws
 
-import argparse
 import os
+import argparse
 import pandas as pd
 
 from fink_broker.parser import getargs
