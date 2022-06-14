@@ -72,7 +72,7 @@ def main():
     index_name = '.orb_cand'
 
     # add the rowkey
-    df_cand = df_cand.withColumn(
+    df_orb = df_orb.withColumn(
         index_row_key_name,
         concat_ws('_', *[F.lit('cand'), 'trajectory_id'])
     )
