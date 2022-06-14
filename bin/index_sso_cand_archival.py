@@ -68,8 +68,14 @@ def main():
 
     cf = {i: 'd' for i in df_orb.columns}
 
-    index_row_key_name = 'trajectory_id'
+    index_row_key_name = 'cand_trajectory_id'
     index_name = '.orb_cand'
+
+    # add the rowkey
+    df_cand = df_cand.withColumn(
+        index_row_key_name,
+        concat_ws('_', *[F.lit('cand'), 'trajectory_id'])
+    )
 
     push_to_hbase(
         df=df_orb,
