@@ -43,7 +43,9 @@ if [[ $? == 0 ]]; then
     echo "Call to Fink-Fat"
     fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
     fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
-    # push to HBase
+
+    echo "Push SSO candidates to HBase"
+    fink start index_sso_cand_archival -c $FINK_HOME/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/index_sso_cand_archival_${NIGHT}.log 2>&1
 
     echo "Push TNS candidates"
     fink start push_to_tns -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/tns_${NIGHT}.log 2>&1
