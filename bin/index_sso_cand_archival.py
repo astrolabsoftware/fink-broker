@@ -74,7 +74,7 @@ def main():
     # add the rowkey
     df_orb = df_orb.withColumn(
         index_row_key_name,
-        concat_ws('_', *[F.lit('cand'), 'trajectory_id'])
+        concat_ws('_', *[lit('cand'), 'trajectory_id'])
     )
 
     push_to_hbase(
