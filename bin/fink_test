@@ -119,7 +119,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Need API KEY
   # fink start index_archival -c $conf --night 20190903 --index_table tns_jd_objectId
 
-  fink start index_sso_cand_archival -c $conf --night 20190903 --fink_fat_output $FINK_FAT_OUTPUT
+  fink start index_sso_cand_archival -c $conf --night 20190903
 
   fink start stats -c $conf --night 20190903
 
