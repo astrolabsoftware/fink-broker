@@ -64,7 +64,6 @@ def main():
         if ' ' in col_:
             pdf_orb = pdf_orb.rename({col_: col_.replace(' ', '_')}, axis='columns')
 
-    # Question: do we need ssnamenr column?
     df_orb = spark.createDataFrame(pdf_orb)
 
     cf = {i: 'd' for i in df_orb.columns}
@@ -74,6 +73,36 @@ def main():
 
     push_to_hbase(
         df=df_orb,
+        table_name=args.science_db_name + index_name,
+        rowkeyname=index_row_key_name,
+        cf=cf
+    )
+
+    # Table 2: candidates
+
+    # connect to fink_fat_output
+    pdf_cand = pd.read_parquet(
+        os.path.join(args.fink_fat_output, 'trajectory_orb.parquet')
+    )
+
+    # drop unused columns
+    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated'], axis='columns')
+
+    df_cand = spark.createDataFrame(pdf_cand)
+
+    cf = {i: 'd' for i in df_cand.columns}
+
+    index_row_key_name = 'jd_trajectory_id'
+    index_name = '.sso_cand'
+
+    # add the rowkey
+    df_cand = df_cand.withColumn(
+        index_row_key_name,
+        concat_ws('_', *['jd', 'trajectory_id'])
+    )
+
+    push_to_hbase(
+        df=df_cand,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf
