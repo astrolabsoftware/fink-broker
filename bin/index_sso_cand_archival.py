@@ -56,11 +56,11 @@ def main():
     )
 
     # renaming
-    for col_ in pdf.columns:
+    for col_ in pdf_orb.columns:
         if '. ' in col_:
-            pdf = pdf.rename({col_: col_.replace('. ', '_')}, axis='columns')
+            pdf_orb = pdf_orb.rename({col_: col_.replace('. ', '_')}, axis='columns')
         if ' ' in col_:
-            pdf = pdf.rename({col_: col_.replace(' ', '_')}, axis='columns')
+            pdf_orb = pdf_orb.rename({col_: col_.replace(' ', '_')}, axis='columns')
 
     # Question: do we need ssnamenr column?
     df_orb = spark.createDataFrame(pdf_orb)
