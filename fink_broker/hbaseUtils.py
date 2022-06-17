@@ -43,12 +43,19 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     df: DataFrame
         Spark DataFrame with the table data
     """
+    # Grab the running Spark Session,
+    # otherwise create it.
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
     df = spark.read.option("catalog", catalog)\
         .format("org.apache.hadoop.hbase.spark")\
         .option("hbase.spark.use.hbasecontext", False)\
         .option("hbase.spark.pushdown.columnfilter", True)\
         .load()\
         .filter(~col(rowkey).startswith('schema_'))
+
     return df
 
 def write_catalog_on_disk(catalog, catalogname) -> None:
