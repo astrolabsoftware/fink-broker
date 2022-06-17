@@ -24,19 +24,15 @@
 import argparse
 import json
 
-from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
-from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
+from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
-from fink_broker.hbaseUtils import construct_schema_row
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-
-from fink_science import __version__ as fsvsn
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -78,9 +74,12 @@ def main():
     # Create and attach the rowkey
     df, row_key_name = attach_rowkey(df)
 
-    # construct the hbase catalog
-    hbcatalog = construct_hbase_catalog_from_flatten_schema(
-        df.schema, args.science_db_name, rowkeyname=row_key_name, cf=cf)
+    push_to_hbase(
+        df=df,
+        table_name=args.science_db_name,
+        rowkeyname=row_key_name,
+        cf=cf
+    )
 
     # Save the catalog on disk (local)
     with open(args.science_db_catalog, 'w') as json_file:
@@ -90,40 +89,10 @@ def main():
         # Print for visual inspection
         print(hbcatalog)
     else:
-        # Push the data using the shc connector
-        df.write\
-            .options(catalog=hbcatalog, newtable=50)\
-            .format("org.apache.hadoop.hbase.spark")\
-            .option("hbase.spark.use.hbasecontext", False)\
-            .save()
-
-        # Construct the schema row - inplace replacement
-        schema_row_key_name = 'schema_version'
-        df = df.withColumnRenamed(row_key_name, schema_row_key_name)
-
-        df_schema = construct_schema_row(
-            df,
-            rowkeyname=schema_row_key_name,
-            version='schema_{}_{}'.format(fbvsn, fsvsn))
-
-        # construct the hbase catalog for the schema
-        hbcatalog_schema = construct_hbase_catalog_from_flatten_schema(
-            df_schema.schema,
-            args.science_db_name,
-            rowkeyname=schema_row_key_name,
-            cf=cf)
-
         # Save the catalog on disk (local)
         catname = args.science_db_catalog.replace('.json', '_schema_row.json')
         with open(catname, 'w') as json_file:
             json.dump(hbcatalog_schema, json_file)
-
-        # Push the data using the shc connector
-        df_schema.write\
-            .options(catalog=hbcatalog_schema, newtable=5)\
-            .format("org.apache.hadoop.hbase.spark")\
-            .option("hbase.spark.use.hbasecontext", False)\
-            .save()
 
 
 if __name__ == "__main__":
