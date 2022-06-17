@@ -23,7 +23,6 @@ import pyspark.sql.functions as F
 
 import os
 import argparse
-import pandas as pd
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
@@ -64,7 +63,7 @@ def main():
 
     # group by
     df_grouped = group_by_key(df, 'jd_trajectory_id', position=1)
-    df_grouped.withColumnRenamed('id', 'trajectory_id')
+    df_grouped = df_grouped.withColumnRenamed('id', 'trajectory_id')
 
     # Definitions
     index_row_key_name = 'count_trajectory_id'
@@ -99,7 +98,7 @@ def main():
 
     # group by
     df_grouped = group_by_key(df, 'ssnamenr_jd', position=1)
-    df_grouped.withColumnRenamed('id', 'ssnamenr')
+    df_grouped = df_grouped.withColumnRenamed('id', 'ssnamenr')
 
     # Definitions
     index_row_key_name = 'count_ssnamenr'
