@@ -37,7 +37,7 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    with open(args.science_db_catalog) as f:
+    with open(os.path.join(args.science_db_catalogs, 'ztf.json')) as f:
         catalog = json.load(f)
 
     catalog_dic = json.loads(catalog)

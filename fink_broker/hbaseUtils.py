@@ -18,12 +18,38 @@ import json
 import numpy as np
 
 from pyspark.sql.functions import concat_ws, col
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
 from fink_broker.tester import spark_unit_tests
+
+def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
+    """ Load table data from HBase into a Spark DataFrame
+
+    The row(s) containing the different schemas are skipped (only data is loaded)
+
+    Parameters
+    ----------
+    catalog: str
+        Json string containing the HBase table. See
+        `fink_utils.hbase` for more information.
+    rowkey: str
+        Name of the rowkey
+
+    Returns
+    ----------
+    df: DataFrame
+        Spark DataFrame with the table data
+    """
+    df = spark.read.option("catalog", catalog)\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
+        .option("hbase.spark.pushdown.columnfilter", True)\
+        .load()\
+        .filter(~col(rowkey).startswith('schema_'))
+    return df
 
 def write_catalog_on_disk(catalog, catalogname) -> None:
     """ Save HBase catalog in json format on disk

@@ -78,10 +78,10 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [SCIENCE_DB_NAME]
         """)
     parser.add_argument(
-        '-science_db_catalog', type=str, default='',
+        '-science_db_catalogs', type=str, default='',
         help="""
-        The path of HBase catalog
-        [SCIENCE_DB_CATALOG]
+        The path for HBase table catalogs. Must exist.
+        [SCIENCE_DB_CATALOGS]
         """)
     parser.add_argument(
         '-log_level', type=str, default='',

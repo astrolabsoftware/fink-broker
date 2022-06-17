@@ -21,7 +21,6 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-import os
 import argparse
 
 from fink_broker.parser import getargs
@@ -79,7 +78,7 @@ def main():
         table_name=args.science_db_name,
         rowkeyname=row_key_name,
         cf=cf,
-        catfolder=os.environ['FINK_HOME']
+        catfolder=args.science_db_catalogs
     )
 
 
