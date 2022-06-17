@@ -121,6 +121,9 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
 
   fink start index_sso_cand_archival -c $conf --night 20190903
 
+  # check the catalogs have been written
+  ls ${FINK_HOME}/*.json
+
   fink start stats -c $conf --night 20190903
 
   fink start check_science_portal -c $conf
