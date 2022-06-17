@@ -31,15 +31,13 @@ import os
 import numpy as np
 import pandas as pd
 
-from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
-from fink_broker.hbaseUtils import construct_hbase_catalog_from_flatten_schema
 from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
-from fink_broker.hbaseUtils import construct_schema_row
+from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.science import ang2pix
 
 from fink_filters.classification import extract_fink_classification
@@ -50,8 +48,6 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-
-from fink_science import __version__ as fsvsn
 
 
 def main():
@@ -299,46 +295,12 @@ def main():
             ] + common_cols
         )
 
-    # construct the time catalog
-    hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
-        df_index.schema,
-        args.science_db_name + index_name,
+    push_to_hbase(
+        df=df_index,
+        table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf
     )
-
-    # Push index table
-    df_index.write\
-        .options(catalog=hbcatalog_index, newtable=50)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
-        .save()
-
-    # Construct the schema row - inplace replacement
-    schema_row_key_name = 'schema_version'
-    df_index = df_index.withColumnRenamed(
-        index_row_key_name,
-        schema_row_key_name
-    )
-
-    df_index_schema = construct_schema_row(
-        df_index,
-        rowkeyname=schema_row_key_name,
-        version='schema_{}_{}'.format(fbvsn, fsvsn))
-
-    # construct the hbase catalog for the schema
-    hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
-        df_index_schema.schema,
-        args.science_db_name + index_name,
-        rowkeyname=schema_row_key_name,
-        cf=cf)
-
-    # Push the data using the shc connector
-    df_index_schema.write\
-        .options(catalog=hbcatalog_index_schema, newtable=50)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
-        .save()
 
 
 if __name__ == "__main__":
