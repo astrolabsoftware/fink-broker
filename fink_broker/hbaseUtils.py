@@ -12,19 +12,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import json
+
+import numpy as np
+
 from pyspark.sql.functions import concat_ws, col
 from pyspark.sql import SparkSession
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
-import numpy as np
-
-import os
-
 from fink_broker.tester import spark_unit_tests
 
-def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50) -> None:
+def write_catalog_on_disk(catalog, catalogname) -> None:
+    """ Save HBase catalog in json format on disk
+
+    Parameters
+    ----------
+    catalog: str
+        Str-dictionary containing the HBase catalog constructed
+        from `construct_hbase_catalog_from_flatten_schema`
+    catalogname: str
+        Name of the catalog on disk
+    """
+    with open(catalogname, 'w') as json_file:
+        json.dump(catalog, json_file)
+
+def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> None:
     """ Push DataFrame data to HBase
 
     Parameters
@@ -39,6 +54,8 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50) -> None:
         Dictionnary containing column names with column family
     nregion: int, optional
         Number of region to create if the table is newly created. Default is 50.
+    catfolder: str
+        Folder to write catalogs (must exist). Default is current directory.
     """
     # construct the catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
@@ -54,6 +71,10 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50) -> None:
         .format("org.apache.hadoop.hbase.spark")\
         .option("hbase.spark.use.hbasecontext", False)\
         .save()
+
+    # write catalog for the table data
+    file_name = table_name + '.json'
+    write_catalog_on_disk(hbcatalog_index, os.path.join(catfolder, file_name))
 
     # Construct the schema row - inplace replacement
     schema_row_key_name = 'schema_version'
@@ -80,6 +101,12 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50) -> None:
         .format("org.apache.hadoop.hbase.spark")\
         .option("hbase.spark.use.hbasecontext", False)\
         .save()
+
+    # write catalog for the schema row
+    file_name = table_name + '_schema_row.json'
+    write_catalog_on_disk(
+        hbcatalog_index_schema, os.path.join(catfolder, file_name)
+    )
 
 def load_science_portal_column_names():
     """ Load names of the alert fields to use in the science portal.

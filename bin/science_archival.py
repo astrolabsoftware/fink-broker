@@ -21,8 +21,9 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-import argparse
+import os
 import json
+import argparse
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
@@ -78,21 +79,9 @@ def main():
         df=df,
         table_name=args.science_db_name,
         rowkeyname=row_key_name,
-        cf=cf
+        cf=cf,
+        catfolder=os.environ['FINK_HOME']
     )
-
-    # Save the catalog on disk (local)
-    with open(args.science_db_catalog, 'w') as json_file:
-        json.dump(hbcatalog, json_file)
-
-    if args.save_science_db_catalog_only:
-        # Print for visual inspection
-        print(hbcatalog)
-    else:
-        # Save the catalog on disk (local)
-        catname = args.science_db_catalog.replace('.json', '_schema_row.json')
-        with open(catname, 'w') as json_file:
-            json.dump(hbcatalog_schema, json_file)
 
 
 if __name__ == "__main__":

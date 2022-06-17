@@ -21,24 +21,24 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
-from pyspark.sql.functions import lit, concat_ws, col
-from pyspark.sql.functions import arrays_zip, explode
-from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import StringType
-
-import argparse
 import os
+import argparse
 import numpy as np
 import pandas as pd
 
-from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, load_parquet_files
+from pyspark.sql.types import StringType
+from pyspark.sql.functions import lit, concat_ws, col
+from pyspark.sql.functions import arrays_zip, explode
+from pyspark.sql.functions import pandas_udf, PandasUDFType
 
-from fink_broker.hbaseUtils import load_science_portal_column_names
-from fink_broker.hbaseUtils import assign_column_family_names
+from fink_broker.parser import getargs
+from fink_broker.science import ang2pix
 from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import push_to_hbase
-from fink_broker.science import ang2pix
+from fink_broker.hbaseUtils import assign_column_family_names
+from fink_broker.hbaseUtils import load_science_portal_column_names
+from fink_broker.sparkUtils import init_sparksession, load_parquet_files
+from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
 
@@ -46,9 +46,6 @@ from fink_tns.utils import download_catalog
 
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -299,7 +296,8 @@ def main():
         df=df_index,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
-        cf=cf
+        cf=cf,
+        catfolder=os.environ['FINK_HOME']
     )
 
 
