@@ -83,7 +83,7 @@ def main():
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=os.environ['FINK_HOME']
+        catfolder=args.science_db_catalogs
     )
 
     # Table 2: Known SSO
@@ -118,7 +118,7 @@ def main():
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=os.environ['FINK_HOME']
+        catfolder=args.science_db_catalogs
     )
 
 
