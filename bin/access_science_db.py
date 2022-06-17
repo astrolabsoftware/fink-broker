@@ -15,6 +15,7 @@
 # limitations under the License.
 """Access the science database, and read alerts. HBase must be installed.
 """
+import os
 import argparse
 import json
 

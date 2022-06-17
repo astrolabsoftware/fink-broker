@@ -24,9 +24,6 @@ from fink_broker.sparkUtils import init_sparksession
 from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker import __version__ as fbvsn
-
-from fink_science import __version__ as fsvsn
 
 from fink_filters.classification import extract_fink_classification
 
