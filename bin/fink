@@ -352,6 +352,15 @@ elif [[ $service == "index_archival" ]]; then
   -index_table ${INDEXTABLE} \
   -tns_folder ${TNS_FOLDER} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "index_sso_cand_archival" ]]; then
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/index_sso_cand_archival.py ${HELP_ON_SERVICE} \
+  -science_db_name ${SCIENCE_DB_NAME} \
+  -night ${NIGHT} \
+  -fink_fat_output ${FINK_FAT_OUTPUT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "push_to_tns" ]]; then
   # Check if we just need to test
   if [[ $TNS_SANDBOX = true ]] ; then

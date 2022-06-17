@@ -224,6 +224,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Prefix for outgoing substreams
         [SUBSTREAM_PREFIX]
         """)
+    parser.add_argument(
+        '-fink_fat_output', type=str, default='',
+        help="""
+        Folder that contains fink-fat output parquet files
+        [FINK_FAT_OUTPUT]
+        """)
     args = parser.parse_args(None)
     return args
 

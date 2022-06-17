@@ -15,11 +15,71 @@
 from pyspark.sql.functions import concat_ws, col
 from pyspark.sql import SparkSession
 
+from fink_broker import __version__ as fbvsn
+from fink_science import __version__ as fsvsn
+
 import numpy as np
 
 import os
 
 from fink_broker.tester import spark_unit_tests
+
+def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50) -> None:
+    """ Push DataFrame data to HBase
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark DataFrame
+    table_name: str
+        Name of the table in HBase
+    rowkeyname: str
+        Name of the rowkey in the table
+    cf: dict
+        Dictionnary containing column names with column family
+    nregion: int, optional
+        Number of region to create if the table is newly created. Default is 50.
+    """
+    # construct the catalog
+    hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
+        df.schema,
+        table_name,
+        rowkeyname=rowkeyname,
+        cf=cf
+    )
+
+    # Push table
+    df.write\
+        .options(catalog=hbcatalog_index, newtable=nregion)\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
+        .save()
+
+    # Construct the schema row - inplace replacement
+    schema_row_key_name = 'schema_version'
+    df = df.withColumnRenamed(
+        rowkeyname,
+        schema_row_key_name
+    )
+
+    df_index_schema = construct_schema_row(
+        df,
+        rowkeyname=schema_row_key_name,
+        version='schema_{}_{}'.format(fbvsn, fsvsn))
+
+    # construct the hbase catalog for the schema
+    hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
+        df_index_schema.schema,
+        table_name,
+        rowkeyname=schema_row_key_name,
+        cf=cf)
+
+    # Push the data using the hbase connector
+    df_index_schema.write\
+        .options(catalog=hbcatalog_index_schema, newtable=nregion)\
+        .format("org.apache.hadoop.hbase.spark")\
+        .option("hbase.spark.use.hbasecontext", False)\
+        .save()
 
 def load_science_portal_column_names():
     """ Load names of the alert fields to use in the science portal.
