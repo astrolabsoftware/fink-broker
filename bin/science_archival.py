@@ -22,7 +22,6 @@
 4. Push data (single shot)
 """
 import os
-import json
 import argparse
 
 from fink_broker.parser import getargs

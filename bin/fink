@@ -318,21 +318,12 @@ elif [[ $service == "reprocess_night" ]]; then
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL}
 elif [[ $service == "science_archival" ]]; then
-  # Check if the use wants to just drop the catalog on disk
-  if [[ "$SAVE_SCIENCE_DB_CATALOG_ONLY" = true ]] ; then
-    SAVE_SCIENCE_DB_CATALOG_ONLY="--save_science_db_catalog_only"
-  else
-    SAVE_SCIENCE_DB_CATALOG_ONLY=""
-  fi
-
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/science_archival.py ${HELP_ON_SERVICE} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -science_db_name ${SCIENCE_DB_NAME} \
-  -science_db_catalog ${SCIENCE_DB_CATALOG} \
-  ${SAVE_SCIENCE_DB_CATALOG_ONLY} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "index_archival" ]]; then
@@ -347,7 +338,6 @@ elif [[ $service == "index_archival" ]]; then
   ${FINK_HOME}/bin/index_archival.py ${HELP_ON_SERVICE} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -science_db_name ${SCIENCE_DB_NAME} \
-  -science_db_catalog ${SCIENCE_DB_CATALOG} \
   -night ${NIGHT} \
   -index_table ${INDEXTABLE} \
   -tns_folder ${TNS_FOLDER} \
