@@ -119,10 +119,11 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Need API KEY
   # fink start index_archival -c $conf --night 20190903 --index_table tns_jd_objectId
 
+  # SSO candidates
   fink start index_sso_cand_archival -c $conf --night 20190903
 
-  # check the catalogs have been written
-  ls ${FINK_HOME}/*.json
+  # Object tables
+  fink start object_archival -c $conf --night 20190903
 
   fink start stats -c $conf --night 20190903
 
