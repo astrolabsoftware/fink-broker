@@ -81,7 +81,8 @@ def main():
         df=df_orb,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
-        cf=cf
+        cf=cf,
+        catfolder=os.environ['FINK_HOME']
     )
 
     # Table 2: candidates
