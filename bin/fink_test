@@ -95,9 +95,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20190903"
-  ls $FINK_HOME/online
-  ls $FINK_HOME/online/science
-  ls $FINK_HOME/online/science/*
+  ls $FINK_HOME/online/raw/year=2019/month=09/day=03
 
   # Connect to the distribution service
   fink start distribution_test --exit_after 30 -c $conf &
