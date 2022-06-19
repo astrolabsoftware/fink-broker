@@ -80,7 +80,7 @@ def main():
         )
     elif 'public2.alerts.ztf' in args.servers:
         # Decode on-the-fly using fastavro
-        f = F.udf(lambda x: fastavro.reader(io.BytesIO(x)).next(), alert_schema)
+        f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)
         df_decoded = df.select(
             [
                 f(df['value']).alias("decoded")
