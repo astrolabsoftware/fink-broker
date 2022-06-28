@@ -54,7 +54,10 @@ def main():
 
     # Load data from HBase
     catalog, rowkey = load_hbase_catalog_as_dict(
-        os.path.join(args.science_db_catalogs, 'ztf.sso_cand.json')
+        os.path.join(
+            args.science_db_catalogs,
+            '{}.sso_cand.json'.format(args.science_db_name)
+        )
     )
     _, catalog_small = select_columns_in_catalog(
         catalog, cols=['jd_trajectory_id']
@@ -89,7 +92,10 @@ def main():
 
     # Load data from HBase
     catalog, rowkey = load_hbase_catalog_as_dict(
-        os.path.join(args.science_db_catalogs, 'ztf.ssnamenr.json')
+        os.path.join(
+            args.science_db_catalogs,
+            '{}.ssnamenr.json'.format(args.science_db_name)
+        )
     )
     _, catalog_small = select_columns_in_catalog(
         catalog, cols=['ssnamenr_jd']

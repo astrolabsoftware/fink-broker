@@ -385,6 +385,7 @@ elif [[ $service == "check_science_portal" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/access_science_db.py ${HELP_ON_SERVICE} \
+  -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "distribution_test" ]]; then
