@@ -122,8 +122,8 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # SSO candidates
   fink start index_sso_cand_archival -c $conf --night 20190903
 
-  # Object tables
-  fink start object_archival -c $conf --night 20190903
+  # Object tables -- cannot be tested as we have no sso cand!
+  # fink start object_archival -c $conf --night 20190903
 
   fink start stats -c $conf --night 20190903
 

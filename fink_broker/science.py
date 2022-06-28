@@ -26,7 +26,7 @@ from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
-from fink_science.xmatch.processor import cdsxmatch
+from fink_science.xmatch.processor import xmatch_cds
 from fink_science.snn.processor import snn_ia
 from fink_science.snn.processor import snn_ia_elasticc
 from fink_science.microlensing.processor import mulens
@@ -177,12 +177,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: cdsxmatch
     logger.info("New processor: cdsxmatch")
-    colnames = [
-        df['objectId'],
-        df['candidate.ra'],
-        df['candidate.dec']
-    ]
-    df = df.withColumn('cdsxmatch', cdsxmatch(*colnames))
+    df = xmatch_cds(df)
 
     # Apply level one processor: asteroids
     logger.info("New processor: asteroids")
