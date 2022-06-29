@@ -93,7 +93,7 @@ def main():
     )
 
     # drop unused columns
-    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated'], axis='columns')
+    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated', 'last_assoc_date'], axis='columns')
 
     df_cand = spark.createDataFrame(pdf_cand)
 
