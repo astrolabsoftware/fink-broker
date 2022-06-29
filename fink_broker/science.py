@@ -26,7 +26,7 @@ from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
-from fink_science.xmatch.processor import xmatch_cds
+from fink_science.xmatch.processor import xmatch_cds, crossmatch_other_catalog
 from fink_science.snn.processor import snn_ia
 from fink_science.snn.processor import snn_ia_elasticc
 from fink_science.microlensing.processor import mulens
@@ -178,6 +178,31 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: cdsxmatch
     logger.info("New processor: cdsxmatch")
     df = xmatch_cds(df)
+
+    logger.info("New processor: Gaia xmatch")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname='vizier:I/355/gaiadr3',
+        cols_out=['DR3Name', 'Plx', 'e_Plx'],
+        types=['string', 'float', 'float']
+    )
+
+    logger.info("New processor: GCVS")
+    df = df.withColumn(
+        'gcvs',
+        crossmatch_other_catalog(
+            df['candidate.candid'], df['ra'], df['dec'], lit('gcvs')
+        )
+    )
+
+    logger.info("New processor: VSX")
+    df = df.withColumn(
+        'vsx',
+        crossmatch_other_catalog(
+            df['candidate.candid'], df['ra'], df['dec'], lit('vsx')
+        )
+    )
 
     # Apply level one processor: asteroids
     logger.info("New processor: asteroids")
