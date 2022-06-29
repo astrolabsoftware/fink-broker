@@ -192,7 +192,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn(
         'gcvs',
         crossmatch_other_catalog(
-            df['candidate.candid'], df['ra'], df['dec'], lit('gcvs')
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'],
+            F.lit('gcvs')
         )
     )
 
@@ -200,7 +203,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn(
         'vsx',
         crossmatch_other_catalog(
-            df['candidate.candid'], df['ra'], df['dec'], lit('vsx')
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'], 
+            F.lit('vsx')
         )
     )
 
