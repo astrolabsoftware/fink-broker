@@ -205,7 +205,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         crossmatch_other_catalog(
             df['candidate.candid'],
             df['candidate.ra'],
-            df['candidate.dec'], 
+            df['candidate.dec'],
             F.lit('vsx')
         )
     )
