@@ -72,8 +72,7 @@ AGG_DATA_PREFIX=${FINK_HOME}/archive
 
 # The name of the HBase table
 SCIENCE_DB_NAME="test_portal"
-SCIENCE_DB_CATALOG=${FINK_HOME}/catalog_hbase.json
-SAVE_SCIENCE_DB_CATALOG_ONLY=false
+SCIENCE_DB_CATALOGS=${FINK_HOME}/catalogs_hbase
 
 # HBase configuration file - must be under ${SPARK_HOME}/conf
 # You can find an example in ${FINK_HOME}/conf

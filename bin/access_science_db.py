@@ -15,6 +15,7 @@
 # limitations under the License.
 """Access the science database, and read alerts. HBase must be installed.
 """
+import os
 import argparse
 import json
 
@@ -37,7 +38,7 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    with open(args.science_db_catalog) as f:
+    with open(os.path.join(args.science_db_catalogs, '{}.json'.format(args.science_db_name))) as f:
         catalog = json.load(f)
 
     catalog_dic = json.loads(catalog)

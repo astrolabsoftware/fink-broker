@@ -81,7 +81,8 @@ def main():
         df=df_orb,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
-        cf=cf
+        cf=cf,
+        catfolder=os.environ['FINK_HOME']
     )
 
     # Table 2: candidates
@@ -92,7 +93,7 @@ def main():
     )
 
     # drop unused columns
-    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated'], axis='columns')
+    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated', 'last_assoc_date'], axis='columns')
 
     df_cand = spark.createDataFrame(pdf_cand)
 
@@ -111,7 +112,8 @@ def main():
         df=df_cand,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
-        cf=cf
+        cf=cf,
+        catfolder=args.science_db_catalogs
     )
 
 
