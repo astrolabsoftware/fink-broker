@@ -81,14 +81,13 @@ def main():
             ]
         )
     elif 'elasticc' in args.topic:
-        print('READING ELASTICC')
         schema = fastavro.schema.load_schema(args.schema)
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
         df_decoded = df.select(
             [
                 from_avro(df["value"], alert_schema_json).alias("decoded")
             ]
-    )
+        )
     elif 'public2.alerts.ztf' in args.servers:
         # Decode on-the-fly using fastavro
         f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)
