@@ -39,7 +39,7 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import convert_to_datetime
+from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -118,7 +118,11 @@ def main():
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
             'brokerIngestTimestamp',
-            F.current_timestamp()
+            convert_to_millitime(
+                df_decoded['candidate.jd'],
+                F.lit('jd'),
+                F.lit(True)
+            )
         )
 
     df_partitionedby = df_decoded\

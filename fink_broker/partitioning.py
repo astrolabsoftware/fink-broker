@@ -23,18 +23,23 @@ from astropy.time import Time
 from fink_broker.tester import spark_unit_tests
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
-def convert_to_millitime(jd: pd.Series, format=None):
+def convert_to_millitime(jd: pd.Series, format=None, now=None):
     if format is None:
         formatval = 'jd'
     else:
         formatval = format.values[0]
 
+    if now is not None and now.values[0] is True:
+        times = [int(Time.now().unix * 1000)] * len(jd)
+    else:
+        times = Time(
+            jd.values,
+            format=formatval
+        ).unix * 1000
+
     return pd.Series(
         np.array(
-            Time(
-                jd.values,
-                format=formatval
-            ).unix * 1000,
+            times,
             dtype=int
         )
     )
