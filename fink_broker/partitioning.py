@@ -24,6 +24,34 @@ from fink_broker.tester import spark_unit_tests
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
 def convert_to_millitime(jd: pd.Series, format=None, now=None):
+    """ Convert date into unix milliseconds (long)
+
+    Parameters
+    ----------
+    jd: double
+        Julian date
+    format: str, optional
+        Astropy time format, e.g. jd, mjd, ... Default is jd.
+    now: boolean, optional
+        If True, return the current time. Default is False
+
+    Returns
+    ----------
+    out: pd.Series
+        Unix milliseconds in UTC
+
+    Examples
+    ----------
+    >>> from fink_broker.sparkUtils import load_parquet_files
+    >>> df = load_parquet_files("online/raw")
+    >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd']))
+    >>> pdf = df.select('millis').toPandas()
+
+    >>> import pyspark.sql.functions as F
+    >>> df = df.withColumn('millis', convert_to_millitime(
+    ...     df['candidate.jd'], F.lit('jd'), F.lit(True)))
+    >>> pdf = df.select('millis').toPandas()
+    """
     if format is None:
         formatval = 'jd'
     else:
