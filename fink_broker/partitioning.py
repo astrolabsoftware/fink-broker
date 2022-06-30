@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import TimestampType
+from pyspark.sql.types import TimestampType, LongType
 from pyspark.sql import SparkSession
 
 import numpy as np
@@ -21,6 +21,23 @@ import pandas as pd
 from astropy.time import Time
 
 from fink_broker.tester import spark_unit_tests
+
+@pandas_udf(LongType(), PandasUDFType.SCALAR)
+def convert_to_millitime(jd: pd.Series, format=None):
+    if format is None:
+        formatval = 'jd'
+    else:
+        formatval = format.values[0]
+
+    return pd.Series(
+        np.array(
+            Time(
+                jd.values,
+                format=formatval
+            ).unix * 1000,
+            dtype=int
+        )
+    )
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
 def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:

@@ -32,7 +32,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
 from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import convert_to_datetime
+from fink_broker.partitioning import convert_to_millitime
 
 def format_df_to_elasticc(df):
     """ Take the input DataFrame, and format it for ELAsTICC post-processing
@@ -61,7 +61,7 @@ def format_df_to_elasticc(df):
     # Add non existing columns
     df = df.withColumn(
         'elasticcPublishTimestamp',
-        convert_to_datetime(
+        convert_to_millitime(
             df['diaSource.midPointTai'],
             F.lit('mjd')
         )
