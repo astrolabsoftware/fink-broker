@@ -78,7 +78,7 @@ def get_kafka_df(
         # The idea is to force the output schema
         # Need better handling of this though...
         jsonschema = open(
-            '/home/julien.peloton/plasticc_alerts/Examples/plasticc_schema/elasticc.v0_9.brokerClassification.avsc',
+            '/home/julien.peloton/elasticc/alert_schema/elasticc.v0_9.brokerClassification.avsc',
             'r'
         ).read()
         df_kafka = df_struct.select(to_avro_native("struct", jsonschema).alias("value"))

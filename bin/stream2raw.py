@@ -28,6 +28,7 @@ structured-streaming-programming-guide.html#starting-streaming-queries
 from pyspark.sql import functions as F
 
 import fastavro
+import fastavro.schema
 import argparse
 import time
 import io
@@ -38,7 +39,7 @@ from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
-from fink_broker.partitioning import convert_to_datetime
+from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -67,12 +68,21 @@ def main():
         kerberos=kerberos)
 
     # Get Schema of alerts
-    alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
+    if 'elasticc' not in args.topic:
+        alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
     if '134.158.' in args.servers or 'localhost' in args.servers:
         # using custom from_avro (not available for Spark 2.4.x)
         # it will be available from Spark 3.0 though
+        df_decoded = df.select(
+            [
+                from_avro(df["value"], alert_schema_json).alias("decoded")
+            ]
+        )
+    elif 'elasticc' in args.topic:
+        schema = fastavro.schema.load_schema(args.schema)
+        alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
         df_decoded = df.select(
             [
                 from_avro(df["value"], alert_schema_json).alias("decoded")
@@ -108,7 +118,11 @@ def main():
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
             'brokerIngestTimestamp',
-            F.current_timestamp()
+            convert_to_millitime(
+                df_decoded['candidate.jd'],
+                F.lit('jd'),
+                F.lit(True)
+            )
         )
 
     df_partitionedby = df_decoded\

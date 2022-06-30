@@ -57,19 +57,25 @@ def main():
     scitmpdatapath = args.online_data_prefix + '/science'
     checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint'
 
-    df = connect_to_raw_database(
-        rawdatapath + "/year={}/month={}/day={}".format(
-            args.night[0:4],
-            args.night[4:6],
-            args.night[6:8]
-        ),
-        rawdatapath + "/year={}/month={}/day={}".format(
-            args.night[0:4],
-            args.night[4:6],
-            args.night[6:8]
-        ),
-        latestfirst=False
-    )
+    if args.night == 'elasticc':
+        df = connect_to_raw_database(
+            rawdatapath, rawdatapath, latestfirst=False
+        )
+    else:
+        # assume YYYYMMHH
+        df = connect_to_raw_database(
+            rawdatapath + "/year={}/month={}/day={}".format(
+                args.night[0:4],
+                args.night[4:6],
+                args.night[6:8]
+            ),
+            rawdatapath + "/year={}/month={}/day={}".format(
+                args.night[0:4],
+                args.night[4:6],
+                args.night[6:8]
+            ),
+            latestfirst=False
+        )
 
     # Apply science modules
     if 'candidate' in df.columns:
