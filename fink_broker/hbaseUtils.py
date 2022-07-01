@@ -161,7 +161,7 @@ def load_science_portal_column_names():
     --------
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
     >>> print(len(cols_d))
-    9
+    14
     """
     # Column family i
     cols_i = [
@@ -183,7 +183,12 @@ def load_science_portal_column_names():
         'roid',
         'nalerthist',
         'rf_kn_vs_nonkn',
-        'tracklet'
+        'tracklet',
+        'DR3Name',
+        'Plx',
+        'e_Plx',
+        'gcvs',
+        'vsx'
     ]
 
     # Column family binary

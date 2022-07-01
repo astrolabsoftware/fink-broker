@@ -112,6 +112,11 @@ def main():
         'cdsxmatch',
         'roid',
         'mulens',
+        'DR3Name',
+        'Plx',
+        'e_Plx',
+        'gcvs',
+        'vsx',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
         'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet'
     ]
