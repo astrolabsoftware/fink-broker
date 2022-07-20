@@ -119,7 +119,7 @@ def main():
         df_decoded = df_decoded.withColumn(
             'brokerIngestTimestamp',
             convert_to_millitime(
-                df_decoded['candidate.jd'],
+                df_decoded[timecol],
                 F.lit('jd'),
                 F.lit(True)
             )
