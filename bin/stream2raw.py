@@ -45,7 +45,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    if 'elasticc' in args.topics:
+    if 'elasticc' in args.topic:
         tz = 'UTC'
     else:
         tz = None
