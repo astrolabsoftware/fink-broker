@@ -45,8 +45,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
+    if 'elasticc' in args.topic:
+        tz = 'UTC'
+    else:
+        tz = None
+
     # Initialise Spark session
-    spark = init_sparksession(name="stream2raw", shuffle_partitions=2)
+    spark = init_sparksession(name="stream2raw", shuffle_partitions=2, tz=tz)
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -120,7 +125,7 @@ def main():
             'brokerIngestTimestamp',
             convert_to_millitime(
                 df_decoded[timecol],
-                F.lit('jd'),
+                F.lit('mjd'),
                 F.lit(True)
             )
         )

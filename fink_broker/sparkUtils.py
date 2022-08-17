@@ -139,7 +139,7 @@ def write_to_csv(
         .to_csv(fn, index=False)
     batchdf.unpersist()
 
-def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession:
+def init_sparksession(name: str, shuffle_partitions: int = None, tz=None) -> SparkSession:
     """ Initialise SparkSession, the level of log for Spark and
     some configuration parameters
 
@@ -151,6 +151,8 @@ def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession
         Number of partition to use when shuffling data.
         Typically better to keep the size of shuffles small.
         Default is None.
+    tz: str, optional
+        Timezone. Default is None.
 
     Returns
     ----------
@@ -172,6 +174,9 @@ def init_sparksession(name: str, shuffle_partitions: int = None) -> SparkSession
     # keep the size of shuffles small
     if shuffle_partitions is not None:
         spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
+
+    if tz is not None:
+        spark.conf.set("spark.sql.session.timeZone", tz)
 
     # Set spark log level to WARN
     spark.sparkContext.setLogLevel("WARN")

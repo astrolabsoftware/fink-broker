@@ -84,19 +84,19 @@ def format_df_to_elasticc(df):
             F.array(
                 F.struct(
                     F.lit('rf_snia_vs_nonia_{}'.format(fsvsn)),
-                    F.lit('coucou'),
+                    F.lit('Probability to be an early SNe Ia based on Random Forest classifier'),
                     F.lit(10),
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
                     F.lit('snn_snia_vs_nonia_{}'.format(fsvsn)),
-                    F.lit('coucou'),
+                    F.lit('Probability to be a SN Ia based on SuperNNova classifier'),
                     F.lit(10),
                     F.col("scores").getItem(1)
                 ),
                 F.struct(
                     F.lit('snn_sn_vs_all_{}'.format(fsvsn)),
-                    F.lit('coucou'),
+                    F.lit('Probability to be a SN based on SuperNNova classifier'),
                     F.lit(10),
                     F.col("scores").getItem(2)
                 ),
@@ -112,7 +112,8 @@ def main():
     # Initialise Spark session
     spark = init_sparksession(
         name="distribute_elasticc_{}".format(args.night),
-        shuffle_partitions=2
+        shuffle_partitions=2,
+        tz='UTC'
     )
 
     # The level here should be controlled by an argument.
@@ -135,12 +136,6 @@ def main():
 
     # The topic name is the filter name
     topicname = args.substream_prefix + 'desc_elasticc'
-
-    # Apply user-defined filter -- dummy
-    f1 = df['rf_snia_vs_nonia'] > 0
-    f2 = df['snn_snia_vs_nonia'] > 0
-    f3 = df['snn_sn_vs_all'] > 0
-    df = df.filter(f1 | f2 | f3)
 
     # Wrap alert data
     df = format_df_to_elasticc(df)

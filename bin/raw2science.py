@@ -43,8 +43,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
+    if args.night == 'elasticc':
+        tz = 'UTC'
+    else:
+        tz = None
+
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science_{}".format(args.night), shuffle_partitions=2)
+    spark = init_sparksession(name="raw2science_{}".format(args.night), shuffle_partitions=2, tz=tz)
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)

@@ -136,7 +136,7 @@ def get_show_string(
     +------------+----------------------------+
     <BLANKLINE>
     """
-    return(df._jdf.showString(n, truncate, vertical))
+    return df._jdf.showString(n, truncate, vertical)
 
 def send_slack_alerts(df: DataFrame, channels: str):
     """Send alerts to slack channel
