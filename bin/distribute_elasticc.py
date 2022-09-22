@@ -82,8 +82,8 @@ def format_df_to_elasticc(df):
         ).withColumn(
             'classes',
             F.array(
-                F.lit(221), # AGN
-                F.lit(111), # SNN
+                F.lit(221),  # AGN
+                F.lit(111),  # SNN
                 df['snn_broad_class'].astype('int'),
                 df['cbpf_broad_class'].astype('int')
             )
