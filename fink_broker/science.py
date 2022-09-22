@@ -36,7 +36,6 @@ from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
 
-from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cbpf_classifier.processor import predict_nn
 from fink_science.agn_elasticc.processor import agn_spark as agn_spark_elasticc
@@ -316,7 +315,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Use for creating temp name
     prefix = 'c'
-    what_prefix = [prefix + i for i in to_expand]
 
     # Append temp columns with historical + current measurements
     for colname in to_expand:
