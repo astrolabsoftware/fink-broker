@@ -391,7 +391,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
     mapping_cbpf = {
-        np.nan: 0,
+        -1: 0,
         0: 11,
         1: 12,
         2: 13,
