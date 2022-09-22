@@ -26,7 +26,6 @@ import time
 from pyspark.sql import functions as F
 
 from fink_broker import __version__ as fbvsn
-from fink_science import __version__ as fsvsn
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
@@ -75,33 +74,48 @@ def format_df_to_elasticc(df):
         .withColumn(
             'scores',
             F.array(
-                df['rf_snia_vs_nonia'].astype('float'),
+                df['rf_agn_vs_nonagn'].astype('float'),
                 df['snn_snia_vs_nonia'].astype('float'),
-                df['snn_sn_vs_all'].astype('float')
+                df['snn_broad_max_prob'].astype('float'),
+                df['cbpf_broad_max_prob'].astype('float')
+            )
+        ).withColumn(
+            'classes',
+            F.array(
+                F.lit(221),  # AGN
+                F.lit(111),  # SNN
+                df['snn_broad_class'].astype('int'),
+                df['cbpf_broad_class'].astype('int')
             )
         ).withColumn(
             'classifications',
             F.array(
                 F.struct(
-                    F.lit('rf_snia_vs_nonia_{}'.format(fsvsn)),
-                    F.lit('Probability to be an early SNe Ia based on Random Forest classifier'),
-                    F.lit(10),
+                    F.lit('Binary AGN classifier version 1.0'),
+                    F.lit('Probability to be an early AGN based on Random Forest classifier'),
+                    F.col("classes").getItem(0),
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
-                    F.lit('snn_snia_vs_nonia_{}'.format(fsvsn)),
+                    F.lit('Binary SN Ia classifier version 1.0'),
                     F.lit('Probability to be a SN Ia based on SuperNNova classifier'),
-                    F.lit(10),
+                    F.col("classes").getItem(1),
                     F.col("scores").getItem(1)
                 ),
                 F.struct(
-                    F.lit('snn_sn_vs_all_{}'.format(fsvsn)),
-                    F.lit('Probability to be a SN based on SuperNNova classifier'),
-                    F.lit(10),
+                    F.lit('SuperNNova broad classifier version 1.0'),
+                    F.lit('Level 1 classifier using SuperNNova'),
+                    F.col("classes").getItem(2),
                     F.col("scores").getItem(2)
                 ),
+                F.struct(
+                    F.lit('CATS broad classifier version 1.0'),
+                    F.lit('Level 1 classifier using the CBPF Algorithm for Transient Search'),
+                    F.col("classes").getItem(3),
+                    F.col("scores").getItem(3)
+                ),
             ).cast(classifications_schema)
-        ).drop("scores")
+        ).drop("scores").drop("classes")
 
     return df.selectExpr(cnames)
 
