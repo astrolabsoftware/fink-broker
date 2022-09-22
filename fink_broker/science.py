@@ -17,27 +17,31 @@ from pyspark.sql import functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 from pyspark.sql.types import StringType, LongType
 
+import numpy as np
 import pandas as pd
+import healpy as hp
 
-from logging import Logger
 import os
+from logging import Logger
+from itertools import chain
 
 from fink_utils.spark.utils import concat_col
 
+from fink_science import __file__
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
-from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.xmatch.processor import xmatch_cds, crossmatch_other_catalog
 from fink_science.snn.processor import snn_ia
-from fink_science.snn.processor import snn_ia_elasticc
 from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
 
-from fink_broker.tester import spark_unit_tests
+from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
+from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
+from fink_science.cbpf_classifier.processor import predict_nn
+from fink_science.agn_elasticc.processor import agn_spark as agn_spark_elasticc
 
-import numpy as np
-import healpy as hp
+from fink_broker.tester import spark_unit_tests
 
 def dec2theta(dec: float) -> float:
     """ Convert Dec (deg) to theta (rad)
@@ -280,6 +284,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
+    Currently available:
+    - AGN
+    - CBPF (broad)
+    - SNN (Ia, and broad)
+
     Focus on ELAsTICC stream
 
     Parameters
@@ -301,9 +310,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')
     >>> df = load_parquet_files(elasticc_alert_sample)
     >>> df = apply_science_modules_elasticc(df, logger)
-
-    # apply_science_modules is lazy, so trigger the computation
-    >>> an_alert = df.take(1)
     """
     # Required alert columns
     to_expand = ['midPointTai', 'filterName', 'psFlux', 'psFluxErr']
@@ -316,7 +322,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     for colname in to_expand:
         df = concat_col(
             df, colname, prefix=prefix,
-            current='diaSource', history='prvDiaSources'
+            current='diaSource', history='prvDiaForcedSources'
         )
     expanded = [prefix + i for i in to_expand]
 
@@ -327,28 +333,94 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     logger.info("New processor: asteroids (random positions)")
     df = df.withColumn('roid', F.lit(0))
 
-    logger.info("New processor: Active Learning")
-    # Perform the fit + classification (default model)
-    args = [F.col(i) for i in what_prefix]
-    args += [F.col('cdsxmatch'), F.col('diaSource.nobs')]
-    df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
+    # add redshift
+    df = df.withColumn(
+        'redshift',
+        F.when(
+            df['diaObject.hostgal_zspec'] != -9.0,
+            df['diaObject.hostgal_zspec']
+        ).otherwise(df['diaObject.hostgal_zphot'])
+    )
+    df = df.withColumn(
+        'redshift_err',
+        F.when(
+            df['diaObject.hostgal_zspec_err'] != -9.0,
+            df['diaObject.hostgal_zspec_err']
+        ).otherwise(df['diaObject.hostgal_zphot_err'])
+    )
+
+    # logger.info("New processor: Active Learning")
+    # # Perform the fit + classification (default model)
+    # args = [F.col(i) for i in what_prefix]
+    # args += [F.col('cdsxmatch'), F.col('diaSource.nobs')]
+    # df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
-    logger.info("New processor: supernnova")
+    logger.info("New processor: supernnova - Ia")
     args = [F.col('diaSource.diaSourceId')]
-    args += [F.col(i) for i in what_prefix]
+    args += [F.col('cmidPointTai'), F.col('cfilterName'), F.col('cpsFlux'), F.col('cpsFluxErr')]
     args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
-    args += [F.lit('snn_snia_vs_nonia')]
+    args += [F.col('diaObject.mwebv'), F.col('redshift'), F.col('redshift_err')]
+    args += [F.lit('elasticc_ia')]
     df = df.withColumn('snn_snia_vs_nonia', snn_ia_elasticc(*args))
 
+    logger.info("New processor: supernnova - Broad")
     args = [F.col('diaSource.diaSourceId')]
-    args += [F.col(i) for i in what_prefix]
+    args += [F.col('cmidPointTai'), F.col('cfilterName'), F.col('cpsFlux'), F.col('cpsFluxErr')]
     args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
-    args += [F.lit('snn_sn_vs_all')]
-    df = df.withColumn('snn_sn_vs_all', snn_ia_elasticc(*args))
+    args += [F.col('diaObject.mwebv'), F.col('redshift'), F.col('redshift_err')]
+    args += [F.lit('elasticc_broad')]
+    df = df.withColumn('preds_snn', snn_broad_elasticc(*args))
+
+    mapping_snn = {
+        -1: -1,
+        0: 11,
+        1: 12,
+        2: 13,
+        3: 21,
+        4: 22,
+    }
+    mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
+
+    col_class = F.col('preds_snn').getItem(0).astype('int')
+    df = df.withColumn('snn_broad_class', mapping_snn_expr[col_class])
+    df = df.withColumn('snn_broad_max_prob', F.col('preds_snn').getItem(1))
+
+    # CBPF
+    args = ['cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName']
+    args += [F.col('diaObject.mwebv'), F.col('diaObject.z_final'), F.col('diaObject.z_final_err')]
+    args += [F.col('diaObject.hostgal_zphot'), F.col('diaObject.hostgal_zphot_err')]
+    df = df.withColumn('cbpf_preds', predict_nn(*args))
+
+    mapping_cbpf = {
+        np.nan: -1,
+        0: 11,
+        1: 12,
+        2: 13,
+        3: 21,
+        4: 22,
+    }
+    mapping_cbpf_expr = F.create_map([F.lit(x) for x in chain(*mapping_cbpf.items())])
+
+    col_class = F.col('cbpf_preds').getItem(0).astype('int')
+    df = df.withColumn('cbpf_broad_class', mapping_cbpf_expr[col_class])
+    df = df.withColumn('cbpf_broad_max_prob', F.col('cbpf_preds').getItem(1))
+
+    # AGN
+    path = os.path.dirname(__file__)
+    model_path_forced = "{}/data/models/AGN_elasticc_fphot.pkl".format(path)
+    args_forced = [
+        'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
+        'diaSource.ra', 'diaSource.decl',
+        'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
+        'diaObject.hostgal_ra', 'diaObject.hostgal_dec',
+        F.lit(model_path_forced)
+    ]
+    df = df.withColumn('rf_agn_vs_nonagn', agn_spark_elasticc(*args_forced))
 
     # Drop temp columns
     df = df.drop(*expanded)
+    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid'])
 
     return df
 
