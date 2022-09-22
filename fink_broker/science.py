@@ -371,7 +371,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('preds_snn', snn_broad_elasticc(*args))
 
     mapping_snn = {
-        -1: -1,
+        -1: 0,
         0: 11,
         1: 12,
         2: 13,
@@ -391,7 +391,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
     mapping_cbpf = {
-        np.nan: -1,
+        np.nan: 0,
         0: 11,
         1: 12,
         2: 13,
@@ -400,8 +400,8 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     }
     mapping_cbpf_expr = F.create_map([F.lit(x) for x in chain(*mapping_cbpf.items())])
 
-    col_class = F.col('cbpf_preds').getItem(0).astype('int')
-    df = df.withColumn('cbpf_broad_class', mapping_cbpf_expr[col_class])
+    col_class = F.col('cbpf_preds').getItem(0)
+    df = df.withColumn('cbpf_broad_class', mapping_cbpf_expr[col_class].astype('int'))
     df = df.withColumn('cbpf_broad_max_prob', F.col('cbpf_preds').getItem(1))
 
     # AGN
