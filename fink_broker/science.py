@@ -36,6 +36,7 @@ from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
 
+from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cbpf_classifier.processor import predict_nn
 from fink_science.agn_elasticc.processor import agn_spark as agn_spark_elasticc
@@ -347,11 +348,11 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         ).otherwise(df['diaObject.hostgal_zphot_err'])
     )
 
-    # logger.info("New processor: Active Learning")
-    # # Perform the fit + classification (default model)
-    # args = [F.col(i) for i in what_prefix]
-    # args += [F.col('cdsxmatch'), F.col('diaSource.nobs')]
-    # df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
+    logger.info("New processor: EarlySN")
+    args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
+    # fake args
+    args += [F.col('cdsxmatch'), F.lit(20), F.lit(40)]
+    df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
     logger.info("New processor: supernnova - Ia")
@@ -415,6 +416,10 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         F.lit(model_path_forced)
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_spark_elasticc(*args_forced))
+
+    # T2
+    df = df.withColumn('t2_broad_class', F.lit(0))
+    df = df.withColumn('t2_broad_max_prob', F.lit(0.0))
 
     # Drop temp columns
     df = df.drop(*expanded)
