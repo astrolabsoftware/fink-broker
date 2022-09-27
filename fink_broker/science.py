@@ -429,9 +429,9 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     }
     mapping_cats_fine_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_fine.items())])
 
-    col_broad_class = F.col('cbpf_preds.broad_preds').getItem(0).astype('int')
+    col_broad_class = F.col('cbpf_preds.broad_preds').getItem(0)
     col_broad_max_col = F.col('cbpf_preds.broad_preds').getItem(1)
-    col_fine_class = F.col('cbpf_preds.fine_preds').getItem(0).astype('int')
+    col_fine_class = F.col('cbpf_preds.fine_preds').getItem(0)
     col_fine_max_col = F.col('cbpf_preds.fine_preds').getItem(1)
 
     df = df\
