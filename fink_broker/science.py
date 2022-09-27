@@ -405,6 +405,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         return '{}_{}'.format(int(i), int(j))
 
     mapping_cats_fine = {
+        trans(-1, -1): 0,
         trans(0, 0): 111,
         trans(0, 1): 112,
         trans(0, 2): 113,
@@ -424,8 +425,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         trans(3, 2): 213,
         trans(3, 3): 214,
         trans(3, 4): 215,
-        trans(4, 0): 221,
-
+        trans(4, 0): 221
     }
     mapping_cats_fine_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_fine.items())])
 
@@ -437,7 +437,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df\
         .withColumn('cats_broad_class', mapping_cats_broad_expr[col_broad_class].astype('int'))\
         .withColumn('cats_broad_max_prob', col_broad_max_col)\
-        .withColumn('cats_fine_class', mapping_cats_fine_expr[F.concat_ws('_', col_broad_class, col_fine_class)].astype('int'))\
+        .withColumn('cats_fine_class', mapping_cats_fine_expr[F.concat_ws('_', col_broad_class.astype('int'), col_fine_class.astype('int'))].astype('int'))\
         .withColumn('cats_fine_max_prob', col_fine_max_col)
 
     # AGN
