@@ -38,7 +38,7 @@ from fink_science.kilonova.processor import knscore
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
-from fink_science.cats_classifier.processor import predict_nn
+from fink_science.cats.processor import predict_nn
 from fink_science.agn_elasticc.processor import agn_spark as agn_spark_elasticc
 
 from fink_broker.tester import spark_unit_tests
