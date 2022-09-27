@@ -374,10 +374,10 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     mapping_snn = {
         -1: 0,
         0: 11,
-        1: 12,
-        2: 13,
-        3: 21,
-        4: 22,
+        1: 13,
+        2: 12,
+        3: 22,
+        4: 21,
     }
     mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
 
