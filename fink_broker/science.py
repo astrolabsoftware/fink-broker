@@ -434,10 +434,10 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     col_fine_class = F.col('cbpf_preds.fine_preds').getItem(0).astype('int')
     col_fine_max_col = F.col('cbpf_preds.fine_preds').getItem(1)
 
-    df_preds = df_preds\
+    df = df\
         .withColumn('cats_broad_class', mapping_cats_broad_expr[col_broad_class].astype('int'))\
         .withColumn('cats_broad_max_prob', col_broad_max_col)\
-        .withColumn('cats_fine_class', mapping_cats_fine_expr[F.concat_ws('_', col_broad_class, col_fine_class)].astype('string'))\
+        .withColumn('cats_fine_class', mapping_cats_fine_expr[F.concat_ws('_', col_broad_class, col_fine_class)].astype('int'))\
         .withColumn('cats_fine_max_prob', col_fine_max_col)
 
     # AGN
