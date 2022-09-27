@@ -374,10 +374,10 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     mapping_snn = {
         -1: 0,
         0: 11,
-        1: 12,
-        2: 13,
-        3: 21,
-        4: 22,
+        1: 13,
+        2: 12,
+        3: 22,
+        4: 21,
     }
     mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
 
@@ -391,7 +391,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     args += [F.col('diaObject.hostgal_zphot'), F.col('diaObject.hostgal_zphot_err')]
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
-    mapping_cbpf = {
+    mapping_cats_broad = {
         -1: 0,
         0: 11,
         1: 12,
@@ -399,11 +399,46 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         3: 21,
         4: 22,
     }
-    mapping_cbpf_expr = F.create_map([F.lit(x) for x in chain(*mapping_cbpf.items())])
+    mapping_cats_broad_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_broad.items())])
 
-    col_class = F.col('cbpf_preds').getItem(0)
-    df = df.withColumn('cbpf_broad_class', mapping_cbpf_expr[col_class].astype('int'))
-    df = df.withColumn('cbpf_broad_max_prob', F.col('cbpf_preds').getItem(1))
+    def trans(i, j):
+        return '{}_{}'.format(int(i), int(j))
+
+    mapping_cats_fine = {
+        trans(0, 0): 111,
+        trans(0, 1): 112,
+        trans(0, 2): 113,
+        trans(0, 3): 114,
+        trans(0, 4): 115,
+        trans(1, 0): 121,
+        trans(1, 1): 122,
+        trans(1, 2): 123,
+        trans(1, 3): 124,
+        trans(2, 0): 131,
+        trans(2, 1): 132,
+        trans(2, 2): 133,
+        trans(2, 3): 134,
+        trans(2, 4): 135,
+        trans(3, 0): 211,
+        trans(3, 1): 212,
+        trans(3, 2): 213,
+        trans(3, 3): 214,
+        trans(3, 4): 215,
+        trans(4, 0): 221,
+
+    }
+    mapping_cats_fine_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_fine.items())])
+
+    col_broad_class = F.col('cbpf_preds.broad_preds').getItem(0)
+    col_broad_max_col = F.col('cbpf_preds.broad_preds').getItem(1)
+    col_fine_class = F.col('cbpf_preds.fine_preds').getItem(0)
+    col_fine_max_col = F.col('cbpf_preds.fine_preds').getItem(1)
+
+    df = df\
+        .withColumn('cats_broad_class', mapping_cats_broad_expr[col_broad_class].astype('int'))\
+        .withColumn('cats_broad_max_prob', col_broad_max_col)\
+        .withColumn('cats_fine_class', mapping_cats_fine_expr[F.concat_ws('_', col_broad_class, col_fine_class)].astype('int'))\
+        .withColumn('cats_fine_max_prob', col_fine_max_col)
 
     # AGN
     path = os.path.dirname(__file__)
