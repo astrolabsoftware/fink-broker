@@ -75,22 +75,28 @@ def format_df_to_elasticc(df):
             'scores',
             F.array(
                 df['rf_agn_vs_nonagn'].astype('float'),
+                1.0 - df['rf_agn_vs_nonagn'].astype('float'),
                 df['snn_snia_vs_nonia'].astype('float'),
+                1.0 - df['snn_snia_vs_nonia'].astype('float'),
                 df['snn_broad_max_prob'].astype('float'),
                 df['cats_broad_max_prob'].astype('float'),
                 df['cats_fine_max_prob'].astype('float'),
                 df['rf_snia_vs_nonia'].astype('float'),
+                1.0 - df['rf_snia_vs_nonia'].astype('float'),
                 df['t2_broad_max_prob'].astype('float'),
             )
         ).withColumn(
             'classes',
             F.array(
                 F.lit(221),  # AGN
+                F.lit(0),  # AGN Others
                 F.lit(111),  # SNN
+                F.lit(0),  # SNN Others
                 df['snn_broad_class'].astype('int'),
                 df['cats_broad_class'].astype('int'),
                 df['cats_fine_class'].astype('int'),
                 F.lit(111),  # EarlySN
+                F.lit(0),  # EarlySN Others
                 df['t2_broad_class'].astype('int')
             )
         ).withColumn(
@@ -103,40 +109,58 @@ def format_df_to_elasticc(df):
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
-                    F.lit('SuperNNova SN Ia classifier version 1.0'),
-                    F.lit('Probability to be a SN Ia based on SuperNNova'),
+                    F.lit('AGN classifier version 1.0'),
+                    F.lit('Probability to NOT be an AGN based on a Random Forest classifier'),
                     F.col("classes").getItem(1),
                     F.col("scores").getItem(1)
                 ),
                 F.struct(
-                    F.lit('SuperNNova broad classifier version 1.0'),
-                    F.lit('Level 1 classifier based on SuperNNova'),
+                    F.lit('SuperNNova SN Ia classifier version 1.0'),
+                    F.lit('Probability to be a SN Ia based on SuperNNova'),
                     F.col("classes").getItem(2),
                     F.col("scores").getItem(2)
                 ),
                 F.struct(
-                    F.lit('CATS broad classifier version 1.0'),
-                    F.lit('Level 1 classifier based on the CBPF Algorithm for Transient Search'),
+                    F.lit('SuperNNova SN Ia classifier version 1.0'),
+                    F.lit('Probability to NOT be a SN Ia based on SuperNNova'),
                     F.col("classes").getItem(3),
                     F.col("scores").getItem(3)
                 ),
                 F.struct(
-                    F.lit('CATS fine classifier version 1.0'),
-                    F.lit('Level 2 classifier based on the CBPF Algorithm for Transient Search'),
+                    F.lit('SuperNNova broad classifier version 1.0'),
+                    F.lit('Level 1 classifier based on SuperNNova'),
                     F.col("classes").getItem(4),
                     F.col("scores").getItem(4)
                 ),
                 F.struct(
-                    F.lit('EarlySN classifier version 1.0'),
-                    F.lit('Probability to be an early SN Ia based on a Random Forest classifier'),
+                    F.lit('CATS broad classifier version 1.0'),
+                    F.lit('Level 1 classifier based on the CBPF Algorithm for Transient Search'),
                     F.col("classes").getItem(5),
                     F.col("scores").getItem(5)
                 ),
                 F.struct(
-                    F.lit('T2 classifier version 1.0'),
-                    F.lit('Level 1 classifier based on Time-Series Transformer'),
+                    F.lit('CATS fine classifier version 1.0'),
+                    F.lit('Level 2 classifier based on the CBPF Algorithm for Transient Search'),
                     F.col("classes").getItem(6),
                     F.col("scores").getItem(6)
+                ),
+                F.struct(
+                    F.lit('EarlySN classifier version 1.0'),
+                    F.lit('Probability to be an early SN Ia based on a Random Forest classifier'),
+                    F.col("classes").getItem(7),
+                    F.col("scores").getItem(7)
+                ),
+                F.struct(
+                    F.lit('EarlySN classifier version 1.0'),
+                    F.lit('Probability to NOT be an early SN Ia based on a Random Forest classifier'),
+                    F.col("classes").getItem(8),
+                    F.col("scores").getItem(8)
+                ),
+                F.struct(
+                    F.lit('T2 classifier version 1.0'),
+                    F.lit('Level 1 classifier based on Time-Series Transformer'),
+                    F.col("classes").getItem(9),
+                    F.col("scores").getItem(9)
                 ),
             ).cast(classifications_schema)
         ).drop("scores").drop("classes")
