@@ -103,26 +103,26 @@ def format_df_to_elasticc(df):
             'classifications',
             F.array(
                 F.struct(
-                    F.lit('AGN classifier version 1.0'),
-                    F.lit('Probability to be an AGN based on a Random Forest classifier'),
+                    F.lit('AGN classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(0),
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
-                    F.lit('AGN classifier version 1.0'),
-                    F.lit('Probability to NOT be an AGN based on a Random Forest classifier'),
+                    F.lit('AGN classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(1),
                     F.col("scores").getItem(1)
                 ),
                 F.struct(
-                    F.lit('SuperNNova SN Ia classifier version 1.0'),
-                    F.lit('Probability to be a SN Ia based on SuperNNova'),
+                    F.lit('SuperNNova SN Ia classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(2),
                     F.col("scores").getItem(2)
                 ),
                 F.struct(
-                    F.lit('SuperNNova SN Ia classifier version 1.0'),
-                    F.lit('Probability to NOT be a SN Ia based on SuperNNova'),
+                    F.lit('SuperNNova SN Ia classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(3),
                     F.col("scores").getItem(3)
                 ),
@@ -145,14 +145,14 @@ def format_df_to_elasticc(df):
                     F.col("scores").getItem(6)
                 ),
                 F.struct(
-                    F.lit('EarlySN classifier version 1.0'),
-                    F.lit('Probability to be an early SN Ia based on a Random Forest classifier'),
+                    F.lit('EarlySN classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(7),
                     F.col("scores").getItem(7)
                 ),
                 F.struct(
-                    F.lit('EarlySN classifier version 1.0'),
-                    F.lit('Probability to NOT be an early SN Ia based on a Random Forest classifier'),
+                    F.lit('EarlySN classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(8),
                     F.col("scores").getItem(8)
                 ),
