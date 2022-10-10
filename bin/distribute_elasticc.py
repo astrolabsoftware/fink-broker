@@ -104,7 +104,7 @@ def format_df_to_elasticc(df):
             F.array(
                 F.struct(
                     F.lit('AGN classifier'),
-                    F.lit('version 1.0'),
+                    F.lit('version 1.1'),
                     F.col("classes").getItem(0),
                     F.col("scores").getItem(0)
                 ),
