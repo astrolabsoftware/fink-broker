@@ -79,7 +79,6 @@ def format_df_to_elasticc(df):
                 df['snn_snia_vs_nonia'].astype('float'),
                 1.0 - df['snn_snia_vs_nonia'].astype('float'),
                 df['snn_broad_max_prob'].astype('float'),
-                df['cats_broad_max_prob'].astype('float'),
                 df['cats_fine_max_prob'].astype('float'),
                 df['rf_snia_vs_nonia'].astype('float'),
                 1.0 - df['rf_snia_vs_nonia'].astype('float'),
@@ -93,7 +92,6 @@ def format_df_to_elasticc(df):
                 F.lit(111),  # SNN
                 F.lit(0),  # SNN Others
                 df['snn_broad_class'].astype('int'),
-                df['cats_broad_class'].astype('int'),
                 df['cats_fine_class'].astype('int'),
                 F.lit(111),  # EarlySN
                 F.lit(0),  # EarlySN Others
@@ -127,20 +125,20 @@ def format_df_to_elasticc(df):
                     F.col("scores").getItem(3)
                 ),
                 F.struct(
-                    F.lit('SuperNNova broad classifier version 1.0'),
-                    F.lit('Level 1 classifier based on SuperNNova'),
+                    F.lit('SuperNNova broad classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(4),
                     F.col("scores").getItem(4)
                 ),
                 F.struct(
-                    F.lit('CATS broad classifier version 1.0'),
-                    F.lit('Level 1 classifier based on the CBPF Algorithm for Transient Search'),
+                    F.lit('CATS fine classifier'),
+                    F.lit('version 2.0'),
                     F.col("classes").getItem(5),
                     F.col("scores").getItem(5)
                 ),
                 F.struct(
-                    F.lit('CATS fine classifier version 1.0'),
-                    F.lit('Level 2 classifier based on the CBPF Algorithm for Transient Search'),
+                    F.lit('EarlySN classifier'),
+                    F.lit('version 1.0'),
                     F.col("classes").getItem(6),
                     F.col("scores").getItem(6)
                 ),
@@ -151,16 +149,10 @@ def format_df_to_elasticc(df):
                     F.col("scores").getItem(7)
                 ),
                 F.struct(
-                    F.lit('EarlySN classifier'),
+                    F.lit('T2 classifier'),
                     F.lit('version 1.0'),
                     F.col("classes").getItem(8),
                     F.col("scores").getItem(8)
-                ),
-                F.struct(
-                    F.lit('T2 classifier version 1.0'),
-                    F.lit('Level 1 classifier based on Time-Series Transformer'),
-                    F.col("classes").getItem(9),
-                    F.col("scores").getItem(9)
                 ),
             ).cast(classifications_schema)
         ).drop("scores").drop("classes")
