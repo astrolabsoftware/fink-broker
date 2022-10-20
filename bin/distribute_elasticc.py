@@ -102,31 +102,31 @@ def format_df_to_elasticc(df):
             F.array(
                 F.struct(
                     F.lit('AGN classifier'),
-                    F.lit('version 1.1'),
+                    F.lit('version 1.2'),
                     F.col("classes").getItem(0),
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
                     F.lit('AGN classifier'),
-                    F.lit('version 1.0'),
+                    F.lit('version 1.2'),
                     F.col("classes").getItem(1),
                     F.col("scores").getItem(1)
                 ),
                 F.struct(
                     F.lit('SuperNNova SN Ia classifier'),
-                    F.lit('version 1.0'),
+                    F.lit('version 1.1'),
                     F.col("classes").getItem(2),
                     F.col("scores").getItem(2)
                 ),
                 F.struct(
                     F.lit('SuperNNova SN Ia classifier'),
-                    F.lit('version 1.0'),
+                    F.lit('version 1.1'),
                     F.col("classes").getItem(3),
                     F.col("scores").getItem(3)
                 ),
                 F.struct(
                     F.lit('SuperNNova broad classifier'),
-                    F.lit('version 1.0'),
+                    F.lit('version 1.1'),
                     F.col("classes").getItem(4),
                     F.col("scores").getItem(4)
                 ),
