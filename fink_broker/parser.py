@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -229,6 +229,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         Folder that contains fink-fat output parquet files
         [FINK_FAT_OUTPUT]
+        """)
+    parser.add_argument(
+        '-producer', type=str, default='ztf',
+        help="""
+        Name of the alert producer. Currently available: ztf, elasticc, sims
+        [PRODUCER]
         """)
     args = parser.parse_args(None)
     return args

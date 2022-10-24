@@ -51,7 +51,7 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="distribute_{}".format(args.night), shuffle_partitions=2)
+    spark = init_sparksession(name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2)
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
