@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
+# Alert producer: ztf, elasticc or sims
+PRODUCER=sims
+
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
 KAFKA_PORT_SIM=9092

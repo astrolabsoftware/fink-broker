@@ -49,7 +49,7 @@ def main():
         tz = None
 
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science_{}".format(args.night), shuffle_partitions=2, tz=tz)
+    spark = init_sparksession(name="raw2science_{}_{}".format(args.producer, args.night), shuffle_partitions=2, tz=tz)
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -62,7 +62,7 @@ def main():
     scitmpdatapath = args.online_data_prefix + '/science'
     checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint'
 
-    if args.night == 'elasticc':
+    if args.producer == 'elasticc':
         df = connect_to_raw_database(
             rawdatapath, rawdatapath, latestfirst=False
         )
