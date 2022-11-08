@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
+# Alert producer: ztf, elasticc or sims
+PRODUCER=ztf
+
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
 KAFKA_PORT_SIM=29092
@@ -20,7 +23,7 @@ KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 
 # Cluster mode - you need a Kafka cluster installed with write mode.
 # Must match the one used for the Producer
-KAFKA_IPPORT="public2.alerts.ztf.uw.edu:9094"
+KAFKA_IPPORT="public.alerts.ztf.uw.edu:9092"
 
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
