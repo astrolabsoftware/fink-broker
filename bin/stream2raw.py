@@ -64,16 +64,12 @@ def main():
     checkpointpath_raw = args.online_data_prefix + '/raw_checkpoint'
 
     # Create a streaming dataframe pointing to a Kafka stream
-    if (args.producer == 'ztf') or (args.producer == 'elasticc'):
-        kerberos = True
-    else:
-        kerberos = False
     df = connect_to_kafka(
         servers=args.servers,
         topic=args.topic,
         startingoffsets=args.startingoffsets_stream,
         failondataloss=False,
-        kerberos=kerberos)
+        kerberos=False)
 
     # Get Schema of alerts
     if args.producer != 'elasticc':
