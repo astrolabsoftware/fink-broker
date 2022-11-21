@@ -408,14 +408,11 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cats_fine_max_prob', F.col('cbpf_preds').getItem(1))
 
     # AGN
-    path = os.path.dirname(__file__)
-    model_path_forced = "{}/data/models/AGN_elasticc_fphot.pkl".format(path)
     args_forced = [
         'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
         'diaSource.ra', 'diaSource.decl',
         'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
-        'diaObject.hostgal_ra', 'diaObject.hostgal_dec',
-        F.lit(model_path_forced)
+        'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
 
