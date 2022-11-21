@@ -27,7 +27,6 @@ from itertools import chain
 
 from fink_utils.spark.utils import concat_col
 
-from fink_science import __file__
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import xmatch_cds, crossmatch_other_catalog
 from fink_science.snn.processor import snn_ia
