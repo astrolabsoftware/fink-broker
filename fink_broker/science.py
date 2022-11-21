@@ -39,7 +39,7 @@ from fink_science.kilonova.processor import knscore
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
-from fink_science.agn_elasticc.processor import agn_spark as agn_spark_elasticc
+from fink_science.agn.processor import agn_elasticc
 
 from fink_broker.tester import spark_unit_tests
 
@@ -417,7 +417,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         'diaObject.hostgal_ra', 'diaObject.hostgal_dec',
         F.lit(model_path_forced)
     ]
-    df = df.withColumn('rf_agn_vs_nonagn', agn_spark_elasticc(*args_forced))
+    df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
 
     # T2
     df = df.withColumn('t2_broad_class', F.lit(0))
