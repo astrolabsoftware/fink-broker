@@ -102,13 +102,13 @@ def format_df_to_elasticc(df):
             F.array(
                 F.struct(
                     F.lit('AGN classifier'),
-                    F.lit('version 1.2'),
+                    F.lit('version 2.0'),
                     F.col("classes").getItem(0),
                     F.col("scores").getItem(0)
                 ),
                 F.struct(
                     F.lit('AGN classifier'),
-                    F.lit('version 1.2'),
+                    F.lit('version 2.0'),
                     F.col("classes").getItem(1),
                     F.col("scores").getItem(1)
                 ),
@@ -132,7 +132,7 @@ def format_df_to_elasticc(df):
                 ),
                 F.struct(
                     F.lit('CATS fine classifier'),
-                    F.lit('version 2.0'),
+                    F.lit('version 3.0'),
                     F.col("classes").getItem(5),
                     F.col("scores").getItem(5)
                 ),
