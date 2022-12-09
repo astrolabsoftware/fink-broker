@@ -32,6 +32,7 @@ from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
 from fink_science.ad_features.processor import extract_features_ad
+from fink_science.anomaly_detection.processor import anomaly_score
 
 from fink_broker.tester import spark_unit_tests
 
@@ -247,6 +248,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     logger.info("New processor: ad_features")
     ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
+
+    # Apply level one processor: anomaly_score
+    logger.info("New processor: anomaly_score")
+    df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
 
     # Drop temp columns
     df = df.drop(*expanded)
