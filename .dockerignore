@@ -1,5 +1,8 @@
 # ignore all files but the Dockerfile and the requirements
 # This is to send only what's needed to the daemon
-*
-!Dockerfile
-!requirements-docker.txt
+/build.sh
+/conf.sh
+/itest
+/push-image.sh
+/Dockerfile
+
