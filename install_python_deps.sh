@@ -13,41 +13,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -e
+
+set -euo pipefail
+
+DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 message_help="""
-Install Python dependencies for fink-broker through pip\n\n
-Usage:\n
-    \t./install_python_deps.sh [--astronet-token]\n\n
-
-You need a valid GitHub token to install astronet, otherwise
-it will be skipped (but you will not be able to use the T2 module).
+Install Python dependencies for fink-broker through pip
+Usage:
+    ./install_python_deps.sh
 """
 
-# Grab the command line arguments
-TOKEN=
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --astronet-token)
-        TOKEN="$2"
-        shift 2
-        ;;
-    -h)
-        echo -e $message_help
-        exit
-        ;;
-  esac
-done
-
 # Dependencies
-pip install -r requirements.txt
+pip install --no-cache-dir -r $DIR/requirements.txt
+
+# Fink-fat
+pip install --no-dependencies git+https://github.com/FusRoman/fink-fat.git@6dcebaee620abb9fb49ea1db9c254300becbea04
+
+# Fink_GRB
+pip install --no-dependencies git+https://github.com/FusRoman/Fink_GRB.git@71e8b4d440da15911a37bc6db4908fefc94ccc6a
 
 # Installation of torch without GPU support (lighter)
-pip install torch==1.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+pip install --no-cache-dir torch==1.12.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
 # Installation of astronet
-if [[ $TOKEN != "" ]]; then
-    pip install git+https://${TOKEN}@github.com/tallamjr/astronet.git
-else
-    echo "You did not provide a token for astronet -- installation skipped"
-fi
+pip install --no-dependencies git+https://github.com/tallamjr/astronet.git
+pip install george
+pip install imbalanced-learn==0.7.0
+pip install optuna==2.3.0
+pip install tensorflow==2.8.0
