@@ -56,7 +56,7 @@ spark-submit --master "k8s://https://${API_SERVER_URL}" \
     --deploy-mode cluster \
     --conf spark.executor.instances=1 \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-    --conf spark.kubernetes.container.image="$FINK_K8S_IMAGE" \
+    --conf spark.kubernetes.container.image="$IMAGE" \
     --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/home/fink -Divy.home=/home/fink" \
     $ci_opt \
     local:///home/fink/fink-broker/bin/stream2raw.py \
