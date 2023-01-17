@@ -24,8 +24,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
+. $DIR/../conf.sh
 
 # submit the job in cluster mode - 1 driver + 1 executor
 PRODUCER="sims"
