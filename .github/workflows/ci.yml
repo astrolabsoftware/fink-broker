@@ -19,7 +19,9 @@ jobs:
         id: vars
         shell: bash
         run: |
-          echo "IMAGE=$(. ./conf.sh && echo $IMAGE)" >> $GITHUB_ENV
+          DIR=$(pwd)
+          . ./conf.sh
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "IMAGE=${IMAGE}"
       - name: Build fink-broker image for k8s
         run: |
