@@ -51,8 +51,9 @@ ENV PYTHONPATH $FINK_HOME:$PYTHONPATH
 ENV PATH $FINK_HOME/bin:$PATH
 
 # Avoir reinstalling Python dependencies
-# is fink-broker code changes
+# if fink-broker code changes
 ADD install_python_deps.sh $FINK_HOME/
+ADD requirements.txt $FINK_HOME/
 RUN $FINK_HOME/install_python_deps.sh
 
 ADD . $FINK_HOME/
