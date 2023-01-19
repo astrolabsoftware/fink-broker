@@ -35,9 +35,11 @@ FINK_TRIGGER_UPDATE=2
 LOG_LEVEL="INFO"
 ci=${CI:-false}
 
-# get the apiserver ip
-API_SERVER_URL=$(kubectl -n kube-system get pod -l component=kube-apiserver \
-  -o=jsonpath="{.items[0].metadata.annotations.kubeadm\.kubernetes\.io/kube-apiserver\.advertise-address\.endpoint}")
+# get the apiserver url
+PROTOCOL=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].ports[0].name}")
+IP=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].addresses[0].ip}")
+PORT=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].ports[0].port}")
+API_SERVER_URL="${PROTOCOL}://${IP}:${PORT}"
 
 # Set RBAC
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
