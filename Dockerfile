@@ -46,13 +46,16 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${PYTHON_VERSION
     && bash $HOME/miniconda.sh -b -p $HOME/miniconda
 
 ENV PATH $HOME/miniconda/bin:$PATH
+ENV FINK_HOME $HOME/fink-broker
+ENV PYTHONPATH $FINK_HOME:$PYTHONPATH
+ENV PATH $FINK_HOME/bin:$PATH
 
+# Avoir reinstalling Python dependencies
+# is fink-broker code changes
+ADD install_python_deps.sh $FINK_HOME/
 RUN $FINK_HOME/install_python_deps.sh
 
-ENV FINK_HOME $HOME/fink-broker
 ADD . $FINK_HOME/
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 
-ENV PYTHONPATH $FINK_HOME:$PYTHONPATH
-ENV PATH $FINK_HOME/bin:$PATH
