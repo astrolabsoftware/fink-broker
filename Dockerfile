@@ -56,7 +56,7 @@ ADD install_python_deps.sh $FINK_HOME/
 ADD requirements.txt $FINK_HOME/
 RUN $FINK_HOME/install_python_deps.sh
 
+RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 ADD . $FINK_HOME/
 
-RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 
