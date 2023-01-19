@@ -47,12 +47,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${PYTHON_VERSION
 
 ENV PATH $HOME/miniconda/bin:$PATH
 
+RUN $FINK_HOME/install_python_deps.sh
+
 ENV FINK_HOME $HOME/fink-broker
 ADD . $FINK_HOME/
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
-
-RUN $FINK_HOME/install_python_deps.sh
 
 ENV PYTHONPATH $FINK_HOME:$PYTHONPATH
 ENV PATH $FINK_HOME/bin:$PATH
