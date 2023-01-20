@@ -50,6 +50,7 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
 ci_opt=""
 if [ $ci = true ]; then
   ci_opt="--conf spark.kubernetes.driver.request.cores=0 --conf spark.kubernetes.executor.request.cores=0"
+  ci_opt="$ci_opt --conf spark.driver.memory=500m --conf spark.executor.memory=500m"
 fi
 
 readonly SPARK_LOG_FILE="/tmp/spark-submit.log"
