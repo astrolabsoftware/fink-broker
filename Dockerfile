@@ -27,7 +27,6 @@ RUN apt-get update && \
     apt install -y --no-install-recommends wget git apt-transport-https ca-certificates gnupg-agent apt-utils build-essential && \
     rm -rf /var/cache/apt/*
 
-ENV PYTHONPATH ${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 
 # Specify the User that the actual main process will run as
 ENV HOME /home/fink
@@ -47,8 +46,10 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${PYTHON_VERSION
 
 ENV PATH $HOME/miniconda/bin:$PATH
 ENV FINK_HOME $HOME/fink-broker
-ENV PYTHONPATH $FINK_HOME:$PYTHONPATH
+ENV PYTHONPATH $FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 ENV PATH $FINK_HOME/bin:$PATH
+
+RUN mkdir $FINK_HOME
 
 # Avoir reinstalling Python dependencies
 # if fink-broker code changes
@@ -57,6 +58,6 @@ ADD requirements.txt $FINK_HOME/
 RUN $FINK_HOME/install_python_deps.sh
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
-ADD . $FINK_HOME/
+ADD --chown=${spark_uid} . $FINK_HOME/
 
 

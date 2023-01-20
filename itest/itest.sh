@@ -56,6 +56,7 @@ readonly SPARK_LOG_FILE="/tmp/spark-submit.log"
 echo "Launch Spark job in background (log file: $SPARK_LOG_FILE)"
 spark-submit --master "k8s://${API_SERVER_URL}" \
     --deploy-mode cluster \
+    --packages ${FINK_PACKAGES} \
     --conf spark.executor.instances=1 \
     --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
     --conf spark.kubernetes.container.image="$IMAGE" \
