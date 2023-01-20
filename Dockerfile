@@ -20,7 +20,7 @@ FROM gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:${spark_image_tag}
 ARG spark_uid=185
 ENV spark_uid ${spark_uid}
 
-# Reset to root to run installation tasks
+# Install system-dependencies and prepare spark_uid user home directory
 USER root
 
 RUN apt-get update && \
@@ -28,19 +28,16 @@ RUN apt-get update && \
     rm -rf /var/cache/apt/*
 
 
-# Specify the User that the actual main process will run as
+# Main process will run as spark_uid 
 ENV HOME /home/fink
-
 RUN mkdir $HOME && chown ${spark_uid} $HOME
-
 USER ${spark_uid}
-
-ARG PYTHON_VERSION=py39_4.11.0
-ENV PYTHON_VERSION=$PYTHON_VERSION
 
 WORKDIR $HOME
 
 # Install python
+ARG PYTHON_VERSION=py39_4.11.0
+ENV PYTHON_VERSION=$PYTHON_VERSION
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${PYTHON_VERSION}-Linux-x86_64.sh -O $HOME/miniconda.sh \
     && bash $HOME/miniconda.sh -b -p $HOME/miniconda
 
@@ -51,8 +48,8 @@ ENV PATH $FINK_HOME/bin:$PATH
 
 RUN mkdir $FINK_HOME
 
-# Avoir reinstalling Python dependencies
-# if fink-broker code changes
+# Avoid re-installing Python dependencies
+# when fink-broker code changes
 ADD install_python_deps.sh $FINK_HOME/
 ADD requirements.txt $FINK_HOME/
 RUN $FINK_HOME/install_python_deps.sh
