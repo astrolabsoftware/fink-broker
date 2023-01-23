@@ -217,9 +217,9 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn(
         '3hsp',
         crossmatch_other_catalog(
-            df['candidate.candid'], 
-            df['candidate.ra'], 
-            df['candidate.dec'], 
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'],
             F.lit('3hsp'),
             F.lit(60.0)
         )
