@@ -39,6 +39,7 @@ from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
 from fink_science.agn.processor import agn_elasticc
+from fink_science.t2.processor import t2_max_prob
 
 from fink_broker.tester import spark_unit_tests
 
@@ -274,6 +275,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         F.col('candidate.ndethist')
     ]
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
+
+    logger.info("New processor: T2")
+    t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
+    df = df.withColumn('t2', t2_max_prob(*t2_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
