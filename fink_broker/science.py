@@ -34,6 +34,8 @@ from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
 from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
+from fink_science.ad_features.processor import extract_features_ad
+from fink_science.anomaly_detection.processor import anomaly_score
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
@@ -280,6 +282,15 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
     df = df.withColumn('t2', t2_max_prob(*t2_args))
+
+    # Apply level one processor: snad (light curve features)
+    logger.info("New processor: ad_features")
+    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
+    df = df.withColumn('lc_features', extract_features_ad(*ad_args))
+
+    # Apply level one processor: anomaly_score
+    logger.info("New processor: anomaly_score")
+    df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
 
     # Drop temp columns
     df = df.drop(*expanded)
