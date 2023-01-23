@@ -251,7 +251,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
             df['candidate.ra'],
             df['candidate.dec'],
             F.lit(60.0)
-            )
+        )
     )
 
     # Apply level one processor: asteroids
