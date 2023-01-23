@@ -215,6 +215,30 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
+    logger.info("New processor: 3HSP (1 arcmin)")
+    df = df.withColumn(
+        '3hsp',
+        crossmatch_other_catalog(
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'],
+            F.lit('3hsp'),
+            F.lit(60.0)
+        )
+    )
+
+    logger.info("New processor: 4LAC (1 arcmin)")
+    df = df.withColumn(
+        '4lac',
+        crossmatch_other_catalog(
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'],
+            F.lit('4lac'),
+            F.lit(60.0)
+        )
+    )
+
     # Apply level one processor: asteroids
     logger.info("New processor: asteroids")
     args_roid = [
