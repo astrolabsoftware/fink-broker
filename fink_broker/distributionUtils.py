@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import os
 import glob
-import shutil
 import subprocess
 
 from fink_broker.avroUtils import readschemafromavrofile
@@ -86,7 +84,7 @@ def get_kafka_df(
 
     return df_kafka
 
-def save_and_load_schema(df, path_for_avro):
+def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
     """ Extract AVRO schema from a static Spark DataFrame
 
     Parameters
