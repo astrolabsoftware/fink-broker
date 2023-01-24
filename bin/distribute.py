@@ -91,8 +91,7 @@ def main():
     df_schema = spark.read.format('parquet').load(input_sci)
     df_schema = df_schema.selectExpr(cnames)
 
-    # folder schemas/ must exist on HDFS for the user
-    path_for_avro = 'schemas/schema_{}.avro'.format(args.night)
+    path_for_avro = 'schema_{}.avro'.format(args.night)
     schema = save_and_load_schema(df_schema, path_for_avro)
 
     # Retrieve time-series information

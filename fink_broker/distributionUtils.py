@@ -103,7 +103,9 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
     df.coalesce(1).limit(1).write.format("avro").save(path_for_avro)
 
     # retrieve data on local disk
-    subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
+    is_local = os.path.isdir(path_for_avro)
+    if not is_local:
+        subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
 
     # Read the avro schema from .avro file
     avro_file = glob.glob(path_for_avro + "/part*")[0]
