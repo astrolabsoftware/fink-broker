@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,8 +20,6 @@ import time
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import to_avro, from_avro
-from fink_broker import __version__ as fbvsn
-from fink_science import __version__ as fsvsn
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
@@ -30,7 +28,7 @@ from pyspark.sql.avro.functions import to_avro as to_avro_native
 from fink_broker.tester import spark_unit_tests
 
 def get_kafka_df(
-        df: DataFrame, schema_path: str, saveschema: bool = False, elasticc: bool = False) -> DataFrame:
+        df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -50,12 +48,10 @@ def get_kafka_df(
     ----------
     df: DataFrame
         A Spark DataFrame created after reading the science database (HBase)
-    schema_path: str
-        Path where to store the avro schema required for decoding the
-        Kafka messages.
-    saveschema: bool
-        If True, save the alert schema on disk. Work only in Spark local mode,
-        and for testing purposes. Default is False.
+    key: str
+        Key to decode the alerts.
+        Old: fbvsn_fsvsn
+        New (>= 2023/01): full schema
 
     Returns
     ----------
@@ -86,22 +82,7 @@ def get_kafka_df(
         df_kafka = df_struct.select(to_avro("struct").alias("value"))
 
     # Add a key based on schema versions
-    df_kafka = df_kafka.withColumn('key', lit('{}_{}'.format(fbvsn, fsvsn)))
-
-    if saveschema:
-        # Harcoded path that corresponds to the schema used
-        # for alert redistribution.
-        schema_path = 'schemas/distribution_schema_new.avsc'
-
-        # Do not work on a DFS like HDFS obviously.
-        # Only local mode & for testing purposes
-        toto = df.writeStream.foreachBatch(
-            lambda x, y: save_avro_schema_stream(x, y, schema_path)
-        ).start()
-        time.sleep(10)
-
-        # Note that the entire Spark application will stop.
-        toto.stop()
+    df_kafka = df_kafka.withColumn('key', lit(key))
 
     return df_kafka
 
@@ -167,6 +148,43 @@ def save_avro_schema(df: DataFrame, schema_path: str):
             {} already exists - cannot write the new schema
         """.format(schema_path)
         print(msg)
+
+def save_and_load_schema(df, path_for_avro):
+    """ Extract AVRO schema from a static Spark DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark dataframe for which we want to extract the schema
+    path_for_avro: str
+        Temporary path on hdfs where the schema will be written
+
+    Returns
+    ----------
+    schema: str
+        Schema as string
+    """
+    # save schema
+    df.coalesce(1).limit(1).write.format("avro").save(path_for_avro)
+
+    # retrieve data on local disk
+    subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
+
+    # Read the avro schema from .avro file
+    avro_file = glob.glob(path_for_avro + "/part*")[0]
+    avro_schema = readschemafromavrofile(avro_file)
+
+    # Write the schema to a file for decoding Kafka messages
+    with open('/tmp/{}'.format(path_for_avro.replace('.avro', '.avsc')), 'w') as f:
+        json.dump(avro_schema, f, indent=2)
+
+    # reload the schema
+    with open('/tmp/{}'.format(path_for_avro.replace('.avro', '.avsc')), 'r') as f:
+        schema_ = json.dumps(f.read())
+
+    schema = json.loads(schema_)
+
+    return schema
 
 def decode_kafka_df(df_kafka: DataFrame, schema_path: str) -> DataFrame:
     """Decode the DataFrame read from Kafka
