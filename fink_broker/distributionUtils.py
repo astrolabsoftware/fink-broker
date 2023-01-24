@@ -18,7 +18,7 @@ import glob
 import subprocess
 
 from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.sparkUtils import to_avro, from_avro
+from fink_broker.sparkUtils import to_avro
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
