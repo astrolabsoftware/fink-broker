@@ -221,24 +221,24 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     logger.info("New processor: 3HSP (1 arcmin)")
     df = df.withColumn(
-        '3hsp',
+        'x3hsp',
         crossmatch_other_catalog(
             df['candidate.candid'],
             df['candidate.ra'],
             df['candidate.dec'],
-            F.lit('x3hsp'),
+            F.lit('3hsp'),
             F.lit(60.0)
         )
     )
 
     logger.info("New processor: 4LAC (1 arcmin)")
     df = df.withColumn(
-        '4lac',
+        'x4lac',
         crossmatch_other_catalog(
             df['candidate.candid'],
             df['candidate.ra'],
             df['candidate.dec'],
-            F.lit('x4lac'),
+            F.lit('4lac'),
             F.lit(60.0)
         )
     )
