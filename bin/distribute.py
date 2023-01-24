@@ -73,7 +73,7 @@ def main():
     )
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
+    df = df.drop('year').drop('month').drop('day').drop('lc_features')
 
     # Cast fields to ease the distribution
     cnames = df.columns
@@ -83,9 +83,9 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
-    cnames[cnames.index('lc_features')] = 'explode(array(lc_features)) as lc_features'
-    cnames[cnames.index('t2')] = 'explode(array(t2)) as t2'
-    cnames[cnames.index('mangrove')] = 'explode(array(mangrove)) as mangrove'
+    # cnames[cnames.index('lc_features')] = 'explode(array(lc_features)) as lc_features'
+    # cnames[cnames.index('t2')] = 'explode(array(t2)) as t2'
+    # cnames[cnames.index('mangrove')] = 'explode(array(mangrove)) as mangrove'
 
     # Extract schema
     df_schema = spark.read.format('parquet').load(input_sci)
