@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ import time
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
-from fink_broker.distributionUtils import get_kafka_df
+from fink_broker.distributionUtils import get_kafka_df, save_and_load_schema
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
@@ -64,9 +64,11 @@ def main():
     checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint'
 
     # Connect to the TMP science database
+    input_sci = scitmpdatapath + "/year={}/month={}/day={}".format(
+        args.night[0:4], args.night[4:6], args.night[6:8])
     df = connect_to_raw_database(
-        scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
-        scitmpdatapath + "/year={}/month={}/day={}".format(args.night[0:4], args.night[4:6], args.night[6:8]),
+        input_sci,
+        input_sci,
         latestfirst=False
     )
 
@@ -81,6 +83,15 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
+    cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
+    cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
+
+    # Extract schema
+    df_schema = spark.read.format('parquet').load(input_sci)
+    df_schema = df_schema.selectExpr(cnames)
+
+    path_for_avro = 'schema_{}.avro'.format(args.night)
+    schema = save_and_load_schema(df_schema, path_for_avro)
 
     # Retrieve time-series information
     to_expand = [
@@ -109,7 +120,7 @@ def main():
         df_tmp = df_tmp.selectExpr(cnames)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
-        df_kafka = get_kafka_df(df_tmp, '')
+        df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
 
         # Ensure that the topic(s) exist on the Kafka Server)
         disquery = df_kafka\

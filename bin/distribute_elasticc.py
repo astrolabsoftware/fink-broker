@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2022 AstroLab Software
+# Copyright 2022-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,7 @@ import time
 from pyspark.sql import functions as F
 
 from fink_broker import __version__ as fbvsn
+from fink_science import __version__ as fsvsn
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
@@ -195,7 +196,7 @@ def main():
     df = format_df_to_elasticc(df)
 
     # Get the DataFrame for publishing to Kafka (avro serialized)
-    df_kafka = get_kafka_df(df, '', elasticc=True)
+    df_kafka = get_kafka_df(df, key='{}_{}'.format(fbvsn, fsvsn), elasticc=True)
 
     # Ensure that the topic(s) exist on the Kafka Server)
     disquery = df_kafka\
