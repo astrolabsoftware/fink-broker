@@ -15,7 +15,6 @@
 import json
 import glob
 import subprocess
-import tempfile
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import to_avro, from_avro
