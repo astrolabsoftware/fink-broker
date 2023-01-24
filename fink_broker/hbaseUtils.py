@@ -188,7 +188,13 @@ def load_science_portal_column_names():
         'Plx',
         'e_Plx',
         'gcvs',
-        'vsx'
+        'vsx',
+        '4lac',
+        '3hsp',
+        'anomaly_score',
+        'lc_features', # hum
+        't2', # hum
+        'mangrove' # hum
     ]
 
     # Column family binary
