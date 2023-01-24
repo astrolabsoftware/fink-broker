@@ -28,7 +28,10 @@ from itertools import chain
 from fink_utils.spark.utils import concat_col
 
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
-from fink_science.xmatch.processor import xmatch_cds, crossmatch_other_catalog
+from fink_science.xmatch.processor import xmatch_cds
+from fink_science.xmatch.processor import crossmatch_other_catalog
+from fink_science.xmatch.processor import crossmatch_mangrove
+
 from fink_science.snn.processor import snn_ia
 from fink_science.microlensing.processor import mulens
 from fink_science.asteroids.processor import roid_catcher
@@ -41,7 +44,7 @@ from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
 from fink_science.agn.processor import agn_elasticc
-from fink_science.t2.processor import t2_max_prob
+from fink_science.t2.processor import t2
 
 from fink_broker.tester import spark_unit_tests
 
@@ -240,6 +243,17 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
+    logger.info("New processor: Mangrove (1 acrmin)")
+    df.withColumn(
+        'mangrove',
+        crossmatch_mangrove(
+            df['candidate.candid'],
+            df['candidate.ra'],
+            df['candidate.dec'],
+            F.lit(60.0)
+        )
+    )
+
     # Apply level one processor: asteroids
     logger.info("New processor: asteroids")
     args_roid = [
@@ -305,7 +319,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     logger.info("New processor: T2")
     t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
-    df = df.withColumn('t2', t2_max_prob(*t2_args))
+    df = df.withColumn('t2', t2(*t2_args))
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
@@ -313,7 +327,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
-    logger.info("New processor: anomaly_score")
+    logger.info("New processor: Anomaly score")
     df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
 
     # Drop temp columns
