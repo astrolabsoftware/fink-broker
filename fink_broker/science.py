@@ -221,7 +221,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     logger.info("New processor: 3HSP (1 arcmin)")
     df = df.withColumn(
-        '3hsp',
+        'x3hsp',
         crossmatch_other_catalog(
             df['candidate.candid'],
             df['candidate.ra'],
@@ -233,7 +233,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     logger.info("New processor: 4LAC (1 arcmin)")
     df = df.withColumn(
-        '4lac',
+        'x4lac',
         crossmatch_other_catalog(
             df['candidate.candid'],
             df['candidate.ra'],
@@ -244,7 +244,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     )
 
     logger.info("New processor: Mangrove (1 acrmin)")
-    df.withColumn(
+    df = df.withColumn(
         'mangrove',
         crossmatch_mangrove(
             df['candidate.candid'],
@@ -329,6 +329,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Apply level one processor: anomaly_score
     logger.info("New processor: Anomaly score")
     df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
+
+    # split features
+    df = df.withColumn("lc_features_g", df['lc_features'].getItem("1"))\
+        .withColumn("lc_features_r", df['lc_features'].getItem("2"))\
+        .drop('lc_features')
 
     # Drop temp columns
     df = df.drop(*expanded)
