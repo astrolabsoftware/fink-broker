@@ -330,6 +330,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     logger.info("New processor: Anomaly score")
     df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
 
+    # split features
+    df = df.withColumn("lc_features_g", df['lc_features'].getItem("1"))\
+        .withColumn("lc_features_r", df['lc_features'].getItem("2"))\
+        .drop('lc_features')
+
     # Drop temp columns
     df = df.drop(*expanded)
 
