@@ -244,7 +244,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     )
 
     logger.info("New processor: Mangrove (1 acrmin)")
-    df.withColumn(
+    df = df.withColumn(
         'mangrove',
         crossmatch_mangrove(
             df['candidate.candid'],
