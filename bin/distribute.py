@@ -89,7 +89,8 @@ def main():
     df_schema = df_schema.selectExpr(cnames)
 
     # folder schemas/ must exist on HDFS for the user
-    schema = save_and_load_schema(df_schema, 'schemas/')
+    path_for_avro = 'schemas/schema_{}.avro'.format(args.night)
+    schema = save_and_load_schema(df_schema, path_for_avro)
 
     # Retrieve time-series information
     to_expand = [
