@@ -15,6 +15,7 @@
 import json
 import glob
 import subprocess
+import tempfile
 
 from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.sparkUtils import to_avro, from_avro
@@ -110,11 +111,11 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
     avro_schema = readschemafromavrofile(avro_file)
 
     # Write the schema to a file for decoding Kafka messages
-    with open('/tmp/{}'.format(path_for_avro.replace('.avro', '.avsc')), 'w') as f:
+    with open('{}'.format(path_for_avro.replace('.avro', '.avsc')), 'w') as f:
         json.dump(avro_schema, f, indent=2)
 
     # reload the schema
-    with open('/tmp/{}'.format(path_for_avro.replace('.avro', '.avsc')), 'r') as f:
+    with open('{}'.format(path_for_avro.replace('.avro', '.avsc')), 'r') as f:
         schema_ = json.dumps(f.read())
 
     schema = json.loads(schema_)
