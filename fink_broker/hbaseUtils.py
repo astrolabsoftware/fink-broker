@@ -165,7 +165,7 @@ def load_science_portal_column_names():
     --------
     >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
     >>> print(len(cols_d))
-    14
+    35
     """
     # Column family i
     cols_i = [
@@ -207,13 +207,13 @@ def load_science_portal_column_names():
         col('t2.{}'.format(i)).alias('t2_{}'.format(i)) for i in T2_COLS
     ]
 
-    cols_d += [
-        col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
-    ]
+    # cols_d += [
+    #     col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
+    # ]
 
-    cols_d += [
-        col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
-    ]
+    # cols_d += [
+    #     col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
+    # ]
 
     # Column family binary
     cols_b = [
