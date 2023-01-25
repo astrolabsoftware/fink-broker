@@ -118,8 +118,12 @@ def main():
         'gcvs',
         'vsx',
         'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet'
+        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
+        'anomaly_score', 'x4lac', 'x3hsp'
     ]
+
+    common_cols += [col_ for col_ in df.columns if col_.startswith('t2_')]
+    common_cols += [col_ for col_ in df.columns if col_.startswith('mangrove_')]
 
     if columns[0].startswith('pixel'):
         nside = int(columns[0].split('pixel')[1])
