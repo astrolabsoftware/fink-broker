@@ -23,6 +23,10 @@ from pyspark.sql import SparkSession, DataFrame
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
+from fink_science.t2.utilities import T2_COLS
+from fink_science.ad_features.processor import FEATURES_COLS
+from fink_science.xmatch.utils import MANGROVE_COLS
+
 from fink_broker.tester import spark_unit_tests
 
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
@@ -189,12 +193,26 @@ def load_science_portal_column_names():
         'e_Plx',
         'gcvs',
         'vsx',
-        '4lac',
-        '3hsp',
-        'anomaly_score',
-        'lc_features', # hum
-        't2', # hum
-        'mangrove' # hum
+        'x4lac',
+        'x3hsp',
+        'anomaly_score'
+    ]
+
+    # mangrove
+    cols_d += [
+        col('mangrove.{}'.format(i)).alias('mangrove_{}'.format(i)) for i in MANGROVE_COLS
+    ]
+
+    cols_d += [
+        col('t2.{}'.format(i)).alias('t2_{}'.format(i)) for i in T2_COLS
+    ]
+
+    cols_d += [
+        col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
+    ]
+
+    cols_d += [
+        col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
     ]
 
     # Column family binary
