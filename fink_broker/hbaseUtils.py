@@ -263,7 +263,7 @@ def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=No
     for col_ in cols:
         # Dumb but simple
         try:
-            df[col_]
+            df.select(col_)
             cnames.append(col_)
         except AnalysisException:
             missing_cols.append(col_)
