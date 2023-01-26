@@ -30,6 +30,7 @@ from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import attach_rowkey
+from fink_broker.hbaseUtils import select_relevant_columns
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -68,7 +69,12 @@ def main():
     cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
 
     # Restrict the input DataFrame to the subset of wanted columns.
-    df = df.select(cols_i + cols_d + cols_b)
+    all_cols = cols_i + cols_d + cols_b
+    df = select_relevant_columns(
+        df,
+        cols=all_cols,
+        logger=logger
+    )
 
     # Create and attach the rowkey
     df, row_key_name = attach_rowkey(df)

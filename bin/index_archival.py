@@ -37,6 +37,7 @@ from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import load_science_portal_column_names
+from fink_broker.hbaseUtils import select_relevant_columns
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -98,7 +99,8 @@ def main():
             'prv_candidates.diffmaglim'
         )
     else:
-        df = df.select(cols_i + cols_d + cols_b)
+        all_cols = cols_i + cols_d + cols_b
+        df = select_relevant_columns(df, all_cols, logger)
 
     # Create and attach the rowkey
     df, _ = attach_rowkey(df)
@@ -135,10 +137,12 @@ def main():
                 df['dec'],
                 lit(nside)
             )
-        ).select(
-            [
-                concat_ws('_', *names).alias(index_row_key_name)
-            ] + ['objectId']
+        )
+        df_index = select_relevant_columns(
+            df_index,
+            cols=['objectId'],
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'class':
         df_index = df.withColumn(
@@ -158,31 +162,35 @@ def main():
                 df['rf_kn_vs_nonkn'],
                 df['tracklet']
             )
-        ).select(
-            [
-                concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
+        )
+        df_index = select_relevant_columns(
+            df_index,
+            cols=common_cols,
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'ssnamenr':
         # Flag only objects with likely counterpart in MPC
-        df_index = df\
-            .filter(df['roid'] == 3)\
-            .select(
-                [
-                    concat_ws('_', *names).alias(index_row_key_name)
-                ] + common_cols
-            )
+        df_index = df.filter(df['roid'] == 3)
+        df_index = select_relevant_columns(
+            df_index,
+            cols=common_cols,
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+        )
     elif columns[0] == 'tracklet':
         # For data < 2021-08-10, no tracklet means ''
         # For data >= 2021-08-10, no tracklet means 'null'
         df_index = df\
             .filter(df['tracklet'] != 'null')\
-            .filter(df['tracklet'] != '')\
-            .select(
-                [
-                    concat_ws('_', *names).alias(index_row_key_name)
-                ] + common_cols
-            )
+            .filter(df['tracklet'] != '')
+
+        df_index = select_relevant_columns(
+            df_index,
+            cols=common_cols,
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+        )
     elif columns[0] == 'upper':
         # This case is the same as the main table
         # but we keep only upper limit measurements.
@@ -285,20 +293,26 @@ def main():
                 df['ra'],
                 df['dec']
             )
-        ).select(
-            [
-                concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols + ['tns']
-        ).cache()
+        )
+
+        df = select_relevant_columns(
+            df,
+            cols=common_cols + ['tns'],
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+        )
+
+        df = df.cache()
         df_index = df.filter(df['tns'] != '').drop('tns')
         # trigger the cache - not the cache might be a killer for LSST...
         n = df_index.count()
         print('TNS objects: {}'.format(n))
     else:
-        df_index = df.select(
-            [
-                concat_ws('_', *names).alias(index_row_key_name)
-            ] + common_cols
+        df = select_relevant_columns(
+            df,
+            cols=common_cols,
+            logger=logger,
+            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
 
     push_to_hbase(

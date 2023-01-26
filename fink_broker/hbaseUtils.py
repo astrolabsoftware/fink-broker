@@ -223,6 +223,57 @@ def load_science_portal_column_names():
 
     return cols_i, cols_d, cols_b
 
+def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=None) -> DataFrame:
+    """ Select columns from `cols` that are actually in `df`.
+
+    It would act as if `df.select(cols, skip_unknown_cols=True)` was possible.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Input Spark DataFrame
+    cols: list
+        Column names to select
+    to_create: list
+        Extra columns to create from others, and to include in the `select`.
+        Example: df.select(['a', 'b', col('a') + col('c')])
+
+    Returns:
+    df: DataFrame
+
+    Examples
+    ----------
+    >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
+
+    >>> select_relevant_columns(df, ['a'])
+    DataFrame[a: bigint]
+
+    >>> select_relevant_columns(df, ['a', 'b', 'c'])
+    select_relevant_columns(df, ['a', 'b', 'c'])
+
+    >>> select_relevant_columns(df, ['a', 'd'])
+    DataFrame[a: bigint]
+
+    >>> select_relevant_columns(df, ['a', 'b'], to_create=[F.col('a') + F.col('b')])
+    DataFrame[a: bigint, b: bigint, (a + b): bigint]
+    """
+    cnames = []
+    missing_cols = []
+    for col_ in cols:
+        if col_ in df.columns:
+            cnames.append(col_)
+        else:
+            missing_cols.append(col_)
+
+    if (to_create is not None) and (type(to_create) == list):
+        cnames += to_create
+    df = df.select(cnames)
+
+    if logger is not None:
+        logger.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
+
+    return df
+
 def assign_column_family_names(df, cols_i, cols_d, cols_b):
     """ Assign a column family name to each column qualifier.
 
