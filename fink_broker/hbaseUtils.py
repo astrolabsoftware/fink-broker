@@ -538,7 +538,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "schemas/template_schema_ZTF_3p3.avro")
+        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")
 
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
         root, "online/science")
