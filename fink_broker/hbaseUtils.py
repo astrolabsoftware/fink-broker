@@ -244,13 +244,14 @@ def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=No
 
     Examples
     ----------
+    >>> import pyspark.sql.functions as F
     >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
 
     >>> select_relevant_columns(df, ['a'])
     DataFrame[a: bigint]
 
     >>> select_relevant_columns(df, ['a', 'b', 'c'])
-    select_relevant_columns(df, ['a', 'b', 'c'])
+    DataFrame[a: bigint, b: bigint, c: bigint]
 
     >>> select_relevant_columns(df, ['a', 'd'])
     DataFrame[a: bigint]
