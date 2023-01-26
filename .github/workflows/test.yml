@@ -40,6 +40,9 @@ jobs:
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink" >> $GITHUB_ENV
+    - name: Download schemas
+        git clone https://github.com/astrolabsoftware/fink-alert-schemas.git
+        echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
     - name: Set up env [2/2]
       run: |
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
