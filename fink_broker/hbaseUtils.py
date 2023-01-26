@@ -19,6 +19,7 @@ import numpy as np
 
 from pyspark.sql.functions import concat_ws, col
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.utils import AnalysisException
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
@@ -260,9 +261,11 @@ def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=No
     cnames = []
     missing_cols = []
     for col_ in cols:
-        if col_ in df.columns:
+        # Dumb but simple
+        try:
+            df[col_]
             cnames.append(col_)
-        else:
+        except AnalysisException:
             missing_cols.append(col_)
 
     if (to_create is not None) and (type(to_create) == list):
