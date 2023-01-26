@@ -308,7 +308,7 @@ def main():
         n = df_index.count()
         print('TNS objects: {}'.format(n))
     else:
-        df = select_relevant_columns(
+        df_index = select_relevant_columns(
             df,
             cols=common_cols,
             logger=logger,
