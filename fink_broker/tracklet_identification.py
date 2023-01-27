@@ -357,7 +357,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "ztf_alerts/tracklet_TRCK1615_00")
+        root, "datasim/tracklet_alerts")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=True)

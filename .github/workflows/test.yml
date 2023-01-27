@@ -33,8 +33,8 @@ jobs:
         echo "${BINPATH}" >> $GITHUB_PATH
     - name: Download test data
       run: |
-        cd $FINK_HOME/datasim
-        source $FINK_HOME/datasim/download_ztf_alert_data.sh
+        cd $FINK_HOME/datasim/basic_alerts
+        source $FINK_HOME/datasim/basic_alerts/download_ztf_alert_data.sh
         cd $FINK_HOME
     - name: Download simulator
       run: |
