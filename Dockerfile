@@ -28,7 +28,7 @@ RUN apt-get update && \
     rm -rf /var/cache/apt/*
 
 
-# Main process will run as spark_uid 
+# Main process will run as spark_uid
 ENV HOME /home/fink
 RUN mkdir $HOME && chown ${spark_uid} $HOME
 USER ${spark_uid}
@@ -50,9 +50,9 @@ RUN mkdir $FINK_HOME
 
 # Avoid re-installing Python dependencies
 # when fink-broker code changes
-ADD install_python_deps.sh $FINK_HOME/
+ENV PIP_NO_CACHE_DIR 1
 ADD requirements.txt $FINK_HOME/
-RUN $FINK_HOME/install_python_deps.sh
+RUN pip install -r $FINK_HOME/requirements.txt
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 ADD --chown=${spark_uid} . $FINK_HOME/
