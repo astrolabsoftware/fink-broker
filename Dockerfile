@@ -1,86 +1,64 @@
-FROM ubuntu:16.04
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+ARG spark_image_tag
+FROM gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:${spark_image_tag}
 
-ENV SPARK_VERSION "2.4.4"
-ENV KAFKA_VERSION "2.2.0"
-ENV USRLIBS /home/libs
+ARG spark_uid=185
+ENV spark_uid ${spark_uid}
 
-WORKDIR $USRLIBS
+# Install system-dependencies and prepare spark_uid user home directory
+USER root
 
-# install base deps
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-  git apt-utils software-properties-common axel vim wget bzip2 curl \
-  apt-transport-https ca-certificates gnupg-agent \
-  && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt install -y --no-install-recommends wget git apt-transport-https ca-certificates gnupg-agent apt-utils build-essential && \
+    rm -rf /var/cache/apt/*
 
-# Install docker
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-  && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-  && apt-get update \
-  && apt-get install -y docker-ce docker-ce-cli containerd.io
 
-# Install docker-compose
-RUN curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose \
-  && chmod +x /usr/local/bin/docker-compose
+# Main process will run as spark_uid
+ENV HOME /home/fink
+RUN mkdir $HOME && chown ${spark_uid} $HOME
+USER ${spark_uid}
 
-# Install Java 8
-RUN add-apt-repository -y ppa:openjdk-r/ppa \
-  && apt-get -qq update \
-  && apt-get install -y openjdk-8-jdk --no-install-recommends \
-  && update-java-alternatives -s java-1.8.0-openjdk-amd64
+WORKDIR $HOME
 
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+# Install python
+ARG PYTHON_VERSION=py39_4.11.0
+ENV PYTHON_VERSION=$PYTHON_VERSION
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${PYTHON_VERSION}-Linux-x86_64.sh -O $HOME/miniconda.sh \
+    && bash $HOME/miniconda.sh -b -p $HOME/miniconda
 
-# Install Apache Kafka
-WORKDIR $USRLIBS
+ENV PATH $HOME/miniconda/bin:$PATH
+ENV FINK_HOME $HOME/fink-broker
+ENV PYTHONPATH $FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
+ENV PATH $FINK_HOME/bin:$PATH
 
-RUN wget https://www.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.12-${KAFKA_VERSION}.tgz -O kafka.tgz \
- && mkdir -p $USRLIBS/kafka \
- && tar -xzf $USRLIBS/kafka.tgz -C $USRLIBS/kafka --strip-components 1 \
- && rm $USRLIBS/kafka.tgz
+RUN mkdir $FINK_HOME
 
-ENV KAFKA_HOME $USRLIBS/kafka
+# Avoid re-installing Python dependencies
+# when fink-broker code changes
+ENV PIP_NO_CACHE_DIR 1
+ADD deps/requirements.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements.txt
+ADD deps/requirements-science.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science.txt
+ADD deps/requirements-science-no-deps.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
 
-# Install Apache Spark
-RUN axel --quiet http://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
-  && tar -xf $USRLIBS/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz \
-  && rm $USRLIBS/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz
+RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
+ADD --chown=${spark_uid} . $FINK_HOME/
 
-ENV SPARK_HOME $USRLIBS/spark-${SPARK_VERSION}-bin-hadoop2.7
-ENV SPARKLIB ${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.7-src.zip
-ENV PYTHONPATH "${SPARKLIB}:${FINK_HOME}:$PYTHONPATH"
-ENV PATH "${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 
-RUN echo "spark.yarn.jars=${SPARK_HOME}/jars/*.jar" > ${SPARK_HOME}/conf/spark-defaults.conf
-
-# Install Python
-WORKDIR $USRLIBS/anaconda3
-
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
- && bash $USRLIBS/anaconda3/miniconda.sh -b -p $USRLIBS/anaconda3/miniconda
-
-ENV PATH $USRLIBS/anaconda3/miniconda/bin:$PATH
-
-# Install the broker deps
-# fink-filters and fink-science are not installed!
-COPY requirements-docker.txt $USRLIBS/anaconda3/requirements-docker.txt
-RUN pip install --upgrade pip setuptools wheel \
-  && pip install ipython \
-  && pip install -r $USRLIBS/anaconda3/requirements-docker.txt
-
-# Install the simulator
-WORKDIR /home
-RUN git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
-
-ENV FINK_ALERT_SIMULATOR /home/fink-alert-simulator
-
-# Here we assume the container will be ran with
-# --v $HOST_PATH_TO/fink-package:/home/fink-package
-ENV FINK_HOME /home/fink-broker
-ENV FINK_SCIENCE /home/fink-science
-ENV FINK_FILTERS /home/fink-filters
-
-ENV PYTHONPATH $FINK_HOME:$FINK_ALERT_SIMULATOR:$FINK_SCIENCE:$FINK_FILTERS:$PYTHONPATH
-ENV PATH $FINK_HOME/bin:$FINK_ALERT_SIMULATOR/bin:$PATH
-
-WORKDIR $FINK_HOME

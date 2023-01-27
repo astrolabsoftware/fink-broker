@@ -1,0 +1,33 @@
+# Active learning
+-e git+https://github.com/emilleishida/fink_sn_activelearning.git@e16152091ff8f9ece8d4823e8da1f498d60ac45f#egg=actsnfink
+-e git+https://github.com/COINtoolbox/ActSNClass.git@2c61da91a9d13834d39804fc35aeb3245ba20755#egg=actsnclass
+
+# microlensing
+-e git+https://github.com/JulienPeloton/LIA.git@4513654b15a0760312eff2661b0fcf4989171ce3#egg=LIA
+
+# supernnova -- elasticc branch
+-e git+https://github.com/supernnova/SuperNNova.git@1a306410966222f68e57ddd38d4fd6bc2e929cdc#egg=supernnova
+h5py
+natsort
+colorama
+seaborn
+
+# SNAD
+light-curve-python>=0.3.5
+light-curve>=0.4.0
+
+# AGN
+iminuit==2.11.2
+
+# kilonova @ sklearn==1.0.2
+-e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect
+
+# Installation of torch without GPU support (lighter)
+-f https://download.pytorch.org/whl/torch_stable.html
+torch==1.12.0+cpu
+
+# Astronet dependencies
+george
+imbalanced-learn==0.7.0
+optuna==2.3.0
+tensorflow==2.8.0

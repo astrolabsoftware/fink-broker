@@ -415,7 +415,7 @@ if __name__ == "__main__":
         root, "online/raw")
 
     globs["ztf_avro_sample"] = os.path.join(
-        root, "schemas/template_schema_ZTF_3p3.avro")
+        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=True)
