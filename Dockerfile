@@ -51,8 +51,12 @@ RUN mkdir $FINK_HOME
 # Avoid re-installing Python dependencies
 # when fink-broker code changes
 ENV PIP_NO_CACHE_DIR 1
-ADD requirements.txt $FINK_HOME/
+ADD deps/requirements.txt $FINK_HOME/
 RUN pip install -r $FINK_HOME/requirements.txt
+ADD deps/requirements-science.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science.txt
+ADD deps/requirements-science-no-deps.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 ADD --chown=${spark_uid} . $FINK_HOME/

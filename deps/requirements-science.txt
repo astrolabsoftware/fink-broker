@@ -1,28 +1,3 @@
-# Dependencies for Fink
-numpy>=1.17
-coverage>=4.2
-coveralls
-pandas==1.3.5
-# > 1.9. see https://github.com/edenhill/librdkafka/issues/3263
-confluent-kafka==1.9.2
-avro-python3
-Cython
-fastavro==1.6.0
-pyarrow==9.0.0
-codecov
-slackclient
-astropy
-astroquery
-fink_filters>=3.5
-fink-science>=3.8.0
-fink-utils>=0.8.0
-scipy
-scikit-learn==1.0.2
-scikit-image
-healpy
-fink-tns>=0.6
-tensorflow_addons
-
 # Active learning
 -e git+https://github.com/emilleishida/fink_sn_activelearning.git@e16152091ff8f9ece8d4823e8da1f498d60ac45f#egg=actsnfink
 -e git+https://github.com/COINtoolbox/ActSNClass.git@2c61da91a9d13834d39804fc35aeb3245ba20755#egg=actsnclass
@@ -47,18 +22,11 @@ iminuit==2.11.2
 # kilonova @ sklearn==1.0.2
 -e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect
 
-# Fink-fat
--e git+https://github.com/FusRoman/fink-fat.git@6dcebaee620abb9fb49ea1db9c254300becbea04#egg=fink-fat --install-option="--no-deps"
-
-# Fink_GRB
--e git+https://github.com/FusRoman/Fink_GRB.git@71e8b4d440da15911a37bc6db4908fefc94ccc6a#egg=Fink_GRB --install-option="--no-deps"
-
 # Installation of torch without GPU support (lighter)
 -f https://download.pytorch.org/whl/torch_stable.html
 torch==1.12.0+cpu
 
-# Installation of astronet
--e git+https://github.com/tallamjr/astronet.git#egg=astronet --install-option="--no-deps"
+# Astronet dependencies
 george
 imbalanced-learn==0.7.0
 optuna==2.3.0
