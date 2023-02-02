@@ -53,7 +53,7 @@ if [ $ci = true ]; then
   ci_opt="$ci_opt --conf spark.driver.memory=500m --conf spark.executor.memory=500m"
 fi
 
-readonly SPARK_LOG_FILE="/tmp/spark-submit.log"
+readonly SPARK_LOG_FILE="/tmp/spark-stream2raw.log"
 echo "Launch Spark job in background (log file: $SPARK_LOG_FILE)"
 spark-submit --master "k8s://${API_SERVER_URL}" \
     --deploy-mode cluster \
@@ -84,6 +84,22 @@ do
   echo "-----"
   kubectl get pods
 done
+
+# Store the stream of alerts
+NIGHT="20190903"
+spark-submit --master "k8s://${API_SERVER_URL}" \
+  --deploy-mode cluster \
+  --conf spark.executor.instances=1 \
+  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+  --conf spark.kubernetes.container.image="$IMAGE" \
+  --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/home/fink -Divy.home=/home/fink" \
+  $ci_opt \
+  local:///home/fink/fink-broker/bin/raw2science.py \
+  -producer ${PRODUCER} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
+  -tinterval ${FINK_TRIGGER_UPDATE} \
+  -night ${NIGHT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER} >& $SPARK_LOG_FILE &
 
 echo "Wait for Spark pods to be running"
 if ! kubectl wait --timeout=60s --for=condition=Ready pods -l spark-role
