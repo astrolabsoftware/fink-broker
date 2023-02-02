@@ -70,8 +70,29 @@ do
   kubectl get pods
 done
 
+<<<<<<< HEAD
 # Debug
 if [ "$pod_count" -ne $expected_pods ]
+=======
+# Store the stream of alerts
+NIGHT="20190903"
+spark-submit --master "k8s://${API_SERVER_URL}" \
+  --deploy-mode cluster \
+  --conf spark.executor.instances=1 \
+  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+  --conf spark.kubernetes.container.image="$IMAGE" \
+  --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/home/fink -Divy.home=/home/fink" \
+  $ci_opt \
+  local:///home/fink/fink-broker/bin/raw2science.py \
+  -producer ${PRODUCER} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
+  -tinterval ${FINK_TRIGGER_UPDATE} \
+  -night ${NIGHT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER} >& $SPARK_LOG_FILE &
+
+echo "Wait for Spark pods to be running"
+if ! kubectl wait --timeout=60s --for=condition=Ready pods -l spark-role
+>>>>>>> efba5f2 (Bump protobuf to 3.20)
 then
   for task in $tasks; do
     echo "--------- $task log file ---------"
