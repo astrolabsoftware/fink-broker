@@ -1,0 +1,14 @@
+* TODO https://stackoverflow.com/questions/30385981/how-to-access-s3a-files-from-apache-spark
+Document +add SO post?:
+Download hadoop binary release: https://www.apache.org/dyn/closer.cgi/hadoop/common/hadoop-3.2.4/hadoop-3.2.4.tar.gz
+extract and copy jar:
+ fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/hadoop-aws-3.2.4.jar ~/src/k8s-spark-py/custom/jars 
+ fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/aws-java-sdk-bundle-1.11.901.jar ~/src/k8s-spark-py/custom/jars
+* TODO document minio bucket creation:
+    5  curl https://dl.min.io/client/mc/release/linux-amd64/mc   --create-dirs   -o $HOME/minio-binaries/mc
+    6  chmod +x $HOME/minio-binaries/mc
+   15  export PATH=$PATH:$HOME/minio-binaries/
+   17  mc alias set s3 http://minio.minio-dev:9000 minioadmin minioadmin
+   19  mc ls s3
+   27  mc mb s3/fink-broker-online
+* DONE INSTALL MINIO https://min.io/docs/minio/kubernetes/upstream/index.html?
