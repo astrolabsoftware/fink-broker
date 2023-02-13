@@ -15,10 +15,10 @@ readonly IMAGE="$REPO/fink-broker:$IMAGE_TAG"
 
 # Spark image tag
 # Spark image is built here: https://github.com/astrolabsoftware/k8s-spark-py/
-SPARK_IMAGE_TAG="k8s-3.1.3"
+SPARK_IMAGE_TAG="k8s-3.2.3"
 
 # Spark version
-readonly SPARK_VERSION="3.1.3"
+readonly SPARK_VERSION="3.2.3"
 
 # Name for the Spark archive
 readonly SPARK_NAME="spark-${SPARK_VERSION}-bin-hadoop3.2"

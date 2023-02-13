@@ -61,4 +61,7 @@ RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 ADD --chown=${spark_uid} . $FINK_HOME/
 
-
+# FIXME move this above when setup is done
+USER root
+RUN xargs -n 1 curl --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
+USER ${spark_uid}
