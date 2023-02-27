@@ -94,7 +94,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 90 -c $conf --night "20190903"
+  fink start raw2science --exit_after 120 -c $conf --night "20190903"
 
   # Start the distribution service
   fink start distribution --exit_after 30 -c $conf --night "20190903"
