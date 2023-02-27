@@ -91,7 +91,7 @@ def main():
     df_schema = df_schema.selectExpr(cnames)
 
     path_for_avro = 'schema_{}.avro'.format(args.night)
-    schema = save_and_load_schema(df_schema, path_for_avro)
+    schema = save_and_load_schema(df_schema, path_for_avro, fs=args.fs)
 
     # Retrieve time-series information
     to_expand = [

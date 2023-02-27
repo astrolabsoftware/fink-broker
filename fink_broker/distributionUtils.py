@@ -85,7 +85,7 @@ def get_kafka_df(
 
     return df_kafka
 
-def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
+def save_and_load_schema(df: DataFrame, path_for_avro: str, fs: str) -> str:
     """ Extract AVRO schema from a static Spark DataFrame
 
     Parameters
@@ -94,6 +94,9 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
         Spark dataframe for which we want to extract the schema
     path_for_avro: str
         Temporary path on hdfs where the schema will be written
+    fs: str
+        Filesystem on which to retrieve data from.
+        Available: local, hdfs, s3
 
     Returns
     ----------
@@ -103,10 +106,12 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
     # save schema
     df.coalesce(1).limit(1).write.format("avro").save(path_for_avro)
 
-    # retrieve data on local disk
-    is_local = os.path.isdir(path_for_avro)
-    if not is_local:
+    # retrieve data on HDFS or S3
+    # If local, the path is just `path_for_avro`
+    if fs == 'hdfs':
         subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
+    elif fs == 's3':
+        subprocess.run(["s3cmd", "get", '--recursive', path_for_avro])
 
     # Read the avro schema from .avro file
     avro_file = glob.glob(path_for_avro + "/part*")[0]

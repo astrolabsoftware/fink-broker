@@ -293,6 +293,7 @@ elif [[ $service == "distribution" ]]; then
   -substream_prefix ${SUBSTREAM_PREFIX} \
   -tinterval ${FINK_TRIGGER_UPDATE} \
   -night ${NIGHT} \
+  -fs ${FS_KIND} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "merge" ]]; then
   spark-submit --master ${SPARK_MASTER} \
@@ -411,7 +412,7 @@ elif [[ $service == "save_schema" ]]; then
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
-  -night ${NIGHT} -log_level ${LOG_LEVEL}
+  -night ${NIGHT} -fs ${FS_KIND} -log_level ${LOG_LEVEL}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

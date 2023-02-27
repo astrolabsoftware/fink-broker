@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2022 AstroLab Software
+# Copyright 2020-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,11 @@
 """
 import argparse
 from time import time
-import subprocess
-import glob
-import json
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
-from fink_broker.avroUtils import readschemafromavrofile
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.distributionUtils import save_and_load_schema
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -61,22 +58,14 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
+    cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
+    cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
 
     df_kafka = df.selectExpr(cnames)
 
     path_for_avro = 'new_schema_{}.avro'.format(time())
-    df_kafka.limit(1).write.format("avro").save(path_for_avro)
 
-    # retrieve data on local disk
-    subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
-
-    # Read the avro schema from .avro file
-    avro_file = glob.glob(path_for_avro + "/part*")[0]
-    avro_schema = readschemafromavrofile(avro_file)
-
-    # Write the schema to a file for decoding Kafka messages
-    with open('schemas/{}'.format(path_for_avro.replace('.avro', '.avsc')), 'w') as f:
-        json.dump(avro_schema, f, indent=2)
+    save_and_load_schema(df_kafka, path_for_avro, fs=args.fs)
 
 
 if __name__ == "__main__":
