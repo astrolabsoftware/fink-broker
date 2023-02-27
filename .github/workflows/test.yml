@@ -64,7 +64,7 @@ jobs:
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        pip install fink-science --upgrade
+        pip install fink-science fink-filters --upgrade
         fink init -c ${FINK_HOME}/conf/fink.conf.dev
         fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
         fink_test -c conf/fink.conf.dev --without-units
@@ -74,7 +74,7 @@ jobs:
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        pip install fink-science --upgrade
+        pip install fink-science fink-filters --upgrade
         fink init -c ${FINK_HOME}/conf/fink.conf.prod
         fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
         fink_test -c conf/fink.conf.prod
