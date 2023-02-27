@@ -155,8 +155,10 @@ if [[ "$INITPATH" = true ]] ; then
     finkdir='mkdir'
   elif [[ "$FS_KIND" = "hdfs" ]] ; then
     finkdir='hdfs dfs -mkdir'
+  elif [[ "$FS_KIND" = "s3" ]] ; then
+    finkdir='s3cmd mb'
   else
-    echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs}"
+    echo "$FS_KIND file system not understood! Currently available: FS_KIND={local, hdfs, s3}"
     exit 1
   fi
   $finkdir $ONLINE_DATA_PREFIX
