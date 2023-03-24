@@ -10,14 +10,14 @@ extract and copy jar:
 kubectl logs stream2raw-py-f529af864f8dee60-driver | grep downlo | cut -d' ' -f2 > jars-urls.txt
 OR add mnv copy:dependencies when building the image?
 * TODO manage dependencies
-Whet to do with:
+What to do with:
 1. hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar 
 hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
 which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
 cf. Julien are they required?
 2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
 * TODO document minio install and bucket creation:
-    5  curl https://dl.min.io/client/mc/release/linux-amd64/mc   --create-dirs   -o $HOME/minio-binaries/mc
+    5  curl https://dl.min.io/client/mc/release/linux-amd64/mc  --create-dirs -o $HOME/minio-binaries/mc
     6  chmod +x $HOME/minio-binaries/mc
    15  export PATH=$PATH:$HOME/minio-binaries/
    17  mc alias set s3 http://minio.minio-dev:9000 minioadmin minioadmin

@@ -16,8 +16,9 @@ import os
 import json
 import glob
 import subprocess
+import time
 
-from fink_broker.avroUtils import readschemafromavrofile
+from fink_broker.avroUtils import get_avro_schema, readschemafromavrofile
 from fink_broker.sparkUtils import to_avro
 
 from pyspark.sql import DataFrame
@@ -101,12 +102,14 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
         Schema as string
     """
     # save schema
-    df.coalesce(1).limit(1).write.format("avro").save(path_for_avro)
+    df.coalesce(1).limit(1).write.format("avro").save("file:///"+path_for_avro)
 
     # retrieve data on local disk
-    is_local = os.path.isdir(path_for_avro)
-    if not is_local:
-        subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
+    # is_local = os.path.isdir(path_for_avro)
+    # if not is_local:
+    #    subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
+    print("SLEEPING XXXXXXXXXXXXXXXXXX")
+    time.sleep(2.4)
 
     # Read the avro schema from .avro file
     avro_file = glob.glob(path_for_avro + "/part*")[0]
@@ -121,6 +124,11 @@ def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
         schema_ = json.dumps(f.read())
 
     schema = json.loads(schema_)
+
+    # print("XXXXXXXXXXXXXXXXXXXXXX "+schema)
+    # print(f"XXXXXXXXXXXXXXXXXXXXXX {df.coalesce(1).limit(1).schema}")
+    # avro_schema = get_avro_schema(df.coalesce(1).limit(1), 'record', 'topLevelRecord', '')
+    # print(f"XXXXXXXXXXXXXXXXXXXXXX {avro_schema}")
 
     return schema
 

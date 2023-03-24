@@ -16,6 +16,7 @@
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
+import json
 import os
 import fastavro
 
@@ -25,6 +26,43 @@ __all__ = [
     'writeavrodata',
     'readschemadata',
     'readschemafromavrofile']
+
+def get_avro_schema(spark_df, schema_type:str, name:str, namespace:str):
+    '''
+    Returns the corresponding avro schema for the passed in spark dataframe.
+    The type mapping covers most commonly used types, every field is made to be nullable.
+    '''
+
+    schema_base = {
+    "type": schema_type,
+    "namespace": name ,
+    "name": namespace
+    }
+
+    # Keys are Spark Types, Values are Avro Types
+    avro_mapping = {
+        'StringType' : ["string", "null"],
+        'LongType' : ["long", "null"],
+        'IntegerType' :  ["int", "null"],
+        'BooleanType' : ["boolean", "null"],
+        'FloatType' : ["float", "null"],
+        'DoubleType': ["double", "null"],
+        'TimestampType' : ["long", "null"],
+        'ArrayType(StringType,true)' : [{"type": "array", "items": ["string", "null"]}, "null"],
+        'ArrayType(IntegerType,true)' : [{"type": "array", "items": ["int", "null"]}, "null"]
+        }
+
+    fields = []
+
+    for field in spark_df.schema.fields:
+        if (str(field.dataType) in avro_mapping):
+            fields.append({"name" : field.name, "type": avro_mapping[str(field.dataType)]})
+        else:
+            fields.append({"name" : field.name, "type": str(field.dataType)})
+
+    schema_base["fields"] = fields
+
+    return json.dumps(schema_base)
 
 def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     """ Encode json into Avro format given a schema.
