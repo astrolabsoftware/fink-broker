@@ -24,9 +24,10 @@
 import argparse
 import time
 
+from fink_broker import schema_converter
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
-from fink_broker.distributionUtils import get_kafka_df, save_and_load_schema
+from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
@@ -91,8 +92,7 @@ def main():
     df_schema = spark.read.format('parquet').load(input_sci)
     df_schema = df_schema.selectExpr(cnames)
 
-    path_for_avro = '/tmp/schema_{}.avro'.format(args.night)
-    schema = save_and_load_schema(df_schema, path_for_avro)
+    schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
 
     # Retrieve time-series information
     to_expand = [

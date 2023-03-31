@@ -18,7 +18,6 @@ import glob
 import subprocess
 import time
 
-from fink_broker.avroUtils import get_avro_schema, readschemafromavrofile
 from fink_broker.sparkUtils import to_avro
 
 from pyspark.sql import DataFrame
@@ -85,52 +84,6 @@ def get_kafka_df(
     df_kafka = df_kafka.withColumn('key', lit(key))
 
     return df_kafka
-
-def save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
-    """ Extract AVRO schema from a static Spark DataFrame
-
-    Parameters
-    ----------
-    df: Spark DataFrame
-        Spark dataframe for which we want to extract the schema
-    path_for_avro: str
-        Temporary path on hdfs where the schema will be written
-
-    Returns
-    ----------
-    schema: str
-        Schema as string
-    """
-    # save schema
-    df.coalesce(1).limit(1).write.format("avro").save("file:///"+path_for_avro)
-
-    # retrieve data on local disk
-    # is_local = os.path.isdir(path_for_avro)
-    # if not is_local:
-    #    subprocess.run(["hdfs", "dfs", '-get', path_for_avro])
-    print("SLEEPING XXXXXXXXXXXXXXXXXX")
-    time.sleep(2.4)
-
-    # Read the avro schema from .avro file
-    avro_file = glob.glob(path_for_avro + "/part*")[0]
-    avro_schema = readschemafromavrofile(avro_file)
-
-    # Write the schema to a file for decoding Kafka messages
-    with open('{}'.format(path_for_avro.replace('.avro', '.avsc')), 'w') as f:
-        json.dump(avro_schema, f, indent=2)
-
-    # reload the schema
-    with open('{}'.format(path_for_avro.replace('.avro', '.avsc')), 'r') as f:
-        schema_ = json.dumps(f.read())
-
-    schema = json.loads(schema_)
-
-    # print("XXXXXXXXXXXXXXXXXXXXXX "+schema)
-    # print(f"XXXXXXXXXXXXXXXXXXXXXX {df.coalesce(1).limit(1).schema}")
-    # avro_schema = get_avro_schema(df.coalesce(1).limit(1), 'record', 'topLevelRecord', '')
-    # print(f"XXXXXXXXXXXXXXXXXXXXXX {avro_schema}")
-
-    return schema
 
 
 if __name__ == "__main__":

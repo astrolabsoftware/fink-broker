@@ -19,50 +19,50 @@ import glob
 import shutil
 import subprocess
 
-from fink_broker.avroUtils import readschemafromavrofile
-from fink_broker.loggingUtils import get_fink_logger
-from fink_broker.sparkUtils import connect_to_raw_database, init_sparksession, to_avro
+from pyspark.sql import DataFrame
 
 from . import distributionUtils
-
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import struct, lit
-from pyspark.sql.avro.functions import to_avro as to_avro_native
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from .avroUtils import readschemafromavrofile
+from .schema_converter import to_avro
+from .sparkUtils import connect_to_raw_database, init_sparksession
 
 _LOG = logging.getLogger(__name__)
 
-def create_spark_session(
-        global_args: dict = None, verbose: bool = False,
-        withstreaming: bool = False):
-    """Create a spark session used for unit tests
+def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
+    """ Extract AVRO schema from a static Spark DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark dataframe for which we want to extract the schema
+    path_for_avro: str
+        Temporary path on hdfs where the schema will be written
+
+    Returns
+    ----------
+    schema: str
+        Schema as string
     """
-    if global_args is None:
-        global_args = globals()
+    # save schema
+    df.coalesce(1).limit(1).write.format("avro").save(path_for_avro)
 
-    from pyspark.sql import SparkSession
-    from pyspark import SparkConf
+    # Read the avro schema from .avro file
+    avro_file = glob.glob(path_for_avro + "/part*")[0]
+    avro_schema = readschemafromavrofile(avro_file)
 
-    conf = SparkConf()
-    confdic = {
-        "spark.python.daemon.module": "coverage_daemon"}
-    conf.setMaster("local[2]")
-    conf.setAppName("fink_test")
-    for k, v in confdic.items():
-        conf.set(key=k, value=v)
-    spark = SparkSession\
-        .builder\
-        .appName("fink_test")\
-        .config(conf=conf)\
-        .getOrCreate()
+    # Write the schema to a file for decoding Kafka messages
+    pre, _ = os.path.splitext(path_for_avro)
+    ref_avro_schema = pre + '.avsc'
+    with open(ref_avro_schema, 'w') as f:
+        json.dump(avro_schema, f, indent=2)
 
-    # Reduce the number of suffled partitions
-    spark.conf.set("spark.sql.shuffle.partitions", 2)
+    # reload the schema
+    with open(ref_avro_schema, 'r') as f:
+        schema = f.read()
 
-    global_args["spark"] = spark
+    return schema
 
-
-def test_save_and_load_schema() -> None:
+def test_to_avro() -> None:
     """ Extract AVRO schema from a static Spark DataFrame
 
     Parameters
@@ -80,16 +80,15 @@ def test_save_and_load_schema() -> None:
 
     spark = init_sparksession(name="pytest", shuffle_partitions=2)
 
-
     # data path
     fink_home = os.environ['FINK_HOME']
-    scitmpdatapath = os.path.join(fink_home, 'utest', 'datasets', 'science')
-    checkpointpath_kafka = '/tmp/kafka_checkpoint'
-    night = '20190903'
+    datapath = os.path.join(fink_home, "utest", "datasets")
+    night = "20190903"
 
     # Connect to the TMP science database
-    input_sci = scitmpdatapath + "/year={}/month={}/day={}".format(
-        night[0:4], night[4:6], night[6:8])
+    input_sci = os.path.join(datapath,
+                             "science",
+                             f"year={night[0:4]}/month={night[4:6]}/day={night[6:8]}")
     df = connect_to_raw_database(
         input_sci,
         input_sci,
@@ -114,10 +113,18 @@ def test_save_and_load_schema() -> None:
     df_schema = spark.read.format('parquet').load(input_sci)
     df_schema = df_schema.selectExpr(cnames)
 
-    path_for_avro = os.path.join('/tmp',f'schema_{night}.avro')
+    avro_schema_fname = f'schema_{night}'
+    path_for_avro = os.path.join('/tmp', avro_schema_fname+".avro")
     if os.path.isdir(path_for_avro):
         shutil.rmtree(path_for_avro)
-    schema = distributionUtils.save_and_load_schema(df_schema, path_for_avro)
-    # avroSchema = spark._jvm.org.apache.spark.sql.avro.SchemaConverters.toAvroType(df_schema.coalesce(1).limit(1).schema, False, "record", "dede")
-    # print("XXXXXXXXXXXXXXXXXXXXXX " + avroSchema)
-    _LOG.info(schema)
+    dumped_json_schema = _save_and_load_schema(df_schema, path_for_avro)
+
+    schema = df_schema.coalesce(1).limit(1).schema
+    json_avro = to_avro(schema)
+
+    assert(json_avro==dumped_json_schema)
+
+    ref_avro_schema = os.path.join(datapath, "schemas", avro_schema_fname+".avsc")
+    with open(ref_avro_schema, 'r') as file:
+        data = file.read()
+    assert(json_avro==data)
