@@ -7,48 +7,43 @@
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
 [![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
-[Fink](https://fink-broker.org) is a broker infrastructure enabling a wide range of applications and services to connect to large streams of alerts issued from telescopes all over the world. You can check the white paper at https://doi.org/10.1093/mnras/staa3602.
+## What is Fink?
 
-# Latest News
-
-* 01/23: Release [2.8](https://github.com/astrolabsoftware/fink-broker/milestone/10?closed=1)
-* 07/22: Release [2.2](https://github.com/astrolabsoftware/fink-broker/milestone/9?closed=1)
-* 04/22: Release [2.0](https://github.com/astrolabsoftware/fink-broker/milestone/7?closed=1), [2.1](https://github.com/astrolabsoftware/fink-broker/milestone/8?closed=1)
-* 01/22: Release [1.4](https://github.com/astrolabsoftware/fink-broker/pull/518)
-* 11/21: Release [1.3](https://github.com/astrolabsoftware/fink-broker/pull/495)
-* 11/21: Release [1.2](https://github.com/astrolabsoftware/fink-broker/pull/492)
-* 08/21: Fink selected as [Rubin Observatory Alert Broker](https://www.lsst.org/scientists/alert-brokers).
-* 03/21: Release [1.1](https://github.com/astrolabsoftware/fink-broker/pull/429)
-* 02/21: Release [1.0](https://github.com/astrolabsoftware/fink-broker/pull/416)
-* 08/20: Release [0.7](https://github.com/astrolabsoftware/fink-broker/pull/396)
-* 06/20: Release [0.6](https://github.com/astrolabsoftware/fink-broker/pull/386).
-* 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year.
-* 04/20: New broker release [0.5](https://github.com/astrolabsoftware/fink-broker/pull/354). Plenty of new features!
-* 02/20: Fink signed a MoU with [ZTF](https://www.ztf.caltech.edu/) to access their live streams!
-* 10/19: Fink was featured at the Spark+AI Summit Europe 2019.
-* 06/19: Fink is participating to the LSST [call](https://ldm-682.lsst.io/) for community broker.
-* 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [cAbhi15](https://github.com/cAbhi15) who will work on the project this year.
-
-## Getting started
-
-Learning Fink is easy whether you are a developer or a scientist:
-
-* Learn about the [broker technology](https://fink-broker.readthedocs.io/en/latest/broker/introduction/), the [science](https://fink-broker.readthedocs.io/en/latest/science/introduction/) we do, and how to [receive](https://fink-broker.readthedocs.io/en/latest/fink-client/) alerts.
-* Learn how to use the broker or how to contribute following the different [tutorials](https://fink-broker.readthedocs.io/en/latest/tutorials/introduction/).
-* Explore the different components:
-    * [fink-alert-simulator](https://github.com/astrolabsoftware/fink-alert-simulator): Simulate alert streams for the Fink broker.
-    * [fink-broker](https://github.com/astrolabsoftware/fink-broker): Astronomy Broker based on Apache Spark.
-    * [fink-science](https://github.com/astrolabsoftware/fink-science): Define your science modules to add values to Fink alerts.
-    * [fink-filters](https://github.com/astrolabsoftware/fink-filters): Define your filters to create your alert stream in Fink.
-    * [fink-client](https://github.com/astrolabsoftware/fink-client):  Light-weight client to manipulate alerts from Fink.
+Fink is an alert broker, that is a layer between astronomical alert issuers and the scientific community analysing the alert data. It exposes services to help the scientists to efficiently analyse the alert data from telescopes and surveys. Among several, it collects and stores alert data, enriches them with information from other surveys and catalogues or user-defined added values such as machine-learning classification scores, and redistributes the most promising events for further analyses, including follow-up observations.
 
 
-## Documentation
+Fink's main scientific objective is to optimize the scientific impact of the [Rubin Observatory](https://www.lsst.org/) alert data stream. We do not limit ourselves to a specific area, but instead our ambition is to study the transient and variable sky as a whole, from Solar system objects to galactic and extragalactic science. In practice thanks to the [Zwicky Transient Facility](https://www.ztf.caltech.edu/) alert stream, we are active since 2019 on Solar system objects, young stellar objects, microlensing, supernovae, kilonovae, gamma-ray bursts, active galactic nuclei, and even anomaly detection. On the technological side, Fink aims at providing a robust infrastructure and state-of-the-art streaming services to Rubin scientists, to seamlessly enable user-defined science cases in a big data context.
 
-Fink's user documentation is hosted at [https://fink-broker.rtfd.io](https://fink-broker.rtfd.io)
+## How Fink works?
 
-Fink-broker developer documentation is available [here](./doc/devel.adoc)
+The current Fink platform works in four steps. First, alerts from multiple streams are continuously ingested and stored on disk (Apache Spark Structured Streaming). Second, alerts satisfying the quality cuts defined by the broker team are processed by a set of science modules. These science modules -- currently a dozen, spanning solar system objects to galactic and extra-galactic science -- are independent processing units developed by the community of users, and deployed in the Fink platform. They can work on a single input alert stream, or combine several streams together. These science modules enrich the initial alert packets using several techniques such as cross-match with external catalogs of astronomical objects, or classification using machine or deep learning based algorithms. All added-values are made public for the benefit of everyone. Third, enriched alert packets are filtered based on their content, and the most promising events are redistributed to the scientific community in real-time (Apache Kafka). The filtering is again community-driven, and users design and deploy filters to receive tailored information in real-time. Finally, all enriched alert packets are stored in a database (Apache HBase) for permanent access and for further analyses.
 
-## Science Portal
+## The Fink galaxy
 
-You can explore all Fink data in the dedicated Portal: [https://fink-portal.org](https://fink-portal.org).
+Fink is made of several blocks that interconnect to provide all services:
+
+- [Fink Broker](https://github.com/astrolabsoftware/fink-broker): Astronomy Broker based on Apache Spark.
+- [Fink Science Modules](https://github.com/astrolabsoftware/fink-science): Define your science modules to add values to Fink alerts.
+- [Fink Filters](https://github.com/astrolabsoftware/fink-filters): Define your filters to create your alert stream in Fink.
+- [Fink Science Portal](https://github.com/astrolabsoftware/fink-science-portal)Fink Science Portal: Web application and REST API to access all alert data.
+- [Fink Client](https://github.com/astrolabsoftware/fink-client): Light-weight client to manipulate alerts sent from Kafka.
+- [Fink Utils](https://github.com/astrolabsoftware/fink-utils): Various utilities used across different repositories in Fink.
+- [Fink Alert Simulator](https://github.com/astrolabsoftware/fink-alert-simulator): Simulate alert streams for the Fink broker.
+
+All are open source, and we thank all contributors!
+
+## Useful links
+
+- Website: https://fink-broker.org
+- Documentation website: https://fink-broker.readthedocs.io
+- Science Portal: https://fink-portal.org
+- Publications: https://fink-broker.org/papers
+- Release notes: https://fink-broker.readthedocs.io/en/latest/release-notes
+
+## Outside academia
+
+Fink has participated to a number of events with the private sector, in particular:
+
+* 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year. _Focus on graph database with JanusGraph_
+* 10/19: Fink was featured at the [Spark+AI Summit Europe 2019](https://www.databricks.com/session_eu19/accelerating-astronomical-discoveries-with-apache-spark).
+* 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [abhishekchauhn](https://github.com/abhishekchauhn) who will work on the project this year. _Focus on alert redistribution with Apache Kafka_
