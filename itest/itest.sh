@@ -26,48 +26,24 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/../conf.sh
 
-# submit the job in cluster mode - 1 driver + 1 executor
-PRODUCER="sims"
-FINK_ALERT_SCHEMA="/home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro"
-KAFKA_STARTING_OFFSET="earliest"
-ONLINE_DATA_PREFIX="/home/fink/fink-broker/online"
-FINK_TRIGGER_UPDATE=2
-LOG_LEVEL="INFO"
-ci=${CI:-false}
+echo $IMAGE
 
-# get the apiserver url
-PROTOCOL=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].ports[0].name}")
-IP=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].addresses[0].ip}")
-PORT=$(kubectl get endpoints -n default kubernetes -o yaml -o=jsonpath="{.subsets[0].ports[0].port}")
-API_SERVER_URL="${PROTOCOL}://${IP}:${PORT}"
+echo "Create S3 bucket"
+kubectl port-forward -n minio-dev svc/minio 9000 &
+finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml --endpoint=localhost:9000 s3 makebucket
 
-# Set RBAC
+echo "Create spark ServiceAccount"
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
 kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=default:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
-ci_opt=""
-if [ $ci = true ]; then
-  ci_opt="--conf spark.kubernetes.driver.request.cores=0 --conf spark.kubernetes.executor.request.cores=0"
-  ci_opt="$ci_opt --conf spark.driver.memory=500m --conf spark.executor.memory=500m"
-fi
-
 readonly SPARK_LOG_FILE="/tmp/spark-stream2raw.log"
-echo "Launch Spark job in background (log file: $SPARK_LOG_FILE)"
-spark-submit --master "k8s://${API_SERVER_URL}" \
-    --deploy-mode cluster \
-    --conf spark.executor.instances=1 \
-    --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-    --conf spark.kubernetes.container.image="$IMAGE" \
-    --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/home/fink -Divy.home=/home/fink" \
-    $ci_opt \
-    local:///home/fink/fink-broker/bin/stream2raw.py \
-    -producer "${PRODUCER}" \
-    -servers "${KAFKA_SOCKET}" -topic "${KAFKA_TOPIC}" \
-    -schema "${FINK_ALERT_SCHEMA}" -startingoffsets_stream "${KAFKA_STARTING_OFFSET}" \
-    -online_data_prefix "${ONLINE_DATA_PREFIX}" \
-    -tinterval "${FINK_TRIGGER_UPDATE}" -log_level "${LOG_LEVEL}" >& $SPARK_LOG_FILE &
+finkctl -config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal stream2raw --image $IMAGE > /tmp/spark-stream2raw.log &
+
+finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal raw2science --image $IMAGE &
+
+finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal distribution --image $IMAGE &
 
 COUNTER=0
 while [ $(kubectl get pod -l spark-role --field-selector=status.phase==Running -o go-template='{{printf "%d\n" (len  .items)}}') -ne 2 \
@@ -83,34 +59,8 @@ do
   echo "Pods:"
   echo "-----"
   kubectl get pods
+  kubectl describe pods -l "spark-role in (executor, driver)"
 done
-
-# Store the stream of alerts
-NIGHT="20190903"
-spark-submit --master "k8s://${API_SERVER_URL}" \
-  --deploy-mode cluster \
-  --conf spark.executor.instances=1 \
-  --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-  --conf spark.kubernetes.container.image="$IMAGE" \
-  --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/home/fink -Divy.home=/home/fink" \
-  $ci_opt \
-  local:///home/fink/fink-broker/bin/raw2science.py \
-  -producer ${PRODUCER} \
-  -online_data_prefix ${ONLINE_DATA_PREFIX} \
-  -tinterval ${FINK_TRIGGER_UPDATE} \
-  -night ${NIGHT} \
-  -log_level ${LOG_LEVEL} ${EXIT_AFTER} >& $SPARK_LOG_FILE &
-
-echo "Wait for Spark pods to be running"
-if ! kubectl wait --timeout=60s --for=condition=Ready pods -l spark-role
-then
-  echo "spark-submit logs:"
-  echo "------------------"
-  cat /tmp/spark-submit.log
-  echo "Pods:"
-  echo "-----"
-  kubectl describe pods -l spark-role
-fi
 
 kubectl describe pods -l "spark-role in (executor, driver)"
 
