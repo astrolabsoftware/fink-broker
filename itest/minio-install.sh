@@ -9,6 +9,8 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
+NS="minio-dev"
+
 if kubectl apply -f $DIR/manifests/minio.yaml
 then
     echo "Deploy minio"
@@ -16,3 +18,5 @@ else
     >&2 echo "ERROR: No able to deploy minio"
     exit 1
 fi
+
+kubectl rollout status deployment minio -n "$NS" --timeout=90s

@@ -84,6 +84,8 @@ jobs:
         run: ./itest/strimzi-setup.sh
       - name: Install fink-broker pre-requisites (Spark)
         run: ./itest/prereq-install.sh
+      - name: Install MinIO
+        run: ./itest/minio-install.sh
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
