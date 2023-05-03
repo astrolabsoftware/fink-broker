@@ -137,7 +137,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        logger.info("Exiting the raw2science service normally...")
+        _LOG.info("Exiting the raw2science service normally...")
     else:
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()
