@@ -1,12 +1,16 @@
+# Set variable below to empty string in order to
+# build and install current development version
+FINK_BROKER_RELEASE=''
+
+
 # Build parameters
 # ----------------
 # Repository address
 REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
 # Tag to apply to the built image, or to identify the image to be pushed
-GIT_HASH="$(git -C $DIR describe --dirty --always)"
-IMAGE_TAG="$GIT_HASH"
+TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
-IMAGE="$REPO/fink-broker:$IMAGE_TAG"
+IMAGE="$REPO/fink-broker:$TAG"
 
 
 # Spark parameters

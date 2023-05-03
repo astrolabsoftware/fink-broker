@@ -90,7 +90,7 @@ jobs:
         with:
           go-version: '1.19.2'
       - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@a59e13c15bd2fb36fa76f10c9aee35cbbef0468c
+        run: go install github.com/astrolabsoftware/finkctl@v1.0.2
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
@@ -99,6 +99,7 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
+          sleep 10
           ./itest/itest.sh
   image-analysis:
     name: Analyze image

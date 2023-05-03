@@ -90,11 +90,11 @@ def main():
             .filter(df['candidate.nbad'] == 0)\
             .filter(df['candidate.rb'] >= 0.55)
 
-        df = apply_science_modules(df, logger)
+        df = apply_science_modules(df, args.noscience)
         timecol = 'candidate.jd'
         converter = lambda x: convert_to_datetime(x)
     elif 'diaSource' in df.columns:
-        df = apply_science_modules_elasticc(df, logger)
+        df = apply_science_modules_elasticc(df)
         timecol = 'diaSource.midPointTai'
         converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
 
@@ -137,7 +137,7 @@ def main():
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
-        logger.info("Exiting the raw2science service normally...")
+        _LOG.info("Exiting the raw2science service normally...")
     else:
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()

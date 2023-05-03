@@ -39,30 +39,47 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
 readonly SPARK_LOG_FILE="/tmp/spark-stream2raw.log"
-finkctl -config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal stream2raw --image $IMAGE > /tmp/spark-stream2raw.log &
 
-finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal raw2science --image $IMAGE &
+tasks="stream2raw raw2science distribution"
 
-finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark --minimal distribution --image $IMAGE &
+# Iterate the string variable using for loop
+for task in $tasks; do
+  finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark \
+    --minimal --noscience $task --image $IMAGE >& "/tmp/$task.log" &
+done
 
-COUNTER=0
-while [ $(kubectl get pod -l spark-role --field-selector=status.phase==Running -o go-template='{{printf "%d\n" (len  .items)}}') -ne 2 \
-  -o $COUNTER -lt 20 ]
+loop=true
+counter=0
+expected_pods=6
+while $loop
 do
+  pod_count=$(kubectl get pod -l spark-role=driver --field-selector=status.phase==Running \
+    -o go-template='{{printf "%d\n" (len  .items)}}')
+
+  if [ $pod_count -eq $expected_pods ]; then
+    loop=false
+  elif [ $counter -gt 5 ]; then
+    loop=false
+  fi
   echo "Wait for Spark pods to be created"
   echo "---------------------------------"
   sleep 2
-  echo "spark-submit logs (30 lines):"
-  echo "-----------------------------"
-  tail -n 30 "$SPARK_LOG_FILE"
-  let COUNTER=COUNTER+1
+  let counter=counter+1
   echo "Pods:"
   echo "-----"
   kubectl get pods
-  kubectl describe pods -l "spark-role in (executor, driver)"
 done
 
-kubectl describe pods -l "spark-role in (executor, driver)"
+# Debug
+if [ "$pod_count" -ne $expected_pods ]
+then
+  for task in $tasks; do
+    echo "--------- $task log file ---------"
+    cat "/tmp/$task.log"
+  done
+  kubectl describe pods -l "spark-role in (executor, driver)"
+  kubectl get pods
+fi
 
 # TODO a cli option
 # kubectl delete pod -l "spark-role in (executor, driver)"
