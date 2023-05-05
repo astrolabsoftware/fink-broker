@@ -7,7 +7,7 @@
 # set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-. ./env.build.sh
+. ./conf.sh
 
 unittests=false
 mypy=false
@@ -41,11 +41,11 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
+# Build image
+$DIR/build.sh
 if [ $unittests = true ]; then
-  # Build ingest image
-  $DIR/build.sh
-  docker run -- "$INGEST_IMAGE" /ingest/bin/pytest.sh
+  docker run -- "$IMAGE" /home/fink/fink-broker/utest/bin/pytest.sh
 fi
 if [ $mypy = true ]; then
-  mypy --config-file $DIR/rootfs/ingest/python/mypy.ini $DIR/rootfs/ingest/bin/replctl $DIR/rootfs/ingest/python/
+  docker run -- "$IMAGE" mypy /home/fink/fink-broker/
 fi

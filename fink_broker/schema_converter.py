@@ -22,7 +22,7 @@ from typing import Any, Dict
 
 from pyspark.sql.types import StructType
 
-def _is_nullable(field: Dict[Any, Any], avro_type: Dict[Any, Any]) -> Any:
+def _is_nullable(field: Dict[Any, Any], avro_type: Any) -> Any:
     avro_type_out: Any
     if field['nullable']:
         avro_type_out = [avro_type, "null"]
@@ -137,6 +137,7 @@ def _parse_struct(data: Dict[Any, Any], name: str = "") -> Dict[Any, Any]:
     if data['type'] not in ['struct']:
         raise ValueError("Expected ['struct'] type, is ", data['type'])
     avroRecord['fields'] = []
+    avro_type: Any
     for field in data['fields']:
         outField: dict[Any, Any] = dict()
         outField['name'] = field['name']

@@ -69,6 +69,6 @@ RUN pip install py4j
 ENV FINK_JARS ""
 ENV FINK_PACKAGES ""
 # pytest requirements
-RUN pip install pytest
+RUN pip install pytest mypy
 
 ADD --chown=${spark_uid} . $FINK_HOME/
