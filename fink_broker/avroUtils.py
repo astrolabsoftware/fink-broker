@@ -16,7 +16,6 @@
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
-import json
 import os
 import fastavro
 

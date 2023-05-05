@@ -16,12 +16,10 @@ import os
 import json
 import logging
 import glob
-import shutil
-import subprocess
+import tempfile
 
 from pyspark.sql import DataFrame
 
-from . import distributionUtils
 from .avroUtils import readschemafromavrofile
 from .schema_converter import to_avro
 from .sparkUtils import connect_to_raw_database, init_sparksession
@@ -114,17 +112,16 @@ def test_to_avro() -> None:
     df_schema = df_schema.selectExpr(cnames)
 
     avro_schema_fname = f'schema_{night}'
-    path_for_avro = os.path.join('/tmp', avro_schema_fname+".avro")
-    if os.path.isdir(path_for_avro):
-        shutil.rmtree(path_for_avro)
-    dumped_json_schema = _save_and_load_schema(df_schema, path_for_avro)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path_for_avro = os.path.join(tmpdir, avro_schema_fname + ".avro")
+        dumped_json_schema = _save_and_load_schema(df_schema, path_for_avro)
 
     schema = df_schema.coalesce(1).limit(1).schema
     json_avro = to_avro(schema)
 
-    assert(json_avro==dumped_json_schema)
+    assert json_avro == dumped_json_schema, "Avro schema is not the expected one"
 
-    ref_avro_schema = os.path.join(datapath, "schemas", avro_schema_fname+".avsc")
+    ref_avro_schema = os.path.join(datapath, "schemas", avro_schema_fname + ".avsc")
     with open(ref_avro_schema, 'r') as file:
         data = file.read()
-    assert(json_avro==data)
+    assert json_avro == data, "Avro schema is not the expected one"
