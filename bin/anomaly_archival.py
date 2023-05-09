@@ -60,7 +60,7 @@ def main():
     _ = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
-        send_to_slack=True, channel_name='fink_alert'
+        send_to_slack=True, channel_name='anomaly_bot'
     )
 
 
