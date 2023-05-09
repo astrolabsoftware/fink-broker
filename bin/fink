@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -381,6 +381,14 @@ elif [[ $service == "push_to_tns" ]]; then
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -tns_folder ${TNS_FOLDER} ${TNS_SANDBOX} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "anomaly_archival" ]]; then
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/anomaly_archival.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
+  -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "check_science_portal" ]]; then
   spark-submit --master ${SPARK_MASTER} \
