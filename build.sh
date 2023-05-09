@@ -26,7 +26,7 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/conf.sh
 
-if NOSCIENCE
+if $NOSCIENCE
 then
     TARGET=noscience
 else
