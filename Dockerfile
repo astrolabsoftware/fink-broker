@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 ARG spark_image_tag
-FROM gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:${spark_image_tag}
+FROM gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:${spark_image_tag} as noscience
 
 ARG spark_uid=185
 ENV spark_uid ${spark_uid}
@@ -73,3 +73,10 @@ ADD deps/requirements-test.txt $FINK_HOME/deps
 RUN pip install -r $FINK_HOME/deps/requirements-test.txt
 
 ADD --chown=${spark_uid} . $FINK_HOME/
+
+FROM noscience AS full
+
+ADD deps/requirements-science.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science.txt
+ADD deps/requirements-science-no-deps.txt $FINK_HOME/
+RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps

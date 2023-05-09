@@ -10,8 +10,14 @@ REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
 # Tag to apply to the built image, or to identify the image to be pushed
 TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
-IMAGE="$REPO/fink-broker:$TAG"
 
+NOSCIENCE=true
+if $NOSCIENCE;
+then
+  IMAGE="$REPO/fink-broker-noscience:$TAG"
+else
+  IMAGE="$REPO/fink-broker:$TAG"
+fi
 
 # Spark parameters
 # ----------------

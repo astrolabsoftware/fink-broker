@@ -26,5 +26,13 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/conf.sh
 
-# Build ingest image
-docker image build --tag "$IMAGE" --build-arg spark_image_tag="$SPARK_IMAGE_TAG" "$DIR"
+if NOSCIENCE
+then
+    TARGET=noscience
+else
+    TARGET=full
+fi
+
+# Build image
+docker image build --tag "$IMAGE" --build-arg spark_image_tag="$SPARK_IMAGE_TAG" "$DIR" --target $TARGET
+
