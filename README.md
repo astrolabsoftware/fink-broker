@@ -25,7 +25,7 @@ Fink is made of several blocks that interconnect to provide all services:
 - [Fink Broker](https://github.com/astrolabsoftware/fink-broker): Astronomy Broker based on Apache Spark.
 - [Fink Science Modules](https://github.com/astrolabsoftware/fink-science): Define your science modules to add values to Fink alerts.
 - [Fink Filters](https://github.com/astrolabsoftware/fink-filters): Define your filters to create your alert stream in Fink.
-- [Fink Science Portal](https://github.com/astrolabsoftware/fink-science-portal)Fink Science Portal: Web application and REST API to access all alert data.
+- [Fink Science Portal](https://github.com/astrolabsoftware/fink-science-portal): Web application and REST API to access all alert data.
 - [Fink Client](https://github.com/astrolabsoftware/fink-client): Light-weight client to manipulate alerts sent from Kafka.
 - [Fink Utils](https://github.com/astrolabsoftware/fink-utils): Various utilities used across different repositories in Fink.
 - [Fink Alert Simulator](https://github.com/astrolabsoftware/fink-alert-simulator): Simulate alert streams for the Fink broker.
