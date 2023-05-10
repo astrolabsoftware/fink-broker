@@ -37,7 +37,7 @@ jobs:
         with:
           name: docker-artifact
           path: artifacts
-  itest:
+  integration-tests:
     name: Run integration tests
     runs-on: ubuntu-22.04
     needs: build
@@ -132,3 +132,25 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
+  push:
+    name: Push fink-broker image to IN2P3 registry
+    runs-on: ubuntu-22.04
+    needs: integration-tests
+    steps:
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load image in local registry
+        run: |
+          docker load --input artifacts/image.tar
+          echo "IMAGE=$(cat artifacts/image-tag)" >> $GITHUB_ENV
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Push image to IN2P3 registry
+        run: |
+          docker push ${{ env.IMAGE }}
