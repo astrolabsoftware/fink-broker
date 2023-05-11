@@ -448,32 +448,17 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
     mapping_cats_general = {
-        -1: 0,
-        0: 111,
-        1: 112,
-        2: 113,
-        3: 114,
-        4: 115,
-        5: 121,
-        6: 122,
-        7: 123,
-        8: 124,
-        9: 131,
-        10: 132,
-        11: 133,
-        12: 134,
-        13: 135,
-        14: 211,
-        15: 212,
-        16: 213,
-        17: 214,
-        18: 221
+        0: 220,
+        1: 230,
+        2: 240,
+        3: 320,
+        4: 330,
     }
     mapping_cats_general_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_general.items())])
 
-    col_fine_class = F.col('cbpf_preds').getItem(0).astype('int')
-    df = df.withColumn('cats_fine_class', mapping_cats_general_expr[col_fine_class])
-    df = df.withColumn('cats_fine_max_prob', F.col('cbpf_preds').getItem(1))
+    df = df.withColumn('argmax', F.expr('array_position(cbpf_preds, array_max(cbpf_preds)) - 1'))
+    df = df.withColumn('cats_broad_class', mapping_cats_general_expr[df['argmax']])
+    df = df.withColumn('cats_broad_max_prob', F.array_max(df['cbpf_preds']))
 
     # AGN
     args_forced = [
