@@ -396,9 +396,18 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('redshift_err', F.col('diaObject.z_final_err'))
 
     logger.info("New processor: EarlySN")
+
     args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
-    # fake args
-    args += [F.col('cdsxmatch'), F.lit(20), F.lit(40)]
+
+    # fake cdsxmatch and nobs
+    args += [F.col('cdsxmatch'), F.lit(20)]
+    args += [F.col('diaObject.ra'), F.col('diaObject.decl')]
+    args += [F.col('diaObject.hostgal_ra'), F.col('diaObject.hostgal_dec')]
+    args += [F.col('diaObject.hostgal_zphot')]
+    args += [F.col('diaObject.hostgal_zphot_err'), F.col('diaObject.mwebv')]
+
+    # maxduration
+    args += [F.lit(40)]
     df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
