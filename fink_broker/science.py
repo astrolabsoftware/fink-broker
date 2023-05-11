@@ -44,6 +44,7 @@ from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
 from fink_science.agn.processor import agn_elasticc
+from fink_science.slsn.processor import slsn_elasticc
 from fink_science.t2.processor import t2
 
 from fink_broker.tester import spark_unit_tests
@@ -468,6 +469,15 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
+
+    # SLSN
+    args_forced = [
+        'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
+        'diaSource.ra', 'diaSource.decl',
+        'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
+        'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
+    ]
+    df = df.withColumn('rf_slsn_vs_nonslsn', slsn_elasticc(*args_forced))
 
     # Drop temp columns
     df = df.drop(*expanded)
