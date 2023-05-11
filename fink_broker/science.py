@@ -484,10 +484,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
 
-    # T2
-    df = df.withColumn('t2_broad_class', F.lit(0))
-    df = df.withColumn('t2_broad_max_prob', F.lit(0.0))
-
     # Drop temp columns
     df = df.drop(*expanded)
     df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid'])
