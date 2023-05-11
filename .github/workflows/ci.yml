@@ -147,8 +147,9 @@ jobs:
           docker load --input artifacts/image.tar
           echo "IMAGE=$(cat artifacts/image-tag)" >> $GITHUB_ENV
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
+          registry: gitlab-registry.in2p3.fr
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
       - name: Push image to IN2P3 registry
