@@ -429,7 +429,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('preds_snn', snn_broad_elasticc(*args))
 
     mapping_snn = {
-        -1: 0,
         0: 11,
         1: 13,
         2: 12,
@@ -449,11 +448,11 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
     mapping_cats_general = {
-        0: 220,
-        1: 230,
-        2: 240,
-        3: 320,
-        4: 330,
+        0: 11,
+        1: 12,
+        2: 13,
+        3: 21,
+        4: 22,
     }
     mapping_cats_general_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_general.items())])
 
@@ -481,7 +480,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid'])
+    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid', 'argmax'])
 
     return df
 
