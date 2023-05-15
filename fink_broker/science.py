@@ -323,7 +323,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
-    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
+    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'cisdiffpos', 'objectId']
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
