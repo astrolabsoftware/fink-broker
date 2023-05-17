@@ -33,7 +33,6 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 from fink_broker.parser import getargs
 from fink_broker.science import ang2pix
-from fink_broker.hbaseUtils import attach_rowkey
 from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import load_science_portal_column_names
@@ -100,10 +99,7 @@ def main():
         )
     else:
         all_cols = cols_i + cols_d + cols_b
-        df = select_relevant_columns(df, all_cols, logger)
-
-    # Create and attach the rowkey
-    df, _ = attach_rowkey(df)
+        df = select_relevant_columns(df, all_cols)
 
     common_cols = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
@@ -141,7 +137,6 @@ def main():
         df_index = select_relevant_columns(
             df_index,
             cols=['objectId'],
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'class':
@@ -166,7 +161,6 @@ def main():
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'ssnamenr':
@@ -175,7 +169,6 @@ def main():
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'tracklet':
@@ -188,7 +181,6 @@ def main():
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
     elif columns[0] == 'upper':
@@ -298,7 +290,6 @@ def main():
         df = select_relevant_columns(
             df,
             cols=common_cols + ['tns'],
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
 
@@ -311,7 +302,6 @@ def main():
         df_index = select_relevant_columns(
             df,
             cols=common_cols,
-            logger=logger,
             to_create=[concat_ws('_', *names).alias(index_row_key_name)]
         )
 

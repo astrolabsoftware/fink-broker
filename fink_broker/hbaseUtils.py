@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import json
+import logging
 
 import numpy as np
 
@@ -28,6 +29,9 @@ from fink_science.t2.utilities import T2_COLS
 from fink_science.xmatch.utils import MANGROVE_COLS
 
 from fink_broker.tester import spark_unit_tests
+
+_LOG = logging.getLogger(__name__)
+
 
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     """ Load table data from HBase into a Spark DataFrame
@@ -224,7 +228,7 @@ def load_science_portal_column_names():
 
     return cols_i, cols_d, cols_b
 
-def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=None) -> DataFrame:
+def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFrame:
     """ Select columns from `cols` that are actually in `df`.
 
     It would act as if `df.select(cols, skip_unknown_cols=True)` was possible.
@@ -273,8 +277,7 @@ def select_relevant_columns(df: DataFrame, cols: list, logger=None, to_create=No
         cnames += to_create
     df = df.select(cnames)
 
-    if logger is not None:
-        logger.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
+    _LOG.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
 
     return df
 
@@ -309,69 +312,6 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
     cf.update({i: 'b' for i in df.select(cols_b).columns})
 
     return cf
-
-def retrieve_row_key_cols():
-    """ Retrieve the list of columns to be used to create the row key.
-
-    The column names are defined here. Be careful in not changing it frequently
-    as you can replace (remove and add) columns for existing table,
-    but you cannot change keys, you must copy the table into new table
-    when changing keys design.
-
-    Returns
-    --------
-    row_key_cols: list of string
-    """
-    # build the row key: objectId_jd
-    row_key_cols = [
-        'objectId',
-        'jd'
-    ]
-    return row_key_cols
-
-def attach_rowkey(df, sep='_'):
-    """ Create and attach the row key to an existing DataFrame.
-
-    The column used to define the row key are declared in
-    `retrieve_row_key_cols`. the row key is made of a string concatenation
-    of those column data, with a separator: str(col1_col2_col3_etc)
-
-    Parameters
-    ----------
-    df: DataFrame
-        Input DataFrame containing alert data from the raw science DB (parquet),
-        and already flattened with a select (i.e. candidate.jd must be jd).
-
-    Returns
-    ----------
-    df: DataFrame
-        Input DataFrame with a new column with the row key. The type of the
-        row key value is string.
-    row_key_name: string
-        Name of the rowkey, made of the columns that were used.
-
-    Examples
-    ----------
-    # Read alert from the raw database
-    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
-
-    >>> df = df.select(['objectId', 'candidate.*'])
-
-    >>> df_rk, row_key_name = attach_rowkey(df)
-
-    >>> 'objectId_jd' in df_rk.columns
-    True
-    """
-    row_key_cols = retrieve_row_key_cols()
-    row_key_name = '_'.join(row_key_cols)
-
-    to_concat = [col(i).astype('string') for i in row_key_cols]
-
-    df = df.withColumn(
-        row_key_name,
-        concat_ws(sep, *to_concat)
-    )
-    return df, row_key_name
 
 def construct_hbase_catalog_from_flatten_schema(
         schema: dict, catalogname: str, rowkeyname: str, cf: dict) -> str:
@@ -530,6 +470,51 @@ def construct_schema_row(df, rowkeyname, version):
     df_schema = spark.createDataFrame([data.tolist()], df.columns)
 
     return df_schema
+
+def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
+    """ Push data stored in a Spark DataFrame into HBase
+
+    It assumes the main ZTF table schema
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark DataFrame (full alert schema)
+    row_key_name: str
+        Name of the rowkey in the table. Should be a column name
+        or a combination of column separated by _ (e.g. jd_objectId).
+    table_name: str
+        HBase table name. If it does not exist, it will
+        be created.
+    catalog_name: str
+        Name for the JSON catalog (saved locally for inspection)
+    """
+    cols_i, cols_d, cols_b = load_science_portal_column_names()
+
+    # Assign each column to a specific column family
+    cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
+
+    # Restrict the input DataFrame to the subset of wanted columns.
+    all_cols = cols_i + cols_d + cols_b
+
+    # index
+    columns = row_key_name.split('_')
+    names = [col(i) for i in columns]
+
+    # Flatten columns & attach rowkey
+    df = select_relevant_columns(
+        df,
+        to_create=[concat_ws('_', *names).alias(row_key_name)],
+        cols=all_cols,
+    )
+
+    push_to_hbase(
+        df=df,
+        table_name=table_name,
+        rowkeyname=row_key_name,
+        cf=cf,
+        catfolder=catalog_name
+    )
 
 
 if __name__ == "__main__":

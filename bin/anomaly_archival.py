@@ -25,6 +25,8 @@ from fink_filters.filter_anomaly_notification.filter import anomaly_notification
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+from fink_broker.hbaseUtils import push_full_df_to_hbase
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -57,10 +59,18 @@ def main():
         'anomaly_score', 'timestamp'
     )
 
-    _ = anomaly_notification_(
+    df_result = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
         send_to_slack=True, channel_name='anomaly_bot'
+    )
+
+    # push data to HBase
+    push_full_df_to_hbase(
+        df_result,
+        row_key_name="jd_objectId",
+        table_name=args.science_db_name + '.anomaly',
+        catalog_name=args.science_db_catalogs
     )
 
 
