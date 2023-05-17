@@ -262,17 +262,17 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
     >>> import pyspark.sql.functions as F
     >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
 
-    >>> select_relevant_columns(df, ['a'], 'b')
+    >>> select_relevant_columns(df, ['a'], '')
     DataFrame[a: bigint]
 
-    >>> select_relevant_columns(df, ['a', 'b', 'c'], 'b')
+    >>> select_relevant_columns(df, ['a', 'b', 'c'], '')
     DataFrame[a: bigint, b: bigint, c: bigint]
 
-    >>> select_relevant_columns(df, ['a', 'd'], 'c')
+    >>> select_relevant_columns(df, ['a', 'd'], '')
     DataFrame[a: bigint]
 
     >>> select_relevant_columns(df, ['a', 'b'], 'c', to_create=[F.col('a') + F.col('b')])
-    DataFrame[a: bigint, b: bigint, (a + b): bigint]
+    DataFrame[a: bigint, b: bigint, c: bigint, (a + b): bigint]
     """
     # Add the row key to the list of columns to extract
     all_cols = cols + [row_key_name]
@@ -371,10 +371,10 @@ def construct_hbase_catalog_from_flatten_schema(
     >>> df_flat = df.select(cols_i)
 
     Attach the row key
-    >>> df_rk, row_key_name = attach_rowkey(df_flat)
+    >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'candidate.jd'])
 
     >>> catalog = construct_hbase_catalog_from_flatten_schema(
-    ...     df_rk.schema, "mycatalogname", row_key_name, cf)
+    ...     df_rk.schema, "mycatalogname", 'objectId_jd', cf)
     """
     schema_columns = schema.jsonValue()["fields"]
 
