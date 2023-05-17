@@ -25,7 +25,7 @@ from fink_filters.filter_anomaly_notification.filter import anomaly_notification
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
-from fink_broker.hbaseUtils import push_full_df_to_hbase
+from fink_broker.hbaseUtils import push_full_df_to_hbase, add_row_key
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -65,10 +65,18 @@ def main():
         send_to_slack=True, channel_name='anomaly_bot'
     )
 
+    # Row key
+    row_key_name = "jd_objectId"
+    df = add_row_key(
+        df,
+        row_key_name=row_key_name,
+        cols=['candidate.jd', 'objectId']
+    )
+
     # push data to HBase
     push_full_df_to_hbase(
         df_result,
-        row_key_name="jd_objectId",
+        row_key_name=row_key_name,
         table_name=args.science_db_name + '.anomaly',
         catalog_name=args.science_db_catalogs
     )

@@ -228,7 +228,7 @@ def load_science_portal_column_names():
 
     return cols_i, cols_d, cols_b
 
-def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFrame:
+def select_relevant_columns(df: DataFrame, cols: list, row_key_name:  str, to_create=None) -> DataFrame:
     """ Select columns from `cols` that are actually in `df`.
 
     It would act as if `df.select(cols, skip_unknown_cols=True)` was possible. Note though
@@ -248,6 +248,8 @@ def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFr
         Input Spark DataFrame
     cols: list
         Column names to select
+    row_key_name: str
+        Row key name
     to_create: list
         Extra columns to create from others, and to include in the `select`.
         Example: df.select(['a', 'b', col('a') + col('c')])
@@ -260,21 +262,28 @@ def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFr
     >>> import pyspark.sql.functions as F
     >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
 
-    >>> select_relevant_columns(df, ['a'])
+    >>> select_relevant_columns(df, ['a'], 'b')
     DataFrame[a: bigint]
 
-    >>> select_relevant_columns(df, ['a', 'b', 'c'])
+    >>> select_relevant_columns(df, ['a', 'b', 'c'], 'b')
     DataFrame[a: bigint, b: bigint, c: bigint]
 
-    >>> select_relevant_columns(df, ['a', 'd'])
+    >>> select_relevant_columns(df, ['a', 'd'], 'c')
     DataFrame[a: bigint]
 
-    >>> select_relevant_columns(df, ['a', 'b'], to_create=[F.col('a') + F.col('b')])
+    >>> select_relevant_columns(df, ['a', 'b'], 'c', to_create=[F.col('a') + F.col('b')])
     DataFrame[a: bigint, b: bigint, (a + b): bigint]
     """
+    # Add the row key to the list of columns to extract
+    all_cols = cols + [row_key_name]
+
+    if (to_create is not None) and (type(to_create) == list):
+        for extra_col in to_create:
+            all_cols += [extra_col]
+
     cnames = []
     missing_cols = []
-    for col_ in cols:
+    for col_ in all_cols:
         # Dumb but simple
         try:
             df.select(col_)
@@ -285,12 +294,6 @@ def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFr
     # flatten names
     df = df.select(cnames)
     colnames = df.columns
-
-    if (to_create is not None) and (type(to_create) == list):
-        colnames += to_create
-
-    # add combinations
-    df = df.select(colnames)
 
     _LOG.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
 
@@ -486,6 +489,31 @@ def construct_schema_row(df, rowkeyname, version):
 
     return df_schema
 
+def add_row_key(df, row_key_name, cols=[]):
+    """ Create and attach the row key to a DataFrame
+
+    This should be typically called before `select_relevant_columns`.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark DataFrame
+    row_key_name: str
+        Row key name (typically columns seprated by _)
+    cols: list
+        List of columns to concatenate
+
+    Returns
+    ----------
+    out: DataFrame
+        Original Spark DataFrame with a new column
+    """
+    row_key_col = concat_ws('_', *cols).alias(row_key_name)
+    df = df.withColumn(row_key_name, row_key_col)
+
+    return df
+
+
 def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     """ Push data stored in a Spark DataFrame into HBase
 
@@ -512,14 +540,10 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     # Restrict the input DataFrame to the subset of wanted columns.
     all_cols = cols_i + cols_d + cols_b
 
-    # index
-    columns = row_key_name.split('_')
-    names = [col(i) for i in columns]
-
-    # Flatten columns & attach rowkey
+    # Flatten columns
     df = select_relevant_columns(
         df,
-        to_create=[concat_ws('_', *names).alias(row_key_name)],
+        row_key_name=row_key_name,
         cols=all_cols,
     )
 

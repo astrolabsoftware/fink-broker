@@ -26,7 +26,7 @@ import argparse
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
-from fink_broker.hbaseUtils import push_full_df_to_hbase
+from fink_broker.hbaseUtils import push_full_df_to_hbase, add_row_key
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -58,10 +58,18 @@ def main():
     # Drop partitioning columns
     df = df.drop('year').drop('month').drop('day')
 
+    # Row key
+    row_key_name = "objectId_jd"
+    df = add_row_key(
+        df,
+        row_key_name=row_key_name,
+        cols=['objectId', 'candidate.jd']
+    )
+
     # push data to HBase
     push_full_df_to_hbase(
         df,
-        row_key_name="objectId_jd",
+        row_key_name=row_key_name,
         table_name=args.science_db_name,
         catalog_name=args.science_db_catalogs
     )
