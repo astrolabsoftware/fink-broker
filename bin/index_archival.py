@@ -75,7 +75,6 @@ def main():
     # construct the index view
     index_row_key_name = args.index_table
     columns = index_row_key_name.split('_')
-    names = [col(i) for i in columns]
     index_name = '.' + columns[0]
 
     # Drop partitioning columns
@@ -135,8 +134,8 @@ def main():
             )
         )
         # Row key
-        df = add_row_key(
-            df,
+        df_index = add_row_key(
+            df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
@@ -165,8 +164,8 @@ def main():
             )
         )
         # Row key
-        df = add_row_key(
-            df,
+        df_index = add_row_key(
+            df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
@@ -179,8 +178,8 @@ def main():
         # Flag only objects with likely counterpart in MPC
         df_index = df.filter(df['roid'] == 3)
         # Row key
-        df = add_row_key(
-            df,
+        df_index = add_row_key(
+            df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
@@ -197,8 +196,8 @@ def main():
             .filter(df['tracklet'] != '')
 
         # Row key
-        df = add_row_key(
-            df,
+        df_index = add_row_key(
+            df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
