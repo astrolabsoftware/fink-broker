@@ -231,7 +231,16 @@ def load_science_portal_column_names():
 def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFrame:
     """ Select columns from `cols` that are actually in `df`.
 
-    It would act as if `df.select(cols, skip_unknown_cols=True)` was possible.
+    It would act as if `df.select(cols, skip_unknown_cols=True)` was possible. Note though
+    that nested cols in `cols` will be flatten, and columns used in `to_create` have to be
+    in this list of flatten names. Example, if my initial df has schema
+    root
+    |-- objectId: string (nullable = true)
+    |-- candidate: struct (nullable = true)
+    |    |-- jd: double (nullable = true)
+
+    then `to_create` can be `F.col('objectId') + F.col('jd')` but
+    not `F.col('objectId') + F.col('candidate.jd')`
 
     Parameters
     ----------
@@ -275,12 +284,13 @@ def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFr
 
     # flatten names
     df = df.select(cnames)
+    colnames = df.columns
 
     if (to_create is not None) and (type(to_create) == list):
-        cnames += to_create
+        colnames += to_create
 
     # add combinations
-    df = df.select(cnames)
+    df = df.select(colnames)
 
     _LOG.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
 
