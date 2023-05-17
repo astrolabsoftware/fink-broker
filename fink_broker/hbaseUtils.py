@@ -273,8 +273,13 @@ def select_relevant_columns(df: DataFrame, cols: list, to_create=None) -> DataFr
         except AnalysisException:
             missing_cols.append(col_)
 
+    # flatten names
+    df = df.select(cnames)
+
     if (to_create is not None) and (type(to_create) == list):
         cnames += to_create
+
+    # add combinations
     df = df.select(cnames)
 
     _LOG.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
