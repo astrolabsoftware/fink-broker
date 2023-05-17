@@ -99,7 +99,7 @@ def main():
         )
     else:
         all_cols = cols_i + cols_d + cols_b
-        df = select_relevant_columns(df, all_cols)
+        df = select_relevant_columns(df, all_cols, '')
 
     common_cols = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',

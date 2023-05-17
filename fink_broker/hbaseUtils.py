@@ -228,7 +228,7 @@ def load_science_portal_column_names():
 
     return cols_i, cols_d, cols_b
 
-def select_relevant_columns(df: DataFrame, cols: list, row_key_name:  str, to_create=None) -> DataFrame:
+def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_create=None) -> DataFrame:
     """ Select columns from `cols` that are actually in `df`.
 
     It would act as if `df.select(cols, skip_unknown_cols=True)` was possible. Note though
@@ -293,7 +293,6 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name:  str, to_cr
 
     # flatten names
     df = df.select(cnames)
-    colnames = df.columns
 
     _LOG.info("Missing columns detected in the DataFrame: {}".format(missing_cols))
 
