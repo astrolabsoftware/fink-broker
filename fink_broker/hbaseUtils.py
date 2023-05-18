@@ -371,7 +371,7 @@ def construct_hbase_catalog_from_flatten_schema(
     >>> df_flat = df.select(cols_i)
 
     Attach the row key
-    >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'candidate.jd'])
+    >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'jd'])
 
     >>> catalog = construct_hbase_catalog_from_flatten_schema(
     ...     df_rk.schema, "mycatalogname", 'objectId_jd', cf)
