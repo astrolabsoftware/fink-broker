@@ -175,7 +175,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Retrieve time-series information
     to_expand = [
         'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+        'magnr', 'sigmagnr', 'isdiffpos'
     ]
 
     # Append temp columns with historical + current measurements
@@ -297,7 +297,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Required alert columns - already computed for SN
     mulens_args = [
         'cfid', 'cmagpsf', 'csigmapsf',
-        'cmagnr', 'csigmagnr', 'cmagzpsci',
+        'cmagnr', 'csigmagnr',
         'cisdiffpos', 'candidate.ndethist'
     ]
     df = df.withColumn('mulens', mulens(*mulens_args))
