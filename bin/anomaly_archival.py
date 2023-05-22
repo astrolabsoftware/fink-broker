@@ -59,23 +59,27 @@ def main():
         'anomaly_score', 'timestamp'
     )
 
-    df_result = anomaly_notification_(
+    pdf = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
         send_to_slack=True, channel_name='anomaly_bot'
     )
 
+    # Keep only candidates of interest
+    oids = pdf['objectId'].values
+    df_hbase = df.filter(df['objectId'].isin(list(oids)))
+
     # Row key
     row_key_name = "jd_objectId"
-    df = add_row_key(
-        df,
+    df_hbase = add_row_key(
+        df_hbase,
         row_key_name=row_key_name,
         cols=['candidate.jd', 'objectId']
     )
 
     # push data to HBase
     push_full_df_to_hbase(
-        df_result,
+        df_hbase,
         row_key_name=row_key_name,
         table_name=args.science_db_name + '.anomaly',
         catalog_name=args.science_db_catalogs
