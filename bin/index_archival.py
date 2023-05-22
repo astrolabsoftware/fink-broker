@@ -33,8 +33,7 @@ from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 from fink_broker.parser import getargs
 from fink_broker.science import ang2pix
-from fink_broker.hbaseUtils import attach_rowkey
-from fink_broker.hbaseUtils import push_to_hbase
+from fink_broker.hbaseUtils import push_to_hbase, add_row_key
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import select_relevant_columns
@@ -76,7 +75,6 @@ def main():
     # construct the index view
     index_row_key_name = args.index_table
     columns = index_row_key_name.split('_')
-    names = [col(i) for i in columns]
     index_name = '.' + columns[0]
 
     # Drop partitioning columns
@@ -100,10 +98,7 @@ def main():
         )
     else:
         all_cols = cols_i + cols_d + cols_b
-        df = select_relevant_columns(df, all_cols, logger)
-
-    # Create and attach the rowkey
-    df, _ = attach_rowkey(df)
+        df = select_relevant_columns(df, all_cols, '')
 
     common_cols = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
@@ -138,11 +133,16 @@ def main():
                 lit(nside)
             )
         )
+        # Row key
+        df_index = add_row_key(
+            df_index,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
         df_index = select_relevant_columns(
             df_index,
             cols=['objectId'],
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
     elif columns[0] == 'class':
         df_index = df.withColumn(
@@ -163,20 +163,30 @@ def main():
                 df['tracklet']
             )
         )
+        # Row key
+        df_index = add_row_key(
+            df_index,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
     elif columns[0] == 'ssnamenr':
         # Flag only objects with likely counterpart in MPC
         df_index = df.filter(df['roid'] == 3)
+        # Row key
+        df_index = add_row_key(
+            df_index,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
     elif columns[0] == 'tracklet':
         # For data < 2021-08-10, no tracklet means ''
@@ -185,11 +195,16 @@ def main():
             .filter(df['tracklet'] != 'null')\
             .filter(df['tracklet'] != '')
 
+        # Row key
+        df_index = add_row_key(
+            df_index,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
         df_index = select_relevant_columns(
             df_index,
             cols=common_cols,
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
     elif columns[0] == 'upper':
         # This case is the same as the main table
@@ -295,11 +310,17 @@ def main():
             )
         )
 
+        # Row key
+        df = add_row_key(
+            df,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
+
         df = select_relevant_columns(
             df,
             cols=common_cols + ['tns'],
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
 
         df = df.cache()
@@ -308,11 +329,17 @@ def main():
         n = df_index.count()
         print('TNS objects: {}'.format(n))
     else:
+        # Row key
+        df = add_row_key(
+            df,
+            row_key_name=index_row_key_name,
+            cols=columns
+        )
+
         df_index = select_relevant_columns(
             df,
             cols=common_cols,
-            logger=logger,
-            to_create=[concat_ws('_', *names).alias(index_row_key_name)]
+            row_key_name=index_row_key_name
         )
 
     push_to_hbase(

@@ -25,6 +25,8 @@ from fink_filters.filter_anomaly_notification.filter import anomaly_notification
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+from fink_broker.hbaseUtils import push_full_df_to_hbase, add_row_key
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -52,15 +54,35 @@ def main():
 
     # Send anomalies
     df_proc = df.select(
-        'objectId', 'candidate.ra',
+        'objectId', 'candid', 'candidate.ra',
         'candidate.dec', 'candidate.rb',
         'anomaly_score', 'timestamp'
     )
 
-    _ = anomaly_notification_(
+    pdf = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
         send_to_slack=True, channel_name='anomaly_bot'
+    )
+
+    # Keep only candidates of interest
+    oids = [int(i) for i in pdf['candid'].values]
+    df_hbase = df.filter(df['candid'].isin(list(oids)))
+
+    # Row key
+    row_key_name = "jd_objectId"
+    df_hbase = add_row_key(
+        df_hbase,
+        row_key_name=row_key_name,
+        cols=['candidate.jd', 'objectId']
+    )
+
+    # push data to HBase
+    push_full_df_to_hbase(
+        df_hbase,
+        row_key_name=row_key_name,
+        table_name=args.science_db_name + '.anomaly',
+        catalog_name=args.science_db_catalogs
     )
 
 
