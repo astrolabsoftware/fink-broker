@@ -54,7 +54,7 @@ def main():
 
     # Send anomalies
     df_proc = df.select(
-        'objectId', 'candidate.ra',
+        'objectId', 'candid', 'candidate.ra',
         'candidate.dec', 'candidate.rb',
         'anomaly_score', 'timestamp'
     )
@@ -66,8 +66,8 @@ def main():
     )
 
     # Keep only candidates of interest
-    oids = pdf['objectId'].values
-    df_hbase = df.filter(df['objectId'].isin(list(oids)))
+    oids = pdf['candid'].values
+    df_hbase = df.filter(df['candid'].isin(list(oids)))
 
     # Row key
     row_key_name = "jd_objectId"
