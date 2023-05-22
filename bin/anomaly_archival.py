@@ -66,7 +66,7 @@ def main():
     )
 
     # Keep only candidates of interest
-    oids = pdf['candid'].values
+    oids = [int(i) for i in pdf['candid'].values]
     df_hbase = df.filter(df['candid'].isin(list(oids)))
 
     # Row key
