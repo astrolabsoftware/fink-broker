@@ -176,7 +176,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Retrieve time-series information
     to_expand = [
         'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+        'magnr', 'sigmagnr', 'isdiffpos'
     ]
 
     # Append temp columns with historical + current measurements
@@ -298,7 +298,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Required alert columns - already computed for SN
     mulens_args = [
         'cfid', 'cmagpsf', 'csigmapsf',
-        'cmagnr', 'csigmagnr', 'cmagzpsci',
+        'cmagnr', 'csigmagnr',
         'cisdiffpos', 'candidate.ndethist'
     ]
     df = df.withColumn('mulens', mulens(*mulens_args))
@@ -324,7 +324,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
-    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'cisdiffpos', 'objectId']
+    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
