@@ -40,13 +40,6 @@ if [[ $? == 0 ]]; then
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tns_jd_objectId --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${NIGHT}.log 2>&1
 
-    echo "Call to Fink-Fat"
-    fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
-    fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
-
-    echo "Push SSO candidates to HBase"
-    fink start index_sso_cand_archival -c $FINK_HOME/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/index_sso_cand_archival_${NIGHT}.log 2>&1
-
     # echo "Push object tables to HBase"
     # fink start object_archival -c $FINK_HOME/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/object_archival_${NIGHT}.log 2>&1
 
@@ -58,6 +51,13 @@ if [[ $? == 0 ]]; then
 
     echo "Update statistics"
     fink start stats -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/stats_${NIGHT}.log 2>&1
+
+    echo "Call to Fink-Fat"
+    fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
+    fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
+
+    echo "Push SSO candidates to HBase"
+    fink start index_sso_cand_archival -c $FINK_HOME/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/index_sso_cand_archival_${NIGHT}.log 2>&1
 
 fi
 
