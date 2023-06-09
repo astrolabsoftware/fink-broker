@@ -327,6 +327,13 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         'cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId',
         'cdistnr', 'cmagnr', 'csigmagnr', 'cisdiffpos'
     ]
+
+    # Temporary fix -- add 100 do distnr to pretend
+    # extra-galactic and skip dcmag
+    df = df\
+        .withColumn('tmp', F.expr('TRANSFORM(cdistnr, el -> el + 100)'))\
+        .drop('cdistnr').withColumnRenamed('tmp', 'cdistnr')
+
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
