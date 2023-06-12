@@ -15,7 +15,7 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import StringType, LongType
+from pyspark.sql.types import StringType, LongType, MapType, FloatType
 
 import numpy as np
 import pandas as pd
@@ -144,6 +144,22 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     ]
 
     return pd.Series(to_return)
+
+@pandas_udf(MapType(StringType(), FloatType()), PandasUDFType.SCALAR)
+def fake_t2(incol):
+    """ Return all t2 probabilities as zero
+
+    Only for test purposes.
+    """
+    keys = [
+        'M-dwarf', 'KN', 'AGN', 'SLSN-I',
+        'RRL', 'Mira', 'SNIax', 'TDE',
+        'SNIa', 'SNIbc', 'SNIa-91bg',
+        'mu-Lens-Single', 'EB', 'SNII'
+    ]
+    values = [0.0] * len(keys)
+    out = {k:v for k,v in zip(keys, values)}
+    return pd.Series([out] * len(incol))
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
@@ -318,9 +334,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     logger.info("New processor: T2")
-    t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
-    t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
-    df = df.withColumn('t2', t2(*t2_args))
+    # t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    # t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
+    # df = df.withColumn('t2', t2(*t2_args))
+    df = df.withColumn('t2', fake_t2('objectId'))
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
