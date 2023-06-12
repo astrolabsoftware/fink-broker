@@ -192,7 +192,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     # Retrieve time-series information
     to_expand = [
         'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'isdiffpos'
+        'magnr', 'sigmagnr', 'isdiffpos', 'distnr'
     ]
 
     # Append temp columns with historical + current measurements
@@ -341,7 +341,17 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
-    ad_args = ['cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId']
+    ad_args = [
+        'cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId',
+        'cdistnr', 'cmagnr', 'csigmagnr', 'cisdiffpos'
+    ]
+
+    # Temporary fix -- add 100 do distnr to pretend
+    # extra-galactic and skip dcmag
+    df = df\
+        .withColumn('tmp', F.expr('TRANSFORM(cdistnr, el -> el + 100)'))\
+        .drop('cdistnr').withColumnRenamed('tmp', 'cdistnr')
+
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
