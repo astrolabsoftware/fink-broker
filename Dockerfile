@@ -48,17 +48,17 @@ ENV FINK_HOME $HOME/fink-broker
 ENV PYTHONPATH $FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 ENV PATH $FINK_HOME/bin:$PATH
 
-RUN mkdir $FINK_HOME
+RUN mkdir -p $FINK_HOME/deps
 
 # Avoid re-installing Python dependencies
 # when fink-broker code changes
 ENV PIP_NO_CACHE_DIR 1
-ADD deps/requirements.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements.txt
-ADD deps/requirements-science.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science.txt
-ADD deps/requirements-science-no-deps.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
+ADD deps/requirements.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements.txt
+ADD deps/requirements-science.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-science.txt
+ADD deps/requirements-science-no-deps.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 
@@ -69,6 +69,7 @@ RUN pip install py4j
 ENV FINK_JARS ""
 ENV FINK_PACKAGES ""
 # pytest requirements
-RUN pip install pytest mypy
+ADD deps/requirements-test.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-test.txt
 
 ADD --chown=${spark_uid} . $FINK_HOME/

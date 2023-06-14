@@ -32,7 +32,7 @@ def _is_nullable(field: Dict[Any, Any], avro_type: Any) -> Any:
         raise ValueError("Unknown value for 'nullable' key in field: ", field)
     return avro_type_out
 
-def _parse_array(data: dict[Any, Any], name: str) -> Dict[Any, Any]:
+def _parse_array(data: Dict[Any, Any], name: str) -> Dict[Any, Any]:
     out: Dict[Any, Any] = dict()
     out['type'] = "array"
     if data['elementType']['type'] == 'struct':
@@ -139,7 +139,7 @@ def _parse_struct(data: Dict[Any, Any], name: str = "") -> Dict[Any, Any]:
     avroRecord['fields'] = []
     avro_type: Any
     for field in data['fields']:
-        outField: dict[Any, Any] = dict()
+        outField: Dict[Any, Any] = dict()
         outField['name'] = field['name']
         if isinstance(field['type'], str):
             if field['type'] == "integer":

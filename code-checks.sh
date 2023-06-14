@@ -20,7 +20,7 @@ Available options:
   -u            Run unit tests
   -m            Run mypy
 
-Perform code analysis, unit testing on qserv code.
+Perform code analysis, unit testing on fink-broker code.
 
 EOD
 }
