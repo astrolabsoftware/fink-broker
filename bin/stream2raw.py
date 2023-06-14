@@ -90,7 +90,7 @@ def main():
         df_decoded = df.select(
             [
                 from_avro(df["value"], alert_schema_json).alias("decoded"),
-                df["key"]
+                df["topic"]
             ]
         )
     elif args.producer == 'ztf':
