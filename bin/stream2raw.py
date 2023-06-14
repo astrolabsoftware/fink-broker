@@ -89,7 +89,8 @@ def main():
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
         df_decoded = df.select(
             [
-                from_avro(df["value"], alert_schema_json).alias("decoded")
+                from_avro(df["value"], alert_schema_json).alias("decoded"),
+                df["key"]
             ]
         )
     elif args.producer == 'ztf':
