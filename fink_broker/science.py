@@ -45,7 +45,7 @@ from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
 from fink_science.agn.processor import agn_elasticc
 from fink_science.slsn.processor import slsn_elasticc
-from fink_science.t2.processor import t2
+# from fink_science.t2.processor import t2
 
 from fink_broker.tester import spark_unit_tests
 
@@ -158,7 +158,7 @@ def fake_t2(incol):
         'mu-Lens-Single', 'EB', 'SNII'
     ]
     values = [0.0] * len(keys)
-    out = {k:v for k,v in zip(keys, values)}
+    out = {k: v for k, v in zip(keys, values)}
     return pd.Series([out] * len(incol))
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
