@@ -36,6 +36,8 @@ from fink_broker.science import ang2pix
 from fink_broker.hbaseUtils import push_to_hbase, add_row_key
 from fink_broker.hbaseUtils import assign_column_family_names
 from fink_broker.hbaseUtils import load_science_portal_column_names
+from fink_broker.hbaseUtils import load_ztf_index_cols
+from fink_broker.hbaseUtils import load_ztf_crossmatch_cols
 from fink_broker.hbaseUtils import select_relevant_columns
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
@@ -89,41 +91,23 @@ def main():
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
         df = df.select(
-            'objectId',
-            'prv_candidates.jd',
-            'prv_candidates.fid',
-            'prv_candidates.magpsf',
-            'prv_candidates.sigmapsf',
-            'prv_candidates.diffmaglim'
+            F.col('objectId').cast('string'),
+            F.col('prv_candidates.jd').cast('array<double>'),
+            F.col('prv_candidates.fid').cast('array<int>'),
+            F.col('prv_candidates.magpsf').cast('array<float>'),
+            F.col('prv_candidates.sigmapsf').cast('array<float>'),
+            F.col('prv_candidates.diffmaglim').cast('array<float>')
         )
     else:
         all_cols = cols_i + cols_d + cols_b
         df = select_relevant_columns(df, all_cols, '')
 
-    common_cols = [
-        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
-        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
-        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
-        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
-        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
-        'cdsxmatch',
-        'roid',
-        'mulens',
-        'DR3Name',
-        'Plx',
-        'e_Plx',
-        'gcvs',
-        'vsx',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
-        'anomaly_score', 'x4lac', 'x3hsp'
-    ]
-
-    common_cols += [col_ for col_ in df.columns if col_.startswith('t2_')]
-    common_cols += [col_ for col_ in df.columns if col_.startswith('mangrove_')]
+    # Load common cols (casted)
+    common_cols = load_ztf_index_cols()
 
     if columns[0].startswith('pixel'):
         nside = int(columns[0].split('pixel')[1])
+        xmatch_cols = load_ztf_crossmatch_cols()
 
         df_index = df.withColumn(
             columns[0],
@@ -132,16 +116,35 @@ def main():
                 df['dec'],
                 lit(nside)
             )
+        ).withColumn(
+            'class',
+            extract_fink_classification(
+                df['cdsxmatch'],
+                df['roid'],
+                df['mulens'],
+                df['snn_snia_vs_nonia'],
+                df['snn_sn_vs_all'],
+                df['rf_snia_vs_nonia'],
+                df['ndethist'],
+                df['drb'],
+                df['classtar'],
+                df['jd'],
+                df['jdstarthist'],
+                df['rf_kn_vs_nonkn'],
+                df['tracklet']
+            )
         )
+
         # Row key
         df_index = add_row_key(
             df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
+
         df_index = select_relevant_columns(
             df_index,
-            cols=['objectId'],
+            cols=xmatch_cols + ['class'],
             row_key_name=index_row_key_name
         )
     elif columns[0] == 'class':

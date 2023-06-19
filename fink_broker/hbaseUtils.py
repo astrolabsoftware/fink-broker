@@ -1,4 +1,4 @@
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,240 @@ from fink_broker.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
 
+
+def load_ztf_cols():
+    """ ZTF columns used in HBase tables with type.
+
+    Returns
+    ---------
+    out: dictionary
+        Keys are column names (flattened). Values are data type.
+
+    Examples
+    --------
+    >>> out = load_ztf_cols()
+    >>> print(len(out))
+    143
+    """
+    fink_cols = {
+        'DR3Name': 'string',
+        'Plx': 'float',
+        'anomaly_score': 'double',
+        'cdsxmatch': 'string',
+        'e_Plx': 'float',
+        'gcvs': 'string',
+        'mangrove_2MASS_name': 'string',
+        'mangrove_HyperLEDA_name': 'string',
+        'mangrove_ang_dist': 'string',
+        'mangrove_lum_dist': 'string',
+        'mulens': 'double',
+        'nalerthist': 'int',
+        'rf_kn_vs_nonkn': 'double',
+        'rf_snia_vs_nonia': 'double',
+        'roid': 'int',
+        'snn_sn_vs_all': 'double',
+        'snn_snia_vs_nonia': 'double',
+        't2_AGN': 'float',
+        't2_EB': 'float',
+        't2_KN': 'float',
+        't2_M-dwarf': 'float',
+        't2_Mira': 'float',
+        't2_RRL': 'float',
+        't2_SLSN-I': 'float',
+        't2_SNII': 'float',
+        't2_SNIa': 'float',
+        't2_SNIa-91bg': 'float',
+        't2_SNIax': 'float',
+        't2_SNIbc': 'float',
+        't2_TDE': 'float',
+        't2_mu-Lens-Single': 'float',
+        'tracklet': 'string',
+        'vsx': 'string',
+        'x3hsp': 'string',
+        'x4lac': 'string'
+    }
+    ztf_cols = {
+        'aimage': 'float',
+        'aimagerat': 'float',
+        'bimage': 'float',
+        'bimagerat': 'float',
+        'candid': 'long',
+        'chinr': 'float',
+        'chipsf': 'float',
+        'classtar': 'float',
+        'clrcoeff': 'float',
+        'clrcounc': 'float',
+        'clrmed': 'float',
+        'clrrms': 'float',
+        'dec': 'double',
+        'decnr': 'double',
+        'diffmaglim': 'float',
+        'distnr': 'float',
+        'distpsnr1': 'float',
+        'distpsnr2': 'float',
+        'distpsnr3': 'float',
+        'drb': 'float',
+        'drbversion': 'string',
+        'dsdiff': 'float',
+        'dsnrms': 'float',
+        'elong': 'float',
+        'exptime': 'float',
+        'fid': 'int',
+        'field': 'int',
+        'fink_broker_version': 'string',
+        'fink_science_version': 'string',
+        'fwhm': 'float',
+        'isdiffpos': 'string',
+        'jd': 'double',
+        'jdendhist': 'double',
+        'jdendref': 'double',
+        'jdstarthist': 'double',
+        'jdstartref': 'double',
+        'magap': 'float',
+        'magapbig': 'float',
+        'magdiff': 'float',
+        'magfromlim': 'float',
+        'maggaia': 'float',
+        'maggaiabright': 'float',
+        'magnr': 'float',
+        'magpsf': 'float',
+        'magzpsci': 'float',
+        'magzpscirms': 'float',
+        'magzpsciunc': 'float',
+        'mindtoedge': 'float',
+        'nbad': 'int',
+        'ncovhist': 'int',
+        'ndethist': 'int',
+        'neargaia': 'float',
+        'neargaiabright': 'float',
+        'nframesref': 'int',
+        'nid': 'int',
+        'nmatches': 'int',
+        'nmtchps': 'int',
+        'nneg': 'int',
+        'objectId': 'string',
+        'objectidps1': 'long',
+        'objectidps2': 'long',
+        'objectidps3': 'long',
+        'pdiffimfilename': 'string',
+        'pid': 'long',
+        'programid': 'int',
+        'programpi': 'string',
+        'publisher': 'string',
+        'ra': 'double',
+        'ranr': 'double',
+        'rb': 'float',
+        'rbversion': 'string',
+        'rcid': 'int',
+        'rfid': 'long',
+        'schemavsn': 'string',
+        'scorr': 'double',
+        'seeratio': 'float',
+        'sgmag1': 'float',
+        'sgmag2': 'float',
+        'sgmag3': 'float',
+        'sgscore1': 'float',
+        'sgscore2': 'float',
+        'sgscore3': 'float',
+        'sharpnr': 'float',
+        'sigmagap': 'float',
+        'sigmagapbig': 'float',
+        'sigmagnr': 'float',
+        'sigmapsf': 'float',
+        'simag1': 'float',
+        'simag2': 'float',
+        'simag3': 'float',
+        'sky': 'float',
+        'srmag1': 'float',
+        'srmag2': 'float',
+        'srmag3': 'float',
+        'ssdistnr': 'float',
+        'ssmagnr': 'float',
+        'ssnamenr': 'string',
+        'ssnrms': 'float',
+        'sumrat': 'float',
+        'szmag1': 'float',
+        'szmag2': 'float',
+        'szmag3': 'float',
+        'tblid': 'long',
+        'tooflag': 'int',
+        'xpos': 'float',
+        'ypos': 'float',
+        'zpclrcov': 'float',
+        'zpmed': 'float'
+    }
+
+    return {**ztf_cols, **fink_cols}
+
+def load_ztf_index_cols():
+    """ Load columns used for index tables (casted).
+
+    Returns
+    ---------
+    out: list of string
+        List of column names casted
+
+    Examples
+    --------
+    >>> out = load_ztf_index_cols()
+    >>> print(len(out))
+    52
+    """
+    ztf_columns = load_ztf_cols()
+
+    to_use = [
+        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
+        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
+        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
+        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
+        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
+        'cdsxmatch',
+        'roid',
+        'mulens',
+        'DR3Name',
+        'Plx',
+        'e_Plx',
+        'gcvs',
+        'vsx',
+        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
+        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
+        'anomaly_score', 'x4lac', 'x3hsp'
+    ]
+
+    return [F.col(k).cast(v) for k, v in ztf_columns.items() if k in to_use]
+
+def load_ztf_crossmatch_cols():
+    """ Load columns used for the crossmatch table (casted).
+
+    Returns
+    ---------
+    out: list of string
+        List of column names casted
+
+    Examples
+    --------
+    >>> out = load_ztf_crossmatch_cols()
+    >>> print(len(out))
+    52
+    """
+    ztf_columns = load_ztf_cols()
+
+    to_use = [
+        'objectId',
+        'candid'
+        'magpsf',
+        'sigmapsf',
+        'jd',
+        'jdstarthist',
+        'cdsxmatch',
+        'drb',
+        'ra',
+        'dec',
+        'fid',
+        'distnr',
+    ]
+
+    return [F.col(k).cast(v) for k, v in ztf_columns.items() if k in to_use]
 
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     """ Load table data from HBase into a Spark DataFrame
