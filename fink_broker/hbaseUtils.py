@@ -18,7 +18,7 @@ import logging
 
 import numpy as np
 
-from pyspark.sql.functions import concat_ws, col
+import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.utils import AnalysisException
 
@@ -296,7 +296,7 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
         .option("hbase.spark.use.hbasecontext", False)\
         .option("hbase.spark.pushdown.columnfilter", True)\
         .load()\
-        .filter(~col(rowkey).startswith('schema_'))
+        .filter(~F.col(rowkey).startswith('schema_'))
 
     return df
 
@@ -438,26 +438,26 @@ def load_science_portal_column_names():
 
     # mangrove
     cols_d += [
-        col('mangrove.{}'.format(i)).alias('mangrove_{}'.format(i)) for i in MANGROVE_COLS
+        F.col('mangrove.{}'.format(i)).alias('mangrove_{}'.format(i)) for i in MANGROVE_COLS
     ]
 
     cols_d += [
-        col('t2.{}'.format(i)).alias('t2_{}'.format(i)) for i in T2_COLS
+        F.col('t2.{}'.format(i)).alias('t2_{}'.format(i)) for i in T2_COLS
     ]
 
     # cols_d += [
-    #     col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
+    #     F.col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
     # ]
 
     # cols_d += [
-    #     col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
+    #     F.col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
     # ]
 
     # Column family binary
     cols_b = [
-        col('cutoutScience.stampData').alias('cutoutScience_stampData'),
-        col('cutoutTemplate.stampData').alias('cutoutTemplate_stampData'),
-        col('cutoutDifference.stampData').alias('cutoutDifference_stampData')
+        F.col('cutoutScience.stampData').alias('cutoutScience_stampData'),
+        F.col('cutoutTemplate.stampData').alias('cutoutTemplate_stampData'),
+        F.col('cutoutDifference.stampData').alias('cutoutDifference_stampData')
     ]
 
     return cols_i, cols_d, cols_b
@@ -486,7 +486,7 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
         Row key name
     to_create: list
         Extra columns to create from others, and to include in the `select`.
-        Example: df.select(['a', 'b', col('a') + col('c')])
+        Example: df.select(['a', 'b', F.col('a') + F.col('c')])
 
     Returns:
     df: DataFrame
@@ -685,12 +685,11 @@ def construct_schema_row(df, rowkeyname, version):
     Examples
     --------
     # Read alert from the raw database
-    >>> from pyspark.sql.functions import lit
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     # inplace replacement
-    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', col('cutoutScience.stampData').alias('cutoutScience_stampData')])
-    >>> df = df.withColumn('schema_version', lit(''))
+    >>> df = df.select(['objectId', 'candidate.jd', 'candidate.candid', F.col('cutoutScience.stampData').alias('cutoutScience_stampData')])
+    >>> df = df.withColumn('schema_version', F.lit(''))
     >>> df = construct_schema_row(df, rowkeyname='schema_version', version='schema_v0')
     >>> df.show()
     +--------+------+------+-----------------------+--------------+
@@ -741,7 +740,7 @@ def add_row_key(df, row_key_name, cols=[]):
     out: DataFrame
         Original Spark DataFrame with a new column
     """
-    row_key_col = concat_ws('_', *cols).alias(row_key_name)
+    row_key_col = F.concat_ws('_', *cols).alias(row_key_name)
     df = df.withColumn(row_key_name, row_key_col)
 
     return df
