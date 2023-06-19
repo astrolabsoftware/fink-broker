@@ -15,7 +15,7 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql.types import StringType, LongType
+from pyspark.sql.types import StringType, LongType, MapType, FloatType
 
 import numpy as np
 import pandas as pd
@@ -44,7 +44,8 @@ from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
 from fink_science.agn.processor import agn_elasticc
-from fink_science.t2.processor import t2
+from fink_science.slsn.processor import slsn_elasticc
+# from fink_science.t2.processor import t2
 
 from fink_broker.tester import spark_unit_tests
 
@@ -143,6 +144,22 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     ]
 
     return pd.Series(to_return)
+
+@pandas_udf(MapType(StringType(), FloatType()), PandasUDFType.SCALAR)
+def fake_t2(incol):
+    """ Return all t2 probabilities as zero
+
+    Only for test purposes.
+    """
+    keys = [
+        'M-dwarf', 'KN', 'AGN', 'SLSN-I',
+        'RRL', 'Mira', 'SNIax', 'TDE',
+        'SNIa', 'SNIbc', 'SNIa-91bg',
+        'mu-Lens-Single', 'EB', 'SNII'
+    ]
+    values = [0.0] * len(keys)
+    out = {k: v for k, v in zip(keys, values)}
+    return pd.Series([out] * len(incol))
 
 def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
@@ -317,9 +334,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
     logger.info("New processor: T2")
-    t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
-    t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
-    df = df.withColumn('t2', t2(*t2_args))
+    # t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
+    # t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
+    # df = df.withColumn('t2', t2(*t2_args))
+    df = df.withColumn('t2', fake_t2('objectId'))
 
     # Apply level one processor: snad (light curve features)
     logger.info("New processor: ad_features")
@@ -406,9 +424,18 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('redshift_err', F.col('diaObject.z_final_err'))
 
     logger.info("New processor: EarlySN")
+
     args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
-    # fake args
-    args += [F.col('cdsxmatch'), F.lit(20), F.lit(40)]
+
+    # fake cdsxmatch and nobs
+    args += [F.col('cdsxmatch'), F.lit(20)]
+    args += [F.col('diaObject.ra'), F.col('diaObject.decl')]
+    args += [F.col('diaObject.hostgal_ra'), F.col('diaObject.hostgal_dec')]
+    args += [F.col('diaObject.hostgal_zphot')]
+    args += [F.col('diaObject.hostgal_zphot_err'), F.col('diaObject.mwebv')]
+
+    # maxduration
+    args += [F.lit(40)]
     df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
@@ -429,7 +456,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('preds_snn', snn_broad_elasticc(*args))
 
     mapping_snn = {
-        -1: 0,
         0: 11,
         1: 13,
         2: 12,
@@ -449,32 +475,17 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('cbpf_preds', predict_nn(*args))
 
     mapping_cats_general = {
-        -1: 0,
-        0: 111,
-        1: 112,
-        2: 113,
-        3: 114,
-        4: 115,
-        5: 121,
-        6: 122,
-        7: 123,
-        8: 124,
-        9: 131,
-        10: 132,
-        11: 133,
-        12: 134,
-        13: 135,
-        14: 211,
-        15: 212,
-        16: 213,
-        17: 214,
-        18: 221
+        0: 11,
+        1: 12,
+        2: 13,
+        3: 21,
+        4: 22,
     }
     mapping_cats_general_expr = F.create_map([F.lit(x) for x in chain(*mapping_cats_general.items())])
 
-    col_fine_class = F.col('cbpf_preds').getItem(0).astype('int')
-    df = df.withColumn('cats_fine_class', mapping_cats_general_expr[col_fine_class])
-    df = df.withColumn('cats_fine_max_prob', F.col('cbpf_preds').getItem(1))
+    df = df.withColumn('argmax', F.expr('array_position(cbpf_preds, array_max(cbpf_preds)) - 1'))
+    df = df.withColumn('cats_broad_class', mapping_cats_general_expr[df['argmax']])
+    df = df.withColumn('cats_broad_max_prob', F.array_max(df['cbpf_preds']))
 
     # AGN
     args_forced = [
@@ -485,13 +496,18 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
 
-    # T2
-    df = df.withColumn('t2_broad_class', F.lit(0))
-    df = df.withColumn('t2_broad_max_prob', F.lit(0.0))
+    # SLSN
+    args_forced = [
+        'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
+        'diaSource.ra', 'diaSource.decl',
+        'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
+        'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
+    ]
+    df = df.withColumn('rf_slsn_vs_nonslsn', slsn_elasticc(*args_forced))
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid'])
+    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid', 'argmax'])
 
     return df
 

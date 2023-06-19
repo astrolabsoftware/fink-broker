@@ -21,6 +21,7 @@ jobs:
           -Dsonar.organization=astrolabsoftware
           -Dsonar.projectKey=finkbroker
           -Dsonar.sources=fink_broker/,bin/
+          -Dsonar.issue.ignore.multicriteria.j1.ruleKey=python:S107,python:S1192
           -Dsonar.test.exclusions=fink_broker/htmlcov,fink_broker/slackUtils.py
           -Dsonar.verbose=true
           -Dsonar.coverage.exclusions=**/**

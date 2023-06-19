@@ -83,7 +83,6 @@ def format_df_to_elasticc(df):
                 df['cats_fine_max_prob'].astype('float'),
                 df['rf_snia_vs_nonia'].astype('float'),
                 1.0 - df['rf_snia_vs_nonia'].astype('float'),
-                df['t2_broad_max_prob'].astype('float'),
             )
         ).withColumn(
             'classes',
@@ -96,7 +95,6 @@ def format_df_to_elasticc(df):
                 df['cats_fine_class'].astype('int'),
                 F.lit(111),  # EarlySN
                 F.lit(0),  # EarlySN Others
-                df['t2_broad_class'].astype('int')
             )
         ).withColumn(
             'classifications',
@@ -148,12 +146,6 @@ def format_df_to_elasticc(df):
                     F.lit('version 1.0'),
                     F.col("classes").getItem(7),
                     F.col("scores").getItem(7)
-                ),
-                F.struct(
-                    F.lit('T2 classifier'),
-                    F.lit('version 1.0'),
-                    F.col("classes").getItem(8),
-                    F.col("scores").getItem(8)
                 ),
             ).cast(classifications_schema)
         ).drop("scores").drop("classes")
