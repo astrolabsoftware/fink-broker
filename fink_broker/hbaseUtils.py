@@ -504,85 +504,6 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> 
         hbcatalog_index_schema, os.path.join(catfolder, file_name)
     )
 
-def load_science_portal_column_names():
-    """ Load names of the alert fields to use in the science portal.
-
-    These column names should match DataFrame column names. Careful when
-    you update it, as it will change the structure of the HBase table.
-
-    The column names are sorted by column family names:
-        - i: for column that identify the alert (original alert)
-        - d: for column that further describe the alert (Fink added value)
-        - b: for binary blob (FITS image)
-
-    Returns
-    --------
-    cols_*: list of string
-        List of DataFrame column names to use for the science portal
-
-    Examples
-    --------
-    >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
-    >>> print(len(cols_d))
-    35
-    """
-    # Column family i
-    cols_i = [
-        'objectId',
-        'schemavsn',
-        'publisher',
-        'fink_broker_version',
-        'fink_science_version',
-        'candidate.*'
-    ]
-
-    # Column family d
-    cols_d = [
-        'cdsxmatch',
-        'rf_snia_vs_nonia',
-        'snn_snia_vs_nonia',
-        'snn_sn_vs_all',
-        'mulens',
-        'roid',
-        'nalerthist',
-        'rf_kn_vs_nonkn',
-        'tracklet',
-        'DR3Name',
-        'Plx',
-        'e_Plx',
-        'gcvs',
-        'vsx',
-        'x4lac',
-        'x3hsp',
-        'anomaly_score'
-    ]
-
-    # mangrove
-    cols_d += [
-        F.col('mangrove.{}'.format(i)).alias('mangrove_{}'.format(i)) for i in MANGROVE_COLS
-    ]
-
-    cols_d += [
-        F.col('t2.{}'.format(i)).alias('t2_{}'.format(i)) for i in T2_COLS
-    ]
-
-    # cols_d += [
-    #     F.col('lc_features_g.{}'.format(i)).alias('lc_features_g_{}'.format(i)) for i in FEATURES_COLS
-    # ]
-
-    # cols_d += [
-    #     F.col('lc_features_r.{}'.format(i)).alias('lc_features_r_{}'.format(i)) for i in FEATURES_COLS
-    # ]
-
-    # Column family binary
-    cols_b = [
-        F.col('cutoutScience.stampData').alias('cutoutScience_stampData'),
-        F.col('cutoutTemplate.stampData').alias('cutoutTemplate_stampData'),
-        F.col('cutoutDifference.stampData').alias('cutoutDifference_stampData')
-    ]
-
-    return cols_i, cols_d, cols_b
-
 def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_create=None) -> DataFrame:
     """ Select columns from `cols` that are actually in `df`.
 
@@ -662,7 +583,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
         - b: for binary types. It currently contains:
             - binary gzipped FITS image
 
-    The split is done in `load_science_portal_column_names`.
+    The split is done in `bring_to_current_schema`.
 
     Parameters
     ----------
@@ -718,12 +639,9 @@ def construct_hbase_catalog_from_flatten_schema(
     # Read alert from the raw database
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
-    >>> cols_i, cols_d, cols_b = load_science_portal_column_names()
+    >>> df_flat, cols_i, cols_d, cols_b = bring_to_current_schema()
 
     >>> cf = assign_column_family_names(df, cols_i, [], [])
-
-    # Flatten the DataFrame
-    >>> df_flat = df.select(cols_i)
 
     Attach the row key
     >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'jd'])
