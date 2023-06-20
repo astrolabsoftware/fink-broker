@@ -637,7 +637,7 @@ def construct_hbase_catalog_from_flatten_schema(
     # Read alert from the raw database
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
-    >>> df_flat, cols_i, cols_d, cols_b = bring_to_current_schema()
+    >>> df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(df)
 
     >>> cf = assign_column_family_names(df, cols_i, [], [])
 
