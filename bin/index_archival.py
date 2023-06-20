@@ -26,9 +26,8 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pyspark.sql.functions as F
 from pyspark.sql.types import StringType
-from pyspark.sql.functions import lit, concat_ws, col
-from pyspark.sql.functions import arrays_zip, explode
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 from fink_broker.parser import getargs
@@ -114,7 +113,7 @@ def main():
             ang2pix(
                 df['ra'],
                 df['dec'],
-                lit(nside)
+                F.lit(nside)
             )
         ).withColumn(
             'class',
@@ -219,15 +218,15 @@ def main():
         # explode
         df_ex = df.withColumn(
             "tmp",
-            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
-        ).withColumn("tmp", explode("tmp")).select(
-            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
+            F.arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
+        ).withColumn("tmp", F.explode("tmp")).select(
+            F.concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
             "objectId",
-            col("tmp.jd"),
-            col("tmp.fid"),
-            col("tmp.magpsf"),
-            col("tmp.sigmapsf"),
-            col("tmp.diffmaglim")
+            F.col("tmp.jd"),
+            F.col("tmp.fid"),
+            F.col("tmp.magpsf"),
+            F.col("tmp.sigmapsf"),
+            F.col("tmp.diffmaglim")
         )
 
         # take only upper limits
@@ -241,15 +240,15 @@ def main():
         # explode
         df_ex = df.withColumn(
             "tmp",
-            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
-        ).withColumn("tmp", explode("tmp")).select(
-            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
+            F.arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
+        ).withColumn("tmp", F.explode("tmp")).select(
+            F.concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
             "objectId",
-            col("tmp.jd"),
-            col("tmp.fid"),
-            col("tmp.magpsf"),
-            col("tmp.sigmapsf"),
-            col("tmp.diffmaglim")
+            F.col("tmp.jd"),
+            F.col("tmp.fid"),
+            F.col("tmp.magpsf"),
+            F.col("tmp.sigmapsf"),
+            F.col("tmp.diffmaglim")
         )
 
         # take only valid measurements from the history

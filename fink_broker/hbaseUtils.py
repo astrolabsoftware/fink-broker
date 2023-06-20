@@ -312,7 +312,7 @@ def load_ztf_index_cols():
     >>> print(len(out))
     52
     """
-    to_use = [
+    common = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
         'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
         'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
@@ -331,7 +331,31 @@ def load_ztf_index_cols():
         'anomaly_score', 'x4lac', 'x3hsp'
     ]
 
-    return to_use
+    mangrove = [
+        'mangrove_2MASS_name',
+        'mangrove_HyperLEDA_name',
+        'mangrove_ang_dist',
+        'mangrove_lum_dist'
+    ]
+
+    t2 = [
+        't2_AGN',
+        't2_EB',
+        't2_KN',
+        't2_M-dwarf',
+        't2_Mira',
+        't2_RRL',
+        't2_SLSN-I',
+        't2_SNII',
+        't2_SNIa',
+        't2_SNIa-91bg',
+        't2_SNIax',
+        't2_SNIbc',
+        't2_TDE',
+        't2_mu-Lens-Single',
+    ]
+
+    return common + mangrove + t2
 
 def load_ztf_crossmatch_cols():
     """ Load columns used for the crossmatch table (casted).
