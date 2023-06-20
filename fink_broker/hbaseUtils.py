@@ -866,7 +866,6 @@ def add_row_key(df, row_key_name, cols=[]):
 
     return df
 
-
 def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     """ Push data stored in a Spark DataFrame into HBase
 
@@ -894,6 +893,12 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
 
     # Restrict the input DataFrame to the subset of wanted columns.
     all_cols = cols_i + cols_d + cols_b
+
+    df_flat = add_row_key(
+        df_flat,
+        row_key_name=row_key_name,
+        cols=row_key_name.split('_')
+    )
 
     # Flatten columns
     df_flat = select_relevant_columns(
