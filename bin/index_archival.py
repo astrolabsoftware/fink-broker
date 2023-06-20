@@ -116,7 +116,7 @@ def main():
                 F.lit(nside)
             )
         ).withColumn(
-            'class',
+            'classification',
             extract_fink_classification(
                 df['cdsxmatch'],
                 df['roid'],
@@ -135,7 +135,7 @@ def main():
         )
 
         # Update cf with added column
-        cf.update({'class': 'd'})
+        cf.update({'classification': 'v'})
 
         # Row key
         df_index = add_row_key(
@@ -146,7 +146,7 @@ def main():
 
         df_index = select_relevant_columns(
             df_index,
-            cols=xmatch_cols + ['class'],
+            cols=xmatch_cols + ['classification'],
             row_key_name=index_row_key_name
         )
     elif columns[0] == 'class':
