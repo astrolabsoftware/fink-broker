@@ -639,7 +639,7 @@ def construct_hbase_catalog_from_flatten_schema(
 
     >>> df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(df)
 
-    >>> cf = assign_column_family_names(df_flat, cols_i, [], [])
+    >>> cf = assign_column_family_names(df_flat, cols_i, cols_d, cols_b)
 
     Attach the row key
     >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'jd'])
