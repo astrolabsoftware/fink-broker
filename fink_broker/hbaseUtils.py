@@ -32,9 +32,8 @@ from fink_broker.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
 
-
-def load_ztf_cols():
-    """ ZTF columns used in HBase tables with type.
+def load_fink_cols():
+    """ Fink-derived columns used in HBase tables with type.
 
     Returns
     ---------
@@ -43,53 +42,81 @@ def load_ztf_cols():
 
     Examples
     --------
-    >>> out = load_ztf_cols()
+    >>> out = load_fink_cols()
+    >>> print(len(out))
+    34
+    """
+    fink_cols = {
+        'DR3Name': {'type': 'string', 'default': 'Unknown'},
+        'Plx': {'type': 'float', 'default': 0.0},
+        'anomaly_score': {'type': 'double', 'default': 0.0},
+        'cdsxmatch': {'type': 'string', 'default': 'Unknown'},
+        'e_Plx': {'type': 'float', 'default': 0.0},
+        'gcvs': {'type': 'string', 'default': 'Unknown'},
+        'mulens': {'type': 'double', 'default': 0.0},
+        'nalerthist': {'type': 'int', 'default': 0},
+        'rf_kn_vs_nonkn': {'type': 'double', 'default': 0.0},
+        'rf_snia_vs_nonia': {'type': 'double', 'default': 0.0},
+        'roid': {'type': 'int', 'default': 0},
+        'snn_sn_vs_all': {'type': 'double', 'default': 0.0},
+        'snn_snia_vs_nonia': {'type': 'double', 'default': 0.0},
+        'tracklet': {'type': 'string', 'default': ''},
+        'vsx': {'type': 'string', 'default': 'Unknown'},
+        'x3hsp': {'type': 'string', 'default': 'Unknown'},
+        'x4lac': {'type': 'string', 'default': 'Unknown'}
+    }
+
+    # Update dictionary with nested cols
+    # for col_ in MANGROVE_COLS:
+    #     name = F.col('mangrove.{}'.format(col_)).alias('mangrove_{}'.format(col_))
+    #     fink_cols.update(
+    #         {name: {'type': 'string', 'default': 'None'}}
+    #     )
+    fink_nested_cols = {}
+    for col_ in MANGROVE_COLS:
+        name = 'mangrove.{}'.format(col_)
+        fink_nested_cols.update(
+            {name: {'type': 'string', 'default': 'None'}}
+        )
+
+    for col_ in T2_COLS:
+        name = 't2.{}'.format(col_)
+        fink_nested_cols.update(
+            {name: {'type': 'float', 'default': 0.0}}
+        )
+
+    return fink_cols, fink_nested_cols
+
+def load_all_cols():
+    """ Fink/ZTF columns used in HBase tables with type.
+
+    Returns
+    ---------
+    out: dictionary
+        Keys are column names (flattened). Values are data type.
+
+    Examples
+    --------
+    >>> out = load_all_cols()
     >>> print(len(out))
     143
     """
-    fink_cols = {
-        'DR3Name': 'string',
-        'Plx': 'float',
-        'anomaly_score': 'double',
-        'cdsxmatch': 'string',
-        'e_Plx': 'float',
-        'gcvs': 'string',
-        'mangrove_2MASS_name': 'string',
-        'mangrove_HyperLEDA_name': 'string',
-        'mangrove_ang_dist': 'string',
-        'mangrove_lum_dist': 'string',
-        'mulens': 'double',
-        'nalerthist': 'int',
-        'rf_kn_vs_nonkn': 'double',
-        'rf_snia_vs_nonia': 'double',
-        'roid': 'int',
-        'snn_sn_vs_all': 'double',
-        'snn_snia_vs_nonia': 'double',
-        't2_AGN': 'float',
-        't2_EB': 'float',
-        't2_KN': 'float',
-        't2_M-dwarf': 'float',
-        't2_Mira': 'float',
-        't2_RRL': 'float',
-        't2_SLSN-I': 'float',
-        't2_SNII': 'float',
-        't2_SNIa': 'float',
-        't2_SNIa-91bg': 'float',
-        't2_SNIax': 'float',
-        't2_SNIbc': 'float',
-        't2_TDE': 'float',
-        't2_mu-Lens-Single': 'float',
-        'tracklet': 'string',
-        'vsx': 'string',
-        'x3hsp': 'string',
-        'x4lac': 'string'
+    fink_cols, fink_nested_cols = load_fink_cols()
+
+    root_level = {
+        'fink_broker_version': 'string',
+        'fink_science_version': 'string',
+        'objectId': 'string',
+        'publisher': 'string',
+        'candid': 'long',
+        'schemavsn': 'string',
     }
-    ztf_cols = {
+
+    candidates = {
         'aimage': 'float',
         'aimagerat': 'float',
         'bimage': 'float',
         'bimagerat': 'float',
-        'candid': 'long',
         'chinr': 'float',
         'chipsf': 'float',
         'classtar': 'float',
@@ -112,8 +139,6 @@ def load_ztf_cols():
         'exptime': 'float',
         'fid': 'int',
         'field': 'int',
-        'fink_broker_version': 'string',
-        'fink_science_version': 'string',
         'fwhm': 'float',
         'isdiffpos': 'string',
         'jd': 'double',
@@ -143,7 +168,6 @@ def load_ztf_cols():
         'nmatches': 'int',
         'nmtchps': 'int',
         'nneg': 'int',
-        'objectId': 'string',
         'objectidps1': 'long',
         'objectidps2': 'long',
         'objectidps3': 'long',
@@ -151,14 +175,12 @@ def load_ztf_cols():
         'pid': 'long',
         'programid': 'int',
         'programpi': 'string',
-        'publisher': 'string',
         'ra': 'double',
         'ranr': 'double',
         'rb': 'float',
         'rbversion': 'string',
         'rcid': 'int',
         'rfid': 'long',
-        'schemavsn': 'string',
         'scorr': 'double',
         'seeratio': 'float',
         'sgmag1': 'float',
@@ -195,15 +217,94 @@ def load_ztf_cols():
         'zpmed': 'float'
     }
 
-    return {**ztf_cols, **fink_cols}
+    candidates = {'candidate.' + k: v for k, v in candidates.items()}
+
+    images = {
+        'cutoutScience.stampData': 'binary',
+        'cutoutTemplate.stampData': 'binary',
+        'cutoutDifference.stampData': 'binary'
+    }
+
+    return root_level, candidates, images, fink_cols, fink_nested_cols
+
+def bring_to_current_schema(df):
+    """ Check all columns exist, fill if necessary, and cast data
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark DataFrame with raw alert data
+
+    Returns
+    ----------
+    out: DataFrame
+        Spark DataFrame with HBase data structure
+    """
+    root_level, candidates, images, fink_cols, fink_nested_cols = load_all_cols()
+
+    tmp_i = []
+    tmp_d = []
+    tmp_b = []
+
+    # assuming no missing columns
+    for colname, coltype in root_level.items():
+        tmp_i.append(F.col(colname).cast(coltype))
+
+    # assuming no missing columns
+    for colname, coltype in candidates.items():
+        tmp_i.append(F.col(colname).cast(coltype))
+
+    cols_i = df.select(tmp_i).columns
+
+    # assuming no missing columns
+    for colname, coltype in images.items():
+        name = F.col(colname).alias(colname.replace('.', '_')).cast(coltype)
+        tmp_b.append(name)
+
+    cols_b = df.select(tmp_b).columns
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_cols.items():
+        try:
+            # ony here to check if the column exists
+            df.select(colname)
+        except AnalysisException:
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn("Adding a noew column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
+            df = df.withColumn(colname, F.lit(coltype_and_default['default']))
+        tmp_d.append(F.col(colname).cast(coltype_and_default['type']))
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_nested_cols.items():
+        try:
+            # ony here to check if the column exists
+            df.select(colname)
+
+            # rename root.level into root_level
+            name = F.col(colname).alias(colname.replace('.', '_')).cast(coltype_and_default['type'])
+            tmp_d.append(name)
+        except AnalysisException:
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn("Adding a noew column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
+            name = colname.replace('.', '_')
+            df = df.withColumn(name, F.lit(coltype_and_default['default']))
+            tmp_d.append(F.col(name).cast(coltype_and_default['type']))
+
+    cols_d = df.select(tmp_d).columns
+
+    # flatten names
+    cnames = tmp_i + tmp_d + tmp_b
+    df = df.select(cnames)
+
+    return df, cols_i, cols_d, cols_b
 
 def load_ztf_index_cols():
-    """ Load columns used for index tables (casted).
+    """ Load columns used for index tables (flattened and casted before).
 
     Returns
     ---------
     out: list of string
-        List of column names casted
+        List of (flattened) column names
 
     Examples
     --------
@@ -211,8 +312,6 @@ def load_ztf_index_cols():
     >>> print(len(out))
     52
     """
-    ztf_columns = load_ztf_cols()
-
     to_use = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
         'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
@@ -232,7 +331,7 @@ def load_ztf_index_cols():
         'anomaly_score', 'x4lac', 'x3hsp'
     ]
 
-    return [F.col(k).cast(v) for k, v in ztf_columns.items() if k in to_use]
+    return to_use
 
 def load_ztf_crossmatch_cols():
     """ Load columns used for the crossmatch table (casted).
@@ -246,10 +345,8 @@ def load_ztf_crossmatch_cols():
     --------
     >>> out = load_ztf_crossmatch_cols()
     >>> print(len(out))
-    52
+    12
     """
-    ztf_columns = load_ztf_cols()
-
     to_use = [
         'objectId',
         'candid'
@@ -265,7 +362,7 @@ def load_ztf_crossmatch_cols():
         'distnr',
     ]
 
-    return [F.col(k).cast(v) for k, v in ztf_columns.items() if k in to_use]
+    return to_use
 
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     """ Load table data from HBase into a Spark DataFrame
@@ -764,23 +861,25 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     catalog_name: str
         Name for the JSON catalog (saved locally for inspection)
     """
-    cols_i, cols_d, cols_b = load_science_portal_column_names()
+    # Check all columns exist, fill if necessary, and cast data
+    df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(df)
 
     # Assign each column to a specific column family
-    cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
+    # This is independent from the final structure
+    cf = assign_column_family_names(df_flat, cols_i, cols_d, cols_b)
 
     # Restrict the input DataFrame to the subset of wanted columns.
     all_cols = cols_i + cols_d + cols_b
 
     # Flatten columns
-    df = select_relevant_columns(
-        df,
+    df_flat = select_relevant_columns(
+        df_flat,
         row_key_name=row_key_name,
         cols=all_cols,
     )
 
     push_to_hbase(
-        df=df,
+        df=df_flat,
         table_name=table_name,
         rowkeyname=row_key_name,
         cf=cf,

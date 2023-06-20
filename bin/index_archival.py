@@ -35,10 +35,10 @@ from fink_broker.parser import getargs
 from fink_broker.science import ang2pix
 from fink_broker.hbaseUtils import push_to_hbase, add_row_key
 from fink_broker.hbaseUtils import assign_column_family_names
-from fink_broker.hbaseUtils import load_science_portal_column_names
 from fink_broker.hbaseUtils import load_ztf_index_cols
 from fink_broker.hbaseUtils import load_ztf_crossmatch_cols
 from fink_broker.hbaseUtils import select_relevant_columns
+from fink_broker.hbaseUtils import bring_to_current_schema
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -52,6 +52,11 @@ from astropy import units as u
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
+
+    # construct the index view
+    index_row_key_name = args.index_table
+    columns = index_row_key_name.split('_')
+    index_name = '.' + columns[0]
 
     # Initialise Spark session
     spark = init_sparksession(
@@ -72,25 +77,21 @@ def main():
         args.night[4:6],
         args.night[6:8]
     )
-    df = load_parquet_files(path)
-
-    # construct the index view
-    index_row_key_name = args.index_table
-    columns = index_row_key_name.split('_')
-    index_name = '.' + columns[0]
+    data = load_parquet_files(path)
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
+    data = data.drop('year').drop('month').drop('day')
 
-    # Load column names to use in the science portal
-    cols_i, cols_d, cols_b = load_science_portal_column_names()
+    # Check all columns exist, fill if necessary, and cast data
+    df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(data)
 
     # Assign each column to a specific column family
-    cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
+    # This is independent from the final structure
+    cf = assign_column_family_names(df_flat, cols_i, cols_d, cols_b)
 
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
-        df = df.select(
+        df = data.select(
             F.col('objectId').cast('string'),
             F.col('prv_candidates.jd').cast('array<double>'),
             F.col('prv_candidates.fid').cast('array<int>'),
@@ -99,8 +100,7 @@ def main():
             F.col('prv_candidates.diffmaglim').cast('array<float>')
         )
     else:
-        all_cols = cols_i + cols_d + cols_b
-        df = select_relevant_columns(df, all_cols, '')
+        df = df_flat
 
     # Load common cols (casted)
     common_cols = load_ztf_index_cols()
