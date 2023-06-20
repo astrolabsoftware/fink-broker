@@ -270,7 +270,7 @@ def bring_to_current_schema(df):
             df.select(colname)
         except AnalysisException:
             _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn("Adding a noew column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
+            _LOG.warn("Adding a new column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
             df = df.withColumn(colname, F.lit(coltype_and_default['default']))
         tmp_d.append(F.col(colname).cast(coltype_and_default['type']))
 

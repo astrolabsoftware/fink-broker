@@ -135,6 +135,9 @@ def main():
             )
         )
 
+        # Update cf with added column
+        cf.update({'class': 'd'})
+
         # Row key
         df_index = add_row_key(
             df_index,
