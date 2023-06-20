@@ -42,9 +42,12 @@ def load_fink_cols():
 
     Examples
     --------
-    >>> out = load_fink_cols()
-    >>> print(len(out))
-    34
+    >>> fink_cols, fink_nested_cols = load_fink_cols()
+    >>> print(len(fink_cols))
+    17
+
+    >>> print(len(fink_nested_cols))
+    18
     """
     fink_cols = {
         'DR3Name': {'type': 'string', 'default': 'Unknown'},
@@ -66,12 +69,6 @@ def load_fink_cols():
         'x4lac': {'type': 'string', 'default': 'Unknown'}
     }
 
-    # Update dictionary with nested cols
-    # for col_ in MANGROVE_COLS:
-    #     name = F.col('mangrove.{}'.format(col_)).alias('mangrove_{}'.format(col_))
-    #     fink_cols.update(
-    #         {name: {'type': 'string', 'default': 'None'}}
-    #     )
     fink_nested_cols = {}
     for col_ in MANGROVE_COLS:
         name = 'mangrove.{}'.format(col_)
@@ -97,9 +94,10 @@ def load_all_cols():
 
     Examples
     --------
-    >>> out = load_all_cols()
+    >>> root_level, candidates, images, fink_cols, fink_nested_cols = load_all_cols()
+    >>> out = {**root_level, **candidates, **images, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    143
+    146
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -285,7 +283,7 @@ def bring_to_current_schema(df):
             tmp_d.append(name)
         except AnalysisException:
             _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn("Adding a noew column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
+            _LOG.warn("Adding a new column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
             name = colname.replace('.', '_')
             df = df.withColumn(name, F.lit(coltype_and_default['default']))
             tmp_d.append(F.col(name).cast(coltype_and_default['type']))
@@ -310,7 +308,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    52
+    70
     """
     common = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
@@ -369,7 +367,7 @@ def load_ztf_crossmatch_cols():
     --------
     >>> out = load_ztf_crossmatch_cols()
     >>> print(len(out))
-    12
+    11
     """
     to_use = [
         'objectId',
