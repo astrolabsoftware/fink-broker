@@ -367,7 +367,7 @@ def load_ztf_crossmatch_cols():
     --------
     >>> out = load_ztf_crossmatch_cols()
     >>> print(len(out))
-    11
+    12
     """
     to_use = [
         'objectId',
@@ -382,6 +382,7 @@ def load_ztf_crossmatch_cols():
         'dec',
         'fid',
         'distnr',
+        'nalerthist'
     ]
 
     return to_use
