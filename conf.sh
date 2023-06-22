@@ -11,7 +11,8 @@ REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
 TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
 
-NOSCIENCE=true
+# Disable science pipeline
+# export NOSCIENCE=true
 if $NOSCIENCE;
 then
   IMAGE="$REPO/fink-broker-noscience:$TAG"

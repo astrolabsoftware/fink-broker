@@ -45,7 +45,7 @@ tasks="stream2raw raw2science distribution"
 # Iterate the string variable using for loop
 for task in $tasks; do
   finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark \
-    --minimal --noscience $task --image $IMAGE >& "/tmp/$task.log" &
+    --minimal $task --image $IMAGE >& "/tmp/$task.log" &
 done
 
 loop=true
