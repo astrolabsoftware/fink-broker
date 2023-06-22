@@ -45,7 +45,7 @@ def _parse_array(data: Dict[Any, Any], name: str) -> Dict[Any, Any]:
         raise ValueError("Unknown type in parse_array()")
     return out
 
-def _parse_map(data: dict[Any, Any]) -> Dict[Any, Any]:
+def _parse_map(data: Dict[Any, Any]) -> Dict[Any, Any]:
     out: Dict[Any, Any] = dict()
     out['type'] = "map"
     values = data['valueType']
