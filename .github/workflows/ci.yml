@@ -84,6 +84,13 @@ jobs:
         run: ./itest/strimzi-setup.sh
       - name: Install fink-broker pre-requisites (Spark)
         run: ./itest/prereq-install.sh
+      - name: Install MinIO
+        run: ./itest/minio-install.sh
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.19.2'
+      - name: Install finkctl
+        run: go install github.com/astrolabsoftware/finkctl@v1.0.2
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
@@ -92,6 +99,7 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
+          sleep 10
           ./itest/itest.sh
   image-analysis:
     name: Analyze image

@@ -22,7 +22,7 @@ import pandas as pd
 import healpy as hp
 
 import os
-from logging import Logger
+import logging
 from itertools import chain
 
 from fink_utils.spark.utils import concat_col
@@ -48,6 +48,11 @@ from fink_science.slsn.processor import slsn_elasticc
 # from fink_science.t2.processor import t2
 
 from fink_broker.tester import spark_unit_tests
+
+# ---------------------------------
+# Local non-exported definitions --
+# ---------------------------------
+_LOG = logging.getLogger(__name__)
 
 def dec2theta(dec: float) -> float:
     """ Convert Dec (deg) to theta (rad)
@@ -161,7 +166,8 @@ def fake_t2(incol):
     out = {k: v for k, v in zip(keys, values)}
     return pd.Series([out] * len(incol))
 
-def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
+
+def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
     Focus on ZTF stream
@@ -170,25 +176,29 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     ----------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing raw alert data
-    logger: Logger
-        Fink logger
 
     Returns
     ----------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing enriched alert data
+    noscience: bool
+        Return untouched input dataframe, useful for Fink-broker infrastructure validation
 
     Examples
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> from fink_broker.loggingUtils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_test', 'INFO')
+    >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(ztf_alert_sample)
-    >>> df = apply_science_modules(df, logger)
+    >>> df = apply_science_modules(df)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
     """
+    if noscience:
+        return df
+
     # Retrieve time-series information
     to_expand = [
         'jd', 'fid', 'magpsf', 'sigmapsf',
@@ -202,10 +212,10 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     expanded = [prefix + i for i in to_expand]
 
     # Apply level one processor: cdsxmatch
-    logger.info("New processor: cdsxmatch")
+    _LOG.info("New processor: cdsxmatch")
     df = xmatch_cds(df)
 
-    logger.info("New processor: Gaia xmatch")
+    _LOG.info("New processor: Gaia xmatch")
     df = xmatch_cds(
         df,
         distmaxarcsec=1,
@@ -214,7 +224,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         types=['string', 'float', 'float']
     )
 
-    logger.info("New processor: GCVS")
+    _LOG.info("New processor: GCVS")
     df = df.withColumn(
         'gcvs',
         crossmatch_other_catalog(
@@ -225,7 +235,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
-    logger.info("New processor: VSX")
+    _LOG.info("New processor: VSX")
     df = df.withColumn(
         'vsx',
         crossmatch_other_catalog(
@@ -236,7 +246,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
-    logger.info("New processor: 3HSP (1 arcmin)")
+    _LOG.info("New processor: 3HSP (1 arcmin)")
     df = df.withColumn(
         'x3hsp',
         crossmatch_other_catalog(
@@ -248,7 +258,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
-    logger.info("New processor: 4LAC (1 arcmin)")
+    _LOG.info("New processor: 4LAC (1 arcmin)")
     df = df.withColumn(
         'x4lac',
         crossmatch_other_catalog(
@@ -260,7 +270,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
         )
     )
 
-    logger.info("New processor: Mangrove (1 acrmin)")
+    _LOG.info("New processor: Mangrove (1 acrmin)")
     df = df.withColumn(
         'mangrove',
         crossmatch_mangrove(
@@ -272,14 +282,14 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     )
 
     # Apply level one processor: asteroids
-    logger.info("New processor: asteroids")
+    _LOG.info("New processor: asteroids")
     args_roid = [
         'cjd', 'cmagpsf',
         'candidate.ndethist', 'candidate.sgscore1',
         'candidate.ssdistnr', 'candidate.distpsnr1']
     df = df.withColumn('roid', roid_catcher(*args_roid))
 
-    logger.info("New processor: Active Learning")
+    _LOG.info("New processor: Active Learning")
 
     # Perform the fit + classification.
     # Note we can omit the model_path argument, and in that case the
@@ -292,7 +302,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     )
 
     # Apply level one processor: superNNova
-    logger.info("New processor: supernnova")
+    _LOG.info("New processor: supernnova")
 
     snn_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     snn_args += [
@@ -309,7 +319,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('snn_sn_vs_all', snn_ia(*snn_args))
 
     # Apply level one processor: microlensing
-    logger.info("New processor: microlensing")
+    _LOG.info("New processor: microlensing")
 
     # Required alert columns - already computed for SN
     mulens_args = [
@@ -320,11 +330,11 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('mulens', mulens(*mulens_args))
 
     # Apply level one processor: nalerthist
-    logger.info("New processor: nalerthist")
+    _LOG.info("New processor: nalerthist")
     df = df.withColumn('nalerthist', nalerthist(df['cmagpsf']))
 
     # Apply level one processor: kilonova detection
-    logger.info("New processor: kilonova")
+    _LOG.info("New processor: kilonova")
     knscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     knscore_args += [
         F.col('candidate.jdstarthist'),
@@ -333,14 +343,14 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     ]
     df = df.withColumn('rf_kn_vs_nonkn', knscore(*knscore_args))
 
-    logger.info("New processor: T2")
+    _LOG.info("New processor: T2")
     # t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     # t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
     # df = df.withColumn('t2', t2(*t2_args))
     df = df.withColumn('t2', fake_t2('objectId'))
 
     # Apply level one processor: snad (light curve features)
-    logger.info("New processor: ad_features")
+    _LOG.info("New processor: ad_features")
     ad_args = [
         'cmagpsf', 'cjd', 'csigmapsf', 'cfid', 'objectId',
         'cdistnr', 'cmagnr', 'csigmagnr', 'cisdiffpos'
@@ -355,7 +365,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('lc_features', extract_features_ad(*ad_args))
 
     # Apply level one processor: anomaly_score
-    logger.info("New processor: Anomaly score")
+    _LOG.info("New processor: Anomaly score")
     df = df.withColumn('anomaly_score', anomaly_score('lc_features'))
 
     # split features
@@ -368,7 +378,7 @@ def apply_science_modules(df: DataFrame, logger: Logger) -> DataFrame:
 
     return df
 
-def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
+def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
     Currently available:
@@ -382,8 +392,6 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     ----------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing raw alert data
-    logger: Logger
-        Fink logger
 
     Returns
     ----------
@@ -395,8 +403,9 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> from fink_broker.loggingUtils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')
+    >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(elasticc_alert_sample)
-    >>> df = apply_science_modules_elasticc(df, logger)
+    >>> df = apply_science_modules_elasticc(df)
     """
     # Required alert columns
     to_expand = ['midPointTai', 'filterName', 'psFlux', 'psFluxErr']
@@ -412,19 +421,18 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
         )
     expanded = [prefix + i for i in to_expand]
 
-    logger.info("New processor: xmatch (random positions)")
+    _LOG.info("New processor: xmatch (random positions)")
     # Assuming random positions
     df = df.withColumn('cdsxmatch', F.lit('Unknown'))
 
-    logger.info("New processor: asteroids (random positions)")
+    _LOG.info("New processor: asteroids (random positions)")
     df = df.withColumn('roid', F.lit(0))
 
     # add redshift
     df = df.withColumn('redshift', F.col('diaObject.z_final'))
     df = df.withColumn('redshift_err', F.col('diaObject.z_final_err'))
 
-    logger.info("New processor: EarlySN")
-
+    _LOG.info("New processor: EarlySN")
     args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
 
     # fake cdsxmatch and nobs
@@ -439,7 +447,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
-    logger.info("New processor: supernnova - Ia")
+    _LOG.info("New processor: supernnova - Ia")
     args = [F.col('diaSource.diaSourceId')]
     args += [F.col('cmidPointTai'), F.col('cfilterName'), F.col('cpsFlux'), F.col('cpsFluxErr')]
     args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
@@ -447,7 +455,7 @@ def apply_science_modules_elasticc(df: DataFrame, logger: Logger) -> DataFrame:
     args += [F.lit('elasticc_ia')]
     df = df.withColumn('snn_snia_vs_nonia', snn_ia_elasticc(*args))
 
-    logger.info("New processor: supernnova - Broad")
+    _LOG.info("New processor: supernnova - Broad")
     args = [F.col('diaSource.diaSourceId')]
     args += [F.col('cmidPointTai'), F.col('cfilterName'), F.col('cpsFlux'), F.col('cpsFluxErr')]
     args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]

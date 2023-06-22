@@ -106,7 +106,7 @@ def readschemafromavrofile(fn: str) -> dict:
     """
     with open(fn, mode='rb') as file_data:
         data = readschemadata(file_data)
-        schema = data.schema
+        schema = data.writer_schema
     return schema
 
 
