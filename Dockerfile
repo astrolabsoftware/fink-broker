@@ -55,10 +55,6 @@ RUN mkdir -p $FINK_HOME/deps
 ENV PIP_NO_CACHE_DIR 1
 ADD deps/requirements.txt $FINK_HOME/deps
 RUN pip install -r $FINK_HOME/deps/requirements.txt
-ADD deps/requirements-science.txt $FINK_HOME/deps
-RUN pip install -r $FINK_HOME/deps/requirements-science.txt
-ADD deps/requirements-science-no-deps.txt $FINK_HOME/deps
-RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 
