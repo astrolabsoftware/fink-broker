@@ -13,7 +13,7 @@ TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 
 # Disable science pipeline
 # export NOSCIENCE=true
-if $NOSCIENCE;
+if [ "$NOSCIENCE" = true ];
 then
   IMAGE="$REPO/fink-broker-noscience:$TAG"
 else
