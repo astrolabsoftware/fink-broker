@@ -371,7 +371,7 @@ def load_ztf_crossmatch_cols():
     """
     to_use = [
         'objectId',
-        'candid'
+        'candid',
         'magpsf',
         'sigmapsf',
         'jd',
