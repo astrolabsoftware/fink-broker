@@ -367,7 +367,7 @@ def load_ztf_crossmatch_cols():
     --------
     >>> out = load_ztf_crossmatch_cols()
     >>> print(len(out))
-    12
+    13
     """
     to_use = [
         'objectId',
