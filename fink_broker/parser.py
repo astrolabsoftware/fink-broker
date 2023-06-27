@@ -236,6 +236,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Name of the alert producer. Currently available: ztf, elasticc, sims
         [PRODUCER]
         """)
+    parser.add_argument(
+        '-noscience', type=bool, default=False,
+        help="""
+        Disable execution of science modules
+        """)
     args = parser.parse_args(None)
     return args
 

@@ -1,0 +1,34 @@
+* TODO improve final test in CI (check Kafka with fink-client https://github.com/astrolabsoftware/fink-client)
+* TODO run code-check.sh in CI
+* DONE add unit test for schema_converter
+* TODO https://stackoverflow.com/questions/30385981/how-to-access-s3a-files-from-apache-spark
+Document +add SO post?:
+Download hadoop binary release: https://www.apache.org/dyn/closer.cgi/hadoop/common/hadoop-3.2.4/hadoop-3.2.4.tar.gz
+extract and copy jar:
+ fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/hadoop-aws-3.2.4.jar ~/src/k8s-spark-py/custom/jars 
+ fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/aws-java-sdk-bundle-1.11.901.jar ~/src/k8s-spark-py/custom/jars
+	// WARNING package are not deployed in spark-executor
+	// see https://stackoverflow.com/a/67299668/2784039
+* TODO document hack to retrieve Maven URLs
+kubectl logs stream2raw-py-f529af864f8dee60-driver | grep downlo | cut -d' ' -f2 > jars-urls.txt
+OR add mnv copy:dependencies when building the image?
+* TODO manage dependencies
+What to do with:
+1. hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar 
+hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
+which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
+cf. Julien are they required?
+2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
+* TODO document minio install and bucket creation:
+    5  curl https://dl.min.io/client/mc/release/linux-amd64/mc  --create-dirs -o $HOME/minio-binaries/mc
+    6  chmod +x $HOME/minio-binaries/mc
+   15  export PATH=$PATH:$HOME/minio-binaries/
+   17  mc alias set s3 http://minio.minio-dev:9000 minioadmin minioadmin
+   19  mc ls s3
+   27  mc mb s3/fink-broker-online
+ mc ls f1 --recursive fink-broker-online/
+* TODO test removal of options below
++    --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" \
+     --conf spark.hadoop.fs.s3a.path.style.access=true \
++    --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \
+* DONE INSTALL MINIO https://min.io/docs/minio/kubernetes/upstream/index.html?

@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -360,7 +361,7 @@ def load_parquet_files(path: str) -> DataFrame:
     return df
 
 def get_schemas_from_avro(
-        avro_path: str) -> (StructType, dict, str):
+        avro_path: str) -> Tuple[StructType, dict, str]:
     """ Build schemas from an avro file (DataFrame & JSON compatibility)
 
     Parameters

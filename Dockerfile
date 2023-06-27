@@ -27,6 +27,8 @@ RUN apt-get update && \
     apt install -y --no-install-recommends wget git apt-transport-https ca-certificates gnupg-agent apt-utils build-essential && \
     rm -rf /var/cache/apt/*
 
+ADD deps/jars-urls.txt $FINK_HOME/
+RUN xargs -n 1 curl --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
 
 # Main process will run as spark_uid
 ENV HOME /home/fink
@@ -46,19 +48,28 @@ ENV FINK_HOME $HOME/fink-broker
 ENV PYTHONPATH $FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 ENV PATH $FINK_HOME/bin:$PATH
 
-RUN mkdir $FINK_HOME
+RUN mkdir -p $FINK_HOME/deps
 
 # Avoid re-installing Python dependencies
 # when fink-broker code changes
 ENV PIP_NO_CACHE_DIR 1
-ADD deps/requirements.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements.txt
-ADD deps/requirements-science.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science.txt
-ADD deps/requirements-science-no-deps.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
+ADD deps/requirements.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements.txt
+ADD deps/requirements-science.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-science.txt
+ADD deps/requirements-science-no-deps.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
+
+# TODO add a development image which include tools below
+# doctest requirements
+# example: python /opt/fink-broker/fink_broker/science.py
+RUN pip install py4j
+ENV FINK_JARS ""
+ENV FINK_PACKAGES ""
+# pytest requirements
+ADD deps/requirements-test.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-test.txt
+
 ADD --chown=${spark_uid} . $FINK_HOME/
-
-
