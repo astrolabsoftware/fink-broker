@@ -2,6 +2,12 @@
 # build and install current development version
 FINK_BROKER_RELEASE=''
 
+# Do not launch science pipeline if true
+NOSCIENCE="${NOSCIENCE:-false}"
+
+# Set minimal limits/requests for Spark driver and executor if true
+MINIMAL="${MINIMAL:-false}"
+
 
 # Build parameters
 # ----------------
@@ -12,7 +18,6 @@ TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
 
 # Disable science pipeline
-# export NOSCIENCE=true
 if [ "$NOSCIENCE" = true ];
 then
   IMAGE="$REPO/fink-broker-noscience:$TAG"
