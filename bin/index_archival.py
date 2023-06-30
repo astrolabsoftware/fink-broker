@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2022 AstroLab Software
+# Copyright 2020-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,17 +26,18 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pyspark.sql.functions as F
 from pyspark.sql.types import StringType
-from pyspark.sql.functions import lit, concat_ws, col
-from pyspark.sql.functions import arrays_zip, explode
 from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 from fink_broker.parser import getargs
 from fink_broker.science import ang2pix
 from fink_broker.hbaseUtils import push_to_hbase, add_row_key
 from fink_broker.hbaseUtils import assign_column_family_names
-from fink_broker.hbaseUtils import load_science_portal_column_names
+from fink_broker.hbaseUtils import load_ztf_index_cols
+from fink_broker.hbaseUtils import load_ztf_crossmatch_cols
 from fink_broker.hbaseUtils import select_relevant_columns
+from fink_broker.hbaseUtils import bring_to_current_schema
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
@@ -50,6 +51,11 @@ from astropy import units as u
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
+
+    # construct the index view
+    index_row_key_name = args.index_table
+    columns = index_row_key_name.split('_')
+    index_name = '.' + columns[0]
 
     # Initialise Spark session
     spark = init_sparksession(
@@ -70,78 +76,77 @@ def main():
         args.night[4:6],
         args.night[6:8]
     )
-    df = load_parquet_files(path)
-
-    # construct the index view
-    index_row_key_name = args.index_table
-    columns = index_row_key_name.split('_')
-    index_name = '.' + columns[0]
+    data = load_parquet_files(path)
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
+    data = data.drop('year').drop('month').drop('day')
 
-    # Load column names to use in the science portal
-    cols_i, cols_d, cols_b = load_science_portal_column_names()
+    # Check all columns exist, fill if necessary, and cast data
+    df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(data)
 
     # Assign each column to a specific column family
-    cf = assign_column_family_names(df, cols_i, cols_d, cols_b)
+    # This is independent from the final structure
+    cf = assign_column_family_names(df_flat, cols_i, cols_d, cols_b)
 
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
-        df = df.select(
-            'objectId',
-            'prv_candidates.jd',
-            'prv_candidates.fid',
-            'prv_candidates.magpsf',
-            'prv_candidates.sigmapsf',
-            'prv_candidates.diffmaglim'
+        df = data.select(
+            F.col('objectId').cast('string'),
+            F.col('prv_candidates.jd').cast('array<double>'),
+            F.col('prv_candidates.fid').cast('array<int>'),
+            F.col('prv_candidates.magpsf').cast('array<float>'),
+            F.col('prv_candidates.sigmapsf').cast('array<float>'),
+            F.col('prv_candidates.diffmaglim').cast('array<float>')
         )
     else:
-        all_cols = cols_i + cols_d + cols_b
-        df = select_relevant_columns(df, all_cols, '')
+        df = df_flat
 
-    common_cols = [
-        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
-        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
-        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
-        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
-        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
-        'cdsxmatch',
-        'roid',
-        'mulens',
-        'DR3Name',
-        'Plx',
-        'e_Plx',
-        'gcvs',
-        'vsx',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
-        'anomaly_score', 'x4lac', 'x3hsp'
-    ]
-
-    common_cols += [col_ for col_ in df.columns if col_.startswith('t2_')]
-    common_cols += [col_ for col_ in df.columns if col_.startswith('mangrove_')]
+    # Load common cols (casted)
+    common_cols = load_ztf_index_cols()
 
     if columns[0].startswith('pixel'):
         nside = int(columns[0].split('pixel')[1])
+        xmatch_cols = load_ztf_crossmatch_cols()
 
         df_index = df.withColumn(
             columns[0],
             ang2pix(
                 df['ra'],
                 df['dec'],
-                lit(nside)
+                F.lit(nside)
+            )
+        ).withColumn(
+            'classification',
+            extract_fink_classification(
+                df['cdsxmatch'],
+                df['roid'],
+                df['mulens'],
+                df['snn_snia_vs_nonia'],
+                df['snn_sn_vs_all'],
+                df['rf_snia_vs_nonia'],
+                df['ndethist'],
+                df['drb'],
+                df['classtar'],
+                df['jd'],
+                df['jdstarthist'],
+                df['rf_kn_vs_nonkn'],
+                df['tracklet']
             )
         )
+
+        # Update cf with added column
+        cf.update({'classification': 'd'})
+
         # Row key
         df_index = add_row_key(
             df_index,
             row_key_name=index_row_key_name,
             cols=columns
         )
+
         df_index = select_relevant_columns(
             df_index,
-            cols=['objectId'],
+            cols=xmatch_cols + ['classification'],
             row_key_name=index_row_key_name
         )
     elif columns[0] == 'class':
@@ -213,15 +218,15 @@ def main():
         # explode
         df_ex = df.withColumn(
             "tmp",
-            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
-        ).withColumn("tmp", explode("tmp")).select(
-            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
+            F.arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
+        ).withColumn("tmp", F.explode("tmp")).select(
+            F.concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
             "objectId",
-            col("tmp.jd"),
-            col("tmp.fid"),
-            col("tmp.magpsf"),
-            col("tmp.sigmapsf"),
-            col("tmp.diffmaglim")
+            F.col("tmp.jd"),
+            F.col("tmp.fid"),
+            F.col("tmp.magpsf"),
+            F.col("tmp.sigmapsf"),
+            F.col("tmp.diffmaglim")
         )
 
         # take only upper limits
@@ -235,15 +240,15 @@ def main():
         # explode
         df_ex = df.withColumn(
             "tmp",
-            arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
-        ).withColumn("tmp", explode("tmp")).select(
-            concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
+            F.arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
+        ).withColumn("tmp", F.explode("tmp")).select(
+            F.concat_ws('_', 'objectId', 'tmp.jd').alias(index_row_key_name),
             "objectId",
-            col("tmp.jd"),
-            col("tmp.fid"),
-            col("tmp.magpsf"),
-            col("tmp.sigmapsf"),
-            col("tmp.diffmaglim")
+            F.col("tmp.jd"),
+            F.col("tmp.fid"),
+            F.col("tmp.magpsf"),
+            F.col("tmp.sigmapsf"),
+            F.col("tmp.diffmaglim")
         )
 
         # take only valid measurements from the history
