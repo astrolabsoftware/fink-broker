@@ -13,7 +13,9 @@ env:
 jobs:
   build:
     name: Build image
-    runs-on: ubuntu-22.04
+    # Use an environment variable to set the worker
+
+    runs-on: [self-hosted]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -43,7 +45,7 @@ jobs:
           path: artifacts
   integration-tests:
     name: Run integration tests
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted]
     needs: build
     steps:
       - name: Checkout code
@@ -107,7 +109,7 @@ jobs:
           ./itest/itest.sh
   image-analysis:
     name: Analyze image
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted]
     permissions:
       security-events: write
     needs: build
@@ -138,7 +140,7 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     name: Push fink-broker image to IN2P3 registry
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted]
     needs: integration-tests
     steps:
       - name: Download image
