@@ -12,12 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 from typing import Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
+
+from py4j.protocol import Py4JJavaError
 
 import os
 import json
@@ -309,6 +312,10 @@ def connect_to_raw_database(
         .builder \
         .getOrCreate()
 
+    while not path_exist(basepath):
+        print("Waiting for data to arrive in {}".format(basepath))
+        time.sleep(5)
+
     # Create a DF from the database
     userschema = spark\
         .read\
@@ -325,6 +332,27 @@ def connect_to_raw_database(
         .load()
 
     return df
+
+def path_exist(path: str) -> bool:
+    """Check if a path exists on Spark FS
+
+    Parameters
+    ----------
+    path : str
+        Path to check
+
+    Returns
+    -------
+    bool
+        True if the path exists, False otherwise
+    """
+    sc = SparkContext._active_spark_context
+    try:
+        rdd = sc.textFile(path)
+        rdd.take(1)
+        return True
+    except Py4JJavaError as e:
+        return False
 
 def load_parquet_files(path: str) -> DataFrame:
     """ Initialise SparkSession, and load parquet files with Spark

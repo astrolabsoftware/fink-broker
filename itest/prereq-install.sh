@@ -24,8 +24,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly  FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
+. $DIR/../conf.sh
 
 mkdir -p "$SPARK_INSTALL_DIR"
 

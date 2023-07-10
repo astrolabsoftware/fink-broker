@@ -30,15 +30,16 @@ echo $IMAGE
 
 echo "Create S3 bucket"
 kubectl port-forward -n minio-dev svc/minio 9000 &
-finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml --endpoint=localhost:9000 s3 makebucket
+export FINKCONFIG="$DIR"
+finkctl --endpoint=localhost:9000 s3 makebucket
 
 echo "Create spark ServiceAccount"
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
 kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
-kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=default:spark \
-  --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
-tasks="stream2raw raw2science distribution"
+NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
+kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
+  --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
 if [ "$NOSCIENCE" = true ];
 then
@@ -54,37 +55,14 @@ else
   MINIMAL_OPT=""
 fi
 
-# Iterate the string variable using for loop
+tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark \
-    $MINIMAL_OPT $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
+  finkctl run $MINIMAL_OPT $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
 done
 
-loop=true
-counter=0
-
-expected_pods=6
-while $loop
-do
-  pod_count=$(kubectl get pod -l spark-role=driver --field-selector=status.phase==Running \
-    -o go-template='{{printf "%d\n" (len  .items)}}')
-
-  if [ $pod_count -eq $expected_pods ]; then
-    loop=false
-  elif [ $counter -gt 5 ]; then
-    loop=false
-  fi
-  echo "Wait for Spark pods to be created"
-  echo "---------------------------------"
-  sleep 2
-  let counter=counter+1
-  echo "Pods:"
-  echo "-----"
-  kubectl get pods
-done
-
+# Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
-if [ "$pod_count" -ne $expected_pods ]
+if ! finkctl wait tasks --timeout=180s
 then
   for task in $tasks; do
     echo "--------- $task log file ---------"
@@ -93,8 +71,3 @@ then
   kubectl describe pods -l "spark-role in (executor, driver)"
   kubectl get pods
 fi
-
-# TODO add a cli option
-# kubectl delete pod -l "spark-role in (executor, driver)"
-
-

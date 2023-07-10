@@ -80,12 +80,14 @@ spec:
         port: 9094
         type: nodeport
         tls: false
+        authentication:
+          type: scram-sha-512
     storage:
       type: jbod
       volumes:
       - id: 0
         type: persistent-claim
-        size: 100Gi
+        size: 1Gi
         deleteClaim: false
     config:
       offsets.topic.replication.factor: 1
@@ -97,7 +99,7 @@ spec:
     replicas: 1
     storage:
       type: persistent-claim
-      size: 100Gi
+      size: 1Gi
       deleteClaim: false
   entityOperator:
     topicOperator: {}

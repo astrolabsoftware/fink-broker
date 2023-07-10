@@ -1,19 +1,60 @@
-# Qserv operator CI workflow
----
-name: "Integration tests"
-on:
-  push:
-  pull_request:
-    branches:
-      - master
-env:
-  NOSCIENCE: true
-  MINIMAL: true
+name: "Reusable workflow for Fink integration tests"
 
+on:
+  workflow_call:
+    inputs:
+      minimal:
+        required: true
+        type: string
+      noscience:
+        required: true
+        type: string
+    secrets:
+      registry_username:
+        required: true
+      registry_token:
+        required: true
+
+env:
+  MINIMAL: ${{ inputs.minimal }}
+  NOSCIENCE: ${{ inputs.noscience }}
+  # Override the self-hosted runner value
+  POD_NAMESPACE: default
+  CI_REPO: docker-registry.docker-registry:5000
 jobs:
   build:
     name: Build image
-    runs-on: ubuntu-22.04
+    # Use an environment variable to set the worker
+    strategy:
+      matrix:
+        runner: [self-hosted, v2]
+    runs-on: ${{ matrix.runner }}
+    outputs:
+      image: ${{ steps.push.outputs.IMAGE }}
+      promoted_image: ${{ steps.push.outputs.PROMOTED_IMAGE }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Build fink-broker image for k8s
+        run: |
+          ./build.sh
+      - name: Push image to local registry
+        id: push
+        run: |
+          DIR=$(pwd)
+          . ./conf.sh
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "PROMOTED_IMAGE=$PROMOTED_IMAGE" >> "$GITHUB_OUTPUT"
+  integration-tests:
+    name: Run integration tests
+    strategy:
+      matrix:
+        runner: [self-hosted, v2]
+    runs-on: ${{ matrix.runner }}
+    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -25,42 +66,38 @@ jobs:
         run: |
           DIR=$(pwd)
           . ./conf.sh
+          echo "FINK_ALERT_SIMULATOR_DIR=$FINK_ALERT_SIMULATOR_DIR" >> $GITHUB_ENV
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "IMAGE=${IMAGE}"
-      - name: Build fink-broker image for k8s
-        run: |
-          ./build.sh
-      - name: Export fink-broker image
-        run: |
-          docker images
-          echo "${{ env.IMAGE }}"
-          mkdir -p artifacts
-          docker save "${{ env.IMAGE }}" > artifacts/image.tar
-          echo "${{ env.IMAGE }}" > artifacts/image-tag
-      - uses: actions/upload-artifact@v2
-        with:
-          name: docker-artifact
-          path: artifacts
-  integration-tests:
-    name: Run integration tests
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Declare Version Variables
-        id: vars
-        shell: bash
-        run: |
-          echo "FINK_ALERT_SIMULATOR_DIR=$(. ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
       - name: Clone fink-alert-simulator code
         run: ./itest/clone-fink-alert-simulator.sh
+      - name: Create kind-helper configuration
+        run: |
+          cat <<EOF > $HOME/.kind-helper
+          kind:
+            # Supported only for clusters with one node
+            # Use host directory to share data between host and kind node
+            # host directory will be mounted on /mnt/extra on each node
+            # extraMountPath: /path/to/host/directory
+
+            # Sets "127.0.0.1" as an extra Subject Alternative Names (SANs) for the API Server signing certificate.
+            # See https://kubernetes.io/docs/reference/config-api/kubeadm-config.v1beta3/#kubeadm-k8s-io-v1beta3-APIServer
+            # Usefull to access API server through a ssh tunnel
+            localcertsans: false
+
+            # Use calico CNI instead of kindnet
+            # useCalico: true
+            # Number of worker nodes
+            workers: 0
+
+            # Supported only for clusters with one node
+            # Certificates must be available on kind host at "/etc/docker/certs.d/{{ .PrivateRegistry }}"
+            privateRegistry: "docker-registry.docker-registry:5000"
+          EOF
       - name: Create k8s/kind cluster
         run: |
-          git clone --depth 1 -b "k8s-1.25.0" --single-branch https://github.com/k8s-school/kind-helper.git
-          ./kind-helper/k8s-create.sh -s
+          VERSION="v1.0.2-rc1"
+          curl -sfL https://raw.githubusercontent.com/k8s-school/kind-helper/$VERSION/install.sh | bash
+          kind-helper create
       - name: Load fink-alert-simulator image inside kind
         run: |
           DIR="${{ env.FINK_ALERT_SIMULATOR_DIR }}"
@@ -70,31 +107,34 @@ jobs:
           else
             echo "::error Failed to pull $IMAGE"
           fi
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load container image inside kind
+      - name: Load fink-broker image inside kind
         run: |
-          kind load image-archive artifacts/image.tar
-          docker exec -- kind-control-plane crictl image
-      - name: Install fink-alert-simulator pre-requisites (argoCD)
+          IMAGE=${{ needs.build.outputs.image }}
+          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
+            echo "::notice Succeeded to pull $IMAGE"
+          else
+            echo "::error Failed to pull $IMAGE"
+          fi
+      - name: Install fink-alert-simulator pre-requisites (argo-workflows)
         run: |
+          # sleep infinity
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
       - name: Install strimzi (kafka-operator)
         run: ./itest/strimzi-install.sh
       - name: Setup kafka
         run: ./itest/strimzi-setup.sh
       - name: Install fink-broker pre-requisites (Spark)
-        run: ./itest/prereq-install.sh
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install openjdk-8-jdk-headless
+          ./itest/prereq-install.sh
       - name: Install MinIO
         run: ./itest/minio-install.sh
       - uses: actions/setup-go@v4
         with:
           go-version: '1.19.2'
       - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@v1.0.3
+        run: go install github.com/astrolabsoftware/finkctl@main
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
@@ -103,31 +143,26 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
-          sleep 10
-          ./itest/itest.sh
+          ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        runner: [self-hosted, v2]
+    runs-on: ${{ matrix.runner }}
     permissions:
       security-events: write
     needs: build
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load image in local registry
+      - name: Pull image from local registry
         run: |
-          docker load --input artifacts/image.tar
-          echo "IMAGE=$(cat artifacts/artifacts/image-tag)" >> $GITHUB_ENV
+          IMAGE=${{ needs.build.outputs.image }}
+          docker pull "$IMAGE"
       - name: Scan fink-broker image
         uses: anchore/scan-action@v3
         id: scan
         with:
-          image: "${{ env.IMAGE }}"
+          image: "${{ needs.build.outputs.image }}"
           fail-build: false
       - name: Display SARIF report
         run: |
@@ -138,24 +173,22 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     name: Push fink-broker image to IN2P3 registry
-    runs-on: ubuntu-22.04
-    needs: integration-tests
+    strategy:
+      matrix:
+        runner: [self-hosted, v2]
+    runs-on: ${{ matrix.runner }}
+    needs: [build, integration-tests, image-analysis]
     steps:
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load image in local registry
-        run: |
-          docker load --input artifacts/image.tar
-          echo "IMAGE=$(cat artifacts/image-tag)" >> $GITHUB_ENV
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           registry: gitlab-registry.in2p3.fr
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          username: ${{ secrets.registry_username }}
+          password: ${{ secrets.registry_token }}
       - name: Push image to IN2P3 registry
         run: |
-          docker push ${{ env.IMAGE }}
+          IMAGE="${{ needs.build.outputs.image }}"
+          PROMOTED_IMAGE="${{ needs.build.outputs.promoted_image }}"
+          docker pull "$IMAGE"
+          docker tag "$IMAGE" "$PROMOTED_IMAGE"
+          docker push "$PROMOTED_IMAGE"

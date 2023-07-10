@@ -1,0 +1,16 @@
+name: "Workflow for Fink integration tests based on 'noscience' image"
+on:
+  push:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  call-workflow-passing-data:
+    uses: ./.github/workflows/itest.yml
+    with:
+      minimal: true
+      noscience: true
+    secrets:
+      registry_username: ${{ secrets.REGISTRY_USERNAME }}
+      registry_token: ${{ secrets.REGISTRY_TOKEN }}
