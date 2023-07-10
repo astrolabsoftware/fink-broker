@@ -57,7 +57,7 @@ def main():
 
     paths = list_hdfs_files(folder)
     npath = len(paths)
-    logger.debug('{} parquet detected'.format(npath))
+    logger.info('{} parquet detected'.format(npath))
 
     # Row key
     row_key_name = "objectId_jd"
@@ -65,7 +65,7 @@ def main():
     for index, path in enumerate(paths):
         df = load_parquet_files(path)
         n_alerts_parquet = df.count()
-        logger.debug('Pushing {}/{} parquet to HBase ({} alerts)'.format(index + 1, npath, n_alerts_parquet))
+        logger.info('Pushing {}/{} parquet to HBase ({} alerts)'.format(index + 1, npath, n_alerts_parquet))
         n_alerts += n_alerts_parquet
 
         # Drop partitioning columns
@@ -78,7 +78,7 @@ def main():
             table_name=args.science_db_name,
             catalog_name=args.science_db_catalogs
         )
-    logger.debug('{} alerts pushed to HBase'.format(n_alerts))
+    logger.info('{} alerts pushed to HBase'.format(n_alerts))
 
 
 if __name__ == "__main__":
