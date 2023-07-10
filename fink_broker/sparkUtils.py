@@ -406,6 +406,31 @@ def get_schemas_from_avro(
 
     return df_schema, alert_schema, alert_schema_json
 
+def list_hdfs_files(hdfs_path='archive/science/year=2023/month=06/day=25'):
+    """ List files on an HDFS folder with full path
+
+    Parameters
+    ----------
+    hdfs_path: str
+        Folder name on HDFS containing files
+
+    Returns
+    ----------
+    paths: list of str
+        List of filenames with full path
+    """
+    spark = SparkSession \
+        .builder \
+        .getOrCreate()
+
+    jvm = spark._jvm
+    jsc = spark._jsc
+
+    fs = jvm.org.apache.hadoop.fs.FileSystem.get(jsc.hadoopConfiguration())
+    Path = jvm.org.apache.hadoop.fs.Path
+    paths = [p.getPath().toString() for p in fs.listStatus(Path(hdfs_path))]
+    return paths
+
 
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
