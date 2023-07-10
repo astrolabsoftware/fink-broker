@@ -9,13 +9,16 @@ on:
 env:
   NOSCIENCE: true
   MINIMAL: true
+  RUNNER: self-hosted
 
 jobs:
   build:
     name: Build image
     # Use an environment variable to set the worker
-
-    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        runner: [self-hosted]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -45,7 +48,10 @@ jobs:
           path: artifacts
   integration-tests:
     name: Run integration tests
-    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        runner: [self-hosted]
+    runs-on: ${{ matrix.runner }}
     needs: build
     steps:
       - name: Checkout code
@@ -109,7 +115,10 @@ jobs:
           ./itest/itest.sh
   image-analysis:
     name: Analyze image
-    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        runner: [self-hosted]
+    runs-on: ${{ matrix.runner }}
     permissions:
       security-events: write
     needs: build
@@ -140,7 +149,10 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     name: Push fink-broker image to IN2P3 registry
-    runs-on: [self-hosted]
+    strategy:
+      matrix:
+        runner: [self-hosted]
+    runs-on: ${{ matrix.runner }}
     needs: integration-tests
     steps:
       - name: Download image
