@@ -7,8 +7,9 @@ on:
     branches:
       - master
 env:
-  NOSCIENCE: true
   MINIMAL: true
+  NOSCIENCE: true
+  POD_NAMESPACE: ""
   RUNNER: self-hosted
 
 jobs:
