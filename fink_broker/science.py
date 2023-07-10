@@ -166,7 +166,6 @@ def fake_t2(incol):
     out = {k: v for k, v in zip(keys, values)}
     return pd.Series([out] * len(incol))
 
-
 def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 

@@ -38,18 +38,31 @@ kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f 
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=default:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
-readonly SPARK_LOG_FILE="/tmp/spark-stream2raw.log"
-
 tasks="stream2raw raw2science distribution"
+
+if [ "$NOSCIENCE" = true ];
+then
+  NOSCIENCE_OPT="--noscience"
+else
+  NOSCIENCE_OPT=""
+fi
+
+if [ "$MINIMAL" = true ];
+then
+  MINIMAL_OPT="--minimal"
+else
+  MINIMAL_OPT=""
+fi
 
 # Iterate the string variable using for loop
 for task in $tasks; do
   finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark \
-    --minimal --noscience $task --image $IMAGE >& "/tmp/$task.log" &
+    $MINIMAL_OPT $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
 done
 
 loop=true
 counter=0
+
 expected_pods=6
 while $loop
 do
@@ -70,7 +83,7 @@ do
   kubectl get pods
 done
 
-# Debug
+# Debug in case of not expected behaviour
 if [ "$pod_count" -ne $expected_pods ]
 then
   for task in $tasks; do
@@ -81,7 +94,7 @@ then
   kubectl get pods
 fi
 
-# TODO a cli option
+# TODO add a cli option
 # kubectl delete pod -l "spark-role in (executor, driver)"
 
 

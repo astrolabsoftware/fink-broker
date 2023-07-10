@@ -2,6 +2,12 @@
 # build and install current development version
 FINK_BROKER_RELEASE=''
 
+# Do not launch science pipeline if true
+NOSCIENCE="${NOSCIENCE:-false}"
+
+# Set minimal limits/requests for Spark driver and executor if true
+MINIMAL="${MINIMAL:-false}"
+
 
 # Build parameters
 # ----------------
@@ -10,8 +16,14 @@ REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
 # Tag to apply to the built image, or to identify the image to be pushed
 TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
-IMAGE="$REPO/fink-broker:$TAG"
 
+# Disable science pipeline
+if [ "$NOSCIENCE" = true ];
+then
+  IMAGE="$REPO/fink-broker-noscience:$TAG"
+else
+  IMAGE="$REPO/fink-broker:$TAG"
+fi
 
 # Spark parameters
 # ----------------
