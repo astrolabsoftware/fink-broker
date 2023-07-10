@@ -90,7 +90,13 @@ jobs:
           docker exec -- kind-control-plane crictl image
       - name: Install fink-alert-simulator pre-requisites (argoCD)
         run: |
+          # DEBUG
+          # TODO add it as a kind-helper option
           kubectl get sa -o yaml
+          kubectl get nodes
+          kubectl get pods -A -o wide
+          kubectl get namespaces
+          # DEBUG
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
       - name: Install strimzi (kafka-operator)
         run: ./itest/strimzi-install.sh
