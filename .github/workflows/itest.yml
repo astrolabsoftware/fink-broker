@@ -1,14 +1,18 @@
-# Qserv operator CI workflow
----
-name: "Integration tests"
+name: "Reusable workflow for Fink integration tests"
+
 on:
-  push:
-  pull_request:
-    branches:
-      - master
+  workflow_call:
+    inputs:
+      minimal:
+        required: true
+        type: string
+      noscience:
+        required: true
+        type: string
+
 env:
-  MINIMAL: false
-  NOSCIENCE: false
+  MINIMAL: ${{ inputs.minimal }}
+  NOSCIENCE: ${{ inputs.noscience }}
   # Override the self-hosted runner value
   POD_NAMESPACE: default
   RUNNER: self-hosted
