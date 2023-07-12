@@ -7,12 +7,11 @@ on:
     branches:
       - master
 env:
-  MINIMAL: true
-  NOSCIENCE: true
+  MINIMAL: false
+  NOSCIENCE: false
   # Override the self-hosted runner value
   POD_NAMESPACE: default
   RUNNER: self-hosted
-
 jobs:
   build:
     name: Build image
