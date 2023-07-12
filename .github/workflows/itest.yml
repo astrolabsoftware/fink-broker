@@ -9,7 +9,8 @@ on:
 env:
   MINIMAL: true
   NOSCIENCE: true
-  POD_NAMESPACE: ""
+  # Override the self-hosted runner value
+  POD_NAMESPACE: default
   RUNNER: self-hosted
 
 jobs:
@@ -91,7 +92,7 @@ jobs:
           docker exec -- kind-control-plane crictl image
       - name: Install fink-alert-simulator pre-requisites (argoCD)
         run: |
-          sleep infinity
+          # sleep infinity
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
       - name: Install strimzi (kafka-operator)
         run: ./itest/strimzi-install.sh
