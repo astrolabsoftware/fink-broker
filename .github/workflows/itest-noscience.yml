@@ -11,3 +11,6 @@ jobs:
     with:
       minimal: true
       noscience: true
+    secrets:
+      registry_username: ${{ secrets.REGISTRY_USERNAME }}
+      registry_token: ${{ secrets.REGISTRY_TOKEN }}

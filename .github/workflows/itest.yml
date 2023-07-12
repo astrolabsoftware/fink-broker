@@ -9,6 +9,11 @@ on:
       noscience:
         required: true
         type: string
+    secrets:
+      registry_username:
+        required: true
+      registry_token:
+        required: true
 
 env:
   MINIMAL: ${{ inputs.minimal }}
@@ -175,8 +180,8 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: gitlab-registry.in2p3.fr
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          username: ${{ secrets.registry_username }}
+          password: ${{ secrets.registry_token }}
       - name: Push image to IN2P3 registry
         run: |
           docker push ${{ env.IMAGE }}
