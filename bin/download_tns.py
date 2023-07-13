@@ -33,6 +33,7 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
     # Apply quality cuts
     mask = pdf['internalnames'].apply(lambda x: (x is not None) and (x == x))
     pdf_val = pdf[mask]
+    pdf_val['type'] = pdf_val['type'].astype('str')
 
     pdf_val['internalnames'] = pdf_val['internalnames'].apply(
         lambda x: [i.strip() for i in x.split(',')]
