@@ -28,21 +28,21 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
     """
     # Add new or rename columns
     pdf['fullname'] = pdf['name_prefix'] + ' ' + pdf['name']
-    pdf['internalnames'] = pdf['internal_names']
+    pdf['internalname'] = pdf['internal_names']
 
     # Apply quality cuts
-    mask = pdf['internalnames'].apply(lambda x: (x is not None) and (x == x))
+    mask = pdf['internalname'].apply(lambda x: (x is not None) and (x == x))
     pdf_val = pdf[mask]
     pdf_val['type'] = pdf_val['type'].astype('str')
 
-    pdf_val['internalnames'] = pdf_val['internalnames'].apply(
+    pdf_val['internalname'] = pdf_val['internalname'].apply(
         lambda x: [i.strip() for i in x.split(',')]
     )
 
-    pdf_explode = pdf_val.explode('internalnames')
+    pdf_explode = pdf_val.explode('internalname')
 
     # Select columns of interest -- and create a Spark DataFrame
-    cols = ['fullname', 'ra', 'declination', 'type', 'internalnames']
+    cols = ['fullname', 'ra', 'declination', 'type', 'internalname']
 
     return pdf_explode[cols]
 
@@ -53,8 +53,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    # construct the index view 'fullname_internalnames'
-    index_row_key_name = 'fullname_internalnames'
+    # construct the index view 'fullname_internalname'
+    index_row_key_name = 'fullname_internalname'
     columns = index_row_key_name.split('_')
     index_name = '.tns_resolver'
 
