@@ -88,7 +88,7 @@ def main():
     )
 
     # Save raw data
-    pdf_tns.to_parquet('/spark_mongo_tmp/julien.peloton/tns_raw.parquet')
+    pdf_tns.to_parquet('{}/tns_raw.parquet'.format(args.tns_raw_output))
 
     # Filter TNS confirmed data
     f1 = ~pdf_tns['type'].isna()
@@ -97,7 +97,7 @@ def main():
         lambda x: '(TNS) {}'.format(x)
     )
 
-    pdf_tns_filt.to_parquet('/spark_mongo_tmp/julien.peloton/tns.parquet')
+    pdf_tns_filt.to_parquet('{}/tns.parquet'.format(args.tns_raw_output))
 
 
 if __name__ == "__main__":

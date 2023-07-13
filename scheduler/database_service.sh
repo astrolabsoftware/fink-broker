@@ -22,6 +22,9 @@ DAY=${NIGHT:6:2}
 
 $(hdfs dfs -test -d /user/julien.peloton/online/science/year=${YEAR}/month=${MONTH}/day=${DAY})
 if [[ $? == 0 ]]; then
+    echo "Download latest TNS data"
+    fink start tns_resolver -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs --tns_raw_output /spark_mongo_tmp/julien.peloton > ${FINK_HOME}/broker_logs/tns_resolver_${NIGHT}.log 2>&1
+
     echo "merge_and_clean"
     fink start merge -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_high --night ${NIGHT} > ${FINK_HOME}/broker_logs/merge_and_clean_${NIGHT}.log 2>&1
 
