@@ -56,7 +56,7 @@ def main():
     # construct the index view 'fullname_internalnames'
     index_row_key_name = 'fullname_internalnames'
     columns = index_row_key_name.split('_')
-    index_name = 'tns_resolver'
+    index_name = '.tns_resolver'
 
     # Initialise Spark session
     spark = init_sparksession(
