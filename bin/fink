@@ -117,6 +117,10 @@ while [ "$#" -gt 0 ]; do
       TNS_FOLDER="$2"
       shift 2
       ;;
+    --tns_raw_output)
+      TNS_RAW_OUTPUT="$2"
+      shift 2
+      ;;
     --tns_sandbox)
       TNS_SANDBOX=true
       shift 1
@@ -422,6 +426,17 @@ elif [[ $service == "save_schema" ]]; then
   ${FINK_HOME}/bin/save_distribution_schema.py ${HELP_ON_SERVICE} ${EXIT_AFTER} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} -log_level ${LOG_LEVEL}
+elif [[ $service == "tns_resolver" ]]; then
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/download_tns.py ${HELP_ON_SERVICE} \
+  -science_db_name ${SCIENCE_DB_NAME} \
+  -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
+  -night ${NIGHT} \
+  -tns_folder ${TNS_FOLDER} \
+  -tns_raw_output ${TNS_RAW_OUTPUT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 else
   # In case you give an unknown service
   echo "unknown service: $service" >&2

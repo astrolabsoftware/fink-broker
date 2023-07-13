@@ -241,6 +241,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         Disable execution of science modules
         """)
+    parser.add_argument(
+        '-tns_raw_output', type=str, default='',
+        help="""
+        Folder that contains raw TNS catalog
+        [TNS_RAW_OUTPUT]
+        """)
     args = parser.parse_args(None)
     return args
 
