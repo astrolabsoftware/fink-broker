@@ -58,7 +58,9 @@ jobs:
         id: vars
         shell: bash
         run: |
-          echo "FINK_ALERT_SIMULATOR_DIR=$(DIR=$(pwd) && . ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
+          DIR=$(pwd)
+          . ./conf.sh
+          echo "FINK_ALERT_SIMULATOR_DIR=$FINK_ALERT_SIMULATOR_DIR" >> $GITHUB_ENV
       - name: Clone fink-alert-simulator code
         run: ./itest/clone-fink-alert-simulator.sh
       - name: Create k8s/kind cluster
@@ -125,6 +127,7 @@ jobs:
         run: |
           DIR=$(pwd)
           . ./conf.sh
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           docker pull $IMAGE
       - name: Scan fink-broker image
         uses: anchore/scan-action@v3
@@ -159,5 +162,5 @@ jobs:
         run: |
           DIR=$(pwd)
           . ./conf.sh
-          docker tag ${{ env.IMAGE }} "$PROMOTED_IMAGE"
+          docker tag "$IMAGE" "$PROMOTED_IMAGE"
           docker push "$PROMOTED_IMAGE"
