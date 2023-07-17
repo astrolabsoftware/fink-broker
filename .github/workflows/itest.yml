@@ -39,6 +39,7 @@ jobs:
           ./build.sh
       - name: Push image to local registry
         run: |
+          DIR=$(pwd)
           . ./conf.sh
           docker push $IMAGE
   integration-tests:
@@ -57,7 +58,7 @@ jobs:
         id: vars
         shell: bash
         run: |
-          echo "FINK_ALERT_SIMULATOR_DIR=$(. ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
+          echo "FINK_ALERT_SIMULATOR_DIR=$(DIR=$(pwd) && . ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
       - name: Clone fink-alert-simulator code
         run: ./itest/clone-fink-alert-simulator.sh
       - name: Create k8s/kind cluster
@@ -122,6 +123,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Pull image from local registry
         run: |
+          DIR=$(pwd)
           . ./conf.sh
           docker pull $IMAGE
       - name: Scan fink-broker image
