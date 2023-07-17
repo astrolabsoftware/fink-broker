@@ -152,7 +152,7 @@ jobs:
       matrix:
         runner: [self-hosted]
     runs-on: ${{ matrix.runner }}
-    needs: [integration-tests, image-analysis]
+    needs: [build, integration-tests, image-analysis]
     steps:
       - name: Login to DockerHub
         uses: docker/login-action@v2
