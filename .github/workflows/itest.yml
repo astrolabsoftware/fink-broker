@@ -34,28 +34,13 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Declare Version Variables
-        id: vars
-        shell: bash
-        run: |
-          DIR=$(pwd)
-          . ./conf.sh
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "IMAGE=${IMAGE}"
       - name: Build fink-broker image for k8s
         run: |
           ./build.sh
-      - name: Export fink-broker image
+      - name: Push image to local registry
         run: |
-          docker images
-          echo "${{ env.IMAGE }}"
-          mkdir -p artifacts
-          docker save "${{ env.IMAGE }}" > artifacts/image.tar
-          echo "${{ env.IMAGE }}" > artifacts/image-tag
-      - uses: actions/upload-artifact@v2
-        with:
-          name: docker-artifact
-          path: artifacts
+          . ./conf.sh
+          docker push $IMAGE
   integration-tests:
     name: Run integration tests
     strategy:
@@ -89,15 +74,13 @@ jobs:
           else
             echo "::error Failed to pull $IMAGE"
           fi
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load container image inside kind
+      - name: Load fink-broker image inside kind
         run: |
-          kind load image-archive artifacts/image.tar
-          docker exec -- kind-control-plane crictl image
+          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
+            echo "::notice Succeeded to pull $IMAGE"
+          else
+            echo "::error Failed to pull $IMAGE"
+          fi
       - name: Install fink-alert-simulator pre-requisites (argoCD)
         run: |
           # sleep infinity
@@ -137,15 +120,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load image in local registry
+      - name: Pull image from local registry
         run: |
-          docker load --input artifacts/image.tar
-          echo "IMAGE=$(cat artifacts/artifacts/image-tag)" >> $GITHUB_ENV
+          . ./conf.sh
+          docker pull $IMAGE
       - name: Scan fink-broker image
         uses: anchore/scan-action@v3
         id: scan
@@ -167,15 +145,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     needs: integration-tests
     steps:
-      - name: Download image
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load image in local registry
-        run: |
-          docker load --input artifacts/image.tar
-          echo "IMAGE=$(cat artifacts/image-tag)" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -184,4 +155,7 @@ jobs:
           password: ${{ secrets.registry_token }}
       - name: Push image to IN2P3 registry
         run: |
-          docker push ${{ env.IMAGE }}
+          DIR=$(pwd)
+          . ./conf.sh
+          docker tag ${{ env.IMAGE }} "$PROMOTED_IMAGE"
+          docker push "$PROMOTED_IMAGE"

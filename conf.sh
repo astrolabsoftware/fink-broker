@@ -13,6 +13,7 @@ MINIMAL="${MINIMAL:-false}"
 # ----------------
 # Repository address
 REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
+CI_REPO="docker-registry.docker-registry:5000"
 # Tag to apply to the built image, or to identify the image to be pushed
 TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script
@@ -20,9 +21,11 @@ TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # Disable science pipeline
 if [ "$NOSCIENCE" = true ];
 then
-  IMAGE="$REPO/fink-broker-noscience:$TAG"
+  IMAGE="$CI_REPO/fink-broker-noscience:$TAG"
+  PROMOTED_IMAGE="$REPO/fink-broker-noscience:$TAG"
 else
-  IMAGE="$REPO/fink-broker:$TAG"
+  IMAGE="$CI_REPO/fink-broker:$TAG"
+  PROMOTED_IMAGE="$REPO/fink-broker:$TAG"
 fi
 
 # Spark parameters
