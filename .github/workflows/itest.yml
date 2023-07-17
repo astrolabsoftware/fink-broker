@@ -87,7 +87,7 @@ jobs:
       - name: Load fink-broker image inside kind
         run: |
           IMAGE=${{ needs.build.outputs.image }}
-          if docker exec -t -- kind-control-plane crictl pull " "$IMAGE"; then
+          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
