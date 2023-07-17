@@ -38,10 +38,12 @@ jobs:
         run: |
           ./build.sh
       - name: Push image to local registry
+        id: local-registry
         run: |
           DIR=$(pwd)
           . ./conf.sh
           docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> "$GITHUB_OUTPUT"
   integration-tests:
     name: Run integration tests
     strategy:
@@ -61,6 +63,7 @@ jobs:
           DIR=$(pwd)
           . ./conf.sh
           echo "FINK_ALERT_SIMULATOR_DIR=$FINK_ALERT_SIMULATOR_DIR" >> $GITHUB_ENV
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
       - name: Clone fink-alert-simulator code
         run: ./itest/clone-fink-alert-simulator.sh
       - name: Create k8s/kind cluster
@@ -79,7 +82,8 @@ jobs:
           fi
       - name: Load fink-broker image inside kind
         run: |
-          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
+          IMAGE=${{ steps.local-registry.outputs.IMAGE }}
+          if docker exec -t -- kind-control-plane crictl pull " "$IMAGE"; then
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
@@ -121,19 +125,15 @@ jobs:
       security-events: write
     needs: build
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Pull image from local registry
         run: |
-          DIR=$(pwd)
-          . ./conf.sh
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          docker pull $IMAGE
+          IMAGE=${{ steps.local-registry.outputs.IMAGE }}
+          docker pull "$IMAGE"
       - name: Scan fink-broker image
         uses: anchore/scan-action@v3
         id: scan
         with:
-          image: "${{ env.IMAGE }}"
+          image: "${{ steps.local-registry.outputs.IMAGE }}"
           fail-build: false
       - name: Display SARIF report
         run: |
@@ -148,10 +148,8 @@ jobs:
       matrix:
         runner: [self-hosted]
     runs-on: ${{ matrix.runner }}
-    needs: integration-tests
+    needs: [integration-tests, image-analysis]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -160,7 +158,7 @@ jobs:
           password: ${{ secrets.registry_token }}
       - name: Push image to IN2P3 registry
         run: |
-          DIR=$(pwd)
-          . ./conf.sh
+          IMAGE="${{ steps.local-registry.outputs.IMAGE }}"
+          docker pull "$IMAGE"
           docker tag "$IMAGE" "$PROMOTED_IMAGE"
           docker push "$PROMOTED_IMAGE"
