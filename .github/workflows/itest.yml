@@ -70,6 +70,29 @@ jobs:
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
       - name: Clone fink-alert-simulator code
         run: ./itest/clone-fink-alert-simulator.sh
+      - name: Create kind-helper configuration
+        run: |
+          cat <<EOF > $HOME/.kind-helper
+          kind:
+            # Supported only for clusters with one node
+            # Use host directory to share data between host and kind node
+            # host directory will be mounted on /mnt/extra on each node
+            # extraMountPath: /path/to/host/directory
+
+            # Sets "127.0.0.1" as an extra Subject Alternative Names (SANs) for the API Server signing certificate.
+            # See https://kubernetes.io/docs/reference/config-api/kubeadm-config.v1beta3/#kubeadm-k8s-io-v1beta3-APIServer
+            # Usefull to access API server through a ssh tunnel
+            localcertsans: false
+
+            # Use calico CNI instead of kindnet
+            # useCalico: true
+            # Number of worker nodes
+            workers: 0
+
+            # Supported only for clusters with one node
+            # Certificates must be available on kind host at "/etc/docker/certs.d/{{ .PrivateRegistry }}"
+            privateRegistry: "docker-registry.docker-registry:5000"
+          EOF
       - name: Create k8s/kind cluster
         run: |
           VERSION="v1.0.2-rc1"
@@ -92,7 +115,6 @@ jobs:
           else
             echo "::error Failed to pull $IMAGE"
           fi
-          sleep infinity
       - name: Install fink-alert-simulator pre-requisites (argoCD)
         run: |
           # sleep infinity
