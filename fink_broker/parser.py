@@ -237,7 +237,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [PRODUCER]
         """)
     parser.add_argument(
-        '-noscience', type=bool, default=False,
+        '--noscience', action="store_true",
         help="""
         Disable execution of science modules
         """)

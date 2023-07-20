@@ -13,7 +13,7 @@ MINIMAL="${MINIMAL:-false}"
 # ----------------
 # Repository address
 REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
-CI_REPO="docker-registry.docker-registry:5000"
+CI_REPO="${CI_REPO:-$REPO}"
 # Tag to apply to the built image, or to identify the image to be pushed
 TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
 # WARNING "spark-py" is hard-coded in spark build script

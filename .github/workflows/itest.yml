@@ -21,6 +21,7 @@ env:
   # Override the self-hosted runner value
   POD_NAMESPACE: default
   RUNNER: self-hosted
+  CI_REPO: docker-registry.docker-registry:5000
 jobs:
   build:
     name: Build image
@@ -97,7 +98,7 @@ jobs:
         run: |
           VERSION="v1.0.2-rc1"
           curl -sfL https://raw.githubusercontent.com/k8s-school/kind-helper/$VERSION/install.sh | bash
-          kind-helper create -s
+          kind-helper create
       - name: Load fink-alert-simulator image inside kind
         run: |
           DIR="${{ env.FINK_ALERT_SIMULATOR_DIR }}"
@@ -115,7 +116,7 @@ jobs:
           else
             echo "::error Failed to pull $IMAGE"
           fi
-      - name: Install fink-alert-simulator pre-requisites (argoCD)
+      - name: Install fink-alert-simulator pre-requisites (argo-workflows)
         run: |
           # sleep infinity
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
@@ -141,7 +142,7 @@ jobs:
       - name: Run fink-broker
         run: |
           sleep 10
-          ./itest/itest.sh
+          ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
     strategy:
