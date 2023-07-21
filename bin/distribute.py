@@ -86,9 +86,9 @@ def main():
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
     if not args.noscience:
-      # This column is added by the science pipeline
-      cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
-      cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
+        # This column is added by the science pipeline
+        cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
+        cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
 
     # Extract schema
     df_schema = spark.read.format('parquet').load(input_sci)
@@ -117,7 +117,8 @@ def main():
         topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
 
         # Apply user-defined filter
-        df_tmp = apply_user_defined_filter(df, userfilter, logger)
+        if not args.noscience:
+            df_tmp = apply_user_defined_filter(df, userfilter, logger)
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
