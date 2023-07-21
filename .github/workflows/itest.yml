@@ -126,7 +126,7 @@ jobs:
         run: ./itest/strimzi-setup.sh
       - name: Install fink-broker pre-requisites (Spark)
         run: |
-          apt-get -y install openjdk-8-jdk-headless
+          sudo apt-get -y install openjdk-8-jdk-headless
           ./itest/prereq-install.sh
       - name: Install MinIO
         run: ./itest/minio-install.sh
