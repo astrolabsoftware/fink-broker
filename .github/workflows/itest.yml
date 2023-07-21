@@ -125,7 +125,9 @@ jobs:
       - name: Setup kafka
         run: ./itest/strimzi-setup.sh
       - name: Install fink-broker pre-requisites (Spark)
-        run: ./itest/prereq-install.sh
+        run: |
+          apt-get -y install openjdk-8-jdk-headless
+          ./itest/prereq-install.sh
       - name: Install MinIO
         run: ./itest/minio-install.sh
       - uses: actions/setup-go@v4

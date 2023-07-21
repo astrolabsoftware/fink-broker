@@ -60,19 +60,25 @@ for task in $tasks; do
     $MINIMAL_OPT $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
 done
 
+# Wait for Spark pods to be created and warm up
+sleep 10
+
 loop=true
 counter=0
 
 expected_pods=6
+exit_code=1
 while $loop
 do
   pod_count=$(kubectl get pod -l spark-role=driver --field-selector=status.phase==Running \
     -o go-template='{{printf "%d\n" (len  .items)}}')
 
   if [ $pod_count -eq $expected_pods ]; then
-    loop=false
+    exit_code=0
+    break
   elif [ $counter -gt 5 ]; then
-    loop=false
+    >&2 echo "ERROR: Fail to create Spark pods"
+    break
   fi
   echo "Wait for Spark pods to be created"
   echo "---------------------------------"
@@ -93,6 +99,8 @@ then
   kubectl describe pods -l "spark-role in (executor, driver)"
   kubectl get pods
 fi
+
+exit "$exit_code"
 
 # TODO add a cli option
 # kubectl delete pod -l "spark-role in (executor, driver)"
