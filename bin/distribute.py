@@ -85,7 +85,9 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
-    cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
+    if not args.noscience:
+        # This column is added by the science pipeline
+        cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
     cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
 
     # Extract schema
