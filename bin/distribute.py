@@ -117,7 +117,9 @@ def main():
         topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
 
         # Apply user-defined filter
-        if not args.noscience:
+        if args.noscience:
+            df_tmp = df
+        else:
             df_tmp = apply_user_defined_filter(df, userfilter, logger)
 
         # Wrap alert data
