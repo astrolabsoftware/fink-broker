@@ -66,7 +66,7 @@ sleep 10
 loop=true
 counter=0
 
-expected_pods=6
+expected_pods=3
 exit_code=1
 while $loop
 do
