@@ -76,18 +76,43 @@ do
   if [ $pod_count -eq $expected_pods ]; then
     exit_code=0
     break
-  elif [ $counter -gt 5 ]; then
+  elif [ $counter -gt 15 ]; then
     >&2 echo "ERROR: Fail to create Spark pods"
     break
   fi
   echo "Wait for Spark pods to be created"
   echo "---------------------------------"
-  sleep 2
+  sleep 5
   let counter=counter+1
   echo "Pods:"
   echo "-----"
   kubectl get pods
 done
+
+# Check that the pods keep running for a few seconds
+sleep 10
+
+while $loop
+do
+  pod_count=$(kubectl get pod -l spark-role=driver --field-selector=status.phase==Running \
+    -o go-template='{{printf "%d\n" (len  .items)}}')
+
+  if [ $pod_count -eq $expected_pods ]; then
+    exit_code=0
+    break
+  elif [ $counter -gt 15 ]; then
+    >&2 echo "ERROR: Fail to create Spark pods"
+    break
+  fi
+  echo "Wait for Spark pods to be created"
+  echo "---------------------------------"
+  sleep 5
+  let counter=counter+1
+  echo "Pods:"
+  echo "-----"
+  kubectl get pods
+done
+
 
 # Debug in case of not expected behaviour
 if [ "$pod_count" -ne $expected_pods ]
