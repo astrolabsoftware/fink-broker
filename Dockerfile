@@ -28,7 +28,7 @@ RUN apt-get update && \
     rm -rf /var/cache/apt/*
 
 ADD deps/jars-urls.txt $FINK_HOME/
-RUN xargs -n 1 curl --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
+RUN xargs -n 1 curl --fail --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
 
 # Main process will run as spark_uid
 ENV HOME /home/fink
