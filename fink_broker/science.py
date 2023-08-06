@@ -435,14 +435,12 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
 
     # fake cdsxmatch and nobs
-    args += [F.col('cdsxmatch'), F.lit(20)]
     args += [F.col('diaObject.ra'), F.col('diaObject.decl')]
     args += [F.col('diaObject.hostgal_ra'), F.col('diaObject.hostgal_dec')]
+    args += [F.col('diaObject.hostgal_snsep')]
     args += [F.col('diaObject.hostgal_zphot')]
-    args += [F.col('diaObject.hostgal_zphot_err'), F.col('diaObject.mwebv')]
+    args += [F.col('diaObject.hostgal_zphot_err')]
 
-    # maxduration
-    args += [F.lit(40)]
     df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
 
     # Apply level one processor: superNNova
