@@ -16,6 +16,17 @@ spec:
     - protocol: TCP
       port: 9000
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,9 +54,8 @@ spec:
         - minio server /data --console-address :9090
         volumeMounts:
         - mountPath: /data
-          name: localvolume
+          name: data
       volumes:
-      - name: localvolume
-        hostPath: # MinIO generally recommends using locally-attached volumes
-          path: /data/minio
-          type: DirectoryOrCreate
+      - name: data
+        persistentVolumeClaim:
+          claimName: minio-dev
