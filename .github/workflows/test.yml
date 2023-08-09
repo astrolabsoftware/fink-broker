@@ -31,11 +31,11 @@ jobs:
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
         echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
         echo "${BINPATH}" >> $GITHUB_PATH
-    - name: Download test data
-      run: |
-        cd $FINK_HOME/datasim/basic_alerts
-        source $FINK_HOME/datasim/basic_alerts/download_ztf_alert_data.sh
-        cd $FINK_HOME
+    #- name: Download test data
+    #  run: |
+    #    cd $FINK_HOME/datasim/basic_alerts
+    #    source $FINK_HOME/datasim/basic_alerts/download_ztf_alert_data.sh
+    #    cd $FINK_HOME
     - name: Download simulator
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
