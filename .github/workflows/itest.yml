@@ -135,7 +135,7 @@ jobs:
         with:
           go-version: '1.19.2'
       - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@v1.0.4
+        run: go install github.com/astrolabsoftware/finkctl@main
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
