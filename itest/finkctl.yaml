@@ -16,12 +16,12 @@ stream2raw:
   kafka_starting_offset: earliest
   kafka_topic: ztf-stream-sim
 raw2science:
-  night: "20190903"
+  night: "20200101"
 distribution:
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
   # distribution_servers: "kafka_server1:kafka_server2"
   distribution_schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
   substream_prefix: "fink_"
   # Default to <stream2raw.night>
-  # night: "20190903"
+  # night: "20200101"
 
