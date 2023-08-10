@@ -552,7 +552,7 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
     # Add the row key to the list of columns to extract
     all_cols = cols + [row_key_name]
 
-    if (to_create is not None) and (type(to_create) == list):
+    if (to_create is not None) and isinstance(to_create, list):
         for extra_col in to_create:
             all_cols += [extra_col]
 
@@ -669,7 +669,7 @@ def construct_hbase_catalog_from_flatten_schema(
         #     sep = ""
 
         # Deal with array
-        if type(column["type"]) == dict:
+        if isinstance(column["type"], dict):
             # column["type"]["type"]
             column["type"] = "string"
 
