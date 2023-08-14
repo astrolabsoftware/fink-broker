@@ -15,3 +15,4 @@ alias cdfb="cd $FINK_BROKER_SRC_DIR"
 alias cdfc="cd $FINKCTL_SRC_DIR"
 
 alias fns="export MINIMAL=true NSCIENCE=true"
+alias fbp="$FINK_BROKER_SRC_DIR/build.sh && $FINK_BROKER_SRC_DIR/push.sh"
