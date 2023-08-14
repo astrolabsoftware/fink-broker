@@ -31,7 +31,7 @@ cat << EOF | kubectl create -n $KAFKA_NS -f -
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:
-  name: finkProducer
+  name: fink-producer
   labels:
     strimzi.io/cluster: "$KAFKA_CLUSTER"
 spec:
