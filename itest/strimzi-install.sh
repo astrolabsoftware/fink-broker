@@ -82,8 +82,6 @@ spec:
         tls: false
         authentication:
           type: scram-sha-512
-    authorization:
-      type: simple
     storage:
       type: jbod
       volumes:

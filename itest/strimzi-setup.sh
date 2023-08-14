@@ -37,14 +37,6 @@ metadata:
 spec:
   authentication:
     type: scram-sha-512
-  authorization:
-    type: simple
-    acls:
-      - resource:
-          type: topic
-          name: ztf-stream-sim
-          patternType: literal
-        operation: Read
 EOF
 
 cat << EOF | kubectl create -n $KAFKA_NS -f -
