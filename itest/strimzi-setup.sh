@@ -29,9 +29,29 @@ readonly  FINKKUB=$(readlink -f "${DIR}/..")
 
 cat << EOF | kubectl create -n $KAFKA_NS -f -
 apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: fink-user
+  labels:
+    strimzi.io/cluster: "$KAFKA_CLUSTER"
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: ztf-stream-sim
+          patternType: literal
+        operation: Read
+EOF
+
+cat << EOF | kubectl create -n $KAFKA_NS -f -
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: ztf-stream-sim 
+  name: ztf-stream-sim
   labels:
     strimzi.io/cluster: "$KAFKA_CLUSTER"
 spec:

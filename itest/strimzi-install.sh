@@ -80,6 +80,8 @@ spec:
         port: 9094
         type: nodeport
         tls: false
+        authentication:
+          type: scram-sha-512
     storage:
       type: jbod
       volumes:
