@@ -312,16 +312,15 @@ def connect_to_raw_database(
         .builder \
         .getOrCreate()
 
+    while not path_exist(basepath):
+        print("Waiting for data to arrive in {}".format(basepath))
+        time.sleep(5)
+
     # Create a DF from the database
     userschema = spark\
         .read\
         .parquet(basepath)\
         .schema
-
-    datapath = os.path.join(basepath, path)
-    while not path_exist(datapath):
-        print("Waiting for data to arrive in {}".format(datapath))
-        time.sleep(5)
 
     df = spark \
         .readStream \
