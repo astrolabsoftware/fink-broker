@@ -104,7 +104,7 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
-          ./itest/itest.sh
+          ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
     runs-on: ubuntu-22.04
