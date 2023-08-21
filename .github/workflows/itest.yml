@@ -144,7 +144,6 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
-          sleep 10
           ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
