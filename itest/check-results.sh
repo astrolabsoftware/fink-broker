@@ -26,7 +26,7 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/../conf.sh
 
-fink_topics=$(finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml spark)
+fink_topics=$(finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml kafka)
 
 echo "Fink topics:\n$fink_topics"
 
