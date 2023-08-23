@@ -20,7 +20,7 @@
 
 # @author  Fabrice Jammes
 
-set -euxo pipefail
+set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
@@ -28,7 +28,8 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 fink_topics=$(finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml kafka)
 
-echo "Fink topics:\n$fink_topics"
+echo "Fink topics:"
+echo "$fink_topics"
 
 nb_topics=$(echo $fink_topics | wc -w)
 
