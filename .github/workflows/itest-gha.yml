@@ -105,6 +105,9 @@ jobs:
       - name: Run fink-broker
         run: |
           ./itest/fink-start.sh
+      - name: Check results
+        run: |
+          ./itest/check-results.sh
   image-analysis:
     name: Analyze image
     runs-on: ubuntu-22.04
