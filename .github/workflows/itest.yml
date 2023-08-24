@@ -20,7 +20,6 @@ env:
   NOSCIENCE: ${{ inputs.noscience }}
   # Override the self-hosted runner value
   POD_NAMESPACE: default
-  RUNNER: self-hosted
   CI_REPO: docker-registry.docker-registry:5000
 jobs:
   build:
@@ -28,7 +27,7 @@ jobs:
     # Use an environment variable to set the worker
     strategy:
       matrix:
-        runner: [self-hosted]
+        runner: [self-hosted, v2]
     runs-on: ${{ matrix.runner }}
     outputs:
       image: ${{ steps.push.outputs.IMAGE }}
@@ -53,7 +52,7 @@ jobs:
     name: Run integration tests
     strategy:
       matrix:
-        runner: [self-hosted]
+        runner: [self-hosted, v2]
     runs-on: ${{ matrix.runner }}
     needs: build
     steps:
@@ -149,7 +148,7 @@ jobs:
     name: Analyze image
     strategy:
       matrix:
-        runner: [self-hosted]
+        runner: [self-hosted, v2]
     runs-on: ${{ matrix.runner }}
     permissions:
       security-events: write
@@ -176,7 +175,7 @@ jobs:
     name: Push fink-broker image to IN2P3 registry
     strategy:
       matrix:
-        runner: [self-hosted]
+        runner: [self-hosted, v2]
     runs-on: ${{ matrix.runner }}
     needs: [build, integration-tests, image-analysis]
     steps:
