@@ -26,6 +26,8 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/../conf.sh
 
+# TODO implement a wait option in finkctl
+sleep 100
 fink_topics=$(finkctl --config $DIR/finkctl.yaml --secret $DIR/finkctl.secret.yaml kafka)
 
 echo "Fink topics:"
