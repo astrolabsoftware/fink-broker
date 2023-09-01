@@ -351,7 +351,7 @@ def path_exist(path: str) -> bool:
         rdd = sc.textFile(path)
         rdd.take(1)
         return True
-    except Py4JJavaError as e:
+    except Py4JJavaError:
         return False
 
 def load_parquet_files(path: str) -> DataFrame:
