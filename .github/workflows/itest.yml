@@ -27,7 +27,7 @@ jobs:
     # Use an environment variable to set the worker
     strategy:
       matrix:
-        runner: [self-hosted, v2]
+        runner: [self-hosted]
     runs-on: ${{ matrix.runner }}
     outputs:
       image: ${{ steps.push.outputs.IMAGE }}
