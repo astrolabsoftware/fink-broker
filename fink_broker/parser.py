@@ -108,7 +108,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [TIME_INTERVAL]
         """)
     parser.add_argument(
-        '-exit_after', type=int, default=86400,
+        '-exit_after', type=int, default=64800,
         help="""
         Stop the service after `exit_after` seconds.
         This primarily for use on CI, to stop service after some time.

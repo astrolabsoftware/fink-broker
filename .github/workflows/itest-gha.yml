@@ -1,13 +1,11 @@
-# Qserv operator CI workflow
----
-name: "Integration tests"
+name: "Fink-broker e2e workflow (noscience, GHA)"
 on:
   push:
   pull_request:
     branches:
       - master
 env:
-  FINKCTL_VERSION: v1.1.0-rc1 
+  FINKCTL_VERSION: v1.1.0-rc1
   NOSCIENCE: true
   MINIMAL: true
 

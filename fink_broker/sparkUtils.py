@@ -312,9 +312,12 @@ def connect_to_raw_database(
         .builder \
         .getOrCreate()
 
+    wait_sec = 5
     while not path_exist(basepath):
         print("Waiting for data to arrive in {}".format(basepath))
-        time.sleep(5)
+        time.sleep(wait_sec)
+        # Sleep for longer and longer
+        wait_sec = increase_wait_time(wait_sec)
 
     # Create a DF from the database
     userschema = spark\
@@ -333,8 +336,25 @@ def connect_to_raw_database(
 
     return df
 
+def increase_wait_time(wait_sec: int) -> int:
+    """ Increase the waiting time between two checks by 20%
+
+    Parameters
+    ----------
+    wait_sec : int
+        Current waiting time in seconds
+
+    Returns
+    -------
+    int
+        New waiting time in seconds, maximum 60 seconds
+    """
+    if wait_sec < 60:
+        wait_sec *= 1.2
+    return wait_sec
+
 def path_exist(path: str) -> bool:
-    """Check if a path exists on Spark FS
+    """Check if a path exists on Spark shared filesystem (HDFS or S3)
 
     Parameters
     ----------
