@@ -365,16 +365,20 @@ def path_exist(path: str) -> bool:
     bool
         True if the path exists, False otherwise
     """
-    spark = SparkSession.builder.getOrCreate()
+    spark = SparkSession \
+            .builder \
+            .getOrCreate()
 
     jvm = spark._jvm
     jsc = spark._jsc
 
-    fs = jvm.org.apache.hadoop.fs.FileSystem.get(jsc.hadoopConfiguration())
+    conf = jsc.hadoopConfiguration()
+    uri = jvm.java.net.URI(path)
+
+    fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
     if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
-        return True
-    else:
-        return False
+            return True
+    return False
 
 def load_parquet_files(path: str) -> DataFrame:
     """ Initialise SparkSession, and load parquet files with Spark
