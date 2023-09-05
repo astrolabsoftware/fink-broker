@@ -281,8 +281,7 @@ def connect_to_kafka(
 
     return df
 
-def connect_to_raw_database(
-        basepath: str, path: str, latestfirst: bool) -> DataFrame:
+def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> DataFrame:
     """ Initialise SparkSession, and connect to the raw database (Parquet)
 
     Parameters
@@ -366,12 +365,15 @@ def path_exist(path: str) -> bool:
     bool
         True if the path exists, False otherwise
     """
-    sc = SparkContext._active_spark_context
-    try:
-        rdd = sc.textFile(path)
-        rdd.take(1)
+    spark = SparkSession.builder.getOrCreate()
+
+    jvm = spark._jvm
+    jsc = spark._jsc
+
+    fs = jvm.org.apache.hadoop.fs.FileSystem.get(jsc.hadoopConfiguration())
+    if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
         return True
-    except Py4JJavaError:
+    else:
         return False
 
 def load_parquet_files(path: str) -> DataFrame:
