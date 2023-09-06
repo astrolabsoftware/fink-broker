@@ -20,8 +20,6 @@ from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
 
-from py4j.protocol import Py4JJavaError
-
 import os
 import json
 
@@ -244,9 +242,7 @@ def connect_to_kafka(
     True
     """
     # Grab the running Spark Session
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     conf = spark.sparkContext.getConf().getAll()
 
@@ -307,9 +303,7 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     True
     """
     # Grab the running Spark Session
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     wait_sec = 5
     while not path_exist(basepath):
@@ -365,9 +359,7 @@ def path_exist(path: str) -> bool:
     bool
         True if the path exists, False otherwise
     """
-    spark = SparkSession \
-            .builder \
-            .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     jvm = spark._jvm
     jsc = spark._jsc
@@ -377,8 +369,9 @@ def path_exist(path: str) -> bool:
 
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
     if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
-            return True
-    return False
+        return True
+    else:
+        return False
 
 def load_parquet_files(path: str) -> DataFrame:
     """ Initialise SparkSession, and load parquet files with Spark
