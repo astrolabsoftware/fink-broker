@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 from typing import Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -241,9 +242,7 @@ def connect_to_kafka(
     True
     """
     # Grab the running Spark Session
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     conf = spark.sparkContext.getConf().getAll()
 
@@ -278,8 +277,7 @@ def connect_to_kafka(
 
     return df
 
-def connect_to_raw_database(
-        basepath: str, path: str, latestfirst: bool) -> DataFrame:
+def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> DataFrame:
     """ Initialise SparkSession, and connect to the raw database (Parquet)
 
     Parameters
@@ -305,9 +303,14 @@ def connect_to_raw_database(
     True
     """
     # Grab the running Spark Session
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
+
+    wait_sec = 5
+    while not path_exist(basepath):
+        print("Waiting for data to arrive in {}".format(basepath))
+        time.sleep(wait_sec)
+        # Sleep for longer and longer
+        wait_sec = increase_wait_time(wait_sec)
 
     # Create a DF from the database
     userschema = spark\
@@ -325,6 +328,50 @@ def connect_to_raw_database(
         .load()
 
     return df
+
+def increase_wait_time(wait_sec: int) -> int:
+    """ Increase the waiting time between two checks by 20%
+
+    Parameters
+    ----------
+    wait_sec : int
+        Current waiting time in seconds
+
+    Returns
+    -------
+    int
+        New waiting time in seconds, maximum 60 seconds
+    """
+    if wait_sec < 60:
+        wait_sec *= 1.2
+    return wait_sec
+
+def path_exist(path: str) -> bool:
+    """Check if a path exists on Spark shared filesystem (HDFS or S3)
+
+    Parameters
+    ----------
+    path : str
+        Path to check
+
+    Returns
+    -------
+    bool
+        True if the path exists, False otherwise
+    """
+    spark = SparkSession.builder.getOrCreate()
+
+    jvm = spark._jvm
+    jsc = spark._jsc
+
+    conf = jsc.hadoopConfiguration()
+    uri = jvm.java.net.URI(path)
+
+    fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
+    if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
+        return True
+    else:
+        return False
 
 def load_parquet_files(path: str) -> DataFrame:
     """ Initialise SparkSession, and load parquet files with Spark

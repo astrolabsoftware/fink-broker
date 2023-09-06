@@ -1,0 +1,162 @@
+name: "Fink-broker e2e workflow (noscience, GHA)"
+on:
+  push:
+  pull_request:
+    branches:
+      - master
+env:
+  FINKCTL_VERSION: v1.1.0-rc1
+  NOSCIENCE: true
+  MINIMAL: true
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Declare Version Variables
+        id: vars
+        shell: bash
+        run: |
+          DIR=$(pwd)
+          . ./conf.sh
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "IMAGE=${IMAGE}"
+      - name: Build fink-broker image for k8s
+        run: |
+          ./build.sh
+      - name: Export fink-broker image
+        run: |
+          docker images
+          echo "${{ env.IMAGE }}"
+          mkdir -p artifacts
+          docker save "${{ env.IMAGE }}" > artifacts/image.tar
+          echo "${{ env.IMAGE }}" > artifacts/image-tag
+      - uses: actions/upload-artifact@v2
+        with:
+          name: docker-artifact
+          path: artifacts
+  integration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Declare Version Variables
+        id: vars
+        shell: bash
+        run: |
+          echo "FINK_ALERT_SIMULATOR_DIR=$(. ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
+      - name: Clone fink-alert-simulator code
+        run: ./itest/clone-fink-alert-simulator.sh
+      - name: Create k8s/kind cluster
+        run: |
+          git clone --depth 1 -b "k8s-1.25.0" --single-branch https://github.com/k8s-school/kind-helper.git
+          ./kind-helper/k8s-create.sh -s
+      - name: Load fink-alert-simulator image inside kind
+        run: |
+          DIR="${{ env.FINK_ALERT_SIMULATOR_DIR }}"
+          .  "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/conf.sh
+          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
+            echo "::notice Succeeded to pull $IMAGE"
+          else
+            echo "::error Failed to pull $IMAGE"
+          fi
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load container image inside kind
+        run: |
+          kind load image-archive artifacts/image.tar
+          docker exec -- kind-control-plane crictl image
+      - name: Install fink-alert-simulator pre-requisites (argoCD)
+        run: |
+          "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
+      - name: Install strimzi (kafka-operator)
+        run: ./itest/strimzi-install.sh
+      - name: Setup kafka
+        run: ./itest/strimzi-setup.sh
+      - name: Install fink-broker pre-requisites (Spark)
+        run: ./itest/prereq-install.sh
+      - name: Install MinIO
+        run: ./itest/minio-install.sh
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.19.2'
+      - name: Install finkctl
+        run: go install github.com/astrolabsoftware/finkctl@"${{ env.FINKCTL_VERSION }}"
+      - name: Run fink-alert-simulator
+        run: |
+          "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
+          argo watch @latest
+      # - name: Setup tmate session
+      # uses: mxschmitt/action-tmate@v3
+      - name: Run fink-broker
+        run: |
+          ./itest/fink-start.sh
+      - name: Check results
+        run: |
+          ./itest/check-results.sh
+  image-analysis:
+    name: Analyze image
+    runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load image in local registry
+        run: |
+          docker load --input artifacts/image.tar
+          echo "IMAGE=$(cat artifacts/artifacts/image-tag)" >> $GITHUB_ENV
+      - name: Scan fink-broker image
+        uses: anchore/scan-action@v3
+        id: scan
+        with:
+          image: "${{ env.IMAGE }}"
+          fail-build: false
+      - name: Display SARIF report
+        run: |
+          cat ${{ steps.scan.outputs.sarif }}
+      - name: upload Anchore scan SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
+  push:
+    name: Push fink-broker image to IN2P3 registry
+    runs-on: ubuntu-22.04
+    needs: integration-tests
+    steps:
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load image in local registry
+        run: |
+          docker load --input artifacts/image.tar
+          echo "IMAGE=$(cat artifacts/image-tag)" >> $GITHUB_ENV
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: gitlab-registry.in2p3.fr
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Push image to IN2P3 registry
+        run: |
+          docker push ${{ env.IMAGE }}

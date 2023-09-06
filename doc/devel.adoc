@@ -14,7 +14,16 @@ git clone https://github.com/astrolabsoftware/fink-broker.git
 cd fink-broker
 ----
 
-`conf.sh` contains all build parameters with inline documenation for all of them. For example, edit `SPARK_IMAGE_TAG` value in `conf.sh` in order to customize the base image used to `fink-broker` container image.
+=== Configure the build
+
+`conf.sh` contains all build parameters with inline documentation for all of them. For example, edit `SPARK_IMAGE_TAG` value in `conf.sh` in order to customize the base image used to `fink-broker` container image.
+
+[,shell]
+----
+# Work with minimal cpu/memory requirements and no science code
+export MINIMAL=true
+export NOSCIENCE=true
+----
 
 === Build the image:
 
@@ -22,7 +31,6 @@ cd fink-broker
 ----
 ./build.sh
 ----
-
 
 === Push the image to CC-IN2P3 registry
 

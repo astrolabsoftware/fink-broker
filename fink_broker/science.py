@@ -27,32 +27,39 @@ from itertools import chain
 
 from fink_utils.spark.utils import concat_col
 
-from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
-from fink_science.xmatch.processor import xmatch_cds
-from fink_science.xmatch.processor import crossmatch_other_catalog
-from fink_science.xmatch.processor import crossmatch_mangrove
-
-from fink_science.snn.processor import snn_ia
-from fink_science.microlensing.processor import mulens
-from fink_science.asteroids.processor import roid_catcher
-from fink_science.nalerthist.processor import nalerthist
-from fink_science.kilonova.processor import knscore
-from fink_science.ad_features.processor import extract_features_ad
-from fink_science.anomaly_detection.processor import anomaly_score
-
-from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
-from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
-from fink_science.cats.processor import predict_nn
-from fink_science.agn.processor import agn_elasticc
-from fink_science.slsn.processor import slsn_elasticc
-# from fink_science.t2.processor import t2
-
 from fink_broker.tester import spark_unit_tests
+
 
 # ---------------------------------
 # Local non-exported definitions --
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
+
+
+# Conditional import of science modules
+try:
+    from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+    from fink_science.xmatch.processor import xmatch_cds
+    from fink_science.xmatch.processor import crossmatch_other_catalog
+    from fink_science.xmatch.processor import crossmatch_mangrove
+
+    from fink_science.snn.processor import snn_ia
+    from fink_science.microlensing.processor import mulens
+    from fink_science.asteroids.processor import roid_catcher
+    from fink_science.nalerthist.processor import nalerthist
+    from fink_science.kilonova.processor import knscore
+    from fink_science.ad_features.processor import extract_features_ad
+    from fink_science.anomaly_detection.processor import anomaly_score
+
+    from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
+    from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
+    from fink_science.cats.processor import predict_nn
+    from fink_science.agn.processor import agn_elasticc
+    from fink_science.slsn.processor import slsn_elasticc
+    # from fink_science.t2.processor import t2
+except ImportError:
+    _LOG.warning("Fink science modules are not available. ")
+    pass
 
 def dec2theta(dec: float) -> float:
     """ Convert Dec (deg) to theta (rad)

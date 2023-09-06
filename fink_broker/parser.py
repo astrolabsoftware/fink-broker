@@ -108,11 +108,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [TIME_INTERVAL]
         """)
     parser.add_argument(
-        '-exit_after', type=int, default=None,
+        '-exit_after', type=int, default=64800,
         help="""
         Stop the service after `exit_after` seconds.
-        This primarily for use on Travis, to stop service after some time.
-        Use that with `fink start service --exit_after <time>`. Default is None.
+        This primarily for use on CI, to stop service after some time.
+        Use that with `fink start service --exit_after <time>`. Default is 24h.
         """)
     parser.add_argument(
         '-datasimpath', type=str, default='',
@@ -237,7 +237,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [PRODUCER]
         """)
     parser.add_argument(
-        '-noscience', type=bool, default=False,
+        '--noscience', action="store_true",
         help="""
         Disable execution of science modules
         """)

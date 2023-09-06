@@ -16,38 +16,15 @@
 # limitations under the License.
 #
 
-# Setup Kafka for Fink
+# Create docker image containing Fink packaged for k8s
 
 # @author  Fabrice Jammes
 
-set -euxo pipefail
+set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly  FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
+. $DIR/../conf.sh
 
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaUser
-metadata:
-  name: fink-producer
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  authentication:
-    type: scram-sha-512
-EOF
-
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaTopic
-metadata:
-  name: ztf-stream-sim
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  partitions: 3
-  replicas: 1
-EOF
-
+finkctl wait topics --expected 10 --timeout 240s
+finkctl get topics

@@ -2,7 +2,8 @@ s3:
   endpoint: http://minio.minio-dev:9000
   use_ssl: "false"
   bucket: fink-broker-online
-spark:
+# General parameter used to run fink tasks
+run:
   fink_trigger_update: "2"
   # Can be set using --image option
   # image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker:2.7.1-33-ge27a2aa-dirty
@@ -12,14 +13,14 @@ spark:
   log_level: INFO
 stream2raw:
   fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
-  kafka_socket: kafka-cluster-kafka-external-bootstrap.kafka:9094
+  kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
   kafka_starting_offset: earliest
   kafka_topic: ztf-stream-sim
 raw2science:
   night: "20200101"
 distribution:
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
-  # distribution_servers: "kafka_server1:kafka_server2"
+  distribution_servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
   distribution_schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
   substream_prefix: "fink_"
   # Default to <stream2raw.night>
