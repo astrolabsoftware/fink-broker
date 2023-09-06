@@ -59,13 +59,23 @@ def main():
         'anomaly_score', 'timestamp'
     )
 
+    # All-sky anomalies
     pdf = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
         send_to_slack=True, channel_name='anomaly_bot'
     )
 
-    # Keep only candidates of interest
+    # Area-restricted anomalies
+    # We do not store candidates
+    anomaly_notification_(
+        df_proc, threshold=5,
+        send_to_tg=True, channel_id='@anomaly_spec',
+        send_to_slack=False, channel_name=None,
+        cut_coords=True
+    )
+
+    # Keep only candidates of interest for all sky anomalies
     oids = [int(i) for i in pdf['candid'].values]
     df_hbase = df.filter(df['candid'].isin(list(oids)))
 
