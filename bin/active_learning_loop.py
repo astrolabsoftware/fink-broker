@@ -83,7 +83,7 @@ def main():
 
     # model path
     curdir = os.path.dirname(os.path.abspath(__file__))
-    model = curdir + '/data/models/for_al_loop/model_20230907.pkl'
+    model = curdir + '/data/models/for_al_loop/model_20230921.pkl'
 
     # Run SN classification using AL model
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
@@ -124,7 +124,7 @@ def main():
     init_msg = f'Number of candidates for the night {args.night}: {len(pdf)}.'
 
     slack_data = []
-    for _, row in pdf.head(10).iterrows():
+    for _, row in pdf.head(30).iterrows():
         t1 = f'ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>'
         t2 = f'''
 EQU: {row.ra},   {row.dec}'''
