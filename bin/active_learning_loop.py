@@ -101,8 +101,11 @@ def main():
     c1 = df['cdsxmatch'].isin(return_list_of_eg_host().tolist())
     c2 = df['candidate.dec'] < 20.
     c3 = df['dist_center'] < 0.1
+    c4 = (df['candidate.jd'] - df['candidate.jdstarthist']) <= 20.
+    c5 = df['candidate.drb'] > 0.5
+    c6 = df['candidate.classtar'] > 0.4
 
-    df_filt = df.filter(c1).filter(c2).filter(c3)
+    df_filt = df.filter(c1).filter(c2).filter(c3).filter(c4).filter(c5).filter(c6)
 
     cols_ = [
         'objectId',
