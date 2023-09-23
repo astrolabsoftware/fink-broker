@@ -103,8 +103,9 @@ def main():
     c3 = (df['candidate.jd'] - df['candidate.jdstarthist']) <= 20.
     c4 = df['candidate.drb'] > 0.5
     c5 = df['candidate.classtar'] > 0.4
+    c6 = df['al_snia_vs_nonia'] > 0.0
 
-    df_filt = df.filter(c1).filter(c2).filter(c3).filter(c4).filter(c5)
+    df_filt = df.filter(c1).filter(c2).filter(c3).filter(c4).filter(c5).filter(c6)
 
     cols_ = [
         'objectId',
@@ -120,7 +121,7 @@ def main():
     pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values('dist_center', ascending=True)
 
-    init_msg = f'Number of candidates for the night {args.night}: {len(pdf)}.'
+    init_msg = f'Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).'
 
     slack_data = []
     for _, row in pdf.head(30).iterrows():
