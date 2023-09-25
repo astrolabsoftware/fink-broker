@@ -19,6 +19,8 @@ import argparse
 import requests
 import os
 
+import numpy as np
+
 from pyspark.sql import functions as F
 
 from fink_utils.spark.utils import concat_col
