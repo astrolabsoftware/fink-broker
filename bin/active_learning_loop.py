@@ -16,7 +16,6 @@
 """Run the AL loop, and push data to Slack
 """
 import argparse
-import requests
 import os
 
 import numpy as np
@@ -72,7 +71,6 @@ def main():
     prefix = 'c'
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
-    expanded = [prefix + i for i in to_expand]
 
     # Add classification
     cols = [
