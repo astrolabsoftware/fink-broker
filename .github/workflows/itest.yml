@@ -16,6 +16,7 @@ on:
         required: true
 
 env:
+  FINKCTL_VERSION: v1.1.0-rc2
   MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
   # Override the self-hosted runner value
@@ -126,7 +127,7 @@ jobs:
         with:
           go-version: '1.19.2'
       - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@v1.0.0
+        run: go install github.com/astrolabsoftware/finkctl@"${{ env.FINKCTL_VERSION }}"
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
