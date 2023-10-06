@@ -25,7 +25,7 @@ env:
 jobs:
   build:
     name: Build image
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     outputs:
       image: ${{ steps.push.outputs.IMAGE }}
       promoted_image: ${{ steps.push.outputs.PROMOTED_IMAGE }}
@@ -47,7 +47,7 @@ jobs:
           echo "PROMOTED_IMAGE=$PROMOTED_IMAGE" >> "$GITHUB_OUTPUT"
   integration-tests:
     name: Run integration tests
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     needs: build
     steps:
       - name: Checkout code
@@ -139,7 +139,7 @@ jobs:
           ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     permissions:
       security-events: write
     needs: build
@@ -163,7 +163,7 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     name: Push fink-broker image to IN2P3 registry
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     needs: [build, integration-tests, image-analysis]
     steps:
       - name: Login to DockerHub
