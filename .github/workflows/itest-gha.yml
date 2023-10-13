@@ -68,6 +68,7 @@ jobs:
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
+            exit 1
           fi
       - name: Download image
         uses: actions/download-artifact@v3

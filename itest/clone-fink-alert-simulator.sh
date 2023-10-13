@@ -26,4 +26,4 @@ else
 fi
 
 git clone "$REPO_URL" --branch "$FINK_ALERT_SIMULATOR_VERSION" \
-  --single-branch --depth=1 "$FINK_ALERT_SIMULATOR_DIR"
+  --single-branch "$FINK_ALERT_SIMULATOR_DIR"

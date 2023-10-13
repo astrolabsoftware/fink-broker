@@ -100,6 +100,7 @@ jobs:
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
+            exit 1
           fi
       - name: Load fink-broker image inside kind
         run: |
