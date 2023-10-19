@@ -83,11 +83,12 @@ def main():
 
     # model path
     curdir = os.path.dirname(os.path.abspath(__file__))
-    model = curdir + '/data/models/for_al_loop/model_20230921.pkl'
+    model = curdir + '/data/models/for_al_loop/model_20231009.pkl'
 
     # Run SN classification using AL model
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
     rfscore_args += [F.col('cdsxmatch'), F.col('candidate.ndethist')]
+    rfscore_args += [F.lit(1), F.lit(3), F.lit('diff')]
     rfscore_args += [F.lit(model)]
     df = df.withColumn(
         'al_snia_vs_nonia',
