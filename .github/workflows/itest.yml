@@ -16,6 +16,7 @@ on:
         required: true
 
 env:
+  FINKCTL_VERSION: v1.1.0-rc2
   MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
   # Override the self-hosted runner value
@@ -24,7 +25,7 @@ env:
 jobs:
   build:
     name: Build image
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     outputs:
       image: ${{ steps.push.outputs.IMAGE }}
       promoted_image: ${{ steps.push.outputs.PROMOTED_IMAGE }}
@@ -46,7 +47,7 @@ jobs:
           echo "PROMOTED_IMAGE=$PROMOTED_IMAGE" >> "$GITHUB_OUTPUT"
   integration-tests:
     name: Run integration tests
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     needs: build
     steps:
       - name: Checkout code
@@ -99,6 +100,7 @@ jobs:
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
+            exit 1
           fi
       - name: Load fink-broker image inside kind
         run: |
@@ -110,7 +112,6 @@ jobs:
           fi
       - name: Install fink-alert-simulator pre-requisites (argo-workflows)
         run: |
-          # sleep infinity
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
       - name: Install strimzi (kafka-operator)
         run: ./itest/strimzi-install.sh
@@ -127,7 +128,7 @@ jobs:
         with:
           go-version: '1.19.2'
       - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@main
+        run: go install github.com/astrolabsoftware/finkctl@"${{ env.FINKCTL_VERSION }}"
       - name: Run fink-alert-simulator
         run: |
           "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
@@ -139,7 +140,7 @@ jobs:
           ./itest/fink-start.sh
   image-analysis:
     name: Analyze image
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     permissions:
       security-events: write
     needs: build
@@ -163,7 +164,7 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     name: Push fink-broker image to IN2P3 registry
-    runs-on: [self-hosted, v2]
+    runs-on: [self-hosted, v3]
     needs: [build, integration-tests, image-analysis]
     steps:
       - name: Login to DockerHub

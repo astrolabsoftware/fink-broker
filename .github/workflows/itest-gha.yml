@@ -5,7 +5,7 @@ on:
     branches:
       - master
 env:
-  FINKCTL_VERSION: v1.1.0-rc1
+  FINKCTL_VERSION: v1.1.0-rc2
   NOSCIENCE: true
   MINIMAL: true
 
@@ -68,6 +68,7 @@ jobs:
             echo "::notice Succeeded to pull $IMAGE"
           else
             echo "::error Failed to pull $IMAGE"
+            exit 1
           fi
       - name: Download image
         uses: actions/download-artifact@v3

@@ -9,9 +9,11 @@ MYSHELL=$(echo $SHELL)
 MYSHELL=$(basename $MYSHELL)
 source <(finkctl completion $MYSHELL)
 
-FINK_BROKER_SRC_DIR="$HOME/src/fink-broker"
-FINK_ALERT_SIM_SRC_DIR="$HOME/src/fink-alert-simulator"
-FINKCTL_SRC_DIR="$HOME/src/finkctl"
+ASTROLAB_DIR="$HOME/src/astrolabsoftware"
+
+FINK_BROKER_SRC_DIR="$ASTROLAB_DIR/fink-broker"
+FINK_ALERT_SIM_SRC_DIR="$ASTROLAB_DIR/fink-alert-simulator"
+FINKCTL_SRC_DIR="$ASTROLAB_DIR/finkctl"
 
 export FINKCONFIG=$FINK_BROKER_SRC_DIR/itest
 
