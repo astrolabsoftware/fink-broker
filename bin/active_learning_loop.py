@@ -83,7 +83,7 @@ def main():
 
     # model path
     curdir = os.path.dirname(os.path.abspath(__file__))
-    model = curdir + '/data/models/for_al_loop/model_20231009.pkl'
+    model = curdir + '/data/models/for_al_loop/model_20231025.pkl'
 
     # Run SN classification using AL model
     rfscore_args = ['cjd', 'cfid', 'cmagpsf', 'csigmapsf']
