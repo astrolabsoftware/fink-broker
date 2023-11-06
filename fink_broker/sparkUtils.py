@@ -181,7 +181,7 @@ def init_sparksession(name: str, shuffle_partitions: int = None, tz=None) -> Spa
         spark.conf.set("spark.sql.session.timeZone", tz)
 
     # Set spark log level to WARN
-    spark.sparkContext.setLogLevel("WARN")
+    # spark.sparkContext.setLogLevel("WARN")
 
     return spark
 
