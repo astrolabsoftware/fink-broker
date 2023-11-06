@@ -97,7 +97,7 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start raw2science --exit_after 90 -c $conf --night "20200101"
 
   # Start the distribution service
-  fink start distribution --exit_after 30 -c $conf --night "20200101"
+  # fink start distribution --exit_after 30 -c $conf --night "20200101"
 
   # merge data
   fink start merge -c $conf --night "20200101"
