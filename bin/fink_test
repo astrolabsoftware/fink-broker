@@ -90,19 +90,27 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Fire a stream
   fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
+  ls -lth ${FINK_HOME}/online
+  echo ""
+
   # Connect the service to build the raw database from the stream
   fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC
 
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 180 -c $conf --night "20200101"
 
+  ls -lth ${FINK_HOME}/online
+  echo ""
+
   du -h ${FINK_HOME}/online/raw
   ls -lth ${FINK_HOME}/online/raw
   ls -lth ${FINK_HOME}/online/raw/year=2020/month=01/day=01
+  echo ""
 
   du -h ${FINK_HOME}/online/science
   ls -lth ${FINK_HOME}/online/science
   ls -lth ${FINK_HOME}/online/science/year=2020/month=01/day=01
+  echo ""
 
   # Start the distribution service
   # fink start distribution --exit_after 30 -c $conf --night "20200101"
