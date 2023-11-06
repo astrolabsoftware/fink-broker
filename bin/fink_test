@@ -99,8 +99,10 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   # Connect the service to build the science database from the raw one
   fink start raw2science --exit_after 60 -c $conf --night "20200101"
 
+  du -h ${FINK_HOME}/online
+
   # Start the distribution service
-  fink start distribution --exit_after 30 -c $conf --night "20200101"
+  # fink start distribution --exit_after 30 -c $conf --night "20200101"
 
   # merge data
   fink start merge -c $conf --night "20200101"
