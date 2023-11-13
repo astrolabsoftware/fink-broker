@@ -1,0 +1,11 @@
+registry: gitlab-registry.in2p3.fr/astrolabsoftware/fink
+dependencies:
+  - url: https://github.com/astrolabsoftware/fink-alert-simulator
+    # If true repository will be locally cloned
+    clone: true
+    # If true, container image will be pulled
+    pull: true
+  - url: https://github.com/astrolabsoftware/finkctl
+    clone: true
+  - package: github.com/k8s-school/ktbx@v1.1.1-rc6
+
