@@ -91,7 +91,7 @@ export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 # Stream integration tests
-if [[ "$WITH_STREAM" = false ]] ; then
+if [[ "$WITH_STREAM" = true ]] ; then
   # Fire another stream
   fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
