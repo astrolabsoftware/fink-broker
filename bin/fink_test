@@ -17,28 +17,34 @@
 ## Must be launched as fink_test
 set -e
 message_help="""
-Run the test suite of Fink\n\n
+Run units and database test suite of Fink\n\n
 Usage:\n
-    \tfink_test [--without-integration] [--without-units] [-h] [-c <conf>]\n\n
+    \tfink_test [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
 
-By default, both unit tests and integration tests will be run.\n
-You can disable the integration tests by specifying --without-integration.\n
-You can disable the unit tests by specifying --without-units.\n
+By default, nothing is run.\n
+You can enable the database integration tests by specifying --db-integration.\n
+You can enable the unit tests by specifying --unit-test.\n
+You can enable the stream integration tests by specifying --stream-integration.\n
 You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.prod) will be used.\n
 Use -h to display this help.
 """
 
 # Grab the command line arguments
-NO_INTEGRATION=false
-NO_UNITS=false
+WITH_DB=false
+WITH_UNITS=false
+WITH_STREAM=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --without-integration)
-        NO_INTEGRATION=true
+  --stream-integration)
+        WITH_STREAM=true
         shift 1
         ;;
-    --without-units)
-        NO_UNITS=true
+    --db-integration)
+        WITH_DB=true
+        shift 1
+        ;;
+    --unit-tests)
+        WITH_UNITS=true
         shift 1
         ;;
     -h)
@@ -84,10 +90,9 @@ export KAFKA_TOPIC="ztf-stream-sim"
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
-# Integration tests
-if [[ "$NO_INTEGRATION" = false ]] ; then
-
-  # Fire a stream
+# Stream integration tests
+if [[ "$WITH_STREAM" = false ]] ; then
+  # Fire another stream
   fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
@@ -97,8 +102,11 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start raw2science --exit_after 90 -c $conf --night "20200101"
 
   # Start the distribution service
-  # fink start distribution --exit_after 30 -c $conf --night "20200101"
+  fink start distribution --exit_after 30 -c $conf --night "20200101"
+fi
 
+# DB Integration tests
+if [[ "$WITH_DB" = true ]] ; then
   # merge data
   fink start merge -c $conf --night "20200101"
 
@@ -113,30 +121,16 @@ if [[ "$NO_INTEGRATION" = false ]] ; then
   fink start index_archival -c $conf --night 20200101 --index_table uppervalid_objectId_jd
   fink start index_archival -c $conf --night 20200101 --index_table ssnamenr_jd
   fink start index_archival -c $conf --night 20200101 --index_table tracklet_objectId
-  # Need API KEY
-  # fink start index_archival -c $conf --night 20200101 --index_table tns_jd_objectId
 
   # SSO candidates
   fink start index_sso_cand_archival -c $conf --night 20200101
 
-  # Object tables
-  # fink start object_archival -c $conf --night 20200101
-
   fink start stats -c $conf --night 20200101
 
   fink start check_science_portal -c $conf
-else
-  # Fire another stream
-  fink_simulator --docker -c ${FINK_HOME}/conf/fink_alert_simulator.conf
-
-  # Connect the service to build the raw database from the stream
-  fink start stream2raw --exit_after 60 --simulator -c $conf --topic $KAFKA_TOPIC
-
-  # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 40 -c $conf --night "20200101"
 fi
 
-if [[ "$NO_UNITS" = false ]] ; then
+if [[ "$WITH_UNITS" = true ]] ; then
   # Run the test suite on the modules assuming the integration
   # tests have been run (to build the databases)
   for i in ${FINK_HOME}/fink_broker/*.py
