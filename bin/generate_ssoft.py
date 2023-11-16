@@ -17,6 +17,7 @@
 """Construct the Solar System Object Fink Table (SSOFT)
 """
 import argparse
+import datetime
 
 from fink_broker.parser import getargs
 
