@@ -42,7 +42,7 @@ def main():
         """
     )
     parser.add_argument(
-        '-frac', type=int, default=None,
+        '-frac', type=float, default=None,
         help="""
         Use only fraction (between 0 and 1) of the input dataset to build the SSOFT
         Default is None, meaning all available data is considered.
