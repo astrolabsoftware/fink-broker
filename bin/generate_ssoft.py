@@ -58,12 +58,11 @@ def main():
     parser.add_argument(
         '--pre_aggregate_data', action="store_true",
         help="""
-        If specified, read pre-aggregated data on HDFS to compute the SSOFT (faster).
-        Otherwise, aggregate and save data on HDFS before computing the SSOFT (slower).
+        If specified, aggregate and save data on HDFS before computing the SSOFT (slower).
+        Otherwise, read pre-aggregated data on HDFS to compute the SSOFT (faster).
         """
     )
-
-    args = getargs(parser)
+    args = parser.parse_args(None)
 
     if args.version is None:
         now = datetime.datetime.now()
@@ -78,7 +77,7 @@ def main():
     )
 
     # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+    logger = get_fink_logger(spark.sparkContext.appName, "INFO")
 
     # debug statements
     inspect_application(logger)
