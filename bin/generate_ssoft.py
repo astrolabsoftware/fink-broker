@@ -93,7 +93,7 @@ def main():
         filename = 'sso_aggregated_{}'.format(version)
 
     pdf = build_the_ssoft(
-        aggregated_filename=args.pre_aggregate_data,
+        aggregated_filename=filename,
         nproc=ncores, nmin=args.nmin,
         frac=args.frac, model=args.model,
         version=version
