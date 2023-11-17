@@ -384,7 +384,7 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
         "cjd", "cfid", "cdiffmaglim", F.lit(10000), F.lit(None)
     ]
     cols_before = df.columns
-    df = DataFrame.withColumn("ft_module", magnitude_rate(*mag_rate_args))
+    df = df.withColumn("ft_module", magnitude_rate(*mag_rate_args))
     df = df.select(
         cols_before + [df["ft_module"][k].alias(k) for k in rate_module_output_schema.keys()]
     )
