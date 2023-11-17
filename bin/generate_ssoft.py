@@ -85,7 +85,8 @@ def main():
     inspect_application(logger)
 
     # We map processing 1:1 with the cores
-    ncores = spark.sparkContext.defaultParallelism
+    ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
+    print("NCORES: {}".format(ncores))
 
     if args.pre_aggregate_data:
         filename = None
