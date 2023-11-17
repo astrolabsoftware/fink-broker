@@ -99,7 +99,7 @@ def main():
         version=version
     )
 
-    pdf.to_parquet('ssoft_{}_{}.parquet'.format(model, version))
+    pdf.to_parquet('ssoft_{}_{}.parquet'.format(args.model, version))
 
 
 if __name__ == "__main__":
