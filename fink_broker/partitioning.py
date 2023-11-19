@@ -142,9 +142,11 @@ def numPart(df, partition_size=128.):
         .builder \
         .getOrCreate()
 
+    logical_plan = df._jdf.queryExecution().logical()
+    mode = df._jdf.queryExecution().mode()
     b = spark._jsparkSession\
         .sessionState()\
-        .executePlan(df._jdf.queryExecution().logical())\
+        .executePlan(plan, mode)\
         .optimizedPlan()\
         .stats()\
         .sizeInBytes()
