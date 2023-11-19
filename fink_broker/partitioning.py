@@ -146,7 +146,7 @@ def numPart(df, partition_size=128.):
     mode = df._jdf.queryExecution().mode()
     b = spark._jsparkSession\
         .sessionState()\
-        .executePlan(plan, mode)\
+        .executePlan(logical_plan, mode)\
         .optimizedPlan()\
         .stats()\
         .sizeInBytes()
