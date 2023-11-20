@@ -49,8 +49,8 @@ org.apache.spark:spark-avro_2.12:3.4.1,\
 org.apache.hbase:hbase-shaded-mapreduce:2.2.7
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.4_spark3_scala2.11_hadoop3.2.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.11_hadoop3.2.jar
+FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
