@@ -91,12 +91,12 @@ def main():
     # Restrict the input DataFrame to the subset of wanted columns.
     if 'upper' in args.index_table:
         df = data.select(
-            F.col('objectId').cast('string'),
-            F.col('prv_candidates.jd').cast('array<double>'),
-            F.col('prv_candidates.fid').cast('array<int>'),
-            F.col('prv_candidates.magpsf').cast('array<float>'),
-            F.col('prv_candidates.sigmapsf').cast('array<float>'),
-            F.col('prv_candidates.diffmaglim').cast('array<float>')
+            F.col('objectId').cast('string').alias('objectId'),
+            F.col('prv_candidates.jd').cast('array<double>').alias('jd'),
+            F.col('prv_candidates.fid').cast('array<int>').alias('fid'),
+            F.col('prv_candidates.magpsf').cast('array<float>').alias('magpsf'),
+            F.col('prv_candidates.sigmapsf').cast('array<float>').alias('sigmapsf'),
+            F.col('prv_candidates.diffmaglim').cast('array<float>').alias('diffmaglim')
         )
     else:
         df = df_flat
