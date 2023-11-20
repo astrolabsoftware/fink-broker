@@ -43,9 +43,9 @@ SECURED_KAFKA_CONFIG=''
 # Change the version according to your Spark version.
 # NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.1.3,\
-org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.3,\
-org.apache.spark:spark-avro_2.12:3.1.3,\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.4.1,\
+org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,\
+org.apache.spark:spark-avro_2.12:3.4.1,\
 org.apache.hbase:hbase-shaded-mapreduce:2.4.9
 
 # Other dependencies (incl. Scala part of Fink)
