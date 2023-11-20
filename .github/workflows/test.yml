@@ -48,7 +48,8 @@ jobs:
       run: |
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
         echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
-        echo "PYTHONPATH=$(ZIPS=(\"$SPARK_HOME"/python/lib/.zip); IFS=:; echo \"${ZIPS[]}\"):$PYTHONPATH"
+        PYTHONPATHSPARK=$(ZIPS=("$SPARK_HOME"/python/lib/.zip); IFS=:; echo "${ZIPS[]}")
+        echo "PYTHONPATH=$PYTHONPATHSPARK:$PYTHONPATH" >> GITHUB_ENV
     - name: Check env
       run: |
         echo "FINK_HOME: $FINK_HOME"
