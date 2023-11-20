@@ -46,13 +46,12 @@ FINK_PACKAGES=\
 org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.4.1,\
 org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,\
 org.apache.spark:spark-avro_2.12:3.4.1,\
-org.apache.hbase:hbase-shaded-mapreduce:2.4.9,\
-org.scala-lang.modules:scala-parser-combinators_2.12:2.3.0
+org.apache.hbase:hbase-shaded-mapreduce:2.2.7
 
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
+FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
