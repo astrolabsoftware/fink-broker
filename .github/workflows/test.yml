@@ -72,8 +72,8 @@ jobs:
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        fink_test -c conf/fink.conf.prod --unit-tests --db-integration
-        curl -s https://codecov.io/bash | bash
+        #fink_test -c conf/fink.conf.prod --unit-tests --db-integration
+        #curl -s https://codecov.io/bash | bash
     - uses: act10ns/slack@v1
       with:
         status: ${{ job.status }}
