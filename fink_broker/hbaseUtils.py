@@ -252,7 +252,7 @@ def bring_to_current_schema(df):
 
     # assuming no missing columns
     for colname, coltype in candidates.items():
-        tmp_i.append(F.col(colname).cast(coltype))
+        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split('.')[-1]))
 
     cols_i = df.select(tmp_i).columns
 
@@ -601,9 +601,9 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
         column qualifiers), and the corresponding column family.
 
     """
-    cf = {i: 'i' for i in df.select(cols_i).columns}
-    cf.update({i: 'd' for i in df.select(cols_d).columns})
-    cf.update({i: 'b' for i in df.select(cols_b).columns})
+    cf = {i: 'i' for i in df.select(['`{}`'.format(k) for k in cols_i]).columns}
+    cf.update({i: 'd' for i in df.select(['`{}`'.format(k) for k in cols_d]).columns})
+    cf.update({i: 'b' for i in df.select(['`{}`'.format(k) for k in cols_b]).columns})
 
     return cf
 
