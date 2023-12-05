@@ -30,9 +30,8 @@ fi
 # Spark parameters
 # ----------------
 
-# Spark image tag
-# Spark image is built here: https://github.com/astrolabsoftware/k8s-spark-py/
-SPARK_IMAGE_TAG="k8s-3.4.1"
+# TODO remove and manage with ciux
+SPARK_PY_IMAGE="gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1"
 
 # Spark version
 SPARK_VERSION="3.4.1"

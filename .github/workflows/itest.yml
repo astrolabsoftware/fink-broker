@@ -14,10 +14,9 @@ on:
         required: true
       registry_token:
         required: true
-
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.1-rc8
+  CIUX_VERSION: v0.0.1-rc11
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
@@ -41,8 +40,8 @@ jobs:
           go-version: '1.21.4'
       - name: Install ciux
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
-      - name: Check dependencies consistency
-        run: ciux ignite $PWD
+      - name: Ciux project ignition
+        run: ciux ignite --selector build $PWD
       - name: Build fink-broker image for k8s
         run: |
           ./build.sh
@@ -69,10 +68,11 @@ jobs:
       - name: Install ciux
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Ciux project ignition
-        run: ciux ignite $PWD --itest --branch="$GHA_BRANCH_NAME"
+        run: ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD
       - name: Create ktbx configuration
         run: |
-          cat <<EOF > $HOME/.ktbx
+          mkdir -p $HOME/.ktbx
+          cat <<EOF > $HOME/.ktbx/config
           kind:
             # Supported only for clusters with one node
             # Use host directory to share data between host and kind node
@@ -144,6 +144,9 @@ jobs:
       - name: Run fink-broker
         run: |
           ./itest/fink-start.sh
+      - name: Check ouput topics are created
+        run: |
+          ./itest/check-results.sh
   image-analysis:
     name: Analyze image
     runs-on: [self-hosted, v3]

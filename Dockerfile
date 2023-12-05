@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG spark_image_tag
-FROM gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:${spark_image_tag} as noscience
+ARG spark_py_image
+FROM ${spark_py_image} as noscience
 
 ARG spark_uid=185
 ENV spark_uid ${spark_uid}

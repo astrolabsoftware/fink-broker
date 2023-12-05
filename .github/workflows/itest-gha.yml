@@ -6,7 +6,7 @@ on:
       - master
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.1-rc8
+  CIUX_VERSION: v0.0.1-rc11
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   NOSCIENCE: true
   MINIMAL: true
@@ -24,7 +24,7 @@ jobs:
           go-version: '1.21.4'
       - name: Install ciux
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
-      - name: Check dependencies consistency
+      - name: Ciux project ignition
         run: ciux ignite $PWD
       - name: Build fink-broker image for k8s
         run: |
@@ -32,7 +32,6 @@ jobs:
       - name: Export fink-broker image
         run: |
           docker images
-          . "$CIUXCONFIG"
           . ./conf.sh
           mkdir -p artifacts
           docker save "$IMAGE" > artifacts/image.tar
@@ -56,7 +55,8 @@ jobs:
       - name: Install ciux
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Ciux project ignition
-        run: ciux ignite $PWD --itest --branch="$GHA_BRANCH_NAME"
+        run: |
+          ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD
       - name: Create k8s/kind cluster
         run: |
           ktbx install kind

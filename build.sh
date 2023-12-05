@@ -22,8 +22,10 @@
 
 set -euxo pipefail
 
+
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
+ciux ignite refresh "$DIR"
 . $DIR/conf.sh
 
 if $NOSCIENCE
@@ -34,5 +36,5 @@ else
 fi
 
 # Build image
-docker image build --tag "$IMAGE" --build-arg spark_image_tag="$SPARK_IMAGE_TAG" "$DIR" --target $TARGET
+docker image build --tag "$IMAGE" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" "$DIR" --target $TARGET
 
