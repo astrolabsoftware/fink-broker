@@ -505,7 +505,7 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     df = df.withColumn('cats_broad_class', mapping_cats_general_expr[df['argmax']])
     df = df.withColumn('cats_broad_max_prob', F.array_max(df['cbpf_preds']))
 
-    # AGN
+    # AGN & SLSN
     args_forced = [
         'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
         'diaSource.ra', 'diaSource.decl',
@@ -513,14 +513,6 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
-
-    # SLSN
-    args_forced = [
-        'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
-        'diaSource.ra', 'diaSource.decl',
-        'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
-        'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
-    ]
     df = df.withColumn('rf_slsn_vs_nonslsn', slsn_elasticc(*args_forced))
 
     # Drop temp columns
