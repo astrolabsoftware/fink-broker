@@ -1,6 +1,7 @@
 # Active learning
--e git+https://github.com/emilleishida/fink_sn_activelearning.git@bf8d4e263e02d42781642f872f7bc030c24792bc#egg=actsnfink
+-e git+https://github.com/emilleishida/fink_sn_activelearning.git@4f46b3a1e29de45793125452974e71e92c1ea454#egg=actsnfink
 -e git+https://github.com/COINtoolbox/ActSNClass.git@2c61da91a9d13834d39804fc35aeb3245ba20755#egg=actsnclass
+joblib==1.2.0
 
 # microlensing
 -e git+https://github.com/JulienPeloton/LIA.git@4513654b15a0760312eff2661b0fcf4989171ce3#egg=LIA
@@ -13,10 +14,10 @@ colorama
 seaborn
 
 # SNAD
-light-curve>=0.7.3
+light-curve[full]
 
 # AGN
-iminuit==2.11.2
+iminuit==2.21.0
 
 # kilonova @ sklearn==1.0.2
 -e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect
@@ -27,3 +28,29 @@ torch==1.12.0+cpu
 
 # CATS dependencies
 tensorflow==2.9.2
+tensorflow_addons==0.18.0
+
+# Anomalies
+onnx==1.12.0
+onnxruntime
+
+# fink-fat
+fink_fat @ https://github.com/FusRoman/fink-fat/archive/v0.16.0.zip --install-option="--no-deps"
+sbpy
+
+# Fink MM
+fink_MM @ https://github.com/FusRoman/Fink_MM/archive/v0.16.10.zip --install-option="--no-deps"
+gcn-kafka==0.3.0
+voevent-parse==1.0.3
+tabulate==0.9.0
+jsonschema==4.6.0
+astropy_healpix==0.7
+hdfs==2.7.2
+importlib-resources==5.9.0
+pandera==0.14.5
+
+# Installation of astronet
+-e git+https://github.com/tallamjr/astronet.git#egg=astronet --install-option="--no-deps"
+imbalanced-learn==0.7.0
+optuna==2.3.0
+george

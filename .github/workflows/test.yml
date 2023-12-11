@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        container: ["julienpeloton/fink-ci:prod", "julienpeloton/fink-ci:dev"]
+        container: ["julienpeloton/fink-ci:dev"]
 
     container:
       image: ${{ matrix.container }}

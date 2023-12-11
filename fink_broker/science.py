@@ -51,7 +51,7 @@ try:
     from fink_science.ad_features.processor import extract_features_ad
     from fink_science.anomaly_detection.processor import anomaly_score
 
-    from fink_science.random_forest_snia.processor import rfscore_sigmoid_elasticc
+    from fink_science.random_forest_snia.processor import rfscore_rainbow_elasticc
     from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
     from fink_science.cats.processor import predict_nn
     from fink_science.agn.processor import agn_elasticc
@@ -450,15 +450,11 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     _LOG.info("New processor: EarlySN")
     args = ['cmidPointTai', 'cfilterName', 'cpsFlux', 'cpsFluxErr']
-
-    # fake cdsxmatch and nobs
-    args += [F.col('diaObject.ra'), F.col('diaObject.decl')]
-    args += [F.col('diaObject.hostgal_ra'), F.col('diaObject.hostgal_dec')]
+    args += [F.col('diaSource.snr')]
     args += [F.col('diaObject.hostgal_snsep')]
     args += [F.col('diaObject.hostgal_zphot')]
-    args += [F.col('diaObject.hostgal_zphot_err')]
 
-    df = df.withColumn('rf_snia_vs_nonia', rfscore_sigmoid_elasticc(*args))
+    df = df.withColumn('rf_snia_vs_nonia', rfscore_rainbow_elasticc(*args))
 
     # Apply level one processor: superNNova
     _LOG.info("New processor: supernnova - Ia")
@@ -509,7 +505,7 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     df = df.withColumn('cats_broad_class', mapping_cats_general_expr[df['argmax']])
     df = df.withColumn('cats_broad_max_prob', F.array_max(df['cbpf_preds']))
 
-    # AGN
+    # AGN & SLSN
     args_forced = [
         'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
         'diaSource.ra', 'diaSource.decl',
@@ -517,14 +513,6 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
     ]
     df = df.withColumn('rf_agn_vs_nonagn', agn_elasticc(*args_forced))
-
-    # SLSN
-    args_forced = [
-        'diaObject.diaObjectId', 'cmidPointTai', 'cpsFlux', 'cpsFluxErr', 'cfilterName',
-        'diaSource.ra', 'diaSource.decl',
-        'diaObject.hostgal_zphot', 'diaObject.hostgal_zphot_err',
-        'diaObject.hostgal_ra', 'diaObject.hostgal_dec'
-    ]
     df = df.withColumn('rf_slsn_vs_nonslsn', slsn_elasticc(*args_forced))
 
     # Drop temp columns
