@@ -121,11 +121,20 @@ def main():
     mask2 = np.equal(sso_number, sso_number)
     sso_number_valid = sso_number[mask2]
 
-    # create index vector for SSODNET
-    index_ssodnet = np.concatenate((sso_name, sso_number_valid))
+    # Vector contains (MPC_names, MPC_numbers, ZTF_ssnamenr)
+    index_ssodnet = np.concatenate((sso_name, sso_number_valid, pdf.ssnamenr.values))
+
+    # Source identifier
+    index_source = np.concatenate(
+        (
+            ['name'] * len(sso_name),
+            ['number'] * len(sso_number_valid),
+            ['ssnamenr'] * len(pdf)
+        )
+    )
 
     # create index vector for Fink
-    index_fink = np.concatenate((pdf.ssnamenr.values, pdf.ssnamenr[mask2].values))
+    index_fink = np.concatenate((pdf.ssnamenr.values, pdf.ssnamenr[mask2].values, pdf.ssnamenr.values))
 
     msg = """
     Number of (unique) SSO objects in Fink: {:,}
@@ -149,7 +158,8 @@ def main():
     pdf_index = pd.DataFrame(
         {
             'ssodnet': index_ssodnet,
-            'ssnamenr': index_fink
+            'ssnamenr': index_fink,
+            'source': index_source
         },
         dtype=str
     )
