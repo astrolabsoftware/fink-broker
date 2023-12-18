@@ -5,10 +5,11 @@ on:
     branches:
       - master
 env:
-  FINKCTL_VERSION: v1.1.0-rc2
+  CIUXCONFIG: /tmp/ciux.sh
+  CIUX_VERSION: v0.0.1-rc11
+  GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   NOSCIENCE: true
   MINIMAL: true
-
 jobs:
   build:
     name: Build image
@@ -18,24 +19,23 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Declare Version Variables
-        id: vars
-        shell: bash
-        run: |
-          DIR=$(pwd)
-          . ./conf.sh
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "IMAGE=${IMAGE}"
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+      - name: Ciux project ignition
+        run: ciux ignite $PWD
       - name: Build fink-broker image for k8s
         run: |
           ./build.sh
       - name: Export fink-broker image
         run: |
           docker images
-          echo "${{ env.IMAGE }}"
+          . ./conf.sh
           mkdir -p artifacts
-          docker save "${{ env.IMAGE }}" > artifacts/image.tar
-          echo "${{ env.IMAGE }}" > artifacts/image-tag
+          docker save "$IMAGE" > artifacts/image.tar
+          echo "$IMAGE" > artifacts/image-tag
       - uses: actions/upload-artifact@v2
         with:
           name: docker-artifact
@@ -49,21 +49,23 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Declare Version Variables
-        id: vars
-        shell: bash
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+      - name: Ciux project ignition
         run: |
-          echo "FINK_ALERT_SIMULATOR_DIR=$(. ./conf.sh && echo $FINK_ALERT_SIMULATOR_DIR)" >> $GITHUB_ENV
-      - name: Clone fink-alert-simulator code
-        run: ./itest/clone-fink-alert-simulator.sh
+          ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD
       - name: Create k8s/kind cluster
         run: |
-          git clone --depth 1 -b "k8s-1.25.0" --single-branch https://github.com/k8s-school/kind-helper.git
-          ./kind-helper/k8s-create.sh -s
+          ktbx install kind
+          ktbx install kubectl
+          ktbx create -s
       - name: Load fink-alert-simulator image inside kind
         run: |
-          DIR="${{ env.FINK_ALERT_SIMULATOR_DIR }}"
-          .  "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/conf.sh
+          . "$CIUXCONFIG"
+          .  "$FINK_ALERT_SIMULATOR_DIR"/conf.sh
           if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
             echo "::notice Succeeded to pull $IMAGE"
           else
@@ -81,7 +83,8 @@ jobs:
           docker exec -- kind-control-plane crictl image
       - name: Install fink-alert-simulator pre-requisites (argoCD)
         run: |
-          "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/prereq-install.sh
+          . "$CIUXCONFIG"
+          .  "$FINK_ALERT_SIMULATOR_DIR"/prereq-install.sh
       - name: Install strimzi (kafka-operator)
         run: ./itest/strimzi-install.sh
       - name: Setup kafka
@@ -90,14 +93,10 @@ jobs:
         run: ./itest/prereq-install.sh
       - name: Install MinIO
         run: ./itest/minio-install.sh
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '1.19.2'
-      - name: Install finkctl
-        run: go install github.com/astrolabsoftware/finkctl@"${{ env.FINKCTL_VERSION }}"
       - name: Run fink-alert-simulator
         run: |
-          "${{ env.FINK_ALERT_SIMULATOR_DIR }}"/argo-submit.sh
+          . "$CIUXCONFIG"
+          "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
           argo watch @latest
       # - name: Setup tmate session
       # uses: mxschmitt/action-tmate@v3

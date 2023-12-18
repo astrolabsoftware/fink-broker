@@ -1,0 +1,24 @@
+apiVersion: v1alpha1
+registry: gitlab-registry.in2p3.fr/astrolabsoftware/fink
+dependencies:
+  - url: https://github.com/astrolabsoftware/fink-alert-simulator
+    # If true repository will be locally cloned
+    clone: true
+    # If true, container image will be pulled
+    pull: true
+    labels:
+      itest: "true"
+      ci: "true"
+  - url: https://github.com/astrolabsoftware/finkctl
+    clone: true
+    labels:
+      itest: "true"
+      ci: "true"
+  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1
+    labels:
+      build: "true"
+  - package: github.com/k8s-school/ktbx@v1.1.1-rc7
+    labels:
+      itest: "optional"
+      ci: "true"
+

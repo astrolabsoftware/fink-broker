@@ -1,6 +1,5 @@
-# Set variable below to empty string in order to
-# build and install current development version
-FINK_BROKER_RELEASE=''
+
+. "$CIUXCONFIG"
 
 # Do not launch science pipeline if true
 NOSCIENCE="${NOSCIENCE:-false}"
@@ -15,7 +14,7 @@ MINIMAL="${MINIMAL:-false}"
 REPO="gitlab-registry.in2p3.fr/astrolabsoftware/fink"
 CI_REPO="${CI_REPO:-$REPO}"
 # Tag to apply to the built image, or to identify the image to be pushed
-TAG=${FINK_BROKER_RELEASE:-$(git -C $DIR describe --dirty --always)}
+TAG="$FINK_BROKER_VERSION"
 # WARNING "spark-py" is hard-coded in spark build script
 
 # Disable science pipeline
@@ -31,9 +30,8 @@ fi
 # Spark parameters
 # ----------------
 
-# Spark image tag
-# Spark image is built here: https://github.com/astrolabsoftware/k8s-spark-py/
-SPARK_IMAGE_TAG="k8s-3.4.1"
+# TODO remove and manage with ciux
+SPARK_PY_IMAGE="gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1"
 
 # Spark version
 SPARK_VERSION="3.4.1"
@@ -59,5 +57,3 @@ KAFKA_CLUSTER="kafka-cluster"
 # Default values are the ones set in fink-alert-simulator CI environment
 KAFKA_SOCKET=${KAFKA_SOCKET:-"kafka-cluster-kafka-external-bootstrap.kafka:9094"}
 KAFKA_TOPIC=${KAFKA_TOPIC:-"ztf-stream-sim"}
-
-FINK_ALERT_SIMULATOR_DIR="/tmp/fink-alert-simulator"
