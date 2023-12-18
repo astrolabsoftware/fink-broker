@@ -114,11 +114,11 @@ def main():
     sso_name, sso_number = rockify(pdf.ssnamenr.copy())
 
     # fill None with values from original ssnamenr
-    mask1 = sso_name == None
+    mask1 = np.equal(sso_name, None)
     sso_name[mask1] = pdf.ssnamenr[mask1]
 
     # Keep only valid number
-    mask2 = sso_number == sso_number
+    mask2 = np.equal(sso_number, sso_number)
     sso_number_valid = sso_number[mask2]
 
     # create index vector for SSODNET
