@@ -29,6 +29,48 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_spins.ssoft import rockify
 
 
+def mark_as_duplicate(series, count=0):
+    """ Iteratively tag duplicates
+
+    Parameters
+    ----------
+    series: pd.Series
+        Pandas series containing strings
+    count: int, optional
+        Counter, starting at 0.
+
+    Returns
+    ----------
+    series: pd.Series
+        Input series with duplicate markers of
+        the form _{level of duplicate}
+
+    Examples
+    ----------
+    >>> pdf = pd.DataFrame({'col': [['a', 'b', 'c'], ['a', 'b'], ['b', 'c']]}).explode('col')
+    >>> mark_as_duplicate(pdf['col'].copy())
+    0    a_0
+    0    b_0
+    0    c_0
+    1    a_1
+    1    b_1
+    2    b_2
+    2    c_1
+    Name: col, dtype: object
+    """
+    if count == 0:
+        # initialise markers
+        series = series.apply(lambda x: x + "_{}".format(count))
+
+    mask = series.duplicated(keep='first')
+    if np.sum(mask) > 0:
+        # duplicates exists
+        series[mask] = series[mask].apply(lambda x: x.replace('_{}'.format(count), '_{}'.format(count + 1)))
+        return mark_as_duplicate(series.copy(), count + 1)
+    else:
+        return series
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
 
@@ -105,7 +147,16 @@ def main():
 
     logger.info(msg)
 
-    pdf_index = pd.DataFrame({'ssodnet': index_ssodnet, 'ssnamenr': index_fink})
+    pdf_index = pd.DataFrame(
+        {
+            'ssodnet': index_ssodnet,
+            'ssnamenr': index_fink
+        },
+        dtype=str
+    )
+
+    index_col = mark_as_duplicate(pdf_index['ssodnet'].copy())
+    pdf_index['ssodnet'] = index_col
 
     df_index = spark.createDataFrame(pdf_index)
 
