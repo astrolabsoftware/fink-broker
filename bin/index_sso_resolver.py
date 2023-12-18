@@ -101,7 +101,6 @@ def main():
         shuffle_partitions=2
     )
 
-    # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, "INFO")
 
     # debug statements
