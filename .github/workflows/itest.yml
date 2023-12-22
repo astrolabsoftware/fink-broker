@@ -16,7 +16,7 @@ on:
         required: true
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.1-rc11
+  CIUX_VERSION: v0.0.1-rc12
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
@@ -95,7 +95,8 @@ jobs:
           EOF
       - name: Create k8s/kind cluster
         run: |
-          ktbx install kind
+          echo "Installing kind in version v0.15.0 because kind latest version is not supported by self-hosted runners"
+          ktbx install kind --kind-version="v0.15.0"
           ktbx install kubectl
           kind version
           kubectl version --client
@@ -127,7 +128,7 @@ jobs:
         run: ./itest/strimzi-install.sh
       - name: Setup kafka
         run: ./itest/strimzi-setup.sh
-      - name: Install fink-broker pre-requisites (Spark)
+      - name: Install fink-broker pre-requisites (JDK, Spark)
         run: |
           sudo apt-get -y update
           sudo apt-get -y install openjdk-8-jdk-headless

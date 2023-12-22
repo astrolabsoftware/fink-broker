@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: minio-dev
+  name: minio
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: minio
-  namespace: minio-dev
+  namespace: minio
 spec:
   selector:
     app.kubernetes.io/name: minio
@@ -19,8 +19,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: minio-dev
-  namespace: minio-dev
+  name: minio
+  namespace: minio
 spec:
   accessModes:
     - ReadWriteOnce
@@ -34,7 +34,7 @@ metadata:
   labels:
     app.kubernetes.io/name: minio
   name: minio
-  namespace: minio-dev
+  namespace: minio
 spec:
   replicas: 1
   selector:
@@ -59,4 +59,4 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
-          claimName: minio-dev
+          claimName: minio
