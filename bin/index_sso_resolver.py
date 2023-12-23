@@ -208,6 +208,9 @@ def main():
     index_col = mark_as_duplicate(pdf_index['ssodnet'].copy())
     pdf_index['ssodnet'] = index_col
 
+    # Make the ssodnet lower case (case-insensitive)
+    pdf_index['ssodnet'] = pdf_index['ssodnet'].apply(lambda x: x.lower())
+
     df_index = spark.createDataFrame(pdf_index)
 
     cf = {i: 'i' for i in df_index.columns}
