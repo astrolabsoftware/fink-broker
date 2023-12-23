@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pyspark.sql.functions as F
+
 import pandas as pd
 import argparse
 import os
@@ -24,7 +26,7 @@ from fink_broker.parser import getargs
 
 
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
-    """ Format the raw TNS data for HBase consumption
+    """ Format the raw TNS data for HBase ingestion
     """
     # Add new or rename columns
     pdf['fullname'] = pdf['name_prefix'] + ' ' + pdf['name']
@@ -77,6 +79,9 @@ def main():
         row_key_name=index_row_key_name,
         cols=columns
     )
+
+    # make the rowkey lower case
+    df_index = df_index.withColumn('index_row_key_name', F.lower('index_row_key_name'))
 
     cf = {i: 'd' for i in df_index.columns}
 
