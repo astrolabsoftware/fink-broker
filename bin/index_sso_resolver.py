@@ -72,6 +72,7 @@ def mark_as_duplicate(series, count=0):
     else:
         return series
 
+
 def sort_indices(pdf, column='ssodnet'):
     """ Isolate decimal values in `column`, and sort the DataFrame by ascending order
 
@@ -153,15 +154,6 @@ def main():
 
     # Vector contains (MPC_names, MPC_numbers, ZTF_ssnamenr)
     index_ssodnet = np.concatenate((sso_name, sso_number_valid, pdf.ssnamenr.values))
-
-    # Source identifier
-    index_source = np.concatenate(
-        (
-            ['name'] * len(sso_name),
-            ['number'] * len(sso_number_valid),
-            ['ssnamenr'] * len(pdf)
-        )
-    )
 
     # create index vector for Fink
     index_fink = np.concatenate(
