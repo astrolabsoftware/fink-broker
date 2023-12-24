@@ -81,7 +81,7 @@ def main():
     )
 
     # make the rowkey lower case
-    df_index = df_index.withColumn('index_row_key_name', F.lower('index_row_key_name'))
+    df_index = df_index.withColumn(index_row_key_name, F.lower(index_row_key_name))
 
     cf = {i: 'd' for i in df_index.columns}
 
