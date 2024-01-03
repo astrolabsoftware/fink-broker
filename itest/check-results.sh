@@ -26,5 +26,5 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/../conf.sh
 
-finkctl wait topics --expected 10 --timeout 600s -v1
+finkctl wait topics --expected 11 --timeout 600s -v1
 finkctl get topics
