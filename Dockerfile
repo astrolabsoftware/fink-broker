@@ -54,7 +54,7 @@ RUN mkdir -p $FINK_HOME/deps
 # when fink-broker code changes
 ENV PIP_NO_CACHE_DIR 1
 ADD deps/requirements.txt $FINK_HOME/deps
-RUN pip install -r $FINK_HOME/deps/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && pip install -r $FINK_HOME/deps/requirements.txt
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 

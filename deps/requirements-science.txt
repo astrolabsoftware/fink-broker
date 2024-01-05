@@ -22,10 +22,6 @@ iminuit==2.21.0
 # kilonova @ sklearn==1.0.2
 -e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect
 
-# Installation of torch without GPU support (lighter)
--f https://download.pytorch.org/whl/torch_stable.html
-torch==1.12.0+cpu
-
 # CATS dependencies
 tensorflow==2.9.2
 tensorflow_addons==0.18.0
@@ -35,11 +31,9 @@ onnx==1.12.0
 onnxruntime
 
 # fink-fat
-fink_fat @ https://github.com/FusRoman/fink-fat/archive/v0.16.0.zip --install-option="--no-deps"
 sbpy
 
 # Fink MM
-fink_MM @ https://github.com/FusRoman/Fink_MM/archive/v0.16.10.zip --install-option="--no-deps"
 gcn-kafka==0.3.0
 voevent-parse==1.0.3
 tabulate==0.9.0
@@ -50,7 +44,6 @@ importlib-resources==5.9.0
 pandera==0.14.5
 
 # Installation of astronet
--e git+https://github.com/tallamjr/astronet.git#egg=astronet --install-option="--no-deps"
 imbalanced-learn==0.7.0
 optuna==2.3.0
 george
