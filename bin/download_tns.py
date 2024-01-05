@@ -44,7 +44,7 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
     pdf_explode = pdf_val.explode('internalname')
 
     # Select columns of interest -- and create a Spark DataFrame
-    cols = ['fullname', 'ra', 'declination', 'type', 'internalname']
+    cols = ['fullname', 'ra', 'declination', 'type', 'redshift', 'internalname']
 
     return pdf_explode[cols]
 
