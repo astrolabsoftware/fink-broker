@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023 AstroLab Software
+# Copyright 2023-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,7 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
     pdf_explode = pdf_val.explode('internalname')
 
     # Select columns of interest -- and create a Spark DataFrame
-    cols = ['fullname', 'ra', 'declination', 'type', 'internalname']
+    cols = ['fullname', 'ra', 'declination', 'type', 'redshift', 'internalname']
 
     return pdf_explode[cols]
 
