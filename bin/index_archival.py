@@ -265,7 +265,7 @@ def main():
             "tmp",
             F.arrays_zip(
                 "magpsf", "sigmapsf", "diffmaglim", "jd", "fid",
-                "magnr", "sigmagnr", "isdiffpos", "distnr"
+                "magnr", "sigmagnr", "isdiffpos", "distnr",
                 "rb", "nbad"
             )
         ).withColumn("tmp", F.explode("tmp")).select(
