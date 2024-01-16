@@ -253,6 +253,7 @@ def main():
             F.col('prv_candidates.magnr').cast('array<float>').alias('magnr'),
             F.col('prv_candidates.sigmagnr').cast('array<float>').alias('sigmagnr'),
             F.col('prv_candidates.isdiffpos').cast('array<string>').alias('isdiffpos'),
+            F.col('prv_candidates.distnr').cast('array<float>').alias('distnr'),
             F.col('prv_candidates.rb').cast('array<float>').alias('rb'),
             F.col('prv_candidates.nbad').cast('array<int>').alias('nbad')
         )
@@ -264,7 +265,7 @@ def main():
             "tmp",
             F.arrays_zip(
                 "magpsf", "sigmapsf", "diffmaglim", "jd", "fid",
-                "magnr", "sigmagnr", "isdiffpos",
+                "magnr", "sigmagnr", "isdiffpos", "distnr"
                 "rb", "nbad"
             )
         ).withColumn("tmp", F.explode("tmp")).select(
@@ -278,6 +279,7 @@ def main():
             F.col("tmp.magnr"),
             F.col("tmp.sigmagnr"),
             F.col("tmp.isdiffpos"),
+            F.col("tmp.distnr"),
             F.col("tmp.rb"),
             F.col("tmp.nbad")
         )
