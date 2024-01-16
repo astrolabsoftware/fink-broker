@@ -62,10 +62,12 @@ jobs:
     - name: Run test suites [dev]
       if: matrix.container == 'julienpeloton/fink-ci:dev'
       run: |
+        # TODO: remove me
+        pip install fink-utils==0.13.11
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        fink_test -c conf/fink.conf.dev --unit-tests
+        fink_test -c conf/fink.conf.dev --unit-tests --db-integration
     - name: Run test suites [prod]
       if: matrix.container == 'julienpeloton/fink-ci:prod'
       run: |
