@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,14 +66,13 @@ def main():
     inspect_application(logger)
 
     # data path
-    scitmpdatapath = args.online_data_prefix + '/science'
+    scitmpdatapath = args.online_data_prefix + '/science/{}'.format(args.night)
     checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint/{}'.format(args.night)
 
     # Connect to the TMP science database
-    input_sci = scitmpdatapath + "/{}".format(args.night)
     df = connect_to_raw_database(
-        input_sci,
-        input_sci,
+        scitmpdatapath,
+        scitmpdatapath,
         latestfirst=False
     )
 
@@ -91,7 +90,7 @@ def main():
         cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
 
     # Extract schema
-    df_schema = spark.read.format('parquet').load(input_sci)
+    df_schema = spark.read.format('parquet').load(scitmpdatapath)
     df_schema = df_schema.selectExpr(cnames)
 
     schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)

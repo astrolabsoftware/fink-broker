@@ -78,6 +78,16 @@ def main():
             latestfirst=False
         )
 
+        # Add ingestion timestamp
+        df = df.withColumn(
+            'brokerStartProcessTimestamp',
+            convert_to_millitime(
+                df['candidate.jd'],
+                F.lit('jd'),
+                F.lit(True)
+            )
+        )
+
     # Add library versions
     df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
         .withColumn('fink_science_version', F.lit(fsvsn))
@@ -94,8 +104,16 @@ def main():
             .filter(df['candidate.rb'] >= 0.55)
 
         df = apply_science_modules(df, args.noscience)
-        # timecol = 'candidate.jd'
-        # converter = lambda x: convert_to_datetime(x)
+
+        # Add ingestion timestamp
+        df = df.withColumn(
+            'brokerEndProcessTimestamp',
+            convert_to_millitime(
+                df['candidate.jd'],
+                F.lit('jd'),
+                F.lit(True)
+            )
+        )
 
         # Append new rows in the tmp science database
         countquery = df\

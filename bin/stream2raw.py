@@ -117,8 +117,15 @@ def main():
     df_decoded = df_decoded.selectExpr(cnames)
 
     if 'candidate' in df_decoded.columns:
-        # timecol = 'candidate.jd'
-        # converter = lambda x: convert_to_datetime(x)
+        # Add ingestion timestamp
+        df_decoded = df_decoded.withColumn(
+            'brokerIngestTimestamp',
+            convert_to_millitime(
+                df_decoded['candidate.jd'],
+                F.lit('jd'),
+                F.lit(True)
+            )
+        )
 
         # write unpartitioned data
         countquery_tmp = df_decoded\
