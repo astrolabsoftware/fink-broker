@@ -136,12 +136,6 @@ def main():
         .withColumn("month", F.date_format("timestamp", "MM"))\
         .withColumn("day", F.date_format("timestamp", "dd"))
 
-    # Append new rows every `tinterval` seconds
-    # and drop duplicates see fink-broker/issues/443
-    if 'candid' in df_decoded.columns:
-        idcol = 'candid'
-        df_partitionedby = df_partitionedby.dropDuplicates([idcol])
-
     countquery_tmp = df_partitionedby\
         .writeStream\
         .outputMode("append") \
