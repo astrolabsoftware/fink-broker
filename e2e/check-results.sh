@@ -26,5 +26,25 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 . $DIR/../conf.sh
 
-finkctl wait topics --expected 11 --timeout 600s -v1
+# TODO improve management of expected topics
+# for example in the argo workflow job witch launch the alert simulator
+if [ $NOSCIENCE = true ]
+then
+  EXPECTED_TOPICS="11"
+else
+  EXPECTED_TOPICS="1"
+fi
+
+count=0
+while ! finkctl wait topics --expected "$EXPECTED_TOPICS" --timeout 60s -v1
+do
+    echo "Waiting for topics to be created"
+    sleep 5
+    kubectl get pods
+    count=$((count+1))
+    if [ $count -eq 10 ]; then
+        echo "Timeout waiting for topics to be created"
+        exit 1
+    fi
+done
 finkctl get topics
