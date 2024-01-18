@@ -69,6 +69,14 @@ def load_fink_cols():
         'x4lac': {'type': 'string', 'default': 'Unknown'},
         'lc_features_g': {'type': 'string', 'default': '[]'},
         'lc_features_r': {'type': 'string', 'default': '[]'},
+        'jd_first_real_det': {'type': 'double', 'default': 0.0},
+        'jdstarthist_dt': {'type': 'double', 'default': 0.0},
+        'mag_rate': {'type': 'double', 'default': 0.0},
+        'sigma_rate': {'type': 'double', 'default': 0.0},
+        'lower_rate': {'type': 'double', 'default': 0.0},
+        'upper_rate': {'type': 'double', 'default': 0.0},
+        'delta_time': {'type': 'double', 'default': 0.0},
+        'from_upper': {'type': 'bool', 'default': False},
     }
 
     fink_nested_cols = {}
@@ -310,52 +318,28 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    72
+    80
     """
+    # From `root` or `candidates.`
     common = [
         'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
         'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
         'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
         'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
         'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
-        'cdsxmatch',
-        'roid',
-        'mulens',
-        'DR3Name',
-        'Plx',
-        'e_Plx',
-        'gcvs',
-        'vsx',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
-        'anomaly_score', 'x4lac', 'x3hsp', 'lc_features_g', 'lc_features_r'
+        'classtar', 'drb', 'ndethist'
     ]
 
-    mangrove = [
-        'mangrove_2MASS_name',
-        'mangrove_HyperLEDA_name',
-        'mangrove_ang_dist',
-        'mangrove_lum_dist'
-    ]
+    # Add Fink added values
+    fink_cols, fink_nested_cols = load_fink_cols()
 
-    t2 = [
-        't2_AGN',
-        't2_EB',
-        't2_KN',
-        't2_M-dwarf',
-        't2_Mira',
-        't2_RRL',
-        't2_SLSN-I',
-        't2_SNII',
-        't2_SNIa',
-        't2_SNIa-91bg',
-        't2_SNIax',
-        't2_SNIbc',
-        't2_TDE',
-        't2_mu-Lens-Single',
-    ]
+    fink_cols_names = list(fink_cols.keys())
+    common += fink_cols_names
 
-    return common + mangrove + t2
+    fink_nested_cols_names = [i.replace('.', '_') for i in fink_nested_cols.keys()]
+    common += fink_nested_cols_names
+
+    return common
 
 def load_ztf_crossmatch_cols():
     """ Load columns used for the crossmatch table (casted).
