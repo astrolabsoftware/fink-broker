@@ -28,6 +28,8 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_filters.classification import extract_fink_classification
 from fink_filters.filter_simbad_candidates.filter import simbad_candidates
 
+from fink_utils.xmatch.simbad import return_list_of_eg_host
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -103,28 +105,8 @@ def main():
 
     out_dic['simbad_tot'] = n_simbad
 
-    # Alerts with a close-by candidate host-galaxy
-    list_simbad_galaxies = [
-        "galaxy",
-        "Galaxy",
-        "EmG",
-        "Seyfert",
-        "Seyfert_1",
-        "Seyfert_2",
-        "BlueCompG",
-        "StarburstG",
-        "LSB_G",
-        "HII_G",
-        "High_z_G",
-        "GinPair",
-        "GinGroup",
-        "BClG",
-        "GinCl",
-        "PartofG",
-    ]
-
     n_simbad_gal = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'].isin(list_simbad_galaxies))\
+        .filter(df_sci['cdsxmatch'].isin(return_list_of_eg_host()))\
         .count()
 
     out_dic['simbad_gal'] = n_simbad_gal
