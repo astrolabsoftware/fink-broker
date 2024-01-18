@@ -58,7 +58,33 @@ def main():
     df_raw = spark.read.format('parquet').load(input_raw)
     df_sci = spark.read.format('parquet').load(input_science)
 
-    df_sci = df_sci.cache()
+    df_sci = df_sci.withColumn(
+        'class',
+        extract_fink_classification(
+            df_sci['cdsxmatch'],
+            df_sci['roid'],
+            df_sci['mulens'],
+            df_sci['snn_snia_vs_nonia'],
+            df_sci['snn_sn_vs_all'],
+            df_sci['rf_snia_vs_nonia'],
+            df_sci['candidate.ndethist'],
+            df_sci['candidate.drb'],
+            df_sci['candidate.classtar'],
+            df_sci['candidate.jd'],
+            df_sci['candidate.jdstarthist'],
+            df_sci['rf_kn_vs_nonkn'],
+            df_sci['tracklet']
+        )
+    )
+
+    cols = [
+        'cdsxmatch',
+        'candidate.field',
+        'candidate.fid',
+        'candidate.jd',
+        'class'
+    ]
+    df_sci = df_sci.select(cols).cache()
 
     # Number of alerts
     n_raw_alert = df_raw.count()
@@ -101,45 +127,26 @@ def main():
 
     out_dic['simbad_gal'] = n_simbad_gal
 
-    df_class = df_sci.withColumn(
-        'class',
-        extract_fink_classification(
-            df_sci['cdsxmatch'],
-            df_sci['roid'],
-            df_sci['mulens'],
-            df_sci['snn_snia_vs_nonia'],
-            df_sci['snn_sn_vs_all'],
-            df_sci['rf_snia_vs_nonia'],
-            df_sci['candidate.ndethist'],
-            df_sci['candidate.drb'],
-            df_sci['candidate.classtar'],
-            df_sci['candidate.jd'],
-            df_sci['candidate.jdstarthist'],
-            df_sci['rf_kn_vs_nonkn'],
-            df_sci['tracklet']
-        )
-    )
-
-    out_class = df_class.groupBy('class').count().collect()
+    out_class = df_sci.groupBy('class').count().collect()
     out_class_ = [o.asDict() for o in out_class]
     out_class_ = [list(o.values()) for o in out_class_]
     for kv in out_class_:
         out_dic[kv[0]] = kv[1]
 
     # Number of fields
-    n_field = df_sci.select('candidate.field').distinct().count()
+    n_field = df_sci.select('field').distinct().count()
 
     out_dic['fields'] = n_field
 
     # number of measurements per band
-    n_g = df_sci.select('candidate.fid').filter('fid == 1').count()
-    n_r = df_sci.select('candidate.fid').filter('fid == 2').count()
+    n_g = df_sci.select('fid').filter('fid == 1').count()
+    n_r = df_sci.select('fid').filter('fid == 2').count()
 
     out_dic['n_g'] = n_g
     out_dic['n_r'] = n_r
 
     # Number of exposures
-    n_exp = df_sci.select('candidate.jd').distinct().count()
+    n_exp = df_sci.select('jd').distinct().count()
 
     out_dic['exposures'] = n_exp
 
