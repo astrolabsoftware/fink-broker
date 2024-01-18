@@ -54,7 +54,10 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2)
+    spark = init_sparksession(
+        name="distribute_{}_{}".format(args.producer, args.night),
+        shuffle_partitions=2
+    )
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -64,19 +67,15 @@ def main():
 
     # data path
     scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint'
+    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint/{}'.format(args.night)
 
     # Connect to the TMP science database
-    input_sci = scitmpdatapath + "/year={}/month={}/day={}".format(
-        args.night[0:4], args.night[4:6], args.night[6:8])
+    input_sci = scitmpdatapath + "/{}".format(args.night)
     df = connect_to_raw_database(
         input_sci,
         input_sci,
         latestfirst=False
     )
-
-    # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
 
     # Cast fields to ease the distribution
     cnames = df.columns

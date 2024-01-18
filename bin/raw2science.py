@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,11 @@ def main():
         tz = None
 
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science_{}_{}".format(args.producer, args.night), shuffle_partitions=2, tz=tz)
+    spark = init_sparksession(
+        name="raw2science_{}_{}".format(args.producer, args.night),
+        shuffle_partitions=2,
+        tz=tz
+    )
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -60,7 +64,7 @@ def main():
     # data path
     rawdatapath = args.online_data_prefix + '/raw'
     scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint'
+    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint/{}'.format(args.night)
 
     if args.producer == 'elasticc':
         df = connect_to_raw_database(
@@ -69,18 +73,17 @@ def main():
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            rawdatapath + "/year={}/month={}/day={}".format(
-                args.night[0:4],
-                args.night[4:6],
-                args.night[6:8]
-            ),
-            rawdatapath + "/year={}/month={}/day={}".format(
-                args.night[0:4],
-                args.night[4:6],
-                args.night[6:8]
-            ),
+            rawdatapath + '/{}'.format(args.night),
+            rawdatapath + '/{}'.format(args.night),
             latestfirst=False
         )
+
+    # Add library versions
+    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
+        .withColumn('fink_science_version', F.lit(fsvsn))
+
+    # Switch publisher
+    df = df.withColumn('publisher', F.lit('Fink'))
 
     # Apply science modules
     if 'candidate' in df.columns:
@@ -91,47 +94,51 @@ def main():
             .filter(df['candidate.rb'] >= 0.55)
 
         df = apply_science_modules(df, args.noscience)
-        timecol = 'candidate.jd'
-        converter = lambda x: convert_to_datetime(x)
+        # timecol = 'candidate.jd'
+        # converter = lambda x: convert_to_datetime(x)
+
+        # Append new rows in the tmp science database
+        countquery = df\
+            .writeStream\
+            .outputMode("append") \
+            .format("parquet") \
+            .option("checkpointLocation", checkpointpath_sci_tmp) \
+            .option("path", scitmpdatapath)\
+            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+            .start()
+
     elif 'diaSource' in df.columns:
         df = apply_science_modules_elasticc(df)
         timecol = 'diaSource.midPointTai'
         converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
 
-    # Add library versions
-    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
-        .withColumn('fink_science_version', F.lit(fsvsn))
+        # re-create partitioning columns if needed.
+        if 'timestamp' not in df.columns:
+            df = df\
+                .withColumn("timestamp", converter(df[timecol]))
 
-    # Switch publisher
-    df = df.withColumn('publisher', F.lit('Fink'))
+        if "year" not in df.columns:
+            df = df\
+                .withColumn("year", F.date_format("timestamp", "yyyy"))
 
-    # re-create partitioning columns if needed.
-    if 'timestamp' not in df.columns:
-        df = df\
-            .withColumn("timestamp", converter(df[timecol]))
+        if "month" not in df.columns:
+            df = df\
+                .withColumn("month", F.date_format("timestamp", "MM"))
 
-    if "year" not in df.columns:
-        df = df\
-            .withColumn("year", F.date_format("timestamp", "yyyy"))
+        if "day" not in df.columns:
+            df = df\
+                .withColumn("day", F.date_format("timestamp", "dd"))
 
-    if "month" not in df.columns:
-        df = df\
-            .withColumn("month", F.date_format("timestamp", "MM"))
-
-    if "day" not in df.columns:
-        df = df\
-            .withColumn("day", F.date_format("timestamp", "dd"))
-
-    # Append new rows in the tmp science database
-    countquery = df\
-        .writeStream\
-        .outputMode("append") \
-        .format("parquet") \
-        .option("checkpointLocation", checkpointpath_sci_tmp) \
-        .option("path", scitmpdatapath)\
-        .partitionBy("year", "month", "day") \
-        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
-        .start()
+        # Append new rows in the tmp science database
+        countquery = df\
+            .writeStream\
+            .outputMode("append") \
+            .format("parquet") \
+            .option("checkpointLocation", checkpointpath_sci_tmp) \
+            .option("path", scitmpdatapath)\
+            .partitionBy("year", "month", "day") \
+            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+            .start()
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
