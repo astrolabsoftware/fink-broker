@@ -298,7 +298,7 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     Examples
     ----------
     >>> dfstream_tmp = connect_to_raw_database(
-    ...   "online/raw", "online/raw/*", True)
+    ...   "online/raw/20200101", "online/raw/20200101", True)
     >>> dfstream_tmp.isStreaming
     True
     """
@@ -485,7 +485,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ['FINK_HOME']
     globs["ztf_alert_sample"] = os.path.join(
-        root, "online/raw")
+        root, "online/raw/20200101")
 
     globs["ztf_avro_sample"] = os.path.join(
         root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")

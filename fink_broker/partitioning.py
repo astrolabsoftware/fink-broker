@@ -1,4 +1,4 @@
-# Copyright 2020-2022 AstroLab Software
+# Copyright 2020-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
     Examples
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd']))
     >>> pdf = df.select('millis').toPandas()
 
@@ -100,7 +100,7 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     Examples
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
     >>> pdf = df.select('datetime').toPandas()
     """
@@ -131,7 +131,7 @@ def numPart(df, partition_size=128.):
     Examples
     ----------
     >>> from fink_broker.sparkUtils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> numpart = numPart(df, partition_size=128.)
     >>> print(numpart)
     1

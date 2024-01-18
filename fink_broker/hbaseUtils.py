@@ -883,7 +883,7 @@ if __name__ == "__main__":
         root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")
 
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
-        root, "online/science")
+        root, "online/science/20200101")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)
