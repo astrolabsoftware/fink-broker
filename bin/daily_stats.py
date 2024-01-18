@@ -26,6 +26,7 @@ from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
+from fink_filters.filter_simbad_candidates.filter import simbad_candidates
 
 
 def main():
@@ -95,9 +96,10 @@ def main():
     out_dic['sci'] = n_sci_alert
 
     # matches with SIMBAD
-    n_simbad = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'] != 'Unknown')\
-        .count()
+    n_simbad = df_sci.withColumn(
+        "is_simbad",
+        simbad_candidates("cdsxmatch")
+    ).filter(F.col("is_simbad")).count()
 
     out_dic['simbad_tot'] = n_simbad
 
