@@ -135,7 +135,7 @@ def main():
             .option("kafka.security.protocol", "SASL_PLAINTEXT")\
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("topic", topicname)\
-            .option("checkpointLocation", checkpointpath_kafka + topicname)\
+            .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
 
