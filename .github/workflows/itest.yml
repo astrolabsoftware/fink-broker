@@ -16,7 +16,7 @@ on:
         required: true
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.1-rc11
+  CIUX_VERSION: v0.0.1-rc12
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
@@ -95,22 +95,20 @@ jobs:
           EOF
       - name: Create k8s/kind cluster
         run: |
-          ktbx install kind
+          echo "Installing kind in version v0.15.0 because kind latest version is not supported by self-hosted runners"
+          ktbx install kind --kind-version="v0.15.0"
           ktbx install kubectl
           kind version
           kubectl version --client
           ktbx version
           ktbx create -s
-      - name: Load fink-alert-simulator image inside kind
+      - name: Install olm and argocd operators
         run: |
-          . "$CIUXCONFIG"
-          .  "$FINK_ALERT_SIMULATOR_DIR"/conf.sh
-          if docker exec -t -- kind-control-plane crictl pull "$IMAGE"; then
-            echo "::notice Succeeded to pull $IMAGE"
-          else
-            echo "::error Failed to pull $IMAGE"
-            exit 1
-          fi
+          ktbx install olm
+          ktbx install argocd
+      - name: Run argoCD
+        run: |
+          ./itest/argocd.sh
       - name: Load fink-broker image inside kind
         run: |
           IMAGE=${{ needs.build.outputs.image }}
@@ -123,17 +121,11 @@ jobs:
         run: |
           . "$CIUXCONFIG"
           "$FINK_ALERT_SIMULATOR_DIR"/prereq-install.sh
-      - name: Install strimzi (kafka-operator)
-        run: ./itest/strimzi-install.sh
-      - name: Setup kafka
-        run: ./itest/strimzi-setup.sh
-      - name: Install fink-broker pre-requisites (Spark)
+      - name: Install fink-broker pre-requisites (JDK, Spark)
         run: |
           sudo apt-get -y update
           sudo apt-get -y install openjdk-8-jdk-headless
           ./itest/prereq-install.sh
-      - name: Install MinIO
-        run: ./itest/minio-install.sh
       - name: Run fink-alert-simulator
         run: |
           . "$CIUXCONFIG"

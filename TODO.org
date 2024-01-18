@@ -16,7 +16,7 @@ Tu crois qu'on pourrais pré-créer les topic pour éviter ce problème
 * TODO Enable authZ in kafka (require authN setup in fink-alert-simulator)
 * TODO [#B] distribute should wait for data to appear instead of crashing in connect_to_raw_database()
 * TODO move nodeport to internal for svc kafka-cluster-kafka-external-bootstrap
-* TODO improve final test in CI (check Kafka with fink-client https://github.com/astrolabsoftware/fink-client)
+* DONE improve final test in CI (check Kafka with fink-client https://github.com/astrolabsoftware/fink-client)
 * TODO run code-check.sh in CI
 * DONE add unit test for schema_converter
 * TODO https://stackoverflow.com/questions/30385981/how-to-access-s3a-files-from-apache-spark
@@ -41,7 +41,7 @@ cf. Julien are they required?
     5  curl https://dl.min.io/client/mc/release/linux-amd64/mc  --create-dirs -o $HOME/minio-binaries/mc
     6  chmod +x $HOME/minio-binaries/mc
    15  export PATH=$PATH:$HOME/minio-binaries/
-   17  mc alias set s3 http://minio.minio-dev:9000 minioadmin minioadmin
+   17  mc alias set s3 http://minio.minio:9000 minioadmin minioadmin
    19  mc ls s3
    27  mc mb s3/fink-broker-online
  mc ls f1 --recursive fink-broker-online/

@@ -28,8 +28,15 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 echo $IMAGE
 
+NS=spark
+echo "Create $NS namespace"
+kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+kubectl config set-context --current --namespace="$NS"
+
 echo "Create S3 bucket"
-kubectl port-forward -n minio-dev svc/minio 9000 &
+kubectl port-forward -n minio svc/minio 9000 &
+# Wait to port-forward to start
+sleep 2
 export FINKCONFIG="$DIR"
 finkctl --endpoint=localhost:9000 s3 makebucket
 
