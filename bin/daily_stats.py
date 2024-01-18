@@ -108,7 +108,7 @@ def main():
     out_dic['simbad_tot'] = n_simbad
 
     n_simbad_gal = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'].isin(return_list_of_eg_host()))\
+        .filter(df_sci['cdsxmatch'].isin(list(return_list_of_eg_host())))\
         .count()
 
     out_dic['simbad_gal'] = n_simbad_gal
