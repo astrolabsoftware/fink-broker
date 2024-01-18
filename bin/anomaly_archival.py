@@ -63,7 +63,7 @@ def main():
     pdf = anomaly_notification_(
         df_proc, threshold=10,
         send_to_tg=True, channel_id="@ZTF_anomaly_bot",
-        send_to_slack=True, channel_name='anomaly_bot'
+        send_to_slack=True, channel_name='bot_anomaly'
     )
 
     # Area-restricted anomalies
@@ -71,7 +71,7 @@ def main():
     anomaly_notification_(
         df_proc, threshold=5,
         send_to_tg=True, channel_id='@anomaly_spec',
-        send_to_slack=False, channel_name=None,
+        send_to_slack=True, channel_name='bot_anomaly_area',
         cut_coords=True
     )
 
