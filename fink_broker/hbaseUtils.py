@@ -76,7 +76,7 @@ def load_fink_cols():
         'lower_rate': {'type': 'double', 'default': 0.0},
         'upper_rate': {'type': 'double', 'default': 0.0},
         'delta_time': {'type': 'double', 'default': 0.0},
-        'from_upper': {'type': 'bool', 'default': False},
+        'from_upper': {'type': 'boolean', 'default': False},
     }
 
     fink_nested_cols = {}
