@@ -19,7 +19,7 @@ Usage: `basename $0` [options] path host [host ...]
   Available options:
     -h          this message
     -k          development mode: load image in kind
-    -d          do not push image to remote registry 
+    -d          do not push image to remote registry
 
 Push image to remote registry and/or load it inside kind
 EOD
@@ -45,8 +45,8 @@ if [ $# -ne 0 ] ; then
 fi
 
 if [ $kind = true ]; then
-  kind load docker-image "$IMAGE"
+  kind load docker-image "$CIUX_IMAGE_URL"
 fi
 if [ $registry = true ]; then
-  docker push "$IMAGE"
+  docker push "$CIUX_IMAGE_URL"
 fi

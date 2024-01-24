@@ -27,18 +27,18 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 . $DIR/../conf.sh
 
 # TODO improve management of expected topics
-# for example in the argo workflow job witch launch the alert simulator
-if [ $NOSCIENCE = true ]
+# for example in finkctl.yaml
+if [ "$SUFFIX" = "noscience" ];
 then
-  EXPECTED_TOPICS="11"
+  expected_topics="11"
 else
-  EXPECTED_TOPICS="1"
+  expected_topics="1"
 fi
 
 count=0
-while ! finkctl wait topics --expected "$EXPECTED_TOPICS" --timeout 60s -v1
+while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1
 do
-    echo "Waiting for expected topics: $EXPECTED_TOPICS"
+    echo "Waiting for expected topics: $expected_topics"
     sleep 5
     kubectl get pods
     count=$((count+1))
