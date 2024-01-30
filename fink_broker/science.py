@@ -253,9 +253,28 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
         cols_out=['SPICY', 'class'],
         types=['int', 'string']
     )
-    # rename `SPICY` into `spicy_id` and `class` into `spicy_class`
+    # rename `SPICY` into `spicy_id`. Values are number or null
     df = df.withColumnRenamed('SPICY', 'spicy_id')
+    # Cast null into -1
+    df = df.withColumn(
+        'SPICY',
+        F.when(
+            df['SPICY'].isNull(),
+            F.lit(-1)
+        ).otherwise(df['SPICY'])
+    )
+
+    # rename `class` into `spicy_class`. Values are:
+    # Unknown, FS, ClassI, ClassII, ClassIII, or 'nan'
     df = df.withColumnRenamed('class', 'spicy_class')
+    # Make 'nan' 'Unknown'
+    df = df.withColumn(
+        'spicy_class',
+        F.when(
+            df['spicy_class'] == 'nan',
+            F.lit('Unknown')
+        ).otherwise(df['spicy_class'])
+    )
 
     _LOG.info("New processor: GCVS (1.5 arcsec)")
     df = df.withColumn(

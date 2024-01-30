@@ -77,6 +77,8 @@ def load_fink_cols():
         'upper_rate': {'type': 'double', 'default': 0.0},
         'delta_time': {'type': 'double', 'default': 0.0},
         'from_upper': {'type': 'boolean', 'default': False},
+        'spicy_id': {'type': 'int', 'default': -1},
+        'spicy_name': {'type': 'string', 'default': 'Unknown'},
     }
 
     fink_nested_cols = {}
