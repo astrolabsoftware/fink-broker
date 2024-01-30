@@ -9,7 +9,6 @@ env:
   CIUX_VERSION: v0.0.1-rc12
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   NOSCIENCE: true
-  MINIMAL: true
 jobs:
   build:
     name: Build image
@@ -68,7 +67,7 @@ jobs:
           ktbx install argocd
       - name: Run argoCD
         run: |
-          ./itest/argocd.sh
+          ./e2e/argocd.sh
       - name: Download image
         uses: actions/download-artifact@v3
         with:
@@ -93,13 +92,13 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install openjdk-8-jdk-headless
-          ./itest/prereq-install.sh
+          ./e2e/prereq-install.sh
       - name: Run fink-broker
         run: |
-          ./itest/fink-start.sh
+          ./e2e/fink-start.sh
       - name: Check results
         run: |
-          ./itest/check-results.sh
+          ./e2e/check-results.sh
   image-analysis:
     name: Analyze image
     runs-on: ubuntu-22.04

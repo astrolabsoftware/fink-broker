@@ -1,3 +1,4 @@
+apiVersion: v1alpha1
 s3:
   endpoint: http://minio.minio:9000
   use_ssl: "false"
@@ -17,6 +18,7 @@ stream2raw:
   kafka_starting_offset: earliest
   kafka_topic: ztf-stream-sim
 raw2science:
+  memory: 3000m
   night: "20200101"
 distribution:
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket

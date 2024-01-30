@@ -12,9 +12,8 @@ on:
 
 jobs:
   call-workflow-passing-data:
-    uses: ./.github/workflows/itest.yml
+    uses: ./.github/workflows/e2e.yml
     with:
-      minimal: false
       noscience: false
     secrets:
       registry_username: ${{ secrets.REGISTRY_USERNAME }}

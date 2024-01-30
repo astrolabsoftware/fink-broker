@@ -3,9 +3,6 @@ name: "Reusable workflow for Fink self-hosted e2e tests"
 on:
   workflow_call:
     inputs:
-      minimal:
-        required: true
-        type: string
       noscience:
         required: true
         type: string
@@ -18,7 +15,6 @@ env:
   CIUXCONFIG: /tmp/ciux.sh
   CIUX_VERSION: v0.0.1-rc12
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  MINIMAL: ${{ inputs.minimal }}
   NOSCIENCE: ${{ inputs.noscience }}
   # Override the self-hosted runner value
   POD_NAMESPACE: default
@@ -108,7 +104,7 @@ jobs:
           ktbx install argocd
       - name: Run argoCD
         run: |
-          ./itest/argocd.sh
+          ./e2e/argocd.sh
       - name: Load fink-broker image inside kind
         run: |
           IMAGE=${{ needs.build.outputs.image }}
@@ -125,7 +121,7 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install openjdk-8-jdk-headless
-          ./itest/prereq-install.sh
+          ./e2e/prereq-install.sh
       - name: Run fink-alert-simulator
         run: |
           . "$CIUXCONFIG"
@@ -135,10 +131,10 @@ jobs:
       # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
-          ./itest/fink-start.sh
+          ./e2e/fink-start.sh
       - name: Check ouput topics are created
         run: |
-          ./itest/check-results.sh
+          ./e2e/check-results.sh
   image-analysis:
     name: Analyze image
     runs-on: [self-hosted, v3]
