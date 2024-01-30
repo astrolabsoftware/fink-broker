@@ -65,7 +65,8 @@ done
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
-if ! finkctl wait tasks --timeout=300s
+timeout="300s"
+if ! finkctl wait tasks --timeout="$timeout"
 then
   for task in $tasks; do
     echo "--------- $task log file ---------"
@@ -73,7 +74,7 @@ then
   done
   kubectl describe pods -l "spark-role in (executor, driver)"
   kubectl get pods
-  echo "ERROR: unable to start fink-broker"
+  echo "ERROR: unable to start fink-broker in $timeout"
   exit 1
 fi
 

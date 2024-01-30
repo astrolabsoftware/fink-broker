@@ -38,7 +38,7 @@ fi
 count=0
 while ! finkctl wait topics --expected "$EXPECTED_TOPICS" --timeout 60s -v1
 do
-    echo "Waiting for topics to be created"
+    echo "Waiting for expected topics: $EXPECTED_TOPICS"
     sleep 5
     kubectl get pods
     count=$((count+1))
