@@ -245,6 +245,18 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     # see https://github.com/astrolabsoftware/fink-broker/issues/787
     df = df.withColumnRenamed('Type', 'vsx')
 
+    _LOG.info("New processor: SPICY (1.2 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:J/ApJS/254/33/table1",
+        distmaxarcsec=1.2,
+        cols_out=['SPICY', 'class'],
+        types=['int', 'string']
+    )
+    # rename `SPICY` into `spicy_id` and `class` into `spicy_class`
+    df = df.withColumnRenamed('SPICY', 'spicy_id')
+    df = df.withColumnRenamed('class', 'spicy_class')
+
     _LOG.info("New processor: GCVS (1.5 arcsec)")
     df = df.withColumn(
         'gcvs',
