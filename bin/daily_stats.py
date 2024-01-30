@@ -20,12 +20,17 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pyspark.sql.functions as F
+
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
+from fink_filters.filter_simbad_candidates.filter import simbad_candidates
+
+from fink_utils.xmatch.simbad import return_list_of_eg_host
 
 
 def main():
@@ -95,34 +100,15 @@ def main():
     out_dic['sci'] = n_sci_alert
 
     # matches with SIMBAD
-    n_simbad = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'] != 'Unknown')\
-        .count()
+    n_simbad = df_sci.withColumn(
+        "is_simbad",
+        simbad_candidates("cdsxmatch")
+    ).filter(F.col("is_simbad")).count()
 
     out_dic['simbad_tot'] = n_simbad
 
-    # Alerts with a close-by candidate host-galaxy
-    list_simbad_galaxies = [
-        "galaxy",
-        "Galaxy",
-        "EmG",
-        "Seyfert",
-        "Seyfert_1",
-        "Seyfert_2",
-        "BlueCompG",
-        "StarburstG",
-        "LSB_G",
-        "HII_G",
-        "High_z_G",
-        "GinPair",
-        "GinGroup",
-        "BClG",
-        "GinCl",
-        "PartofG",
-    ]
-
     n_simbad_gal = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'].isin(list_simbad_galaxies))\
+        .filter(df_sci['cdsxmatch'].isin(list(return_list_of_eg_host())))\
         .count()
 
     out_dic['simbad_gal'] = n_simbad_gal
