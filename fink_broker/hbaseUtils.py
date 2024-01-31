@@ -44,7 +44,7 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    27
+    29
 
     >>> print(len(fink_nested_cols))
     18
@@ -109,7 +109,7 @@ def load_all_cols():
     >>> root_level, candidates, images, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **images, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    156
+    158
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -320,7 +320,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    81
+    83
     """
     # From `root` or `candidates.`
     common = [
