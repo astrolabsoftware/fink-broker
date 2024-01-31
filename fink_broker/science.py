@@ -257,11 +257,11 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     df = df.withColumnRenamed('SPICY', 'spicy_id')
     # Cast null into -1
     df = df.withColumn(
-        'SPICY',
+        'spicy_id',
         F.when(
-            df['SPICY'].isNull(),
+            df['spicy_id'].isNull(),
             F.lit(-1)
-        ).otherwise(df['SPICY'])
+        ).otherwise(df['spicy_id'])
     )
 
     # rename `class` into `spicy_class`. Values are:
