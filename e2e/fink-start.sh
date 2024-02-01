@@ -125,6 +125,7 @@ while ! finkctl wait tasks --timeout="${timeout}s"; do
   fi
   echo "Spark log files"
   echo "---------------"
+
   for task in $tasks; do
     echo "--------- $task log file ---------"
     cat "/tmp/$task.log"
