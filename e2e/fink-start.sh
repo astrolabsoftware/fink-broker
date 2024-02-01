@@ -65,7 +65,7 @@ done
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
-timeout="300s"
+timeout="3600s"
 if ! finkctl wait tasks --timeout="$timeout"
 then
   for task in $tasks; do
