@@ -421,6 +421,8 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
         cols_before + [df["ft_module"][k].alias(k) for k in rate_module_output_schema.keys()]
     )
 
+    df = df.withColumn('from_upper', df['from_upper'].astype('int'))
+
     # Drop temp columns
     df = df.drop(*expanded)
 

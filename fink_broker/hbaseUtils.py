@@ -76,7 +76,7 @@ def load_fink_cols():
         'lower_rate': {'type': 'double', 'default': 0.0},
         'upper_rate': {'type': 'double', 'default': 0.0},
         'delta_time': {'type': 'double', 'default': 0.0},
-        'from_upper': {'type': 'boolean', 'default': False},
+        'from_upper': {'type': 'int', 'default': int(False)},
         'spicy_id': {'type': 'int', 'default': -1},
         'spicy_name': {'type': 'string', 'default': 'Unknown'},
     }
