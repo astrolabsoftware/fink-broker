@@ -126,25 +126,30 @@ def main():
 
         if args.exit_after is not None:
             # Keep the Streaming running until something or someone ends it!
+
+            # Wait for GCN comming
             while count < args.exit_after:
                 gcn_path = (
-                    gcndatapath
-                    + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
+                    gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
                 )
                 if path_exist(gcn_path) and path_exist(scitmpdatapath):
+                    # Start the GCN x ZTF cross-match stream
                     countquery_mm = science2mm(
                         args, config, gcndatapath, scitmpdatapath
                     )
                     break
                 else:
+                    # wait for comming GCN
                     count += 1
                     time.sleep(0.9)
-            
+
+            # If GCN arrived, wait for the remaining time since the launch of raw2science
             remaining_time = args.exit_after - count
             time.sleep(remaining_time)
             countquery_science.stop()
             countquery_mm.stop()
         else:
+            # Start the GCN x ZTF cross-match stream
             countquery_mm = science2mm(
                 args, config, gcndatapath, scitmpdatapath
             )

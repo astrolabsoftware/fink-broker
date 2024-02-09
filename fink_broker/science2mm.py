@@ -4,8 +4,35 @@ from datetime import timedelta
 
 from fink_broker.sparkUtils import connect_to_raw_database
 from pyspark.sql.streaming import StreamingQuery
+import argparse
+import configparser
 
-def science2mm(args, config, gcndatapath, scitmpdatapath)->StreamingQuery:
+
+def science2mm(
+    args: argparse.Namespace,
+    config: configparser.ConfigParser,
+    gcndatapath: str,
+    scitmpdatapath: str,
+) -> StreamingQuery:
+    """
+    Launch the GCN x ZTF cross-match pipeline.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        arguments from the fink command line
+    config : configparser.ConfigParser
+        config entries of fink_mm
+    gcndatapath : str
+        path where are stored the GCN x ZTF data
+    scitmpdatapath : str
+        path where are stored the fink science stream
+
+    Returns
+    -------
+    StreamingQuery
+        the fink_mm query, used by the caller
+    """
     ztf_dataframe = connect_to_raw_database(
         scitmpdatapath, scitmpdatapath, latestfirst=False
     )
@@ -39,7 +66,7 @@ def science2mm(args, config, gcndatapath, scitmpdatapath)->StreamingQuery:
     checkpointpath_mm_tmp = args.online_data_prefix + "/mm_checkpoint/{}".format(
         args.night
     )
-    
+
     query_mm = (
         df_multi_messenger.writeStream.outputMode("append")
         .format("parquet")
