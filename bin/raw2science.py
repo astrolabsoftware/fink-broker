@@ -33,18 +33,22 @@ from fink_broker.sparkUtils import init_sparksession
 from fink_broker.sparkUtils import connect_to_raw_database
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
+from fink_broker.sparkUtils import path_exist
+from fink_broker.science2mm import science2mm
 
 from fink_broker.science import apply_science_modules
 from fink_broker.science import apply_science_modules_elasticc
 
 from fink_science import __version__ as fsvsn
+from fink_mm.init import get_config
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    if args.night == 'elasticc':
-        tz = 'UTC'
+    if args.night == "elasticc":
+        tz = "UTC"
     else:
         tz = None
 
@@ -52,7 +56,7 @@ def main():
     spark = init_sparksession(
         name="raw2science_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
-        tz=tz
+        tz=tz,
     )
 
     # Logger to print useful debug statements
@@ -62,110 +66,128 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + '/raw'
-    scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint/{}'.format(args.night)
+    rawdatapath = args.online_data_prefix + "/raw"
+    scitmpdatapath = args.online_data_prefix + "/science"
+    checkpointpath_sci_tmp = args.online_data_prefix + "/science_checkpoint/{}".format(
+        args.night
+    )
 
-    if args.producer == 'elasticc':
-        df = connect_to_raw_database(
-            rawdatapath, rawdatapath, latestfirst=False
-        )
+    if args.producer == "elasticc":
+        df = connect_to_raw_database(rawdatapath, rawdatapath, latestfirst=False)
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            rawdatapath + '/{}'.format(args.night),
-            rawdatapath + '/{}'.format(args.night),
-            latestfirst=False
+            rawdatapath + "/{}".format(args.night),
+            rawdatapath + "/{}".format(args.night),
+            latestfirst=False,
         )
 
         # Add ingestion timestamp
         df = df.withColumn(
-            'brokerStartProcessTimestamp',
-            convert_to_millitime(
-                df['candidate.jd'],
-                F.lit('jd'),
-                F.lit(True)
-            )
+            "brokerStartProcessTimestamp",
+            convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
         )
 
     # Add library versions
-    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
-        .withColumn('fink_science_version', F.lit(fsvsn))
+    df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
+        "fink_science_version", F.lit(fsvsn)
+    )
 
     # Switch publisher
-    df = df.withColumn('publisher', F.lit('Fink'))
+    df = df.withColumn("publisher", F.lit("Fink"))
 
     # Apply science modules
-    if 'candidate' in df.columns:
+    if "candidate" in df.columns:
         # Apply quality cuts
         logger.info("Applying quality cuts")
-        df = df\
-            .filter(df['candidate.nbad'] == 0)\
-            .filter(df['candidate.rb'] >= 0.55)
+        df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
         df = apply_science_modules(df, args.noscience)
 
         # Add ingestion timestamp
         df = df.withColumn(
-            'brokerEndProcessTimestamp',
-            convert_to_millitime(
-                df['candidate.jd'],
-                F.lit('jd'),
-                F.lit(True)
-            )
+            "brokerEndProcessTimestamp",
+            convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
         )
 
         # Append new rows in the tmp science database
-        countquery = df\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_sci_tmp) \
-            .option("path", scitmpdatapath)\
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+        countquery_science = (
+            df.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_sci_tmp)
+            .option("path", scitmpdatapath)
+            .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
+        )
 
-    elif 'diaSource' in df.columns:
+        count = 0
+        config = get_config({"--config": args.mmconfigpath})
+        gcndatapath = config["PATH"]["online_gcn_data_prefix"]
+
+        if args.exit_after is not None:
+            # Keep the Streaming running until something or someone ends it!
+            while count < args.exit_after:
+                gcn_path = (
+                    gcndatapath
+                    + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
+                )
+                if path_exist(gcn_path) and path_exist(scitmpdatapath):
+                    countquery_mm = science2mm(
+                        args, config, gcndatapath, scitmpdatapath
+                    )
+                    break
+                else:
+                    count += 1
+                    time.sleep(0.9)
+            
+            remaining_time = args.exit_after - count
+            time.sleep(remaining_time)
+            countquery_science.stop()
+            countquery_mm.stop()
+        else:
+            countquery_mm = science2mm(
+                args, config, gcndatapath, scitmpdatapath
+            )
+            # Wait for the end of queries
+            spark.streams.awaitAnyTermination()
+
+    elif "diaSource" in df.columns:
         df = apply_science_modules_elasticc(df)
-        timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+        timecol = "diaSource.midPointTai"
+        converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
         # re-create partitioning columns if needed.
-        if 'timestamp' not in df.columns:
-            df = df\
-                .withColumn("timestamp", converter(df[timecol]))
+        if "timestamp" not in df.columns:
+            df = df.withColumn("timestamp", converter(df[timecol]))
 
         if "year" not in df.columns:
-            df = df\
-                .withColumn("year", F.date_format("timestamp", "yyyy"))
+            df = df.withColumn("year", F.date_format("timestamp", "yyyy"))
 
         if "month" not in df.columns:
-            df = df\
-                .withColumn("month", F.date_format("timestamp", "MM"))
+            df = df.withColumn("month", F.date_format("timestamp", "MM"))
 
         if "day" not in df.columns:
-            df = df\
-                .withColumn("day", F.date_format("timestamp", "dd"))
+            df = df.withColumn("day", F.date_format("timestamp", "dd"))
 
         # Append new rows in the tmp science database
-        countquery = df\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_sci_tmp) \
-            .option("path", scitmpdatapath)\
-            .partitionBy("year", "month", "day") \
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+        countquery = (
+            df.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_sci_tmp)
+            .option("path", scitmpdatapath)
+            .partitionBy("year", "month", "day")
+            .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
+        )
 
-    # Keep the Streaming running until something or someone ends it!
-    if args.exit_after is not None:
-        time.sleep(args.exit_after)
-        countquery.stop()
-        logger.info("Exiting the raw2science service normally...")
-    else:
-        # Wait for the end of queries
-        spark.streams.awaitAnyTermination()
+        # Keep the Streaming running until something or someone ends it!
+        if args.exit_after is not None:
+            time.sleep(args.exit_after)
+            countquery.stop()
+            logger.info("Exiting the raw2science service normally...")
+        else:
+            # Wait for the end of queries
+            spark.streams.awaitAnyTermination()
 
 
 if __name__ == "__main__":
