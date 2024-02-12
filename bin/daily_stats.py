@@ -20,12 +20,17 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import pyspark.sql.functions as F
+
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.hbaseUtils import push_to_hbase
 from fink_broker.parser import getargs
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
+from fink_filters.filter_simbad_candidates.filter import simbad_candidates
+
+from fink_utils.xmatch.simbad import return_list_of_eg_host
 
 
 def main():
@@ -58,50 +63,7 @@ def main():
     df_raw = spark.read.format('parquet').load(input_raw)
     df_sci = spark.read.format('parquet').load(input_science)
 
-    df_sci = df_sci.cache()
-
-    # Number of alerts
-    n_raw_alert = df_raw.count()
-    n_sci_alert = df_sci.count()
-
-    out_dic = {}
-    out_dic['raw'] = n_raw_alert
-    out_dic['sci'] = n_sci_alert
-
-    # matches with SIMBAD
-    n_simbad = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'] != 'Unknown')\
-        .count()
-
-    out_dic['simbad_tot'] = n_simbad
-
-    # Alerts with a close-by candidate host-galaxy
-    list_simbad_galaxies = [
-        "galaxy",
-        "Galaxy",
-        "EmG",
-        "Seyfert",
-        "Seyfert_1",
-        "Seyfert_2",
-        "BlueCompG",
-        "StarburstG",
-        "LSB_G",
-        "HII_G",
-        "High_z_G",
-        "GinPair",
-        "GinGroup",
-        "BClG",
-        "GinCl",
-        "PartofG",
-    ]
-
-    n_simbad_gal = df_sci.select('cdsxmatch')\
-        .filter(df_sci['cdsxmatch'].isin(list_simbad_galaxies))\
-        .count()
-
-    out_dic['simbad_gal'] = n_simbad_gal
-
-    df_class = df_sci.withColumn(
+    df_sci = df_sci.withColumn(
         'class',
         extract_fink_classification(
             df_sci['cdsxmatch'],
@@ -120,26 +82,57 @@ def main():
         )
     )
 
-    out_class = df_class.groupBy('class').count().collect()
+    cols = [
+        'cdsxmatch',
+        'candidate.field',
+        'candidate.fid',
+        'candidate.jd',
+        'class'
+    ]
+    df_sci = df_sci.select(cols).cache()
+
+    # Number of alerts
+    n_raw_alert = df_raw.count()
+    n_sci_alert = df_sci.count()
+
+    out_dic = {}
+    out_dic['raw'] = n_raw_alert
+    out_dic['sci'] = n_sci_alert
+
+    # matches with SIMBAD
+    n_simbad = df_sci.withColumn(
+        "is_simbad",
+        simbad_candidates("cdsxmatch")
+    ).filter(F.col("is_simbad")).count()
+
+    out_dic['simbad_tot'] = n_simbad
+
+    n_simbad_gal = df_sci.select('cdsxmatch')\
+        .filter(df_sci['cdsxmatch'].isin(list(return_list_of_eg_host())))\
+        .count()
+
+    out_dic['simbad_gal'] = n_simbad_gal
+
+    out_class = df_sci.groupBy('class').count().collect()
     out_class_ = [o.asDict() for o in out_class]
     out_class_ = [list(o.values()) for o in out_class_]
     for kv in out_class_:
         out_dic[kv[0]] = kv[1]
 
     # Number of fields
-    n_field = df_sci.select('candidate.field').distinct().count()
+    n_field = df_sci.select('field').distinct().count()
 
     out_dic['fields'] = n_field
 
     # number of measurements per band
-    n_g = df_sci.select('candidate.fid').filter('fid == 1').count()
-    n_r = df_sci.select('candidate.fid').filter('fid == 2').count()
+    n_g = df_sci.select('fid').filter('fid == 1').count()
+    n_r = df_sci.select('fid').filter('fid == 2').count()
 
     out_dic['n_g'] = n_g
     out_dic['n_r'] = n_r
 
     # Number of exposures
-    n_exp = df_sci.select('candidate.jd').distinct().count()
+    n_exp = df_sci.select('jd').distinct().count()
 
     out_dic['exposures'] = n_exp
 

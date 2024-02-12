@@ -2,9 +2,9 @@
 . "$CIUXCONFIG"
 
 # Do not launch science pipeline if true
+# Set minimal limits/requests for Spark driver and executor if true
 NOSCIENCE="${NOSCIENCE:-false}"
 
-# Set minimal limits/requests for Spark driver and executor if true
 MINIMAL="${MINIMAL:-false}"
 
 

@@ -9,7 +9,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-NS="minio-dev"
+NS="minio"
 
 if kubectl apply -f $DIR/manifests/minio.yaml
 then

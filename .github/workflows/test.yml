@@ -9,6 +9,10 @@ on:
       - master
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-suite:
     runs-on: ubuntu-latest
@@ -62,6 +66,8 @@ jobs:
     - name: Run test suites [dev]
       if: matrix.container == 'julienpeloton/fink-ci:dev'
       run: |
+        # TODO: remove me
+        pip install fink-utils==0.13.11
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME

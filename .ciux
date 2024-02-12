@@ -7,17 +7,28 @@ dependencies:
     # If true, container image will be pulled
     pull: true
     labels:
+      dev: "true"
       itest: "true"
       ci: "true"
   - url: https://github.com/astrolabsoftware/finkctl
     clone: true
     labels:
+      dev: "true"
       itest: "true"
       ci: "true"
+  - url: https://github.com/astrolabsoftware/fink-cd
+    labels:
+      dev: "true"
+      itest: "true"
+      ci: "true"
+  - url: https://github.com/k8s-school/ktbx
+    clone: true
+    labels:
+      dev: "true"
   - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1
     labels:
       build: "true"
-  - package: github.com/k8s-school/ktbx@v1.1.1-rc7
+  - package: github.com/k8s-school/ktbx@v1.1.1-rc11
     labels:
       itest: "optional"
       ci: "true"

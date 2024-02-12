@@ -28,9 +28,26 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 echo $IMAGE
 
+NS=spark
+echo "Create $NS namespace"
+kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+kubectl config set-context --current --namespace="$NS"
+
 echo "Create S3 bucket"
-kubectl port-forward -n minio-dev svc/minio 9000 &
-export FINKCONFIG="$DIR"
+kubectl port-forward -n minio svc/minio 9000 &
+# Wait to port-forward to start
+sleep 2
+
+if [ "$NOSCIENCE" = true ];
+then
+  NOSCIENCE_OPT="--noscience"
+  export FINKCONFIG="$DIR/finkconfig_noscience"
+else
+  NOSCIENCE_OPT=""
+  export FINKCONFIG="$DIR/finkconfig"
+fi
+
+
 finkctl --endpoint=localhost:9000 s3 makebucket
 
 echo "Create spark ServiceAccount"
@@ -41,28 +58,15 @@ NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
-if [ "$NOSCIENCE" = true ];
-then
-  NOSCIENCE_OPT="--noscience"
-else
-  NOSCIENCE_OPT=""
-fi
-
-if [ "$MINIMAL" = true ];
-then
-  MINIMAL_OPT="--minimal"
-else
-  MINIMAL_OPT=""
-fi
-
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $MINIMAL_OPT $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
-if ! finkctl wait tasks --timeout=180s
+timeout="300s"
+if ! finkctl wait tasks --timeout="$timeout"
 then
   for task in $tasks; do
     echo "--------- $task log file ---------"
@@ -70,4 +74,9 @@ then
   done
   kubectl describe pods -l "spark-role in (executor, driver)"
   kubectl get pods
+  echo "ERROR: unable to start fink-broker in $timeout"
+  exit 1
 fi
+
+kubectl describe pods -l "spark-role in (executor, driver)"
+kubectl get pods

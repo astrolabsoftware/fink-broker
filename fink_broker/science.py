@@ -1,4 +1,4 @@
-# Copyright 2020-2023 AstroLab Software
+# Copyright 2020-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -224,7 +224,7 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     _LOG.info("New processor: cdsxmatch")
     df = xmatch_cds(df)
 
-    _LOG.info("New processor: Gaia xmatch")
+    _LOG.info("New processor: Gaia xmatch (1.0 arcsec)")
     df = xmatch_cds(
         df,
         distmaxarcsec=1,
@@ -233,7 +233,50 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
         types=['string', 'float', 'float']
     )
 
-    _LOG.info("New processor: GCVS")
+    _LOG.info("New processor: VSX (1.5 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:B/vsx/vsx",
+        distmaxarcsec=1.5,
+        cols_out=['Type'],
+        types=['string']
+    )
+    # legacy -- rename `Type` into `vsx`
+    # see https://github.com/astrolabsoftware/fink-broker/issues/787
+    df = df.withColumnRenamed('Type', 'vsx')
+
+    _LOG.info("New processor: SPICY (1.2 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:J/ApJS/254/33/table1",
+        distmaxarcsec=1.2,
+        cols_out=['SPICY', 'class'],
+        types=['int', 'string']
+    )
+    # rename `SPICY` into `spicy_id`. Values are number or null
+    df = df.withColumnRenamed('SPICY', 'spicy_id')
+    # Cast null into -1
+    df = df.withColumn(
+        'spicy_id',
+        F.when(
+            df['spicy_id'].isNull(),
+            F.lit(-1)
+        ).otherwise(df['spicy_id'])
+    )
+
+    # rename `class` into `spicy_class`. Values are:
+    # Unknown, FS, ClassI, ClassII, ClassIII, or 'nan'
+    df = df.withColumnRenamed('class', 'spicy_class')
+    # Make 'nan' 'Unknown'
+    df = df.withColumn(
+        'spicy_class',
+        F.when(
+            df['spicy_class'] == 'nan',
+            F.lit('Unknown')
+        ).otherwise(df['spicy_class'])
+    )
+
+    _LOG.info("New processor: GCVS (1.5 arcsec)")
     df = df.withColumn(
         'gcvs',
         crossmatch_other_catalog(
@@ -241,17 +284,6 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
             df['candidate.ra'],
             df['candidate.dec'],
             F.lit('gcvs')
-        )
-    )
-
-    _LOG.info("New processor: VSX")
-    df = df.withColumn(
-        'vsx',
-        crossmatch_other_catalog(
-            df['candidate.candid'],
-            df['candidate.ra'],
-            df['candidate.dec'],
-            F.lit('vsx')
         )
     )
 
