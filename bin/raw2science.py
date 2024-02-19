@@ -132,8 +132,7 @@ def main():
             # Wait for GCN comming
             while count < args.exit_after:
                 gcn_path = (
-                    gcndatapath
-                    + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
+                    gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
                 )
                 # if there is gcn and ztf data
                 if path_exist(gcn_path) and path_exist(scitmpdatapath):
