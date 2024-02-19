@@ -231,6 +231,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_FAT_OUTPUT]
         """)
     parser.add_argument(
+        '-mmconfigpath', type=str, default='',
+        help="""
+        Path to fink_mm configuration file
+        [MMCONFIGPATH]
+"""
+    )
+    parser.add_argument(
         '-producer', type=str, default='ztf',
         help="""
         Name of the alert producer. Currently available: ztf, elasticc, sims

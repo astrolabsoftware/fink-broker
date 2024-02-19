@@ -78,7 +78,7 @@ def main():
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
+    # cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
     cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
     cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'

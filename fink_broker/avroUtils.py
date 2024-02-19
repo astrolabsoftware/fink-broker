@@ -21,13 +21,11 @@ import fastavro
 
 from fink_broker.tester import regular_unit_tests
 
-__all__ = [
-    'writeavrodata',
-    'readschemadata',
-    'readschemafromavrofile']
+__all__ = ["writeavrodata", "readschemadata", "readschemafromavrofile"]
+
 
 def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
-    """ Encode json into Avro format given a schema.
+    """Encode json into Avro format given a schema.
 
     Parameters
     ----------
@@ -55,6 +53,7 @@ def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
     bytes_io = io.BytesIO()
     fastavro.schemaless_writer(bytes_io, json_schema, json_data)
     return bytes_io
+
 
 def readschemadata(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     """Read data that already has an Avro schema.
@@ -85,8 +84,9 @@ def readschemadata(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     message = fastavro.reader(bytes_io)
     return message
 
+
 def readschemafromavrofile(fn: str) -> dict:
-    """ Reach schema from a binary avro file.
+    """Reach schema from a binary avro file.
 
     Parameters
     ----------
@@ -104,19 +104,20 @@ def readschemafromavrofile(fn: str) -> dict:
     >>> print(schema['version'])
     3.3
     """
-    with open(fn, mode='rb') as file_data:
+    with open(fn, mode="rb") as file_data:
         data = readschemadata(file_data)
         schema = data.writer_schema
     return schema
 
 
 if __name__ == "__main__":
-    """ Execute the test suite """
+    """Execute the test suite"""
     # Add sample file to globals
     globs = globals()
-    root = os.environ['FINK_HOME']
+    alert_schema_path = os.environ["FINK_SCHEMA"]
     globs["ztf_alert_sample"] = os.path.join(
-        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")
+        alert_schema_path, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
+    )
 
     # Run the regular test suite
     regular_unit_tests(globs)

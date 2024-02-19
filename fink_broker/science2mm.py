@@ -62,7 +62,7 @@ def science2mm(
         gaia_dist=float(config["PRIOR_FILTER"]["gaia_dist"]),
     )
 
-    mmdatapath = config["PATH"]["online_grb_data_prefix"]
+    mmtmpdatapath = args.online_data_prefix + f"/mm/{args.night}"
     checkpointpath_mm_tmp = args.online_data_prefix + "/mm_checkpoint/{}".format(
         args.night
     )
@@ -71,7 +71,7 @@ def science2mm(
         df_multi_messenger.writeStream.outputMode("append")
         .format("parquet")
         .option("checkpointLocation", checkpointpath_mm_tmp)
-        .option("path", mmdatapath)
+        .option("path", mmtmpdatapath)
         .partitionBy("year", "month", "day")
         .trigger(processingTime="{} seconds".format(args.tinterval))
         .start()

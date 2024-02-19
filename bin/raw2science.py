@@ -26,6 +26,7 @@ from pyspark.sql import functions as F
 
 import argparse
 import time
+import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
@@ -66,10 +67,10 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + "/raw"
-    scitmpdatapath = args.online_data_prefix + "/science"
-    checkpointpath_sci_tmp = args.online_data_prefix + "/science_checkpoint/{}".format(
-        args.night
+    rawdatapath = os.path.join(args.online_data_prefix, "raw")
+    scitmpdatapath = os.path.join(args.online_data_prefix, f"science/{args.night}")
+    checkpointpath_sci_tmp = os.path.join(
+        args.online_data_prefix, f"science_checkpoint/{args.night}"
     )
 
     if args.producer == "elasticc":
@@ -77,8 +78,8 @@ def main():
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            rawdatapath + "/{}".format(args.night),
-            rawdatapath + "/{}".format(args.night),
+            os.path.join(rawdatapath, f"{args.night}"),
+            os.path.join(rawdatapath, f"{args.night}"),
             latestfirst=False,
         )
 
@@ -123,6 +124,7 @@ def main():
         count = 0
         config = get_config({"--config": args.mmconfigpath})
         gcndatapath = config["PATH"]["online_gcn_data_prefix"]
+        countquery_mm = None
 
         if args.exit_after is not None:
             # Keep the Streaming running until something or someone ends it!
@@ -130,8 +132,10 @@ def main():
             # Wait for GCN comming
             while count < args.exit_after:
                 gcn_path = (
-                    gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
+                    gcndatapath
+                    + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
                 )
+                # if there is gcn and ztf data
                 if path_exist(gcn_path) and path_exist(scitmpdatapath):
                     # Start the GCN x ZTF cross-match stream
                     countquery_mm = science2mm(
@@ -147,12 +151,11 @@ def main():
             remaining_time = args.exit_after - count
             time.sleep(remaining_time)
             countquery_science.stop()
-            countquery_mm.stop()
+            if countquery_mm is not None:
+                countquery_mm.stop()
         else:
             # Start the GCN x ZTF cross-match stream
-            countquery_mm = science2mm(
-                args, config, gcndatapath, scitmpdatapath
-            )
+            countquery_mm = science2mm(args, config, gcndatapath, scitmpdatapath)
             # Wait for the end of queries
             spark.streams.awaitAnyTermination()
 
