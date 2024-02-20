@@ -116,7 +116,7 @@ if __name__ == "__main__":
     globs = globals()
     alert_schema_path = os.environ["FINK_SCHEMA"]
     globs["ztf_alert_sample"] = os.path.join(
-        alert_schema_path, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
+        alert_schema_path, "ztf/template_schema_ZTF_3p3.avro"
     )
 
     # Run the regular test suite

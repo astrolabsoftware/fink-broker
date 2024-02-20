@@ -65,15 +65,15 @@ FINK_TRIGGER_UPDATE=2
 
 # Alert schema
 # Full path to schema to decode the alerts
-FINK_ALERT_SCHEMA=${FINK_HOME}/fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro
+FINK_ALERT_SCHEMA=${FINK_SCHEMA}/ztf/template_schema_ZTF_3p3.avro
 
 # Prefix path on disk to save live data.
 # They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
 FS_KIND=local
-ONLINE_DATA_PREFIX=${FINK_HOME}/online
-AGG_DATA_PREFIX=${FINK_HOME}/archive
+ONLINE_DATA_PREFIX=${FINK_HOME}/online_test
+AGG_DATA_PREFIX=${FINK_HOME}/archive_test
 
 # The name of the HBase table
 SCIENCE_DB_NAME="test_portal"
@@ -93,6 +93,9 @@ DEPLOY_FINK_PYTHON=false
 
 # Path to fink-fat output
 FINK_FAT_OUTPUT=${FINK_HOME}/datasim/fink_fat_example
+
+# Path to fink-mm configuration file
+FINK_MM_CONFIG=${FINK_HOME}/conf/fink_mm.conf
 
 ######################################
 # Slack
