@@ -51,10 +51,12 @@ jobs:
         echo "PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH" >> $GITHUB_ENV
     - name: Check env
       run: |
+        echo "PATH: $GITHUB_ENV"
         echo "FINK_HOME: $FINK_HOME"
         echo "SPARK_HOME: $SPARK_HOME"
         echo "SPARKLIB: $SPARKLIB"
         echo "FINK_ALERT_SIMULATOR: $FINK_ALERT_SIMULATOR"
+        echo "FINK_SCHEMA: $FINK_SCHEMA"
         echo "KAFKA_HOME: $KAFKA_HOME"
         echo "PYTHONPATH: $PYTHONPATH"
         echo "JAVA_HOME: $JAVA_HOME"
