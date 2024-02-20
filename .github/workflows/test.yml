@@ -65,14 +65,14 @@ jobs:
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        fink_test -c conf/fink.conf.dev --unit-tests --db-integration
+        fink_test -c conf/fink.conf.dev --unit-tests --db-integration --stream-integration
     - name: Run test suites [prod]
       if: matrix.container == 'julienpeloton/fink-ci:prod'
       run: |
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        fink_test -c conf/fink.conf.prod --unit-tests --db-integration
+        fink_test -c conf/fink.conf.prod --unit-tests --db-integration --stream-integration
         curl -s https://codecov.io/bash | bash
     - uses: act10ns/slack@v1
       with:
