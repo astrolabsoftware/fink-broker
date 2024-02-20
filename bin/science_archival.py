@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2020-2023 AstroLab Software
+# Copyright 2020-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,29 +55,27 @@ def main():
         args.night[6:8]
     )
 
+    # Number of individual files
     paths = list_hdfs_files(folder)
-    npath = len(paths)
-    logger.info('{} parquet detected'.format(npath))
+    logger.info('{} parquet files detected'.format(len(paths)))
 
     # Row key
     row_key_name = "objectId_jd"
-    n_alerts = 0
-    for index, path in enumerate(paths):
-        df = load_parquet_files(path)
-        n_alerts_parquet = df.count()
-        logger.info('Pushing {}/{} parquet to HBase ({} alerts)'.format(index + 1, npath, n_alerts_parquet))
-        n_alerts += n_alerts_parquet
 
-        # Drop partitioning columns
-        df = df.drop('year').drop('month').drop('day')
+    # Load data
+    df = load_parquet_files(folder)
+    n_alerts = df.count()
 
-        # push data to HBase
-        push_full_df_to_hbase(
-            df,
-            row_key_name=row_key_name,
-            table_name=args.science_db_name,
-            catalog_name=args.science_db_catalogs
-        )
+    # Drop partitioning columns
+    df = df.drop('year').drop('month').drop('day')
+
+    # push data to HBase
+    push_full_df_to_hbase(
+        df,
+        row_key_name=row_key_name,
+        table_name=args.science_db_name,
+        catalog_name=args.science_db_catalogs
+    )
     logger.info('{} alerts pushed to HBase'.format(n_alerts))
 
 
