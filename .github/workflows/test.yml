@@ -48,7 +48,7 @@ jobs:
       run: |
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
         echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
-        echo "PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:$PYTHONPATH" >> $GITHUB_ENV
+        echo "PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:${PYTHONPATH}" >> $GITHUB_ENV
     - name: Check env
       run: |
         echo "PATH: $GITHUB_ENV"
