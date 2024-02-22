@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Setup Kafka for Fink
+# Create docker image containing Fink packaged for k8s
 
 # @author  Fabrice Jammes
 
@@ -24,30 +24,29 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly  FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
+private_registry=""
+# Get option -r for tmp-registry
+while getopts ":r:" opt; do
+  case $opt in
+    r) private_registry="$OPTARG"
+    ;;
+    \?) echo "Invalid option -$OPTARG" >&2
+    ;;
+  esac
+done
 
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaUser
-metadata:
-  name: fink-producer
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  authentication:
-    type: scram-sha-512
+if [ -z "$private_registry" ]; then
+  echo "Option -r not set. Using default kind configuration"
+  exit 0
+fi
+
+echo "Using private registry: $private_registry"
+mkdir -p $HOME/.ktbx
+cat <<EOF > $HOME/.ktbx/config
+kind:
+  workers: 0
+
+  # Supported only for clusters with one node
+  # Certificates must be available on kind host at "/etc/docker/certs.d/{{ .PrivateRegistry }}"
+  privateRegistry: "$private_registry"
 EOF
-
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaTopic
-metadata:
-  name: ztf-stream-sim
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  partitions: 3
-  replicas: 1
-EOF
-
