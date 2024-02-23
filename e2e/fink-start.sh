@@ -24,39 +24,64 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $CIUXCONFIG
-
 # Used only to set path to spark-submit.sh
 . $DIR/../conf.sh
 
-if [ -n $CIUX_IMAGE_URL ];
-then
-    IMAGE="$CIUX_IMAGE_URL"
-else
-    echo "ERROR: CIUX_IMAGE_URL is not set"
-    exit 1
-fi
+usage() {
+  echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
+  echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
+  echo "  -f: finkctl configuration file"
+  echo "  -i: fink-broker image"
+}
+
+# Parse option for finkctl configuration file and fink-broker image
+while getopts "ef:i:h" opt; do
+  case $opt in
+    e) E2E_TEST=true;;
+    f) FINKCONFIG=$OPTARG ;;
+    h) echo usage ; exit 0 ;;
+    i) IMAGE=$OPTARG ;;
+  esac
+done
 
 NS=spark
 echo "Create $NS namespace"
 kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace="$NS"
 
-echo "Create S3 bucket"
-kubectl port-forward -n minio svc/minio 9000 &
-# Wait to port-forward to start
-sleep 2
-
-if [[ "$IMAGE" =~ "-noscience" ]];
+if [ "$E2E_TEST"=true ];
 then
-  NOSCIENCE_OPT="--noscience"
-  export FINKCONFIG="$DIR/finkconfig_noscience"
-else
-  NOSCIENCE_OPT=""
-  export FINKCONFIG="$DIR/finkconfig"
+  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
+  . $CIUXCONFIG
+  IMAGE="$CIUX_IMAGE_URL"
+  kubectl port-forward -n minio svc/minio 9000 &
+  # Wait to port-forward to start
+  sleep 2
+  echo "Create S3 bucket"
+  finkctl --endpoint=localhost:9000 s3 makebucket
+  if [[ "$IMAGE" =~ "-noscience" ]];
+  then
+    NOSCIENCE_OPT="--noscience"
+    FINKCONFIG="$DIR/finkconfig_noscience"
+  else
+    NOSCIENCE_OPT=""
+    FINKCONFIG="$DIR/finkconfig"
+  fi
 fi
 
-finkctl --endpoint=localhost:9000 s3 makebucket
+if [ -z "$IMAGE" ];
+    echo "ERROR: IMAGE is not set"
+    exit 1
+fi
+
+if [ -z "$FINKCONFIG" ];
+then
+  echo "ERROR: FINKCONFIG is not set"
+  exit 1
+else
+  echo "Use FINKCONFIG: $FINKCONFIG"
+  export FINKCONFIG
+fi
 
 echo "Create spark ServiceAccount"
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
