@@ -7,7 +7,7 @@
 # set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-. ./conf.sh
+. $CIUXCONFIG 
 
 unittests=false
 mypy=false
@@ -44,8 +44,8 @@ fi
 # Build image
 $DIR/build.sh
 if [ $unittests = true ]; then
-  docker run -- "$IMAGE" /home/fink/fink-broker/utest/bin/pytest.sh
+  docker run -- "$CIUX_IMAGE_URL" /home/fink/fink-broker/utest/bin/pytest.sh
 fi
 if [ $mypy = true ]; then
-  docker run -- "$IMAGE" mypy /home/fink/fink-broker/
+  docker run -- "$CIUX_IMAGE_URL" mypy /home/fink/fink-broker/
 fi

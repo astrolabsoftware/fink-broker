@@ -24,8 +24,6 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $DIR/../conf.sh
-
 # TODO improve management of expected topics
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];

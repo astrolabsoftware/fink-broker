@@ -62,7 +62,7 @@ then
 fi
 
 ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
-. $DIR/conf.sh
+. $CIUXCONFIG
 
 if [[ $suffix =~ ^noscience* ]]; then
     target="noscience"

@@ -34,6 +34,9 @@ usage() {
   echo "  -i: fink-broker image"
 }
 
+E2E_TEST=false
+NOSCIENCE_OPT=""
+
 # Parse option for finkctl configuration file and fink-broker image
 while getopts "ef:i:h" opt; do
   case $opt in
@@ -49,11 +52,11 @@ echo "Create $NS namespace"
 kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace="$NS"
 
-if [ "$E2E_TEST"=true ];
+if [ $E2E_TEST = true ];
 then
-  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
   . $CIUXCONFIG
   IMAGE="$CIUX_IMAGE_URL"
+  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
   kubectl port-forward -n minio svc/minio 9000 &
   # Wait to port-forward to start
   sleep 2
@@ -70,6 +73,7 @@ then
 fi
 
 if [ -z "$IMAGE" ];
+then
     echo "ERROR: IMAGE is not set"
     exit 1
 fi
