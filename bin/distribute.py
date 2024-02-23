@@ -23,16 +23,20 @@
 """
 import argparse
 import time
+import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
+from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database, path_exist
 from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.mm2distribute import mm2distribute
 
 from fink_utils.spark.utils import concat_col
 
 from fink_utils.spark.utils import apply_user_defined_filter
+
+from fink_mm.init import get_config
 
 # User-defined topics
 userfilters = [
@@ -141,8 +145,38 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
-        time.sleep(args.exit_after)
+
+        count = 0
+        config = get_config({"--config": args.mmconfigpath})
+
+        while count < args.exit_after:
+
+            mm_path_output = config["PATH"]["online_grb_data_prefix"]
+            mmtmpdatapath = os.path.join(mm_path_output, "online")
+
+            # if there is gcn and ztf data
+            if path_exist(mmtmpdatapath):
+
+                t_before = time.time()
+                time.sleep(45)
+                logger.info("starting mm2distribute ...")
+                stream_distrib_list = mm2distribute(
+                    spark,
+                    config,
+                    args
+                )
+                count += time.time() - t_before
+                break
+
+            count += 1
+            time.sleep(1.0)
+
+        remaining_time = args.exit_after - count
+        remaining_time = remaining_time if remaining_time > 0 else 0
+        time.sleep(remaining_time)
         disquery.stop()
+        for stream in stream_distrib_list:
+            stream.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         # Wait for the end of queries

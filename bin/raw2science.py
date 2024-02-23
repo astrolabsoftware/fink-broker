@@ -136,24 +136,16 @@ def main():
                     gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
                 )
 
-                all_parquet_files = glob.glob(os.path.join(scitmpdatapath, "*.parquet"))
-
-                logger.info(f"""
-                    cond1: {path_exist(gcn_path)}
-                    cond2: {len(all_parquet_files)}
-                    cond3: {os.path.getsize(all_parquet_files[0]) if len(all_parquet_files) > 0 else ""}
-                """)
-
                 # if there is gcn and ztf data
-                if path_exist(gcn_path) and len(all_parquet_files) > 0 and os.path.getsize(all_parquet_files[0]) > 0:
+                if path_exist(gcn_path) and path_exist(scitmpdatapath):
                     # Start the GCN x ZTF cross-match stream
                     t_before = time.time()
-                    time.sleep(30)
+                    time.sleep(45)
                     logger.info("starting science2mm ...")
                     countquery_mm = science2mm(
                         args, config, gcndatapath, scitmpdatapath
                     )
-                    count += (time.time() - t_before)
+                    count += time.time() - t_before
                     break
                 else:
                     # wait for comming GCN
@@ -162,7 +154,7 @@ def main():
 
             # If GCN arrived, wait for the remaining time since the launch of raw2science
             remaining_time = args.exit_after - count
-            logger.info(f"time to the end: {remaining_time} sec")
+            remaining_time = remaining_time if remaining_time > 0 else 0
             time.sleep(remaining_time)
             countquery_science.stop()
             if countquery_mm is not None:

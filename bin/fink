@@ -303,6 +303,7 @@ elif [[ $service == "distribution" ]]; then
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
   -substream_prefix ${SUBSTREAM_PREFIX} \
   -tinterval ${FINK_TRIGGER_UPDATE} \
+  -mmconfigpath ${FINK_MM_CONFIG} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "merge" ]]; then
