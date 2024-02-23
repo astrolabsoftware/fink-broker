@@ -62,7 +62,7 @@ jobs:
         echo `python -V`
     - name: Install fink-mm dev [To remove]
       run: |
-        pip install git+https://github.com/FusRoman/fink-mm.git@7ccd7a9f4dc69897c8c58aeaf439354aec39a6c5 --no-deps
+        pip install git+https://github.com/FusRoman/fink-mm.git@0014542c309234e82c5028ada438768cf95b683a --no-deps
     - name: Run test suites [dev]
       if: matrix.container == 'julienpeloton/fink-ci:dev'
       run: |
