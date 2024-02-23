@@ -158,7 +158,6 @@ def main():
             if path_exist(mmtmpdatapath):
 
                 t_before = time.time()
-                time.sleep(45)
                 logger.info("starting mm2distribute ...")
                 stream_distrib_list = mm2distribute(
                     spark,

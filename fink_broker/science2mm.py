@@ -7,7 +7,9 @@ from pyspark.sql.streaming import StreamingQuery
 import argparse
 import configparser
 import os
+import time
 
+from fink_broker.loggingUtils import get_fink_logger
 
 def science2mm(
     args: argparse.Namespace,
@@ -34,14 +36,27 @@ def science2mm(
     StreamingQuery
         the fink_mm query, used by the caller
     """
-    ztf_dataframe = connect_to_raw_database(
-        scitmpdatapath, scitmpdatapath, latestfirst=False
-    )
-    gcn_dataframe = connect_to_raw_database(
-        gcndatapath,
-        gcndatapath,
-        latestfirst=False,
-    )
+    logger = get_fink_logger()
+    wait = 5
+    while True:
+        try:
+            logger.info("successfully connect to the fink science and gcn database")
+            ztf_dataframe = connect_to_raw_database(
+                scitmpdatapath, scitmpdatapath, latestfirst=False
+            )
+            gcn_dataframe = connect_to_raw_database(
+                gcndatapath,
+                gcndatapath,
+                latestfirst=False,
+            )
+            break
+
+        except Exception:
+            logger.info(f"Exception occured: wait: {wait}", exc_info=1)
+            time.sleep(wait)
+            wait *= 1.2 if wait < 60 else 1
+            continue
+
     # keep gcn emitted between the last day time and the end of the current stream (17:00 Paris Time)
     cur_time = Time(f"{args.night[0:4]}-{args.night[4:6]}-{args.night[6:8]}")
     last_time = cur_time - timedelta(hours=7)  # 17:00 Paris time yesterday

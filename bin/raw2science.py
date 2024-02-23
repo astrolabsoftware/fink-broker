@@ -139,7 +139,6 @@ def main():
                 if path_exist(gcn_path) and path_exist(scitmpdatapath):
                     # Start the GCN x ZTF cross-match stream
                     t_before = time.time()
-                    time.sleep(45)
                     logger.info("starting science2mm ...")
                     countquery_mm = science2mm(
                         args, config, gcndatapath, scitmpdatapath
