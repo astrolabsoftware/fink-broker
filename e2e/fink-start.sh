@@ -57,11 +57,6 @@ then
   . $CIUXCONFIG
   IMAGE="$CIUX_IMAGE_URL"
   echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
-  kubectl port-forward -n minio svc/minio 9000 &
-  # Wait to port-forward to start
-  sleep 2
-  echo "Create S3 bucket"
-  finkctl --endpoint=localhost:9000 s3 makebucket
   if [[ "$IMAGE" =~ "-noscience" ]];
   then
     NOSCIENCE_OPT="--noscience"
@@ -70,6 +65,12 @@ then
     NOSCIENCE_OPT=""
     FINKCONFIG="$DIR/finkconfig"
   fi
+  kubectl port-forward -n minio svc/minio 9000 &
+  # Wait to port-forward to start
+  sleep 2
+  echo "Create S3 bucket"
+  export FINKCONFIG
+  finkctl --endpoint=localhost:9000 s3 makebucket
 fi
 
 if [ -z "$IMAGE" ];
