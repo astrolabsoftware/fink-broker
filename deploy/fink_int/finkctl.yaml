@@ -1,0 +1,30 @@
+apiVersion: v1alpha2
+s3:
+  endpoint: http://ijc-rgw-cloud-3.ijclab.in2p3.fr:8081/
+  use_ssl: "false"
+  bucket: finkk8s2
+# General parameter used to run fink tasks
+run:
+  cpus: 2
+  instances: 1
+  fink_trigger_update: "2"
+  # Can be set using --image option
+  image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker:v3.1.2-rc1-34-g9bf5ec2
+  # Default to s3a://<s3.bucket>
+  # online_data_prefix: s3a://fink-broker-online
+  producer: ztf
+  log_level: INFO
+stream2raw:
+  memory: 3000m
+  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro
+  # Comma-separated list of kafka servers
+  kafka_socket: "public.alerts.ztf.uw.edu:9092"
+  kafka_starting_offset: earliest
+  kafka_topic: "ztf_{{.Night}}_programid1"
+raw2science:
+  memory: 3000m
+distribution:
+  # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
+  distribution_servers: "134.158.74.95:24498"
+  distribution_schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
+  substream_prefix: "finkk8s_"

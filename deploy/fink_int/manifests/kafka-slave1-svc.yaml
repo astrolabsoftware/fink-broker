@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-slave1
+spec:
+  ports:
+    - protocol: TCP
+      port: 24498
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kafka-slave1
+  labels:
+    kubernetes.io/service-name: kafka-slave1
+addressType: IPv4
+ports:
+  - name: '' # empty because port 24498 is not assigned as a well-known
+             # port (by IANA)
+    appProtocol: http
+    protocol: TCP
+    port: 24498
+endpoints:
+  - addresses:
+      - "134.158.74.238"
