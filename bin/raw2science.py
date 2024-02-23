@@ -137,7 +137,7 @@ def main():
                 )
 
                 all_parquet_files = glob.glob(os.path.join(scitmpdatapath, "*.parquet"))
-                
+
                 logger.info(f"""
                     cond1: {path_exist(gcn_path)}
                     cond2: {len(all_parquet_files)}
