@@ -112,6 +112,9 @@ if [[ "$WITH_DB" = true ]] ; then
   # merge data
   fink start merge -c $conf --night $NIGHT_STR
 
+  # fink-mm offline mode
+  fink_mm join_stream offline --night $NIGHT_INT --config $conf
+
   # Update science portal
   fink start science_archival -c $conf --night $NIGHT_INT
   fink start index_archival -c $conf --night $NIGHT_INT --index_table jd_objectId
