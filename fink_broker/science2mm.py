@@ -6,6 +6,7 @@ from fink_broker.sparkUtils import connect_to_raw_database
 from pyspark.sql.streaming import StreamingQuery
 import argparse
 import configparser
+import os
 
 
 def science2mm(
@@ -62,10 +63,9 @@ def science2mm(
         gaia_dist=float(config["PRIOR_FILTER"]["gaia_dist"]),
     )
 
-    mmtmpdatapath = args.online_data_prefix + f"/mm/{args.night}"
-    checkpointpath_mm_tmp = args.online_data_prefix + "/mm_checkpoint/{}".format(
-        args.night
-    )
+    mm_path_output = config["PATH"]["online_grb_data_prefix"]
+    mmtmpdatapath = os.path.join(mm_path_output, "online")
+    checkpointpath_mm_tmp = os.path.join(mm_path_output, "online_checkpoint")
 
     query_mm = (
         df_multi_messenger.writeStream.outputMode("append")

@@ -27,6 +27,7 @@ from pyspark.sql import functions as F
 import argparse
 import time
 import os
+import glob
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
@@ -134,20 +135,34 @@ def main():
                 gcn_path = (
                     gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
                 )
+
+                all_parquet_files = glob.glob(os.path.join(scitmpdatapath, "*.parquet"))
+                
+                logger.info(f"""
+                    cond1: {path_exist(gcn_path)}
+                    cond2: {len(all_parquet_files)}
+                    cond3: {os.path.getsize(all_parquet_files[0]) if len(all_parquet_files) > 0 else ""}
+                """)
+
                 # if there is gcn and ztf data
-                if path_exist(gcn_path) and path_exist(scitmpdatapath):
+                if path_exist(gcn_path) and len(all_parquet_files) > 0 and os.path.getsize(all_parquet_files[0]) > 0:
                     # Start the GCN x ZTF cross-match stream
+                    t_before = time.time()
+                    time.sleep(30)
+                    logger.info("starting science2mm ...")
                     countquery_mm = science2mm(
                         args, config, gcndatapath, scitmpdatapath
                     )
+                    count += (time.time() - t_before)
                     break
                 else:
                     # wait for comming GCN
                     count += 1
-                    time.sleep(0.9)
+                    time.sleep(1)
 
             # If GCN arrived, wait for the remaining time since the launch of raw2science
             remaining_time = args.exit_after - count
+            logger.info(f"time to the end: {remaining_time} sec")
             time.sleep(remaining_time)
             countquery_science.stop()
             if countquery_mm is not None:
