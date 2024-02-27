@@ -68,11 +68,15 @@ jobs:
 
 ### --- The steps below deploy a simple application in the vcluster.
 
-      - name: Create a deployment
+      - name: Create a deployment using internal registry
         shell: bash
         run: |
+          docker pull registry.k8s.io/e2e-test-images/agnhost:2.39
+          docker tag registry.k8s.io/e2e-test-images/agnhost:2.39 \
+            docker-registry.docker-registry:5000/agnhost:2.39
+          docker push docker-registry.docker-registry:5000/agnhost:2.39
           kubectl create deployment hello-node                      \
-            --image=registry.k8s.io/e2e-test-images/agnhost:2.39    \
+            --image=docker-registry.docker-registry:5000/agnhost:2.39    \
             -- /agnhost netexec --http-port=8080
           sleep 10s
           kubectl get deployments
