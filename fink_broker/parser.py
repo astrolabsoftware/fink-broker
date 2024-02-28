@@ -231,7 +231,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_FAT_OUTPUT]
         """)
     parser.add_argument(
-        '-mmconfigpath', type=str, default='',
+        '-mmconfigpath', type=str, default='no-config',
         help="""
         Path to fink_mm configuration file
         [MMCONFIGPATH]

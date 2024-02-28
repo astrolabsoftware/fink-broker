@@ -47,6 +47,10 @@ while [ "$#" -gt 0 ]; do
         WITH_UNITS=true
         shift 1
         ;;
+    --mm-offline)
+        WITH_MM_OFFLINE=true
+        shift 1
+        ;;
     -h)
         echo -e $message_help
         exit
@@ -112,9 +116,6 @@ if [[ "$WITH_DB" = true ]] ; then
   # merge data
   fink start merge -c $conf --night $NIGHT_STR
 
-  # fink-mm offline mode
-  fink_mm join_stream offline --night $NIGHT_INT --config $conf
-
   # Update science portal
   fink start science_archival -c $conf --night $NIGHT_INT
   fink start index_archival -c $conf --night $NIGHT_INT --index_table jd_objectId
@@ -133,6 +134,12 @@ if [[ "$WITH_DB" = true ]] ; then
   fink start stats -c $conf --night $NIGHT_INT
 
   fink start check_science_portal -c $conf
+fi
+
+# MM offline test (need "fink start merge" before)
+if [[ "$WITH_MM_OFFLINE" = true ]] ; then
+  # fink-mm offline mode
+  fink_mm join_stream offline --night $NIGHT_INT --config ${FINK_HOME}/conf/fink_mm.conf
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then

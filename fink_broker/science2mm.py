@@ -52,7 +52,7 @@ def science2mm(
             break
 
         except Exception:
-            logger.info(f"Exception occured: wait: {wait}", exc_info=1)
+            logger.info("Exception occured: wait: {}".format(wait), exc_info=1)
             time.sleep(wait)
             wait *= 1.2 if wait < 60 else 1
             continue
@@ -62,7 +62,7 @@ def science2mm(
     last_time = cur_time - timedelta(hours=7)  # 17:00 Paris time yesterday
     end_time = cur_time + timedelta(hours=17)  # 17:00 Paris time today
     gcn_dataframe = gcn_dataframe.filter(
-        f"triggerTimejd >= {last_time.jd} and triggerTimejd < {end_time.jd}"
+        "triggerTimejd >= {} and triggerTimejd < {}".format(last_time.jd, end_time.jd)
     )
     df_multi_messenger, _ = ztf_join_gcn_stream(
         DataMode.STREAMING,

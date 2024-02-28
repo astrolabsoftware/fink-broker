@@ -143,41 +143,53 @@ def main():
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
 
+    config_path = args.mmconfigpath
+    count = 0
+    stream_distrib_list = None
+
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
 
-        count = 0
-        config = get_config({"--config": args.mmconfigpath})
+        if config_path != "no-config":
+            config = get_config({"--config": config_path})
 
-        while count < args.exit_after:
+            while count < args.exit_after:
 
-            mm_path_output = config["PATH"]["online_grb_data_prefix"]
-            mmtmpdatapath = os.path.join(mm_path_output, "online")
+                mm_path_output = config["PATH"]["online_grb_data_prefix"]
+                mmtmpdatapath = os.path.join(mm_path_output, "online")
 
-            # if there is gcn and ztf data
-            if path_exist(mmtmpdatapath):
+                # if there is gcn and ztf data
+                if path_exist(mmtmpdatapath):
 
-                t_before = time.time()
-                logger.info("starting mm2distribute ...")
-                stream_distrib_list = mm2distribute(
-                    spark,
-                    config,
-                    args
-                )
-                count += time.time() - t_before
-                break
+                    t_before = time.time()
+                    logger.info("starting mm2distribute ...")
+                    stream_distrib_list = mm2distribute(
+                        spark,
+                        config,
+                        args
+                    )
+                    count += time.time() - t_before
+                    break
 
-            count += 1
-            time.sleep(1.0)
+                count += 1
+                time.sleep(1.0)
 
         remaining_time = args.exit_after - count
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         disquery.stop()
-        for stream in stream_distrib_list:
-            stream.stop()
+        if stream_distrib_list is not None:
+            for stream in stream_distrib_list:
+                stream.stop()
         logger.info("Exiting the distribute service normally...")
     else:
+        if config_path != "no-config":
+            config = get_config({"--config": config_path})
+            stream_distrib_list = mm2distribute(
+                spark,
+                config,
+                args
+            )
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()
 

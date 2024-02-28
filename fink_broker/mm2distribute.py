@@ -12,7 +12,7 @@ def mm2distribute(spark, config, args):
     password_writer = config["DISTRIBUTION"]["password_writer"]
 
     year, month, day = args.night[0:4], args.night[4:6], args.night[6:8]
-    basepath = os.path.join(mm_data_path, "online", f"year={year}/month={month}/day={day}")
+    basepath = os.path.join(mm_data_path, "online", "year={}/month={}/day={}".format(year, month, day))
     checkpointpath_mm = os.path.join(mm_data_path, "mm_distribute_checkpoint")
 
     logger = get_fink_logger()
@@ -35,7 +35,7 @@ def mm2distribute(spark, config, args):
             break
 
         except Exception:
-            logger.info(f"Exception occured: wait: {wait}", exc_info=1)
+            logger.info("Exception occured: wait: {}".format(wait), exc_info=1)
             time.sleep(wait)
             wait *= 1.2 if wait < 60 else 1
             continue

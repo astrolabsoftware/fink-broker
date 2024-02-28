@@ -68,9 +68,11 @@ def main():
 
     # data path
     rawdatapath = os.path.join(args.online_data_prefix, "raw")
-    scitmpdatapath = os.path.join(args.online_data_prefix, f"science/{args.night}")
+    scitmpdatapath = os.path.join(
+        args.online_data_prefix, "science/{}".format(args.night)
+    )
     checkpointpath_sci_tmp = os.path.join(
-        args.online_data_prefix, f"science_checkpoint/{args.night}"
+        args.online_data_prefix, "science_checkpoint/{}".format(args.night)
     )
 
     if args.producer == "elasticc":
@@ -78,8 +80,8 @@ def main():
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            os.path.join(rawdatapath, f"{args.night}"),
-            os.path.join(rawdatapath, f"{args.night}"),
+            os.path.join(rawdatapath, "{}".format(args.night)),
+            os.path.join(rawdatapath, "{}".format(args.night)),
             latestfirst=False,
         )
 
@@ -121,34 +123,37 @@ def main():
             .start()
         )
 
+        config_path = args.mmconfigpath
         count = 0
-        config = get_config({"--config": args.mmconfigpath})
-        gcndatapath = config["PATH"]["online_gcn_data_prefix"]
         countquery_mm = None
 
         if args.exit_after is not None:
+
             # Keep the Streaming running until something or someone ends it!
+            if config_path != "no-config":
+                config = get_config({"--config": config_path})
+                gcndatapath = config["PATH"]["online_gcn_data_prefix"]
 
-            # Wait for GCN comming
-            while count < args.exit_after:
-                gcn_path = (
-                    gcndatapath + f"/year={args.night[0:4]}/month={args.night[4:6]}/day={args.night[6:8]}"
-                )
-
-                # if there is gcn and ztf data
-                if path_exist(gcn_path) and path_exist(scitmpdatapath):
-                    # Start the GCN x ZTF cross-match stream
-                    t_before = time.time()
-                    logger.info("starting science2mm ...")
-                    countquery_mm = science2mm(
-                        args, config, gcndatapath, scitmpdatapath
+                # Wait for GCN comming
+                while count < args.exit_after:
+                    gcn_path = gcndatapath + "/year={}/month={}/day={}".format(
+                        args.night[0:4], args.night[4:6], args.night[6:8]
                     )
-                    count += time.time() - t_before
-                    break
-                else:
-                    # wait for comming GCN
-                    count += 1
-                    time.sleep(1)
+
+                    # if there is gcn and ztf data
+                    if path_exist(gcn_path) and path_exist(scitmpdatapath):
+                        # Start the GCN x ZTF cross-match stream
+                        t_before = time.time()
+                        logger.info("starting science2mm ...")
+                        countquery_mm = science2mm(
+                            args, config, gcndatapath, scitmpdatapath
+                        )
+                        count += time.time() - t_before
+                        break
+                    else:
+                        # wait for comming GCN
+                        count += 1
+                        time.sleep(1)
 
             # If GCN arrived, wait for the remaining time since the launch of raw2science
             remaining_time = args.exit_after - count
@@ -158,8 +163,11 @@ def main():
             if countquery_mm is not None:
                 countquery_mm.stop()
         else:
-            # Start the GCN x ZTF cross-match stream
-            countquery_mm = science2mm(args, config, gcndatapath, scitmpdatapath)
+            if config_path != "no-config":
+                config = get_config({"--config": config_path})
+                gcndatapath = config["PATH"]["online_gcn_data_prefix"]
+                # Start the GCN x ZTF cross-match stream
+                countquery_mm = science2mm(args, config, gcndatapath, scitmpdatapath)
             # Wait for the end of queries
             spark.streams.awaitAnyTermination()
 
