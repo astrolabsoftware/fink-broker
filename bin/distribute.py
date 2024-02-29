@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,10 @@ def main():
     args = getargs(parser)
 
     # Initialise Spark session
-    spark = init_sparksession(name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2)
+    spark = init_sparksession(
+        name="distribute_{}_{}".format(args.producer, args.night),
+        shuffle_partitions=2
+    )
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -63,20 +66,15 @@ def main():
     inspect_application(logger)
 
     # data path
-    scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint'
+    scitmpdatapath = args.online_data_prefix + '/science/{}'.format(args.night)
+    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint/{}'.format(args.night)
 
     # Connect to the TMP science database
-    input_sci = scitmpdatapath + "/year={}/month={}/day={}".format(
-        args.night[0:4], args.night[4:6], args.night[6:8])
     df = connect_to_raw_database(
-        input_sci,
-        input_sci,
+        scitmpdatapath,
+        scitmpdatapath,
         latestfirst=False
     )
-
-    # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
 
     # Cast fields to ease the distribution
     cnames = df.columns
@@ -92,7 +90,7 @@ def main():
         cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
 
     # Extract schema
-    df_schema = spark.read.format('parquet').load(input_sci)
+    df_schema = spark.read.format('parquet').load(scitmpdatapath)
     df_schema = df_schema.selectExpr(cnames)
 
     schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
@@ -137,7 +135,7 @@ def main():
             .option("kafka.security.protocol", "SASL_PLAINTEXT")\
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("topic", topicname)\
-            .option("checkpointLocation", checkpointpath_kafka + topicname)\
+            .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
 

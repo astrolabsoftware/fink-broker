@@ -38,16 +38,10 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    year = args.night[:4]
-    month = args.night[4:6]
-    day = args.night[6:8]
+    print('Processing {}'.format(args.night))
 
-    print('Processing {}/{}/{}'.format(year, month, day))
-
-    input_raw = '{}/raw/year={}/month={}/day={}'.format(
-        args.online_data_prefix, year, month, day)
-    input_science = '{}/science/year={}/month={}/day={}'.format(
-        args.online_data_prefix, year, month, day)
+    input_raw = '{}/raw/{}'.format(args.online_data_prefix, args.night)
+    input_science = '{}/science/{}'.format(args.online_data_prefix, args.night)
 
     # basepath
     output_raw = '{}/raw'.format(args.agg_data_prefix)
