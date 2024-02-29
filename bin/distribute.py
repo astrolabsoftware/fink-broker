@@ -23,16 +23,20 @@
 """
 import argparse
 import time
+import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
+from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database, path_exist
 from fink_broker.distributionUtils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.mm2distribute import mm2distribute
 
 from fink_utils.spark.utils import concat_col
 
 from fink_utils.spark.utils import apply_user_defined_filter
+
+from fink_mm.init import get_config
 
 # User-defined topics
 userfilters = [
@@ -78,7 +82,12 @@ def main():
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
+    # cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
+
+    cnames[cnames.index('brokerEndProcessTimestamp')] = 'cast(brokerEndProcessTimestamp as string) as brokerEndProcessTimestamp'
+    cnames[cnames.index('brokerStartProcessTimestamp')] = 'cast(brokerStartProcessTimestamp as string) as brokerStartProcessTimestamp'
+    cnames[cnames.index('brokerIngestTimestamp')] = 'cast(brokerIngestTimestamp as string) as brokerIngestTimestamp'
+
     cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
     cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
@@ -111,6 +120,10 @@ def main():
         df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
 
     broker_list = args.distribution_servers
+    username = args.kafka_sasl_username
+    password = args.kafka_sasl_password
+    kafka_buf_mem = args.kafka_buffer_memory
+    kafka_timeout_ms = args.kafka_delivery_timeout_ms
     for userfilter in userfilters:
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
@@ -132,19 +145,63 @@ def main():
             .writeStream\
             .format("kafka")\
             .option("kafka.bootstrap.servers", broker_list)\
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
+            .option("kafka.sasl.username", username)\
+            .option("kafka.sasl.password", password)\
+            .option("kafka.buffer.memory", kafka_buf_mem)\
+            .option("kafka.delivery.timeout.ms", kafka_timeout_ms)\
+            .option("kafka.auto.create.topics.enable", True)\
             .option("topic", topicname)\
             .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
 
+    config_path = args.mmconfigpath
+    count = 0
+    stream_distrib_list = None
+
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
-        time.sleep(args.exit_after)
+
+        if config_path != "no-config":
+            config = get_config({"--config": config_path})
+
+            while count < args.exit_after:
+
+                mm_path_output = config["PATH"]["online_grb_data_prefix"]
+                mmtmpdatapath = os.path.join(mm_path_output, "online")
+
+                # if there is gcn and ztf data
+                if path_exist(mmtmpdatapath):
+
+                    t_before = time.time()
+                    logger.info("starting mm2distribute ...")
+                    stream_distrib_list = mm2distribute(
+                        spark,
+                        config,
+                        args
+                    )
+                    count += time.time() - t_before
+                    break
+
+                count += 1
+                time.sleep(1.0)
+
+        remaining_time = args.exit_after - count
+        remaining_time = remaining_time if remaining_time > 0 else 0
+        time.sleep(remaining_time)
         disquery.stop()
+        if stream_distrib_list is not None:
+            for stream in stream_distrib_list:
+                stream.stop()
         logger.info("Exiting the distribute service normally...")
     else:
+        if config_path != "no-config":
+            config = get_config({"--config": config_path})
+            stream_distrib_list = mm2distribute(
+                spark,
+                config,
+                args
+            )
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()
 
