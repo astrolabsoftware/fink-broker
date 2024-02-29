@@ -39,6 +39,11 @@ def mm2distribute(spark, config, args):
             time.sleep(wait)
             wait *= 1.2 if wait < 60 else 1
             continue
+    
+    df_grb_stream = df_grb_stream\
+    .drop("brokerEndProcessTimestamp")\
+    .drop("brokerStartProcessTimestamp")\
+    .drop("brokerIngestTimestamp")
 
     stream_distribute_list = grb_distribution_stream(
         df_grb_stream,

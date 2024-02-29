@@ -83,6 +83,11 @@ def main():
     # Cast fields to ease the distribution
     cnames = df.columns
     # cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
+
+    cnames[cnames.index('brokerEndProcessTimestamp')] = 'cast(brokerEndProcessTimestamp as string) as brokerEndProcessTimestamp'
+    cnames[cnames.index('brokerStartProcessTimestamp')] = 'cast(brokerStartProcessTimestamp as string) as brokerStartProcessTimestamp'
+    cnames[cnames.index('brokerIngestTimestamp')] = 'cast(brokerIngestTimestamp as string) as brokerIngestTimestamp'
+
     cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
     cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
@@ -115,6 +120,10 @@ def main():
         df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
 
     broker_list = args.distribution_servers
+    username = args.kafka_sasl_username
+    password = args.kafka_sasl_password
+    kafka_buf_mem = args.kafka_buffer_memory
+    kafka_timeout_ms = args.kafka_delivery_timeout_ms
     for userfilter in userfilters:
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
@@ -136,8 +145,11 @@ def main():
             .writeStream\
             .format("kafka")\
             .option("kafka.bootstrap.servers", broker_list)\
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
+            .option("kafka.sasl.username", username)\
+            .option("kafka.sasl.password", password)\
+            .option("kafka.buffer.memory", kafka_buf_mem)\
+            .option("kafka.delivery.timeout.ms", kafka_timeout_ms)\
+            .option("kafka.auto.create.topics.enable", True)\
             .option("topic", topicname)\
             .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \

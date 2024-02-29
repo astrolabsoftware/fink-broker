@@ -147,6 +147,30 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [DISTRIBUTION_SCHEMA]
         """)
     parser.add_argument(
+        '-kafka_sasl_username', type=str, default='',
+        help="""
+        the sasl username authentication for kafka producer
+        [KAFKA_SASL_USERNAME]
+        """)
+    parser.add_argument(
+        '-kafka_sasl_password', type=str, default='',
+        help="""
+        the sasl password authentication for kafka producer
+        [KAFKA_SASL_PASSWORD]
+        """)
+    parser.add_argument(
+        '-kafka_buffer_memory', type=int, default='',
+        help="""
+        the kafka buffer memory size
+        [KAFKA_BUFFER_MEMORY]
+        """)
+    parser.add_argument(
+        '-kafka_delivery_timeout_ms', type=int, default='',
+        help="""
+        the delivery kafka message timeout in ms
+        [KAFKA_DELIVERY_TIMEOUT_MS]
+        """)
+    parser.add_argument(
         '-startingOffset_dist', type=str, default='',
         help="""From which offset(timestamp) you want to start the
         distribution service.

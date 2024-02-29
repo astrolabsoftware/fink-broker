@@ -22,16 +22,16 @@ ZK_IPPORT="localhost:2181"
 # Array with Broker addresses (IP and Port)
 declare -a KAFKA_BROKER_IPPORT
 
-KAFKA_BROKER_IPPORT[0]="localhost:9093"
-KAFKA_BROKER_IPPORT[1]="localhost:9094"
-KAFKA_BROKER_IPPORT[2]="localhost:9095"
+KAFKA_BROKER_IPPORT[0]="localhost:9092"
+# KAFKA_BROKER_IPPORT[1]="localhost:9093"
+# KAFKA_BROKER_IPPORT[2]="localhost:9094"
 
 # Array with Properties files for Kafka Brokers
 declare -a KAFKA_BROKER_PROPERTIES
 
 KAFKA_BROKER_PROPERTIES[0]="${FINK_HOME}/conf/fink_kafka.server0.properties"
-KAFKA_BROKER_PROPERTIES[1]="${FINK_HOME}/conf/fink_kafka.server1.properties"
-KAFKA_BROKER_PROPERTIES[2]="${FINK_HOME}/conf/fink_kafka.server2.properties"
+# KAFKA_BROKER_PROPERTIES[1]="${FINK_HOME}/conf/fink_kafka.server1.properties"
+# KAFKA_BROKER_PROPERTIES[2]="${FINK_HOME}/conf/fink_kafka.server2.properties"
 
 declare kafka_servers
 for i in ${KAFKA_BROKER_IPPORT[@]}; do
@@ -76,6 +76,11 @@ FINK_PRODUCER_JAAS="${FINK_HOME}/conf/fink_kafka_producer_jaas.conf"
 
 # Fink test Consumer
 FINK_TEST_CONSUMER_JAAS="${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf"
+
+KAFKA_SASL_USERNAME=toto
+KAFKA_SASL_PASSWORD=tata
+KAFKA_BUFFER_MEMORY=134217728
+KAFKA_DELIVERY_TIMEOUT_MS=240000
 
 # Slack channels to send automatic alerts
 SLACK_CHANNELS="${FINK_HOME}/conf/slack_channels.txt"
