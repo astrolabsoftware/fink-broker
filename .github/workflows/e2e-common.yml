@@ -97,14 +97,36 @@ jobs:
       - name: Ciux project ignition
         run: |
           ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
-      - name: Create k8s (kind) cluster
-        run: |
-          # v0.20.0 does not work on self-hosted runners
-          ktbx install kind --kind-version=${{ inputs.kind_version }}
-          ktbx install kubectl
-          # Configure private registry if needed
-          ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
-          ktbx create -s
+          - name: Deploy the virtual cluster
+          shell: bash
+          run: |
+            tmpvalues="$(mktemp)"
+            cat > "${tmpvalues}" << VALUES
+            mapServices:
+              fromHost:
+                - from: docker-registry/docker-registry
+                  to: docker-registry/docker-registry
+            VALUES
+            # Create a manifest file to deploy the registry certificate in
+            # namespaces of the vcluster that need it with:
+            # `kubectl apply -f "${REGISTRY_CA_MANIFEST}" -n <namespace>`
+            cat > "${REGISTRY_CA_MANIFEST}" << MANIFEST
+            apiVersion: v1
+            data:
+              ca.crt: $(base64 -w0 '/registry-ca/docker-registry.docker-registry:5000/ca.crt')
+            kind: Secret
+            metadata:
+              name: registry-ca
+            MANIFEST
+
+            vcluster create "$(hostname)"     \
+              --connect=false --namespace="$(hostname)" \
+              --extra-values="${tmpvalues}" --chart-name=vcluster
+            vcluster connect "$(hostname)"    \
+              --namespace="$(hostname)" --server="$(hostname).$(hostname)"
+
+  ### --- At this point, a vcluster is deployed and kubectl is configured to
+  ### --- create resources in it.
       - name: Install olm and argocd operators
         run: |
           ktbx install olm
