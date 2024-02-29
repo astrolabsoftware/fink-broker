@@ -159,13 +159,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [KAFKA_SASL_PASSWORD]
         """)
     parser.add_argument(
-        '-kafka_buffer_memory', type=int, default='',
+        '-kafka_buffer_memory', type=int, default=134217728,
         help="""
         the kafka buffer memory size
         [KAFKA_BUFFER_MEMORY]
         """)
     parser.add_argument(
-        '-kafka_delivery_timeout_ms', type=int, default='',
+        '-kafka_delivery_timeout_ms', type=int, default=1000,
         help="""
         the delivery kafka message timeout in ms
         [KAFKA_DELIVERY_TIMEOUT_MS]
