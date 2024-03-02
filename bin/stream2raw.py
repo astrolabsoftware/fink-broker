@@ -68,6 +68,7 @@ def main():
         servers=args.servers,
         topic=args.topic,
         startingoffsets=args.startingoffsets_stream,
+        max_offsets_per_trigger=args.max_offsets_per_trigger,
         failondataloss=False,
         kerberos=False)
 

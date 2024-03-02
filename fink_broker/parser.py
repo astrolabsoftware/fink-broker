@@ -59,6 +59,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         building the raw database: latest, earliest, or custom.
         [KAFKA_STARTING_OFFSET]
         """)
+     parser.add_argument(
+        '-max_offsets_per_trigger', type=int, default=5000,
+        help="""Maximum number of offsets to fetch per trigger.
+        Default is 5000.
+        [MAX_OFFSETS_PER_TRIGGER]
+        """)
     parser.add_argument(
         '-online_data_prefix', type=str, default='',
         help="""Path prefix to store online data, e.g. /path/to/online.
