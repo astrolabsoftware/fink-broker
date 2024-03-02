@@ -209,7 +209,6 @@ def get_spark_context() -> SparkContext:
 def connect_to_kafka(
         servers: str, topic: str,
         startingoffsets: str = "latest",
-        max_offsets_per_trigger: int = 5000,
         failondataloss: bool = False, kerberos: bool = False) -> DataFrame:
     """ Initialise SparkSession, and set default Kafka parameters
 
@@ -224,8 +223,6 @@ def connect_to_kafka(
         latest (only new data), earliest (connect from the oldest
         offset available), or a number (see Spark Kafka integration).
         Default is latest.
-    max_offsets_per_trigger: int, optional
-        Maximum number of offsets to fetch per trigger. Default is 5,000.
     failondataloss: bool, optional
         If True, Spark streaming job will fail if it is asking for data offsets
         that do not exist anymore in Kafka (because they have been deleted after
@@ -253,8 +250,7 @@ def connect_to_kafka(
     df = spark \
         .readStream \
         .format("kafka") \
-        .option("kafka.bootstrap.servers", servers) \
-        .option("maxOffsetsPerTrigger", max_offsets_per_trigger)
+        .option("kafka.bootstrap.servers", servers)
 
     if kerberos:
         df = df.option(
