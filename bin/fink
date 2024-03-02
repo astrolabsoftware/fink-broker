@@ -257,7 +257,6 @@ elif [[ $service == "stream2raw" ]]; then
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
     ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -producer ${PRODUCER} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
     -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-    -max_offsets_per_trigger ${MAX_OFFSETS_PER_TRIGGER} \
     -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
