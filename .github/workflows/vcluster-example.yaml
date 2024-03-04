@@ -87,6 +87,7 @@ jobs:
       - name: Create a service
         shell: bash
         run: |
+          sleep 10000
           kubectl expose deployment hello-node --type=LoadBalancer --port=8080
           sleep 60s
           kubectl get services
