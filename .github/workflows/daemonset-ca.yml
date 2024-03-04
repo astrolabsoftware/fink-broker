@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: registry-ca
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: registry-ca
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: registry-ca
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: registry-ca
+    spec:
+      containers:
+      - name: registry-ca
+        image: ubuntu
+        command: ["/bin/sleep", "infinity"]
+        volumeMounts:
+          - mountPath: /etc/docker/certs.d
+            name: registry-ca
+            readOnly: true
+      volumes:
+      - name: etc-docker
+        hostPath:
+          path: /etc/docker/certs.d/
+      - name: registry-ca
+        secret:
+          secretName: registry-ca
+          items:
+            - key: ca.crt
+              path: docker-registry.docker-registry:5000/ca.crt
