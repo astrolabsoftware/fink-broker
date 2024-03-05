@@ -5,6 +5,7 @@ s3:
   bucket: fink-broker-online
 # General parameter used to run fink tasks
 run:
+  cpu: 1
   fink_trigger_update: "2"
   # Can be set using --image option
   # image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker:2.7.1-33-ge27a2aa-dirty
@@ -18,6 +19,8 @@ stream2raw:
   kafka_starting_offset: earliest
   kafka_topic: ztf-stream-sim
 raw2science:
+  instances: 2
+  cpu: 2
   memory: 3000m
   night: "20200101"
 distribution:

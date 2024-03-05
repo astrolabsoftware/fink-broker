@@ -5,7 +5,8 @@ s3:
   bucket: fink-broker-online
 # General parameter used to run fink tasks
 run:
-  cpu: 0
+  instances: 1
+  cpus: 0
   memory: 1000m
   fink_trigger_update: "2"
   # Can be set using --image option
