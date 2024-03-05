@@ -113,6 +113,8 @@ def main():
     for colname in to_expand:
         df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
 
+    df = df.withColumn('cstampDatac', df["cutoutScience.stampData"])
+
     broker_list = args.distribution_servers
     for userfilter in userfilters:
         # The topic name is the filter name
