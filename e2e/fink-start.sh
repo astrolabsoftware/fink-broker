@@ -32,17 +32,23 @@ usage() {
   echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
   echo "  -f: finkctl configuration file"
   echo "  -i: fink-broker image"
+  echo "  -N: night to process, e.g. 20210101"
+  echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
+  echo "  -h: display this help"
 }
 
 E2E_TEST=false
 NOSCIENCE_OPT=""
+NIGHT=""
 
 # Parse option for finkctl configuration file and fink-broker image
-while getopts "ef:i:h" opt; do
+while getopts "ef:i:N:th" opt; do
   case $opt in
     e) E2E_TEST=true;;
     f) FINKCONFIG=$OPTARG ;;
     h) echo usage ; exit 0 ;;
+    N) NIGHT=$OPTARG ;;
+    t) NIGHT=$(date +%Y%m%d) ;;
     i) IMAGE=$OPTARG ;;
   esac
 done
@@ -98,7 +104,7 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
 
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task --image $IMAGE -N $NIGHT >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
