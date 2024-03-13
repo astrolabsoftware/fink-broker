@@ -99,6 +99,7 @@ echo "Create spark ServiceAccount"
 kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
 
 NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
+# FIXME  --namespace=default??? Create a rolebinding in the spark namespace??
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
