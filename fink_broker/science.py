@@ -37,37 +37,31 @@ _LOG = logging.getLogger(__name__)
 
 
 # Conditional import of science modules
-def try_import(module_path):
-    try:
-        return __import__(module_path, fromlist=[''])
-    except ImportError:
-        _LOG.warning(f"Failed to import {module_path}")
-        return None
+try:
+    from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+    from fink_science.xmatch.processor import xmatch_cds
+    from fink_science.xmatch.processor import crossmatch_other_catalog
+    from fink_science.xmatch.processor import crossmatch_mangrove
 
-modules = [
-    'fink_science.random_forest_snia.processor.rfscore_sigmoid_full',
-    'fink_science.xmatch.processor.xmatch_cds',
-    'fink_science.xmatch.processor.crossmatch_other_catalog',
-    'fink_science.xmatch.processor.crossmatch_mangrove',
-    'fink_science.snn.processor.snn_ia',
-    'fink_science.microlensing.processor.mulens',
-    'fink_science.asteroids.processor.roid_catcher',
-    'fink_science.nalerthist.processor.nalerthist',
-    'fink_science.kilonova.processor.knscore',
-    'fink_science.ad_features.processor.extract_features_ad',
-    'fink_science.anomaly_detection.processor.anomaly_score',
-    'fink_science.random_forest_snia.processor.rfscore_rainbow_elasticc',
-    'fink_science.snn.processor.snn_ia_elasticc',
-    'fink_science.snn.processor.snn_broad_elasticc',
-    'fink_science.cats.processor.predict_nn',
-    'fink_science.agn.processor.agn_elasticc',
-    'fink_science.slsn.processor.slsn_elasticc',
-    'fink_science.fast_transient_rate.processor.magnitude_rate',
-    'fink_science.fast_transient_rate.rate_module_output_schema'
-]
+    from fink_science.snn.processor import snn_ia
+    from fink_science.microlensing.processor import mulens
+    from fink_science.asteroids.processor import roid_catcher
+    from fink_science.nalerthist.processor import nalerthist
+    from fink_science.kilonova.processor import knscore
+    from fink_science.ad_features.processor import extract_features_ad
+    from fink_science.anomaly_detection.processor import anomaly_score
 
-for module in modules:
-    globals()[module.split('.')[-1]] = try_import(module)
+    from fink_science.random_forest_snia.processor import rfscore_rainbow_elasticc
+    from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
+    from fink_science.cats.processor import predict_nn
+    from fink_science.agn.processor import agn_elasticc
+    from fink_science.slsn.processor import slsn_elasticc
+    from fink_science.fast_transient_rate.processor import magnitude_rate
+    from fink_science.fast_transient_rate import rate_module_output_schema
+    # from fink_science.t2.processor import t2
+except ImportError:
+    _LOG.warning("Fink science modules are not available. ")
+    pass
 
 def dec2theta(dec: float) -> float:
     """ Convert Dec (deg) to theta (rad)
