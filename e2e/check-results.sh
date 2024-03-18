@@ -30,7 +30,7 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="11"
+  expected_topics="12"
 else
   expected_topics="1"
 fi
