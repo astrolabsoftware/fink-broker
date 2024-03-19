@@ -39,6 +39,7 @@ usage() {
 
 E2E_TEST=false
 NOSCIENCE_OPT=""
+IMAGE_OPT=""
 NIGHT_OPT=""
 
 # Parse option for finkctl configuration file and fink-broker image
