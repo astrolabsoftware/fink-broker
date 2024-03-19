@@ -100,7 +100,7 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
 
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task "$IMAGE_OPT" "$NIGHT_OPT" >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task $IMAGE_OPT $NIGHT_OPT >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
