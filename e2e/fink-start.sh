@@ -49,7 +49,7 @@ while getopts "ef:i:N:th" opt; do
     f) FINKCONFIG=$OPTARG ;;
     h) echo usage ; exit 0 ;;
     N) NIGHT_OPT="-N $OPTARG" ;;
-    t) NIGHT="-N $(date +%Y%m%d)" ;;
+    t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
     i) IMAGE_OPT="--image $OPTARG" ;;
   esac
 done
