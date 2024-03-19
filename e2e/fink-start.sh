@@ -63,6 +63,7 @@ if [ $E2E_TEST = true ];
 then
   . $CIUXCONFIG
   IMAGE="$CIUX_IMAGE_URL"
+  IMAGE_OPT="--image $IMAGE"
   echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
   if [[ "$IMAGE" =~ "-noscience" ]];
   then
