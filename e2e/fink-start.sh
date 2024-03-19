@@ -77,12 +77,11 @@ then
   echo "Create S3 bucket"
   export FINKCONFIG
   finkctl --endpoint=localhost:9000 s3 makebucket
-fi
-
-if [ -z "$IMAGE" ];
-then
-    echo "ERROR: IMAGE is not set"
-    exit 1
+  if [ -z "$IMAGE" ];
+  then
+      echo "ERROR: IMAGE is not set"
+      exit 1
+  fi
 fi
 
 if [ -z "$FINKCONFIG" ];
@@ -131,8 +130,8 @@ while ! finkctl wait tasks --timeout="$timeout"; do
     kubectl describe pods -l "spark-role in (executor, driver)"
     kubectl get pods
     echo "ERROR: unable to start fink-broker in $timeout"
-    # For interactive access for debugging purpose
-    sleep 7200
+    echo "ERROR: enabling interactive access for debugging purpose
+    sleep 7200"
     exit 1
   fi
   echo "ERROR: Spark pods are not running after $timeout, retry $counter/$max_retries"
