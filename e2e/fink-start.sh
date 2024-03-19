@@ -31,7 +31,7 @@ usage() {
   echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
   echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
   echo "  -f: finkctl configuration file"
-  echo "  -i: fink-broker image"
+  echo "  -i: fink-broker image, overriden by CIUX_IMAGE_URL environment variable if -e option is set"
   echo "  -N: night to process, e.g. 20210101"
   echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
   echo "  -h: display this help"
@@ -49,7 +49,7 @@ while getopts "ef:i:N:th" opt; do
     h) echo usage ; exit 0 ;;
     N) NIGHT_OPT="-N $OPTARG" ;;
     t) NIGHT="-N $(date +%Y%m%d)" ;;
-    i) IMAGE=$OPTARG ;;
+    i) IMAGE_OPT="--image $OPTARG" ;;
   esac
 done
 
@@ -77,11 +77,6 @@ then
   echo "Create S3 bucket"
   export FINKCONFIG
   finkctl --endpoint=localhost:9000 s3 makebucket
-  if [ -z "$IMAGE" ];
-  then
-      echo "ERROR: IMAGE is not set"
-      exit 1
-  fi
 fi
 
 if [ -z "$FINKCONFIG" ];
@@ -104,7 +99,7 @@ kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount
 
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task --image $IMAGE "$NIGHT_OPT" >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task "$IMAGE_OPT" "$NIGHT_OPT" >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
