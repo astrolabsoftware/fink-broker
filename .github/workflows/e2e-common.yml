@@ -21,7 +21,7 @@ on:
         required: true
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.1-rc13 
+  CIUX_VERSION: v0.0.1-rc13
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
@@ -146,7 +146,7 @@ jobs:
         id: promote
         run: |
           . "$CIUXCONFIG"
-          echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME/$FINKCTL_VERSION" >> "$GITHUB_OUTPUT"
+          echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME/$CIUX_IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image
