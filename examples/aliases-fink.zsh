@@ -9,7 +9,7 @@ MYSHELL=$(echo $SHELL)
 MYSHELL=$(basename $MYSHELL)
 source <(finkctl completion $MYSHELL)
 
-ASTROLAB_DIR="$HOME/src/astrolabsoftware"
+ASTROLAB_DIR="$HOME/src/github.com/astrolabsoftware"
 
 FINK_BROKER_SRC_DIR="$ASTROLAB_DIR/fink-broker"
 FINK_ALERT_SIM_SRC_DIR="$ASTROLAB_DIR/fink-alert-simulator"
