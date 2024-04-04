@@ -9,7 +9,7 @@ Before proceeding, ensure you have the following prerequisites:
 - Access to a Linux workstation with 16GB+ memory and 100GB+ disk
 - Go programming language installed (version 1.21.4).
 - Docker installed.
-- `sudo` accès required
+- `sudo` access required
 
 ## Steps to Install and Run E2E Tests
 
