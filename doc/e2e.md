@@ -1,4 +1,4 @@
-# Installation and Running End-to-End Tests Guide
+# Installation and execution guide for end-to-end tests of the fink-broker
 
 This document provides instructions on how to install and run end-to-end (e2e) tests for the `fink-broker`
 
@@ -48,12 +48,10 @@ ciux ignite --selector ci $PWD --suffix "$SUFFIX"
 
 Create a Kubernetes cluster (Kind).
 
-```yaml
-- name: Create k8s (kind) cluster
-  run: |
-    ktbx install kind
-    ktbx install kubectl
-    ktbx create -s
+```bash
+ktbx install kind
+ktbx install kubectl
+ktbx create -s
 ```
 
 ### Install OLM and ArgoCD Operators
@@ -61,8 +59,8 @@ Create a Kubernetes cluster (Kind).
 Install OLM and ArgoCD operators.
 
 ```bash
-    ktbx install olm
-    ktbx install argocd
+ktbx install olm
+ktbx install argocd
 ```
 
 ### Install Argo Workflows
@@ -70,7 +68,7 @@ Install OLM and ArgoCD operators.
 Install Argo Workflows.
 
 ```bash
-    ktbx install argowf
+ktbx install argowf
 ```
 
 ### Run ArgoCD
@@ -78,7 +76,7 @@ Install Argo Workflows.
 Run ArgoCD.
 
 ```bash
-    ./e2e/argocd.sh
+./e2e/argocd.sh
 ```
 
 ### Run Fink-Alert-Simulator
@@ -86,9 +84,9 @@ Run ArgoCD.
 Run the Fink-Alert-Simulator.
 
 ```bash
-    . "$CIUXCONFIG"
-    "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
-    argo watch @latest
+. "$CIUXCONFIG"
+"$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
+argo watch @latest
 ```
 
 7.  **Install Fink-Broker Prerequisites (JDK, Spark)**
@@ -96,11 +94,11 @@ Run the Fink-Alert-Simulator.
 Install prerequisites for Fink-Broker (JDK, Spark).
 
 ```bash
-    # commands are provided for Debian-based distribution
-    # use yum for RedHat-based distribution
-    sudo apt-get -y update
-    sudo apt-get -y install openjdk-8-jdk-headless
-    ./e2e/prereq-install.sh
+# commands are provided for Debian-based distribution
+# use yum for RedHat-based distribution
+sudo apt-get -y update
+sudo apt-get -y install openjdk-8-jdk-headless
+./e2e/prereq-install.sh
 ```
 
 ### Run Fink-Broker
@@ -108,7 +106,7 @@ Install prerequisites for Fink-Broker (JDK, Spark).
 Run the Fink-Broker.
 
 ```bash
-    ./e2e/fink-start.sh -e
+./e2e/fink-start.sh -e
 ```
 
 ### Check Results
@@ -116,7 +114,7 @@ Run the Fink-Broker.
 Check the results of the tests.
 
 ```bash
-    ./e2e/check-results.sh
+./e2e/check-results.sh
 ```
 
 
