@@ -6,11 +6,25 @@
 
 ### Pre-requisites
 
-Clone the project:
+Before proceeding, ensure you have the following prerequisites:
+
+- Access to a Linux workstation with 16GB+ memory and 100GB+ disk
+- Go programming language installed (version 1.21.4).
+- Docker installed.
+- `sudo` access required
+
+### Clone the project:
 
 ```shell
 git clone https://github.com/astrolabsoftware/fink-broker.git
 cd fink-broker
+```
+
+### Install `ciux`.
+
+```bash
+CIUX_VERSION=v0.0.3-rc2
+go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
 ### Configure the build
@@ -42,7 +56,7 @@ docker login gitlab-registry.in2p3.fr
 
 ## Run integration tests
 
-It is possible to run integration tests locally. The `itest` section of `.github/workflows/ci.yml` displays the shell commands required to perform these tasks. It is possible to launch these commands locally or against a Kubernetes cluster.
+It is possible to run integration tests locally, as documented in `e2e.md`. For additional details, the `e2e` section of `.github/workflows/e2e-common.yml` displays the shell commands required to perform these tasks.
 
 ## Automated build
 
