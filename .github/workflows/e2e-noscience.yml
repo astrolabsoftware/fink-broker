@@ -9,9 +9,11 @@ jobs:
     uses: ./.github/workflows/e2e-common.yml
     with:
       suffix: "noscience"
-      ci_repo: "docker-registry.docker-registry:5000"
-      runner: "['arc-runners']" 
+      ci_repo: "gitlab.dsi.universite-paris-saclay.fr:5005/fink/fink-registry"
+      runner: "['arc-runners']"
       kind_version: "v0.15.0"
     secrets:
       registry_username: ${{ secrets.REGISTRY_USERNAME }}
       registry_token: ${{ secrets.REGISTRY_TOKEN }}
+      private_registry_username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+      private_registry_token: ${{ secrets.PRIVATE_REGISTRY_TOKEN }}

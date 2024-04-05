@@ -107,32 +107,35 @@ done
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
 # Science setup is VERY slow to start, because of raw2science-exec pod
-timeout="600s"
+
+# 5 minutes timeout
+timeout="300"
 
 counter=0
 max_retries=3
 # Sometimes spark pods crashes and finktctl wait may fail
 # even if Spark pod will be running after a while
 # TODO implement the retry in "finkctl wait"
-while ! finkctl wait tasks --timeout="$timeout"; do
+while ! finkctl wait tasks --timeout="${timeout}s"; do
   if [ $counter -gt $max_retries ]; then
-    echo "Spark log files"
-    echo "---------------"
-    for task in $tasks; do
-      echo "--------- $task log file ---------"
-      cat "/tmp/$task.log"
-    done
-    echo "Pods description"
-    echo "----------------"
-    kubectl describe pods -l "spark-role in (executor, driver)"
-    kubectl get pods
     echo "ERROR: unable to start fink-broker in $timeout"
     echo "ERROR: enabling interactive access for debugging purpose
     sleep 7200"
     exit 1
   fi
+  echo "Spark log files"
+  echo "---------------"
+  for task in $tasks; do
+    echo "--------- $task log file ---------"
+    cat "/tmp/$task.log"
+  done
+  echo "Pods description"
+  echo "----------------"
+  kubectl describe pods -l "spark-role in (executor, driver)"
+  kubectl get pods
   echo "ERROR: Spark pods are not running after $timeout, retry $counter/$max_retries"
   sleep 60
+  timeout=$((timeout+300))
   counter=$((counter+1))
 done
 
