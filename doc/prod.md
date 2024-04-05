@@ -46,14 +46,14 @@ Configuration file is in `fink-broker/deploy/finkctl.yaml`
 ln -s fink-broker/deploy/finkctl.yaml finkctl.yaml
 cat finkctl.secret.yaml
 s3:
-  id: "S3_USER_ID"
-  secret: "S3_SECRET"
+  id: "<S3_USER_ID>"
+  secret: "<S3_SECRET>"
 distribution:
   kafka:
-    username: "spark"
+    username: "<SPARK_USER>"
     # If empty, password is set to "kubectl get -n kafka secrets/fink-producer --template={{.data.password}} | base64 --decode"
     # this is used for integration tests and CI which use a local kafka cluster
-    password: "spark-secret"
+    password: "<SPARK_SECRET>"
 ```
 
 ### PodSecurityPolicies support
