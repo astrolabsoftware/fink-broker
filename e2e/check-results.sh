@@ -24,8 +24,6 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $DIR/../conf.sh
-
 # TODO improve management of expected topics
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
@@ -41,6 +39,13 @@ do
     echo "Waiting for expected topics: $expected_topics"
     sleep 5
     kubectl get pods
+    if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
+    then
+        echo "ERROR: fink-broker as crashed"
+        echo "ERROR: enabling interactive access for debugging purpose"
+        sleep 7200
+        exit 1
+    fi
     count=$((count+1))
     if [ $count -eq 10 ]; then
         echo "Timeout waiting for topics to be created"

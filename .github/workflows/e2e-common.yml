@@ -138,7 +138,7 @@ jobs:
           ./e2e/prereq-install.sh
       - name: Run fink-broker
         run: |
-          ./e2e/fink-start.sh
+          ./e2e/fink-start.sh -e
       - name: Check results
         run: |
           ./e2e/check-results.sh
@@ -180,7 +180,7 @@ jobs:
         run: |
           cat ${{ steps.scan.outputs.sarif }}
       - name: upload Anchore scan SARIF report
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:

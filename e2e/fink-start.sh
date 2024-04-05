@@ -24,51 +24,84 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $CIUXCONFIG
-
 # Used only to set path to spark-submit.sh
 . $DIR/../conf.sh
 
-if [ -n $CIUX_IMAGE_URL ];
-then
-    IMAGE="$CIUX_IMAGE_URL"
-else
-    echo "ERROR: CIUX_IMAGE_URL is not set"
-    exit 1
-fi
+usage() {
+  echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
+  echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
+  echo "  -f: finkctl configuration file"
+  echo "  -i: fink-broker image, overriden by CIUX_IMAGE_URL environment variable if -e option is set"
+  echo "  -N: night to process, e.g. 20210101"
+  echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
+  echo "  -h: display this help"
+}
+
+E2E_TEST=false
+NOSCIENCE_OPT=""
+IMAGE_OPT=""
+NIGHT_OPT=""
+
+# Parse option for finkctl configuration file and fink-broker image
+while getopts "ef:i:N:th" opt; do
+  case $opt in
+    e) E2E_TEST=true;;
+    f) FINKCONFIG=$OPTARG ;;
+    h) echo usage ; exit 0 ;;
+    N) NIGHT_OPT="-N $OPTARG" ;;
+    t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
+    i) IMAGE_OPT="--image $OPTARG" ;;
+  esac
+done
 
 NS=spark
 echo "Create $NS namespace"
 kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace="$NS"
 
-echo "Create S3 bucket"
-kubectl port-forward -n minio svc/minio 9000 &
-# Wait to port-forward to start
-sleep 2
-
-if [[ "$IMAGE" =~ "-noscience" ]];
+if [ $E2E_TEST = true ];
 then
-  NOSCIENCE_OPT="--noscience"
-  export FINKCONFIG="$DIR/finkconfig_noscience"
-else
-  NOSCIENCE_OPT=""
-  export FINKCONFIG="$DIR/finkconfig"
+  . $CIUXCONFIG
+  IMAGE="$CIUX_IMAGE_URL"
+  IMAGE_OPT="--image $IMAGE"
+  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
+  if [[ "$IMAGE" =~ "-noscience" ]];
+  then
+    NOSCIENCE_OPT="--noscience"
+    FINKCONFIG="$DIR/finkconfig_noscience"
+  else
+    NOSCIENCE_OPT=""
+    FINKCONFIG="$DIR/finkconfig"
+  fi
+  kubectl port-forward -n minio svc/minio 9000 &
+  # Wait to port-forward to start
+  sleep 2
+  echo "Create S3 bucket"
+  export FINKCONFIG
+  finkctl --endpoint=localhost:9000 s3 makebucket
 fi
 
-finkctl --endpoint=localhost:9000 s3 makebucket
+if [ -z "$FINKCONFIG" ];
+then
+  echo "ERROR: FINKCONFIG is not set"
+  exit 1
+else
+  echo "Use FINKCONFIG: $FINKCONFIG"
+  export FINKCONFIG
+fi
 
 echo "Create spark ServiceAccount"
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
 kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
 
 NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
+# FIXME  --namespace=default??? Create a rolebinding in the spark namespace??
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task $IMAGE_OPT $NIGHT_OPT >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
@@ -94,8 +127,8 @@ while ! finkctl wait tasks --timeout="$timeout"; do
     kubectl describe pods -l "spark-role in (executor, driver)"
     kubectl get pods
     echo "ERROR: unable to start fink-broker in $timeout"
-    # For interactive access for debugging purpose
-    sleep 7200
+    echo "ERROR: enabling interactive access for debugging purpose
+    sleep 7200"
     exit 1
   fi
   echo "ERROR: Spark pods are not running after $timeout, retry $counter/$max_retries"
