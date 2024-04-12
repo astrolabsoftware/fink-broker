@@ -112,6 +112,8 @@ jobs:
   ### --- create resources in it.
       - name: Install olm and argocd operators
         run: |
+          echo "DEBUG XXXXXXXXXXXX"
+          sleep 7200
           ktbx install olm
           ktbx install argocd
       - name: Install argo-workflows (fink-alert-simulator pre-requisite)
