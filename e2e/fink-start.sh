@@ -119,8 +119,8 @@ max_retries=3
 while ! finkctl wait tasks --timeout="${timeout}s"; do
   if [ $counter -gt $max_retries ]; then
     echo "ERROR: unable to start fink-broker in $timeout"
-    echo "ERROR: enabling interactive access for debugging purpose
-    sleep 7200"
+    echo "ERROR: enabling interactive access for debugging purpose"
+    sleep 7200
     exit 1
   fi
   echo "Spark log files"
