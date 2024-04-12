@@ -33,29 +33,9 @@ jobs:
       # the vcluster namespaces if necessary.
       REGISTRY_CA_MANIFEST: "/tmp/registry-ca-manifest.yaml"
     steps:
-
       - name: Deploy the virtual cluster
         shell: bash
         run: |
-          tmpvalues="$(mktemp)"
-          cat > "${tmpvalues}" << VALUES
-          mapServices:
-            fromHost:
-              - from: docker-registry/docker-registry
-                to: docker-registry/docker-registry
-          VALUES
-          # Create a manifest file to deploy the registry certificate in
-          # namespaces of the vcluster that need it with:
-          # `kubectl apply -f "${REGISTRY_CA_MANIFEST}" -n <namespace>`
-          cat > "${REGISTRY_CA_MANIFEST}" << MANIFEST
-          apiVersion: v1
-          data:
-            ca.crt: $(base64 -w0 '/registry-ca/docker-registry.docker-registry:5000/ca.crt')
-          kind: Secret
-          metadata:
-            name: registry-ca
-          MANIFEST
-
           vcluster create "$(hostname)"     \
             --connect=false --namespace="$(hostname)" \
             --extra-values="${tmpvalues}" --chart-name=vcluster
@@ -71,14 +51,14 @@ jobs:
       - name: Create a deployment using internal registry
         shell: bash
         run: |
+          CI_REPO="gitlab.dsi.universite-paris-saclay.fr:5005/fink/fink-registry"
+          echo "Login to CI private registry $CI_REPO"
+          echo ${{ secrets.private_registry_token }} | docker login --username ${{ secrets.private_registry_token }} --password-stdin "$CI_REPO"
           docker pull registry.k8s.io/e2e-test-images/agnhost:2.39
-          docker tag registry.k8s.io/e2e-test-images/agnhost:2.39 \
-            docker-registry.docker-registry:5000/agnhost:2.39
-          docker push docker-registry.docker-registry:5000/agnhost:2.39
-          # Test the registry certificate in the default namespace.
-          kubectl apply -f "${REGISTRY_CA_MANIFEST}" -n default
+          docker tag registry.k8s.io/e2e-test-images/agnhost:2.39 "$CI_REPO"/agnhost:2.39
+          docker push "$CI_REPO"/agnhost:2.39
           kubectl create deployment hello-node                      \
-            --image=docker-registry.docker-registry:5000/agnhost:2.39    \
+            --image="$CI_REPO"/agnhost:2.39    \
             -- /agnhost netexec --http-port=8080
           sleep 10s
           kubectl get deployments
@@ -94,69 +74,6 @@ jobs:
           HELLO_NODE_ADDRESS=$(kubectl get service hello-node -o jsonpath={.spec.clusterIP})
           HELLO_NODE_PORT=$(kubectl get service hello-node -o jsonpath={.spec.ports[].port})
           curl "${HELLO_NODE_ADDRESS}:${HELLO_NODE_PORT}"
-
-### --- The steps below deploy a docker-in-docker pod to show how to use the
-### --- docker registry of the host cluster from within the vcluster.
-
-      - name: Test the docker registry
-        shell: bash
-        run: |
-          poddef="$(mktemp)"
-          # Create a docker-in-docker pod with the local docker registry
-          # certificate mounted from a secret.
-          cat > "${poddef}" << PODDEF
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: dind
-          spec:
-            restartPolicy: Always
-            containers:
-              - image: docker:dind
-                imagePullPolicy: IfNotPresent
-                name: dind
-                securityContext:
-                  privileged: true
-                volumeMounts:
-                  - mountPath: /etc/docker/certs.d
-                    name: registry-ca
-                    readOnly: true
-            volumes:
-              # Define a volume from the Secret holding the registry
-              # certificate.  We have to provide the mount path here because
-              # the mountPath field of the volumeMounts structure does no
-              # support colons in path.
-              # See https://github.com/kubernetes/kubernetes/issues/93479.
-              - name: registry-ca
-                secret:
-                  secretName: registry-ca
-                  items:
-                    - key: ca.crt
-                      path: docker-registry.docker-registry:5000/ca.crt
-          PODDEF
-
-          # Inject the registry certificate in the default namespace.
-          kubectl apply -f "${REGISTRY_CA_MANIFEST}" -n default
-          # Create a docker-in-docker pod to test the registry.
-          kubectl apply -f "${poddef}" -n default
-          # Wait for the pod to be created.
-          kubectl wait --for=condition=Ready -f "${poddef}" -n default
-          # Wait a bit more, just in case...
-          sleep 10s
-
-          # Push an image from docker hub.
-          kubectl exec -n default dind -- docker pull hello-world
-          # Retag and push it to the local registry.
-          kubectl exec -n default dind -- docker tag hello-world:latest \
-                    docker-registry.docker-registry:5000/my-hello-world:1.0
-          kubectl exec -n default dind -- docker push \
-                    docker-registry.docker-registry:5000/my-hello-world:1.0
-          # Remove all local references to the image.
-          kubectl exec -n default dind -- docker rmi hello-world:latest \
-                    docker-registry.docker-registry:5000/my-hello-world:1.0
-          # Pull it again from the local registry.
-          kubectl exec -n default dind -- docker pull \
-                    docker-registry.docker-registry:5000/my-hello-world:1.0
 
       # This step is not strictly necessary. When the runner pod exits, the
       # playground namespace and hence to whole vcluster are destroyed.
