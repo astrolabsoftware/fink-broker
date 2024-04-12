@@ -46,7 +46,9 @@ jobs:
         with:
           go-version: '1.21.4'
       - name: Install ciux
-        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+        run: |
+          echo "XXXXXXXXXXXxxx DEBUG ${{ inputs.runner }}"
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Build fink-broker image for k8s
         run: |
           ./build.sh -s "${{ env.SUFFIX }}" -r "${{ env.CI_REPO }}"
@@ -97,33 +99,14 @@ jobs:
       - name: Ciux project ignition
         run: |
           ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
-          - name: Deploy the virtual cluster
-          shell: bash
-          run: |
-            tmpvalues="$(mktemp)"
-            cat > "${tmpvalues}" << VALUES
-            mapServices:
-              fromHost:
-                - from: docker-registry/docker-registry
-                  to: docker-registry/docker-registry
-            VALUES
-            # Create a manifest file to deploy the registry certificate in
-            # namespaces of the vcluster that need it with:
-            # `kubectl apply -f "${REGISTRY_CA_MANIFEST}" -n <namespace>`
-            cat > "${REGISTRY_CA_MANIFEST}" << MANIFEST
-            apiVersion: v1
-            data:
-              ca.crt: $(base64 -w0 '/registry-ca/docker-registry.docker-registry:5000/ca.crt')
-            kind: Secret
-            metadata:
-              name: registry-ca
-            MANIFEST
-
-            vcluster create "$(hostname)"     \
-              --connect=false --namespace="$(hostname)" \
-              --extra-values="${tmpvalues}" --chart-name=vcluster
-            vcluster connect "$(hostname)"    \
-              --namespace="$(hostname)" --server="$(hostname).$(hostname)"
+      - name: Deploy the Kubernetes cluster
+        shell: bash
+        run: |
+          vcluster create "$(hostname)"     \
+            --connect=false --namespace="$(hostname)" \
+            --chart-name=vcluster
+          vcluster connect "$(hostname)"    \
+            --namespace="$(hostname)" --server="$(hostname).$(hostname)"
 
   ### --- At this point, a vcluster is deployed and kubectl is configured to
   ### --- create resources in it.
