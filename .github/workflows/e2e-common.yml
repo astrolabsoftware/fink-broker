@@ -102,6 +102,10 @@ jobs:
       - name: Deploy the Kubernetes cluster
         shell: bash
         run: |
+          sudo rm /usr/bin/vcluster
+          curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/latest/download/vcluster-linux-amd64"
+          sudo install -c -m 0755 vcluster /usr/bin
+          rm -f vcluster
           vcluster create "$(hostname)"     \
             --connect=false --namespace="$(hostname)" \
             --chart-name=vcluster
