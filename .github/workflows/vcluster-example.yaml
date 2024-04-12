@@ -60,7 +60,7 @@ jobs:
           kubectl create deployment hello-node                      \
             --image="$CI_REPO"/agnhost:2.39    \
             -- /agnhost netexec --http-port=8080
-          sleep 10s
+          kubectl wait --for=condition=ready pod -l app=hello-node
           kubectl get deployments
           kubectl get pods
 
@@ -73,7 +73,6 @@ jobs:
           HELLO_NODE_ADDRESS=$(kubectl get service hello-node -o jsonpath={.spec.clusterIP})
           HELLO_NODE_PORT=$(kubectl get service hello-node -o jsonpath={.spec.ports[].port})
           curl "${HELLO_NODE_ADDRESS}:${HELLO_NODE_PORT}"
-          sleep 10000
 
       # This step is not strictly necessary. When the runner pod exits, the
       # playground namespace and hence to whole vcluster are destroyed.
