@@ -103,7 +103,7 @@ jobs:
         shell: bash
         run: |
           sudo rm /usr/bin/vcluster
-          curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/download/v0.20.0-alpha.4/vcluster-linux-arm64"
+          curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/download/v0.20.0-alpha.4/vcluster-linux-amd64"
           sudo install -c -m 0755 vcluster /usr/bin
           rm -f vcluster
           vcluster create "$(hostname)"     \
