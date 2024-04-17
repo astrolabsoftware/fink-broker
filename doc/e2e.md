@@ -28,7 +28,7 @@ git clone github.com/astrolabsoftware/fink-broker
 Install the `ciux` tool based on the provided version.
 
 ```bash
-CIUX_VERSION=v0.0.3-rc2
+CIUX_VERSION=v0.0.3-rc3
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
@@ -94,10 +94,11 @@ argo watch @latest
 Install prerequisites for Fink-Broker (JDK, Spark).
 
 ```bash
-# commands are provided for Debian-based distribution
-# use yum for RedHat-based distribution
+# Debian-based distribution
 sudo apt-get -y update
 sudo apt-get -y install openjdk-8-jdk-headless
+# RedHat-based distribution
+sudo dnf install java-1.8.0-openjdk.x86_64
 ./e2e/prereq-install.sh
 ```
 
@@ -118,13 +119,13 @@ Check the results of the tests.
 ```
 
 
-    Promote the Fink-Broker image.
+Promote the Fink-Broker image.
 
-    ```bash
-        . "$CIUXCONFIG"
-        echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME/$FINKCTL_VERSION" >> "$GITHUB_OUTPUT"
-        echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
-    ```
+```bash
+    . "$CIUXCONFIG"
+    echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME/$FINKCTL_VERSION" >> "$GITHUB_OUTPUT"
+    echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
+```
 
 ## Conclusion
 
