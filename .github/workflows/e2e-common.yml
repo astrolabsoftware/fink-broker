@@ -106,6 +106,7 @@ jobs:
           curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/download/v0.20.0-beta.1/vcluster-linux-amd64"
           sudo install -c -m 0755 vcluster /usr/bin
           rm -f vcluster
+          sleep 7200
           vcluster create "$(hostname)"     \
             --connect=false --namespace="$(hostname)" \
             --chart-name=vcluster
