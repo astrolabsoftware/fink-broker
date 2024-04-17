@@ -37,10 +37,13 @@ go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 Ignite the project using `ciux`.
 
 ```bash
-cd fink-broker
-# Variables below must be defined in all the following commands
+# Create directory for ciux configuration
+mkdir -p ~/.ciux
+# Define variables below for all the following commands
 export SUFFIX="noscience"
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
+# Ignite the project
+cd fink-broker
 ciux ignite --selector ci $PWD --suffix "$SUFFIX"
 ```
 
