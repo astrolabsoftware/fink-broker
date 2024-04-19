@@ -47,7 +47,7 @@ while getopts "ef:i:N:th" opt; do
   case $opt in
     e) E2E_TEST=true;;
     f) FINKCONFIG=$OPTARG ;;
-    h) echo usage ; exit 0 ;;
+    h) usage ; exit 0 ;;
     N) NIGHT_OPT="-N $OPTARG" ;;
     t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
     i) IMAGE_OPT="--image $OPTARG" ;;
