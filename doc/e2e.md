@@ -47,38 +47,19 @@ cd fink-broker
 ciux ignite --selector ci $PWD --suffix "$SUFFIX"
 ```
 
-### Create Kubernetes (Kind) Cluster
-
-Create a Kubernetes cluster (Kind).
+### Install pre-requisites
 
 ```bash
+# Create a Kubernetes cluster (Kind)
 ktbx install kind
 ktbx install kubectl
 ktbx create -s
-```
-
-### Install OLM and ArgoCD Operators
-
-Install OLM and ArgoCD operators.
-
-```bash
+# Install OLM and ArgoCD operators.
 ktbx install olm
 ktbx install argocd
-```
-
-### Install Argo Workflows
-
-Install Argo Workflows.
-
-```bash
+# Install Argo Workflows
 ktbx install argowf
-```
-
-### Run ArgoCD
-
-Run ArgoCD.
-
-```bash
+# Run ArgoCD
 ./e2e/argocd.sh
 ```
 
@@ -92,24 +73,12 @@ Run the Fink-Alert-Simulator.
 argo watch @latest
 ```
 
-7.  **Install Fink-Broker Prerequisites (JDK, Spark)**
-
-Install prerequisites for Fink-Broker (JDK, Spark).
-
-```bash
-# commands are provided for Debian-based distribution
-# use yum for RedHat-based distribution
-sudo apt-get -y update
-sudo apt-get -y install openjdk-8-jdk-headless
-./e2e/prereq-install.sh
-```
-
 ### Run Fink-Broker
 
 Run the Fink-Broker.
 
 ```bash
-./e2e/fink-start.sh -e
+./e2e/fink-start.sh
 ```
 
 ### Check Results
