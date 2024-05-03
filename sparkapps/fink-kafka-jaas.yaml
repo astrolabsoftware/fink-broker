@@ -2,7 +2,7 @@ apiVersion: v1
 data:
   # e2e tests: Value is returned by
   #    kubectl get -n kafka secrets/fink-producer -o "jsonpath={.data['sasl\.jaas\.config']}"
-  kafka-jaas.conf: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0iZmluay1wcm9kdWNlciIgcGFzc3dvcmQ9IlM4SHVXNTBBUDUyRCI7 
+  kafka-jaas.conf: ICAgIEthZmthQ2xpZW50IHsKICAgICAgICBvcmcuYXBhY2hlLmthZmthLmNvbW1vbi5zZWN1cml0eS5zY3JhbS5TY3JhbUxvZ2luTW9kdWxlIHJlcXVpcmVkCiAgICAgICAgdXNlcm5hbWU9Zmluay1wcm9kdWNlcgogICAgICAgIHBhc3N3b3JkPWt2SkhKeTZwdGs5cTsKICAgIH07Cgo= 
 kind: Secret 
 metadata:
   name: fink-kafka-jaas
