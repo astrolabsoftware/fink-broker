@@ -159,7 +159,7 @@ def main():
     for _, row in pdf.head(30).iterrows():
         append_slack_messages(slack_data, row)
 
-    msg_handler_slack(slack_data, "al-loop", init_msg)
+    msg_handler_slack(slack_data, "bot_al_loop", init_msg)
 
     # Filter for high probabilities
     pdf_hp = pdf[pdf["al_snia_vs_nonia"] > 0.5]
@@ -170,9 +170,7 @@ def main():
     for _, row in pdf_hp.head(30).iterrows():
         append_slack_messages(slack_data, row)
 
-    # TODO: this only works for channel within Fink slack workspace
-    # TODO: fink-filters need to be rewritten.
-    msg_handler_slack(slack_data, "fink-al-snia", init_msg)
+    msg_handler_slack(slack_data, "bot_al_loop_highprob", init_msg)
 
 
 if __name__ == "__main__":
