@@ -16,9 +16,6 @@
 """Run the xmatch with Dwarf AGN, and push data to Slack
 """
 import argparse
-import os
-
-import numpy as np
 
 from pyspark.sql import functions as F
 
