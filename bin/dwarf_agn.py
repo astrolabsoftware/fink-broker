@@ -54,6 +54,9 @@ def main():
     )
     df = load_parquet_files(path)
 
+    # Remove known asteroids
+    df = df.filter(df['roid'] != 3)
+
     args = ['candidate.candid', 'candidate.ra', 'candidate.dec']
     pdf = df\
         .withColumn('manga', crossmatch_dwarf_agn(*args))\
