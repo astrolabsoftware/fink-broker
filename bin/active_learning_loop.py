@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023 AstroLab Software
+# Copyright 2023-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Run the AL loop, and push data to Slack
-"""
+"""Run the AL loop, and push data to Slack."""
 import argparse
 import os
 
@@ -37,7 +36,39 @@ from fink_science import __file__
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 
 
+def append_slack_messages(slack_data: list, row: dict) -> None:
+    """Append messages to list for Slack distribution.
+
+    Parameters
+    ----------
+    slack_data: list
+        List containing all Slack messages. Each element
+        is a message (string).
+    row: dict
+        Pandas DataFrame row as dictionary. Contains
+        Fink data.
+    """
+    t1 = f'ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>'
+    t2 = f'''
+EQU: {row.ra},   {row.dec}'''
+
+    t3 = f'Score: {round(row.al_snia_vs_nonia, 3)}'
+    t4 = f'Classification: {row.classification}'
+    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId)
+    curve.seek(0)
+    cutout.seek(0)
+    cutout_perml = f"<{cutout_perml}|{' '}>"
+    curve_perml = f"<{curve_perml}|{' '}>"
+    slack_data.append(f'''==========================
+{t1}
+{t2}
+{t3}
+{t4}
+{cutout_perml}{curve_perml}''')
+
+
 def main():
+    """Extract probabilities from the AL model, and send results to Slack."""
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
@@ -126,25 +157,20 @@ def main():
 
     slack_data = []
     for _, row in pdf.head(30).iterrows():
-        t1 = f'ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>'
-        t2 = f'''
-EQU: {row.ra},   {row.dec}'''
+        append_slack_messages(slack_data, row)
 
-        t3 = f'Score: {round(row.al_snia_vs_nonia, 3)}'
-        t4 = f'Classification: {row.classification}'
-        cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId)
-        curve.seek(0)
-        cutout.seek(0)
-        cutout_perml = f"<{cutout_perml}|{' '}>"
-        curve_perml = f"<{curve_perml}|{' '}>"
-        slack_data.append(f'''==========================
-{t1}
-{t2}
-{t3}
-{t4}
-{cutout_perml}{curve_perml}''')
+    msg_handler_slack(slack_data, "bot_al_loop", init_msg)
 
-    msg_handler_slack(slack_data, "al-loop", init_msg)
+    # Filter for high probabilities
+    pdf_hp = pdf[pdf["al_snia_vs_nonia"] > 0.5]
+
+    init_msg = f'Number of candidates for the night {args.night} (high probability): {len(pdf_hp)} ({len(np.unique(pdf_hp.objectId))} unique objects).'
+
+    slack_data = []
+    for _, row in pdf_hp.head(30).iterrows():
+        append_slack_messages(slack_data, row)
+
+    msg_handler_slack(slack_data, "bot_al_loop_highprob", init_msg)
 
 
 if __name__ == "__main__":
