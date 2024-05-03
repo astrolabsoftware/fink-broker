@@ -47,38 +47,19 @@ cd fink-broker
 ciux ignite --selector ci $PWD --suffix "$SUFFIX"
 ```
 
-### Create Kubernetes (Kind) Cluster
-
-Create a Kubernetes cluster (Kind).
+### Install pre-requisites
 
 ```bash
+# Create a Kubernetes cluster (Kind)
 ktbx install kind
 ktbx install kubectl
 ktbx create -s
-```
-
-### Install OLM and ArgoCD Operators
-
-Install OLM and ArgoCD operators.
-
-```bash
+# Install OLM and ArgoCD operators.
 ktbx install olm
 ktbx install argocd
-```
-
-### Install Argo Workflows
-
-Install Argo Workflows.
-
-```bash
+# Install Argo Workflows
 ktbx install argowf
-```
-
-### Run ArgoCD
-
-Run ArgoCD.
-
-```bash
+# Run ArgoCD
 ./e2e/argocd.sh
 ```
 

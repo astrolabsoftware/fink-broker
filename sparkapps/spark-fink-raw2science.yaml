@@ -18,32 +18,37 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: pyspark-pi
-  namespace: default
+  name: fink-raw2science
 spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "gcr.io/spark-operator/spark-py:v3.1.1"
+  image: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker-noscience:v3.1.2-rc1-31-g1c2a1e3"
   imagePullPolicy: Always
   mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
   arguments:
-    - '-log_level "INFO"'
-    - '-online_data_prefix "s3a://fink-broker-online"'
-    - '-producer "sims"'
-    - '-tinterval "2"'
-    - '-night "20200101"'
+    - '-log_level'
+    - 'INFO'
+    - '-online_data_prefix'
+    - 's3a://fink-broker-online'
+    - '-producer'
+    - 'sims'
+    - '-tinterval'
+    - '2'
+    - '--noscience'
+    - '-night'
+    - '20200101'
   sparkVersion: "3.4.1"
   sparkConf:
     spark.driver.extraJavaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
     spark.hadoop.fs.s3a.endpoint: http://minio.minio:9000
     spark.hadoop.fs.s3a.access.key: "minioadmin"
     spark.hadoop.fs.s3a.secret.key: "minioadmin"
-    spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: 2
-    spark.hadoop.fs.s3a.connection.ssl.enabled: false
-    spark.hadoop.fs.s3a.fast.upload: true
-    spark.hadoop.fs.s3a.path.style.access: true
-    spark.hadoop.fs.s3a.aws.credentials.provider: org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \
+    spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: "2"
+    spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
+    spark.hadoop.fs.s3a.fast.upload: "true"
+    spark.hadoop.fs.s3a.path.style.access: "true"
+    spark.hadoop.fs.s3a.aws.credentials.provider: "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
     spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
   restartPolicy:
     type: OnFailure
