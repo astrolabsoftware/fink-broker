@@ -18,32 +18,26 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: fink-distribution
+  name: fink-raw2science
 spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  image: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker-noscience:v3.1.2-rc1-31-g1c2a1e3"
-  imagePullPolicy: Always
-  mainApplicationFile: local:///home/fink/fink-broker/bin/distribute.py
+  image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+  imagePullPolicy: "{{ .Values.image.pullPolicy}}"
+  mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
   arguments:
     - '-log_level'
-    - 'INFO'
+    - '{{ .Values.log_level }}'
     - '-online_data_prefix'
-    - 's3a://fink-broker-online'
+    - 's3a://{{ tpl .Values.s3.bucket . }}'
     - '-producer'
-    - 'sims'
+    - '{{ .Values.producer }}'
     - '-tinterval'
-    - '2'
+    - '{{ .Values.fink_trigger_update }}'
     - '--noscience'
-    - '-distribution_servers'
-    - 'kafka-cluster-kafka-external-bootstrap.kafka:9094'
-    - '-distribution_schema'
-    - '/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc'
-    - '-substream_prefix'
-    - 'fink_'
     - '-night'
-    - '20200101'
+    - '{{ .Values.night }}'
   sparkVersion: "3.4.1"
   sparkConf:
     spark.driver.extraJavaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
@@ -62,14 +56,11 @@ spec:
     onFailureRetryInterval: 10
     onSubmissionFailureRetries: 5
     onSubmissionFailureRetryInterval: 20
-  volumes:
-  - name: kafka-secret
-    secret:
-      secretName: fink-kafka-jaas
   driver:
     cores: 1
     coreLimit: "1200m"
     memory: "512m"
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
     labels:
       version: 3.4.1
     serviceAccount: spark
@@ -77,9 +68,5 @@ spec:
     cores: 1
     instances: 1
     memory: "512m"
-    javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf"
     labels:
       version: 3.4.1
-    volumeMounts:
-    - name: kafka-secret
-      mountPath: /etc/fink-broker

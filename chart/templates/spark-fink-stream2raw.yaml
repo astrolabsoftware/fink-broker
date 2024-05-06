@@ -30,7 +30,7 @@ spec:
     - '-log_level'
     - 'INFO'
     - '-online_data_prefix'
-    - 's3a://fink-broker-online'
+    - 's3a://{{ tpl .Values.s3.bucket . }}'
     - '-producer'
     - 'sims'
     - '-tinterval'

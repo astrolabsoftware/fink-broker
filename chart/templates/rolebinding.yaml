@@ -9,5 +9,5 @@ roleRef:
   name: edit
 subjects:
 - kind: ServiceAccount
-  name: spark
+  name: {{ include "chart.serviceAccountName" . }}
   namespace: spark
