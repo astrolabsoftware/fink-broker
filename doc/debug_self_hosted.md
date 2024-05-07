@@ -19,4 +19,7 @@ export SRC=/home/runner/_work/fink-broker/fink-broker
 
 # Access source code:
 ls /home/runner/_work/fink-broker/fink-broker
+
+# Access fink pod
+kubectl get pods
 ```
