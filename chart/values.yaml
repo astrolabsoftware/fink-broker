@@ -9,7 +9,7 @@ image:
   pullPolicy: Always
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
   name: fink-broker
-  tag: 2.7.1-33-ge27a2aa-dirty
+  tag: "v3.1.2-rc1-26-g6b2404a"
 
 # Can be overriden in stream2raw, raw2science and distribution sections
 cores: 1
@@ -44,7 +44,7 @@ stream2raw:
 #
 raw2science:
   # Override the default value of instances
-  memory: 3Gi
+  memory: 3g
   instances: "{{.Values.instances}}"
 
 #
@@ -54,7 +54,7 @@ distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
   instances: "{{.Values.instances}}"
-  memory: 2Gi
+  memory: 2g
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
   servers: "{{ .Values.stream2raw.servers }}"
   schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"

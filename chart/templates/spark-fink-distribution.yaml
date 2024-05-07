@@ -31,7 +31,7 @@ spec:
       secretName: fink-kafka-jaas
   driver:
     cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: {{ tpl .Values.distribution.coreRequest . }}
+    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
     labels:
@@ -39,7 +39,7 @@ spec:
     serviceAccount: {{ .Values.serviceAccount.name }}
   executor:
     cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: {{ tpl .Values.distribution.coreRequest . }}
+    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "512m"
     javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf"
     labels:
