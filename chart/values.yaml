@@ -14,6 +14,7 @@ image:
 # Can be overriden in stream2raw, raw2science and distribution sections
 cores: 1
 coresRequest: 0
+instances: 1
 memory: 1Gi
 # instances: 1
 
@@ -27,8 +28,6 @@ producer: sims
 
 log_level: INFO
 
-  # Can be overriden using --night or --tonight options
-
 #
 # Parameters used to run the stream2raw task
 #
@@ -37,14 +36,16 @@ stream2raw:
   kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
   kafka_starting_offset: earliest
   kafka_topic: "ztf-stream-{{.Values.night}}"
+  instances: "{{.Values.instances}}"
+  servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
 
 #
 # Parameters used to run the raw2science task
 #
 raw2science:
-  # Override the default value of run.instances
-  instances: 4
+  # Override the default value of instances
   memory: 3Gi
+  instances: "{{.Values.instances}}"
 
 #
 # Parameters used to run the distribution task
@@ -52,9 +53,10 @@ raw2science:
 distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coresRequest}}"
+  instances: "{{.Values.instances}}"
   memory: 2Gi
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
-  servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
+  servers: "{{ .Values.stream2raw.servers }}"
   schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
   substream_prefix: "fink_"
 
@@ -73,13 +75,11 @@ s3:
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
-  # Automatically mount a ServiceAccount's API credentials?
-  automount: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: "spark"
 
 podAnnotations: {}
 podLabels: {}

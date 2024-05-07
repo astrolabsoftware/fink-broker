@@ -9,5 +9,5 @@ roleRef:
   name: edit
 subjects:
 - kind: ServiceAccount
-  name: {{ include "chart.serviceAccountName" . }}
-  namespace: spark
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}

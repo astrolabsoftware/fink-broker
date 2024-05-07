@@ -20,11 +20,7 @@ kind: SparkApplication
 metadata:
   name: fink-raw2science
 spec:
-  type: Python
-  pythonVersion: "3"
-  mode: cluster
-  image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-  imagePullPolicy: "{{ .Values.image.pullPolicy}}"
+{{- include "chart.common" . | nindent 2 }}
   mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
   arguments:
     - '-log_level'
@@ -35,27 +31,10 @@ spec:
     - '{{ .Values.producer }}'
     - '-tinterval'
     - '{{ .Values.fink_trigger_update }}'
-    - '--noscience'
+    - '--{{ .Values.pipelineType }}'
     - '-night'
     - '{{ .Values.night }}'
-  sparkVersion: "3.4.1"
-  sparkConf:
-    spark.driver.extraJavaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
-    spark.hadoop.fs.s3a.endpoint: http://minio.minio:9000
-    spark.hadoop.fs.s3a.access.key: "minioadmin"
-    spark.hadoop.fs.s3a.secret.key: "minioadmin"
-    spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: "2"
-    spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
-    spark.hadoop.fs.s3a.fast.upload: "true"
-    spark.hadoop.fs.s3a.path.style.access: "true"
-    spark.hadoop.fs.s3a.aws.credentials.provider: "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
-    spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
-  restartPolicy:
-    type: OnFailure
-    onFailureRetries: 3
-    onFailureRetryInterval: 10
-    onSubmissionFailureRetries: 5
-    onSubmissionFailureRetryInterval: 20
+  sparkConf: {{- include "chart.s3config" . | nindent 4 }}
   driver:
     cores: 1
     coreLimit: "1200m"

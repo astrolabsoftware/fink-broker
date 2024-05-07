@@ -50,13 +50,32 @@ app.kubernetes.io/name: {{ include "chart.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "chart.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "chart.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{/* Generate s3 configuration */}}
+{{- define "chart.s3config" -}}
+spark.hadoop.fs.s3a.endpoint: {{ .Values.s3.endpoint }}
+spark.hadoop.fs.s3a.access.key: {{ .Values.s3.access_key }}
+spark.hadoop.fs.s3a.secret.key: {{ .Values.s3.secret_key }}
+spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: "2"
+spark.hadoop.fs.s3a.connection.ssl.enabled: {{ .Values.s3.use_ssl }}
+spark.hadoop.fs.s3a.fast.upload: "true"
+spark.hadoop.fs.s3a.path.style.access: "true"
+spark.hadoop.fs.s3a.aws.credentials.provider: "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 {{- end }}
+
+
+{{/* Generate common configuration */}}
+{{- define "chart.common" -}}
+type: Python
+pythonVersion: "3"
+mode: cluster
+image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+imagePullPolicy: "{{ .Values.image.pullPolicy}}"
+sparkVersion: "3.4.1"
+restartPolicy:
+  type: OnFailure
+  onFailureRetries: 3
+  onFailureRetryInterval: 10
+  onSubmissionFailureRetries: 5
+  onSubmissionFailureRetryInterval: 20
 {{- end }}
