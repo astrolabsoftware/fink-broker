@@ -13,7 +13,7 @@ image:
 
 # Can be overriden in stream2raw, raw2science and distribution sections
 cores: 1
-coresRequest: 0
+coreRequest: 0
 instances: 1
 memory: 1Gi
 # instances: 1
@@ -52,7 +52,7 @@ raw2science:
 #
 distribution:
   cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coresRequest}}"
+  coreRequest: "{{.Values.coreRequest}}"
   instances: "{{.Values.instances}}"
   memory: 2Gi
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket

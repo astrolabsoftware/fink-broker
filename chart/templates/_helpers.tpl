@@ -56,7 +56,7 @@ spark.hadoop.fs.s3a.endpoint: {{ .Values.s3.endpoint }}
 spark.hadoop.fs.s3a.access.key: {{ .Values.s3.access_key }}
 spark.hadoop.fs.s3a.secret.key: {{ .Values.s3.secret_key }}
 spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version: "2"
-spark.hadoop.fs.s3a.connection.ssl.enabled: {{ .Values.s3.use_ssl }}
+spark.hadoop.fs.s3a.connection.ssl.enabled: "{{ .Values.s3.use_ssl }}"
 spark.hadoop.fs.s3a.fast.upload: "true"
 spark.hadoop.fs.s3a.path.style.access: "true"
 spark.hadoop.fs.s3a.aws.credentials.provider: "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
