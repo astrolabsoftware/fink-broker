@@ -92,6 +92,9 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21.4'
+      - name: Install wget
+        # TODO replace with curl in ktbx script which install helm
+        run: sudo apt-get update && sudo apt-get install -y wget
       - name: Install ciux
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Ciux project ignition

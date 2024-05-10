@@ -79,3 +79,16 @@ restartPolicy:
   onSubmissionFailureRetries: 5
   onSubmissionFailureRetryInterval: 20
 {{- end }}
+
+{{/* Generate common argument for fink-broker command line */}}
+{{- define "chart.commonargs" -}}
+    - '-log_level'
+    - '{{ .Values.log_level }}'
+    - '-online_data_prefix'
+    - 's3a://{{ tpl .Values.s3.bucket . }}'
+    - '-producer'
+    - '{{ .Values.producer }}'
+    - '-tinterval'
+    - '{{ .Values.fink_trigger_update }}'
+    - '--{{ .Values.pipelineType }}'
+{{- end }}
