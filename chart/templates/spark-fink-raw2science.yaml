@@ -1,23 +1,14 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: {{ include "chart.fullname" . }}-raw2science
+  name: {{ include "fink.fullname" . }}-raw2science
 spec:
-{{- include "chart.common" . | nindent 2 }}
+{{- include "fink.common" . | nindent 2 }}
   mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
-  arguments:
-    - '-log_level'
-    - '{{ .Values.log_level }}'
-    - '-online_data_prefix'
-    - 's3a://{{ tpl .Values.s3.bucket . }}'
-    - '-producer'
-    - '{{ .Values.producer }}'
-    - '-tinterval'
-    - '{{ .Values.fink_trigger_update }}'
-    - '--{{ .Values.pipelineType }}'
+  arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-night'
     - '{{ .Values.night }}'
-  sparkConf: {{- include "chart.s3config" . | nindent 4 }}
+  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   driver:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"

@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "chart.name" -}}
+{{- define "fink.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "chart.fullname" -}}
+{{- define "fink.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "chart.chart" -}}
+{{- define "fink.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "chart.labels" -}}
-helm.sh/chart: {{ include "chart.chart" . }}
-{{ include "chart.selectorLabels" . }}
+{{- define "fink.labels" -}}
+helm.sh/chart: {{ include "fink.chart" . }}
+{{ include "fink.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,13 +45,13 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "chart.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "chart.name" . }}
+{{- define "fink.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "fink.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/* Generate s3 configuration */}}
-{{- define "chart.s3config" -}}
+{{- define "fink.s3config" -}}
 spark.hadoop.fs.s3a.endpoint: {{ .Values.s3.endpoint }}
 spark.hadoop.fs.s3a.access.key: {{ .Values.s3.access_key }}
 spark.hadoop.fs.s3a.secret.key: {{ .Values.s3.secret_key }}
@@ -65,7 +65,7 @@ spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 
 
 {{/* Generate common configuration */}}
-{{- define "chart.common" -}}
+{{- define "fink.common" -}}
 type: Python
 pythonVersion: "3"
 mode: cluster
@@ -81,14 +81,16 @@ restartPolicy:
 {{- end }}
 
 {{/* Generate common argument for fink-broker command line */}}
-{{- define "chart.commonargs" -}}
-    - '-log_level'
-    - '{{ .Values.log_level }}'
-    - '-online_data_prefix'
-    - 's3a://{{ tpl .Values.s3.bucket . }}'
-    - '-producer'
-    - '{{ .Values.producer }}'
-    - '-tinterval'
-    - '{{ .Values.fink_trigger_update }}'
-    - '--{{ .Values.pipelineType }}'
+{{- define "fink.commonargs" -}}
+- '-log_level'
+- '{{ .Values.log_level }}'
+- '-online_data_prefix'
+- 's3a://{{ tpl .Values.s3.bucket . }}'
+- '-producer'
+- '{{ .Values.producer }}'
+- '-tinterval'
+- '{{ .Values.fink_trigger_update }}'
+{{- if hasSuffix "-noscience" .Values.image.name }}
+- '--noscience'
+{{- end -}}
 {{- end }}

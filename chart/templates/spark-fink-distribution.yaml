@@ -1,20 +1,11 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: {{ include "chart.fullname" . }}-distribution
+  name: {{ include "fink.fullname" . }}-distribution
 spec:
-{{- include "chart.common" . | nindent 2 }}
+{{- include "fink.common" . | nindent 2 }}
   mainApplicationFile: local:///home/fink/fink-broker/bin/distribute.py
-  arguments:
-    - '-log_level'
-    - '{{ .Values.log_level }}'
-    - '-online_data_prefix'
-    - 's3a://{{ tpl .Values.s3.bucket . }}'
-    - '-producer'
-    - '{{ .Values.producer }}'
-    - '-tinterval'
-    - '{{ .Values.fink_trigger_update }}'
-    - '--{{ .Values.pipelineType }}'
+  arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-distribution_servers'
     - '{{ .Values.distribution.servers }}'
     - '-distribution_schema'
@@ -24,7 +15,7 @@ spec:
     - '-night'
     - '{{ .Values.night }}'
   sparkVersion: "3.4.1"
-  sparkConf: {{- include "chart.s3config" . | nindent 4 }}
+  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   volumes:
   - name: kafka-secret
     secret:
