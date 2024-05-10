@@ -109,12 +109,10 @@ while ! finkctl wait tasks --timeout="${timeout}s"; do
     sleep 7200
     exit 1
   fi
-  echo "Spark log files"
+  echo "Spark applications"
   echo "---------------"
-  for task in $tasks; do
-    echo "--------- $task log file ---------"
-    cat "/tmp/$task.log"
-  done
+  kubectl get sparkapplications
+  kubectl logs -n spark-operator -l app.kubernetes.io/instance=spark-operator
   echo "Pods description"
   echo "----------------"
   kubectl describe pods -l "spark-role in (executor, driver)"

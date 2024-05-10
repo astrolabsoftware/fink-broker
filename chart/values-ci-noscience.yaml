@@ -31,19 +31,23 @@ log_level: INFO
 # Parameters used to run the stream2raw task
 #
 stream2raw:
+  cores: "{{.Values.cores}}"
+  coreRequest: "{{.Values.coreRequest}}"
+  memory: "{{.Values.memory}}"
+  instances: "{{.Values.instances}}"
   fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
   kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
   kafka_starting_offset: earliest
   kafka_topic: "ztf-stream-{{.Values.night}}"
-  instances: "{{.Values.instances}}"
   servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
 
 #
 # Parameters used to run the raw2science task
 #
 raw2science:
-  # Override the default value of instances
-  memory: 3g
+  cores: "{{.Values.cores}}"
+  coreRequest: "{{.Values.coreRequest}}"
+  memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
 
 #
@@ -52,8 +56,8 @@ raw2science:
 distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
+  memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
-  memory: 2g
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
   servers: "{{ .Values.stream2raw.servers }}"
   schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"

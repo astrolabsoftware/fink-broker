@@ -31,6 +31,15 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
+Return the proper Fink image name
+*/}}
+{{- define "fink.image" -}}
+{{- $registryName := .Values.image.registry -}}
+{{- $repositoryName := .Values.image.repository -}}
+{{- $tag := .Values.image.tag | toString -}}
+{{- end -}}
+
+{{/*
 Common labels
 */}}
 {{- define "fink.labels" -}}
