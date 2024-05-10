@@ -80,7 +80,11 @@ fi
 
 # Start fink-broker
 echo "Start fink-broker"
-helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE"
+helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE" \
+  --set image.repository="$CIUX_IMAGE_REGISTRY" \
+  --set image.name="$CIUX_IMAGE_NAME" \
+  --set image.tag="$CIUX_IMAGE_TAG"
+
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
