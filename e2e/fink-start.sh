@@ -63,15 +63,12 @@ if [ $E2E_TEST = true ];
 then
   . $CIUXCONFIG
   IMAGE="$CIUX_IMAGE_URL"
-  IMAGE_OPT="--image $IMAGE"
   echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
   if [[ "$IMAGE" =~ "-noscience" ]];
   then
-    NOSCIENCE_OPT="--noscience"
-    FINKCONFIG="$DIR/finkconfig_noscience"
+    VALUE_FILE="$DIR/../chart/values-ci-no-science.yaml"
   else
-    NOSCIENCE_OPT=""
-    FINKCONFIG="$DIR/finkconfig"
+    VALUE_FILE="$DIR/../chart/values-ci.yaml"
   fi
   kubectl port-forward -n minio svc/minio 9000 &
   # Wait to port-forward to start
@@ -83,7 +80,7 @@ fi
 
 # Start fink-broker
 echo "Start fink-broker"
-helm install --debug fink ./chart
+helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE"
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour

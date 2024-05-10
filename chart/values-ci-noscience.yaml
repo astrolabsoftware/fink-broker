@@ -1,0 +1,86 @@
+# Default values for chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+night: "20240101"
+pipelineType: "noscience"
+
+image:
+  pullPolicy: Always
+  repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
+  name: fink-broker
+  tag: "v3.1.2-rc1-26-g6b2404a"
+
+# Can be overriden in stream2raw, raw2science and distribution sections
+cores: 1
+coreRequest: 0
+instances: 1
+memory: 1Gi
+# instances: 1
+
+fink_trigger_update: "2"
+
+# Can be overriden using --image option
+
+# Default to s3a://<s3.bucket>
+# online_data_prefix: s3a://fink-broker-online
+producer: sims
+
+log_level: INFO
+
+#
+# Parameters used to run the stream2raw task
+#
+stream2raw:
+  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
+  kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
+  kafka_starting_offset: earliest
+  kafka_topic: "ztf-stream-{{.Values.night}}"
+  instances: "{{.Values.instances}}"
+  servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
+
+#
+# Parameters used to run the raw2science task
+#
+raw2science:
+  # Override the default value of instances
+  memory: 3g
+  instances: "{{.Values.instances}}"
+
+#
+# Parameters used to run the distribution task
+#
+distribution:
+  cores: "{{.Values.cores}}"
+  coreRequest: "{{.Values.coreRequest}}"
+  instances: "{{.Values.instances}}"
+  memory: 2g
+  # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
+  servers: "{{ .Values.stream2raw.servers }}"
+  schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
+  substream_prefix: "fink_"
+
+#
+# Parameters used to access the S3 bucket
+#
+s3:
+  endpoint: http://minio.minio:9000
+  use_ssl: "false"
+  # {{.Night}} is optional and will be replaced by the value of run.night
+  bucket: "fink-broker-online-{{.Values.night}}"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "spark"
+
+podAnnotations: {}
+podLabels: {}
+
