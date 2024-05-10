@@ -2,13 +2,13 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-night: "20240101"
+night: "20200101"
 pipelineType: "noscience"
 
 image:
   pullPolicy: Always
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
-  name: fink-broker
+  name: fink-broker-noscience
   tag: "v3.1.2-rc1-26-g6b2404a"
 
 # Can be overriden in stream2raw, raw2science and distribution sections

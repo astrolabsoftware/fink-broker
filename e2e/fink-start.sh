@@ -66,14 +66,18 @@ then
   echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
   if [[ "$IMAGE" =~ "-noscience" ]];
   then
-    VALUE_FILE="$DIR/../chart/values-ci-no-science.yaml"
+    VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
+    FINKCONFIG="$DIR/finkconfig_noscience"
   else
     VALUE_FILE="$DIR/../chart/values-ci.yaml"
+    FINKCONFIG="$DIR/finkconfig"
   fi
   kubectl port-forward -n minio svc/minio 9000 &
   # Wait to port-forward to start
   sleep 2
   echo "Create S3 bucket"
+  # TODO find and alternate way to create bucket which remove use of FINKCONFIG
+  # replaced by helm value file
   export FINKCONFIG
   finkctl --endpoint=localhost:9000 s3 makebucket
 fi
