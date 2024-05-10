@@ -1,7 +1,7 @@
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: fink-raw2science
+  name: {{ include "chart.fullname" . }}-raw2science
 spec:
 {{- include "chart.common" . | nindent 2 }}
   mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
