@@ -115,7 +115,9 @@ jobs:
           ktbx install argowf
       - name: Install spark-operator
         run: |
-          # TODO move in argoCD
+          # TODO move in argoCD or ktbx?
+          helm repo add spark-operator https://kubeflow.github.io/spark-operator
+          helm repo update
           helm install spark-operator spark-operator/spark-operator --namespace spark-operator \
           --create-namespace  --version 1.2.14 --set webhook.enable=true --set sparkJobNamespace=spark
       - name: Run argoCD
@@ -143,11 +145,6 @@ jobs:
           argo watch @latest
       # - name: Setup tmate session
       # uses: mxschmitt/action-tmate@v3
-      - name: Install fink-broker pre-requisites (JDK, Spark)
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install openjdk-8-jdk-headless
-          ./e2e/prereq-install.sh
       - name: Run fink-broker
         run: |
           ./e2e/fink-start.sh -e
