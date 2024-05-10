@@ -81,28 +81,9 @@ then
   finkctl --endpoint=localhost:9000 s3 makebucket
 fi
 
-if [ -z "$FINKCONFIG" ];
-then
-  echo "ERROR: FINKCONFIG is not set"
-  exit 1
-else
-  echo "Use FINKCONFIG: $FINKCONFIG"
-  export FINKCONFIG
-fi
-
-echo "Create spark ServiceAccount"
-# see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
-kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
-
-NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
-# FIXME  --namespace=default??? Create a rolebinding in the spark namespace??
-kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
-  --namespace=default --dry-run=client -o yaml | kubectl apply -f -
-
-tasks="stream2raw raw2science distribution"
-for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task $IMAGE_OPT $NIGHT_OPT >& "/tmp/$task.log" &
-done
+# Start fink-broker
+echo "Start fink-broker"
+helm install --debug fink ./chart
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour

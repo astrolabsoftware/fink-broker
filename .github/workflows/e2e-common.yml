@@ -102,6 +102,7 @@ jobs:
           # v0.20.0 does not work on self-hosted runners
           ktbx install kind --kind-version=${{ inputs.kind_version }}
           ktbx install kubectl
+          ktbx install helm
           # Configure private registry if needed
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           ktbx create -s
@@ -112,6 +113,11 @@ jobs:
       - name: Install argo-workflows (fink-alert-simulator pre-requisite)
         run: |
           ktbx install argowf
+      - name: Install spark-operator
+        run: |
+          # TODO move in argoCD
+          helm install spark-operator spark-operator/spark-operator --namespace spark-operator \
+          --create-namespace  --version 1.2.14 --set webhook.enable=true --set sparkJobNamespace=spark
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
