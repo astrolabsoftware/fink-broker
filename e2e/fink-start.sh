@@ -89,6 +89,8 @@ helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE" \
   --set image.name="$CIUX_IMAGE_NAME" \
   --set image.tag="$CIUX_IMAGE_TAG"
 
+echo "Create secrets"
+finkctl createsecrets
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
