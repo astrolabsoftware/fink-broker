@@ -37,7 +37,7 @@ stream2raw:
   fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
   kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
   kafka_starting_offset: earliest
-  kafka_topic: "ztf-stream-{{.Values.night}}"
+  kafka_topic: "ztf-stream-sim"
   servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
 
 #
@@ -69,7 +69,7 @@ s3:
   endpoint: http://minio.minio:9000
   use_ssl: "false"
   # {{.Night}} is optional and will be replaced by the value of run.night
-  bucket: "fink-broker-online-{{.Values.night}}"
+  bucket: "fink-broker-online"
   access_key: "minioadmin"
   secret_key: "minioadmin"
 
