@@ -7,7 +7,7 @@ spec:
   mainApplicationFile: local:///home/fink/fink-broker/bin/distribute.py
   arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-distribution_servers'
-    - '{{ .Values.distribution.kafka.in_sockets }}'
+    - '{{ .Values.distribution.kafka.out_sockets }}'
     - '-distribution_schema'
     - '{{ .Values.distribution.kafka.schema }}'
     - '-substream_prefix'

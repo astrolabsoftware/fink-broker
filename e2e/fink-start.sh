@@ -29,65 +29,50 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 usage() {
   echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
-  echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
-  echo "  -f: finkctl configuration file"
-  echo "  -i: fink-broker image, overriden by CIUX_IMAGE_URL environment variable if -e option is set"
-  echo "  -N: night to process, e.g. 20210101"
-  echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
+  echo "  Run end-to-end tests, fink configuration file and fink-broker image are automatically set"
   echo "  -h: display this help"
 }
 
-E2E_TEST=false
-NOSCIENCE_OPT=""
-IMAGE_OPT=""
-NIGHT_OPT=""
-
 # Parse option for finkctl configuration file and fink-broker image
-while getopts "ef:i:N:th" opt; do
+while getopts "h" opt; do
   case $opt in
-    e) E2E_TEST=true;;
-    f) FINKCONFIG=$OPTARG ;;
     h) usage ; exit 0 ;;
-    N) NIGHT_OPT="-N $OPTARG" ;;
-    t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
-    i) IMAGE_OPT="--image $OPTARG" ;;
   esac
 done
 
 NS=spark
-echo "Create $NS namespace"
-kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
-kubectl config set-context --current --namespace="$NS"
 
-if [ $E2E_TEST = true ];
+# Prepare e2e tests
+. $CIUXCONFIG
+IMAGE="$CIUX_IMAGE_URL"
+echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
+if [[ "$IMAGE" =~ "-noscience" ]];
 then
-  . $CIUXCONFIG
-  IMAGE="$CIUX_IMAGE_URL"
-  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
-  if [[ "$IMAGE" =~ "-noscience" ]];
-  then
-    VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
-    FINKCONFIG="$DIR/finkconfig_noscience"
-  else
-    VALUE_FILE="$DIR/../chart/values-ci.yaml"
-    FINKCONFIG="$DIR/finkconfig"
-  fi
-  kubectl port-forward -n minio svc/minio 9000 &
-  # Wait to port-forward to start
-  sleep 2
-  echo "Create S3 bucket"
-  # TODO find and alternate way to create bucket which remove use of FINKCONFIG
-  # replaced by helm value file
-  export FINKCONFIG
-  finkctl --endpoint=localhost:9000 s3 makebucket
+  VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
+  FINKCONFIG="$DIR/finkconfig_noscience"
+else
+  VALUE_FILE="$DIR/../chart/values-ci.yaml"
+  FINKCONFIG="$DIR/finkconfig"
 fi
+kubectl port-forward -n minio svc/minio 9000 &
+# Wait to port-forward to start
+sleep 2
+echo "Create S3 bucket"
+# TODO find and alternate way to create bucket which remove use of FINKCONFIG
+# replaced by helm value file
+export FINKCONFIG
+finkctl --endpoint=localhost:9000 s3 makebucket
 
 # Start fink-broker
 echo "Start fink-broker"
 helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE" \
+  --namespace "$NS" \
+  --create-namespace \
   --set image.repository="$CIUX_IMAGE_REGISTRY" \
   --set image.name="$CIUX_IMAGE_NAME" \
   --set image.tag="$CIUX_IMAGE_TAG"
+
+kubectl config set-context --current --namespace="$NS"
 
 echo "Create secrets"
 finkctl createsecrets
@@ -95,6 +80,7 @@ finkctl createsecrets
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
 # Science setup is VERY slow to start, because of raw2science-exec pod
+# TODO use helm --wait with a pod which monitor the status of the Spark pods?
 
 # 5 minutes timeout
 timeout="300"
