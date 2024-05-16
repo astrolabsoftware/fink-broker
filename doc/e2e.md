@@ -73,16 +73,15 @@ Run the Fink-Alert-Simulator.
 argo watch @latest
 ```
 
-7.  **Install Fink-Broker Prerequisites (JDK, Spark)**
+1.  **Install Fink-Broker Prerequisites (Spark-operator)**
 
 Install prerequisites for Fink-Broker (JDK, Spark).
 
 ```bash
-# commands are provided for Debian-based distribution
-# use yum for RedHat-based distribution
-sudo apt-get -y update
-sudo apt-get -y install openjdk-8-jdk-headless
-./e2e/prereq-install.sh
+helm repo add spark-operator https://kubeflow.github.io/spark-operator
+helm repo update
+helm install spark-operator spark-operator/spark-operator --namespace spark-operator \
+    --create-namespace  --version 1.2.14 --set webhook.enable=true --set sparkJobNamespace=spark
 ```
 
 ### Run Fink-Broker
