@@ -36,10 +36,10 @@ stream2raw:
   memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
   fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
-  kafka_socket: kafka-cluster-kafka-bootstrap.kafka:9092
-  kafka_starting_offset: earliest
-  kafka_topic: "ztf-stream-{{.Values.night}}"
-  servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
+  kafka:
+    in_socket: kafka-cluster-kafka-bootstrap.kafka:9092
+    starting_offset: earliest
+    topic: "ztf-stream-{{.Values.night}}"
 
 #
 # Parameters used to run the raw2science task
@@ -58,10 +58,10 @@ distribution:
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
-  # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
-  servers: "{{ .Values.stream2raw.servers }}"
-  schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
-  substream_prefix: "fink_"
+  kafka:
+    out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
+    schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
+    substream_prefix: "fink_"
 
 #
 # Parameters used to access the S3 bucket

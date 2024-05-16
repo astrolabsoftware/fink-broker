@@ -7,13 +7,13 @@ spec:
   mainApplicationFile: local:///home/fink/fink-broker/bin/stream2raw.py
   arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-servers'
-    - '{{ .Values.stream2raw.servers }}'
+    - '{{ .Values.stream2raw.kafka.in_sockets }}'
     - '-schema'
     - '{{ .Values.stream2raw.fink_alert_schema }}'
     - '-startingoffsets_stream'
-    - '{{ .Values.stream2raw.kafka_starting_offset }}'
+    - '{{ .Values.stream2raw.kafka.starting_offset }}'
     - '-topic'
-    - '{{ .Values.stream2raw.kafka_topic }}'
+    - '{{ .Values.stream2raw.kafka.topic }}'
   sparkVersion: "3.4.1"
   sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   driver:
