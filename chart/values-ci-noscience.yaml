@@ -5,85 +5,17 @@
 night: "20200101"
 
 image:
-  pullPolicy: Always
-  repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
   name: fink-broker-noscience
-  tag: "v3.1.2-rc1-26-g6b2404a"
-
-# Can be overriden in stream2raw, raw2science and distribution sections
-cores: 1
-coreRequest: 0
-instances: 1
-memory: 1g
-
-fink_trigger_update: "2"
-
-# Can be overriden using --image option
-
-# Default to s3a://<s3.bucket>
-# online_data_prefix: s3a://fink-broker-online
-producer: sims
-
-log_level: INFO
 
 #
 # Parameters used to run the stream2raw task
 #
 stream2raw:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
-  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
   kafka:
-    in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
-    starting_offset: earliest
     topic: "ztf-stream-sim"
-
-
-#
-# Parameters used to run the raw2science task
-#
-raw2science:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
-
-#
-# Parameters used to run the distribution task
-#
-distribution:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
-  # Comma-separated list of Kafka servers
-  kafka:
-    out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
-    schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
-    substream_prefix: "fink_"
 
 #
 # Parameters used to access the S3 bucket
 #
 s3:
-  endpoint: http://minio.minio:9000
-  use_ssl: "false"
-  # {{.Night}} is optional and will be replaced by the value of run.night
   bucket: "fink-broker-online"
-  access_key: "minioadmin"
-  secret_key: "minioadmin"
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: "spark"
-
-podAnnotations: {}
-podLabels: {}
-

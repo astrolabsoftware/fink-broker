@@ -14,7 +14,7 @@ image:
 cores: 1
 coreRequest: 0
 instances: 1
-memory: 1Gi
+memory: 1g
 # instances: 1
 
 fink_trigger_update: "2"
@@ -37,7 +37,7 @@ stream2raw:
   instances: "{{.Values.instances}}"
   fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
   kafka:
-    in_socket: kafka-cluster-kafka-bootstrap.kafka:9092
+    in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest
     topic: "ztf-stream-{{.Values.night}}"
 
