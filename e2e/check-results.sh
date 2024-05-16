@@ -41,14 +41,15 @@ do
     kubectl get pods
     if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
-        echo "ERROR: fink-broker as crashed"
-        echo "ERROR: enabling interactive access for debugging purpose"
+        echo "ERROR: fink-broker as crashed" 1>&2
+        echo "ERROR: enabling interactive access for debugging purpose" 1>&2
         sleep 7200
         exit 1
     fi
     count=$((count+1))
     if [ $count -eq 10 ]; then
-        echo "Timeout waiting for topics to be created"
+        echo "ERROR: Timeout waiting for topics to be created" 1>&2
+        kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
         exit 1
     fi
 done
