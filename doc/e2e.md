@@ -90,7 +90,7 @@ sudo apt-get -y install openjdk-8-jdk-headless
 Run the Fink-Broker.
 
 ```bash
-./e2e/fink-start.sh -e
+./e2e/fink-start.sh
 ```
 
 ### Check Results
