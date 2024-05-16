@@ -141,6 +141,7 @@ jobs:
       - name: Run fink-alert-simulator
         run: |
           . "$CIUXCONFIG"
+          kubectl config set-context --current --namespace=argo
           "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
           argo watch @latest
       # - name: Setup tmate session

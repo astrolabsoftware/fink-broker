@@ -41,7 +41,7 @@ do
     kubectl get pods
     if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
-        echo "ERROR: fink-broker as crashed" 1>&2
+        echo "ERROR: fink-broker has crashed" 1>&2
         echo "ERROR: enabling interactive access for debugging purpose" 1>&2
         sleep 7200
         exit 1
