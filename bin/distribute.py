@@ -75,7 +75,6 @@ def main():
 
     # Connect to the TMP science database
     df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
-    df = connect_to_raw_database(input_sci, input_sci, latestfirst=False)
 
     # Cast fields to ease the distribution
     cnames = df.columns
