@@ -13,8 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Access the science database, and read alerts. HBase must be installed.
-"""
+"""Access the science database, and read alerts. HBase must be installed."""
+
 import os
 import argparse
 import json
@@ -23,14 +23,14 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     # Grab the running Spark Session,
     # otherwise create it.
-    spark = init_sparksession(
-        name="readingScienceDB", shuffle_partitions=2)
+    spark = init_sparksession(name="readingScienceDB", shuffle_partitions=2)
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -38,21 +38,26 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    with open(os.path.join(args.science_db_catalogs, '{}.json'.format(args.science_db_name))) as f:
+    with open(
+        os.path.join(args.science_db_catalogs, "{}.json".format(args.science_db_name))
+    ) as f:
         catalog = json.load(f)
 
     catalog_dic = json.loads(catalog)
 
-    df = spark.read.option("catalog", catalog)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
+    df = (
+        spark.read.option("catalog", catalog)
+        .format("org.apache.hadoop.hbase.spark")
+        .option("hbase.spark.use.hbasecontext", False)
         .load()
+    )
 
-    print("Number of entries in {}: ".format(
-        catalog_dic["table"]["name"]), df.count())
+    print("Number of entries in {}: ".format(catalog_dic["table"]["name"]), df.count())
 
-    print("Number of distinct objects in {}: ".format(
-        catalog_dic["table"]["name"]), df.select('objectId').distinct().count())
+    print(
+        "Number of distinct objects in {}: ".format(catalog_dic["table"]["name"]),
+        df.select("objectId").distinct().count(),
+    )
 
 
 if __name__ == "__main__":

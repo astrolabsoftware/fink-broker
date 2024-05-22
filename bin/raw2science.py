@@ -22,6 +22,7 @@ Step 4: Push alert data into the tmp science database (parquet)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
+
 from pyspark.sql import functions as F
 
 import argparse
@@ -39,17 +40,22 @@ from fink_broker.science import apply_science_modules_elasticc
 
 from fink_science import __version__ as fsvsn
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    if args.night == 'elasticc':
-        tz = 'UTC'
+    if args.night == "elasticc":
+        tz = "UTC"
     else:
         tz = None
 
     # Initialise Spark session
-    spark = init_sparksession(name="raw2science_{}_{}".format(args.producer, args.night), shuffle_partitions=2, tz=tz)
+    spark = init_sparksession(
+        name="raw2science_{}_{}".format(args.producer, args.night),
+        shuffle_partitions=2,
+        tz=tz,
+    )
 
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
@@ -58,80 +64,71 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + '/raw'
-    scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint'
+    rawdatapath = args.online_data_prefix + "/raw"
+    scitmpdatapath = args.online_data_prefix + "/science"
+    checkpointpath_sci_tmp = args.online_data_prefix + "/science_checkpoint"
 
-    if args.producer == 'elasticc':
-        df = connect_to_raw_database(
-            rawdatapath, rawdatapath, latestfirst=False
-        )
+    if args.producer == "elasticc":
+        df = connect_to_raw_database(rawdatapath, rawdatapath, latestfirst=False)
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            rawdatapath + "/year={}/month={}/day={}".format(
-                args.night[0:4],
-                args.night[4:6],
-                args.night[6:8]
+            rawdatapath
+            + "/year={}/month={}/day={}".format(
+                args.night[0:4], args.night[4:6], args.night[6:8]
             ),
-            rawdatapath + "/year={}/month={}/day={}".format(
-                args.night[0:4],
-                args.night[4:6],
-                args.night[6:8]
+            rawdatapath
+            + "/year={}/month={}/day={}".format(
+                args.night[0:4], args.night[4:6], args.night[6:8]
             ),
-            latestfirst=False
+            latestfirst=False,
         )
 
     # Apply science modules
-    if 'candidate' in df.columns:
+    if "candidate" in df.columns:
         # Apply quality cuts
         logger.info("Applying quality cuts")
-        df = df\
-            .filter(df['candidate.nbad'] == 0)\
-            .filter(df['candidate.rb'] >= 0.55)
+        df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
         df = apply_science_modules(df, args.noscience)
-        timecol = 'candidate.jd'
+        timecol = "candidate.jd"
         converter = lambda x: convert_to_datetime(x)
-    elif 'diaSource' in df.columns:
+    elif "diaSource" in df.columns:
         df = apply_science_modules_elasticc(df)
-        timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+        timecol = "diaSource.midPointTai"
+        converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
     # Add library versions
-    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
-        .withColumn('fink_science_version', F.lit(fsvsn))
+    df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
+        "fink_science_version", F.lit(fsvsn)
+    )
 
     # Switch publisher
-    df = df.withColumn('publisher', F.lit('Fink'))
+    df = df.withColumn("publisher", F.lit("Fink"))
 
     # re-create partitioning columns if needed.
-    if 'timestamp' not in df.columns:
-        df = df\
-            .withColumn("timestamp", converter(df[timecol]))
+    if "timestamp" not in df.columns:
+        df = df.withColumn("timestamp", converter(df[timecol]))
 
     if "year" not in df.columns:
-        df = df\
-            .withColumn("year", F.date_format("timestamp", "yyyy"))
+        df = df.withColumn("year", F.date_format("timestamp", "yyyy"))
 
     if "month" not in df.columns:
-        df = df\
-            .withColumn("month", F.date_format("timestamp", "MM"))
+        df = df.withColumn("month", F.date_format("timestamp", "MM"))
 
     if "day" not in df.columns:
-        df = df\
-            .withColumn("day", F.date_format("timestamp", "dd"))
+        df = df.withColumn("day", F.date_format("timestamp", "dd"))
 
     # Append new rows in the tmp science database
-    countquery = df\
-        .writeStream\
-        .outputMode("append") \
-        .format("parquet") \
-        .option("checkpointLocation", checkpointpath_sci_tmp) \
-        .option("path", scitmpdatapath)\
-        .partitionBy("year", "month", "day") \
-        .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+    countquery = (
+        df.writeStream.outputMode("append")
+        .format("parquet")
+        .option("checkpointLocation", checkpointpath_sci_tmp)
+        .option("path", scitmpdatapath)
+        .partitionBy("year", "month", "day")
+        .trigger(processingTime="{} seconds".format(args.tinterval))
         .start()
+    )
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

@@ -22,6 +22,7 @@ from astropy.time import Time
 
 from fink_broker.tester import spark_unit_tests
 
+
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
 def convert_to_millitime(jd: pd.Series, format=None, now=None):
     """Convert date into unix milliseconds (long)
@@ -53,19 +54,17 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
     >>> pdf = df.select('millis').toPandas()
     """
     if format is None:
-        formatval = 'jd'
+        formatval = "jd"
     else:
         formatval = format.to_numpy()[0]
 
     if now is not None:
         times = [Time.now().to_datetime()] * len(jd)
     else:
-        times = Time(
-            jd.to_numpy(),
-            format=formatval
-        ).to_datetime()
+        times = Time(jd.to_numpy(), format=formatval).to_datetime()
 
     return pd.Series(times)
+
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)
 def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
@@ -105,13 +104,14 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     >>> pdf = df.select('datetime').toPandas()
     """
     if format is None:
-        formatval = 'jd'
+        formatval = "jd"
     else:
         formatval = format.to_numpy()[0]
 
     return pd.Series(Time(jd.to_numpy(), format=formatval).to_datetime())
 
-def compute_num_part(df, partition_size=128.):
+
+def compute_num_part(df, partition_size=128.0):
     """Compute the idle number of partitions of a DataFrame based on its size.
 
     Parameters
@@ -137,21 +137,20 @@ def compute_num_part(df, partition_size=128.):
     """
     # Grab the running Spark Session,
     # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     logical_plan = df._jdf.queryExecution().logical()
     mode = df._jdf.queryExecution().mode()
-    b = spark._jsparkSession\
-        .sessionState()\
-        .executePlan(logical_plan, mode)\
-        .optimizedPlan()\
-        .stats()\
+    b = (
+        spark._jsparkSession.sessionState()
+        .executePlan(logical_plan, mode)
+        .optimizedPlan()
+        .stats()
         .sizeInBytes()
+    )
 
     # Convert in MB
-    b_mb = b / 1024. / 1024.
+    b_mb = b / 1024.0 / 1024.0
 
     # Ceil it
     numpart = int(np.ceil(b_mb / partition_size))

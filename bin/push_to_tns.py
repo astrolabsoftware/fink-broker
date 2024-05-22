@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Push early SN candidates to TNS"""
+
 import argparse
 import requests
 import os
@@ -28,14 +29,14 @@ from fink_tns.utils import read_past_ids, retrieve_groupid
 from fink_tns.report import extract_discovery_photometry, build_report
 from fink_tns.report import save_logs_and_return_json_report, send_json_report
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="TNS_report_{}".format(args.night),
-        shuffle_partitions=2
+        name="TNS_report_{}".format(args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -45,45 +46,52 @@ def main():
     inspect_application(logger)
 
     # Connect to the aggregated science database
-    path = '{}/science/year={}/month={}/day={}'.format(
-        args.agg_data_prefix,
-        args.night[:4],
-        args.night[4:6],
-        args.night[6:8]
+    path = "{}/science/year={}/month={}/day={}".format(
+        args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
     )
     df = load_parquet_files(path)
 
-    with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
-        tns_marker = f.read().replace('\n', '')
+    with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
+        tns_marker = f.read().replace("\n", "")
 
     if not args.tns_sandbox:
         print("WARNING: submitting to real (not sandbox) TNS website")
 
     if args.tns_sandbox:
         url_tns_api = "https://sandbox.wis-tns.org/api"
-        with open('{}/sandbox-tns_api.key'.format(args.tns_folder)) as f:
+        with open("{}/sandbox-tns_api.key".format(args.tns_folder)) as f:
             # remove line break...
-            key = f.read().replace('\n', '')
+            key = f.read().replace("\n", "")
     else:
         url_tns_api = "https://www.wis-tns.org/api"
-        with open('{}/tns_api.key'.format(args.tns_folder)) as f:
+        with open("{}/tns_api.key".format(args.tns_folder)) as f:
             # remove line break...
-            key = f.read().replace('\n', '')
+            key = f.read().replace("\n", "")
 
     cols = [
-        'cdsxmatch', 'roid', 'mulens',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'candidate.ndethist', 'candidate.drb', 'candidate.classtar',
-        'candidate.jd', 'candidate.jdstarthist', 'rf_kn_vs_nonkn', 'tracklet'
+        "cdsxmatch",
+        "roid",
+        "mulens",
+        "snn_snia_vs_nonia",
+        "snn_sn_vs_all",
+        "rf_snia_vs_nonia",
+        "candidate.ndethist",
+        "candidate.drb",
+        "candidate.classtar",
+        "candidate.jd",
+        "candidate.jdstarthist",
+        "rf_kn_vs_nonkn",
+        "tracklet",
     ]
-    df = df.withColumn('class', extract_fink_classification(*cols))
+    df = df.withColumn("class", extract_fink_classification(*cols))
 
-    pdf = df\
-        .filter(df['class'] == 'Early SN Ia candidate')\
-        .filter(df['candidate.ndethist'] <= 20)\
+    pdf = (
+        df.filter(df["class"] == "Early SN Ia candidate")
+        .filter(df["candidate.ndethist"] <= 20)
         .toPandas()
+    )
 
-    pdf_unique = pdf.groupby('objectId')[pdf.columns].min()
+    pdf_unique = pdf.groupby("objectId")[pdf.columns].min()
     print("{} new alerts".format(len(pdf)))
     print("{} new sources".format(len(pdf_unique)))
     pdf = pdf_unique
@@ -94,56 +102,47 @@ def main():
     for index, row in enumerate(pdf.iterrows()):
         alert = row[1]
         past_ids = read_past_ids(args.tns_folder)
-        if alert['objectId'] in past_ids.to_numpy():
-            print('{} already sent!'.format(alert['objectId']))
+        if alert["objectId"] in past_ids.to_numpy():
+            print("{} already sent!".format(alert["objectId"]))
             continue
         if check_tns:
-            groupid = retrieve_groupid(key, tns_marker, alert['objectId'])
+            groupid = retrieve_groupid(key, tns_marker, alert["objectId"])
             if groupid > 0:
-                print("{} already reported by {}".format(
-                    alert['objectId'],
-                    groupid
-                ))
+                print("{} already reported by {}".format(alert["objectId"], groupid))
             else:
-                print('New report for object {}'.format(alert['objectId']))
+                print("New report for object {}".format(alert["objectId"]))
         photometry, non_detection = extract_discovery_photometry(alert)
-        report['at_report']["{}".format(index)] = build_report(
-            alert,
-            photometry,
-            non_detection
+        report["at_report"]["{}".format(index)] = build_report(
+            alert, photometry, non_detection
         )
-        ids.append(alert['objectId'])
-    print('new objects: ', ids)
+        ids.append(alert["objectId"])
+    print("new objects: ", ids)
 
     if len(ids) != 0:
         json_report = save_logs_and_return_json_report(
-            name='{}{}{}'.format(
-                args.night[:4],
-                args.night[4:6],
-                args.night[6:8]
-            ),
+            name="{}{}{}".format(args.night[:4], args.night[4:6], args.night[6:8]),
             folder=args.tns_folder,
             ids=ids,
-            report=report
+            report=report,
         )
         r = send_json_report(key, url_tns_api, json_report, tns_marker)
         print(r.json())
 
         # post to slack
-        slacktxt = ' \n '.join(['https://fink-portal.org/{}'.format(i) for i in ids])
-        slacktxt = '{} \n '.format(args.night) + slacktxt
+        slacktxt = " \n ".join(["https://fink-portal.org/{}".format(i) for i in ids])
+        slacktxt = "{} \n ".format(args.night) + slacktxt
         r = requests.post(
-            os.environ['TNSWEBHOOK'],
-            json={'text': slacktxt, "username": "VirtualData"},
-            headers={'Content-Type': 'application/json'}
+            os.environ["TNSWEBHOOK"],
+            json={"text": slacktxt, "username": "VirtualData"},
+            headers={"Content-Type": "application/json"},
         )
         print(r.status_code)
     else:
-        slacktxt = '{} \n No new sources'.format(args.night)
+        slacktxt = "{} \n No new sources".format(args.night)
         r = requests.post(
-            os.environ['TNSWEBHOOK'],
-            json={'text': slacktxt, "username": "VirtualData"},
-            headers={'Content-Type': 'application/json'}
+            os.environ["TNSWEBHOOK"],
+            json={"text": slacktxt, "username": "VirtualData"},
+            headers={"Content-Type": "application/json"},
         )
 
 

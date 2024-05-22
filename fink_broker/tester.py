@@ -55,8 +55,8 @@ def regular_unit_tests(global_args: dict = None, verbose: bool = False):
 
 
 def spark_unit_tests(
-        global_args: dict = None, verbose: bool = False,
-        withstreaming: bool = False):
+    global_args: dict = None, verbose: bool = False, withstreaming: bool = False
+):
     """Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
@@ -92,16 +92,13 @@ def spark_unit_tests(
     confdic = {
         "spark.jars.packages": os.environ["FINK_PACKAGES"],
         "spark.jars": os.environ["FINK_JARS"],
-        "spark.python.daemon.module": "coverage_daemon"}
+        "spark.python.daemon.module": "coverage_daemon",
+    }
     conf.setMaster("local[2]")
     conf.setAppName("fink_test")
     for k, v in confdic.items():
         conf.set(key=k, value=v)
-    spark = SparkSession\
-        .builder\
-        .appName("fink_test")\
-        .config(conf=conf)\
-        .getOrCreate()
+    spark = SparkSession.builder.appName("fink_test").config(conf=conf).getOrCreate()
 
     # Reduce the number of suffled partitions
     spark.conf.set("spark.sql.shuffle.partitions", 2)
@@ -109,10 +106,13 @@ def spark_unit_tests(
     global_args["spark"] = spark
 
     if withstreaming:
-        dfstream = spark.readStream.format("kafka")\
-            .option("kafka.bootstrap.servers", os.environ["KAFKA_IPPORT_SIM"])\
-            .option("subscribe", os.environ["KAFKA_TOPIC"])\
-            .option("startingOffsets", "earliest").load()
+        dfstream = (
+            spark.readStream.format("kafka")
+            .option("kafka.bootstrap.servers", os.environ["KAFKA_IPPORT_SIM"])
+            .option("subscribe", os.environ["KAFKA_TOPIC"])
+            .option("startingOffsets", "earliest")
+            .load()
+        )
         global_args["dfstream"] = dfstream
 
     # Numpy introduced non-backward compatible change from v1.14.

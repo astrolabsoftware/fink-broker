@@ -19,6 +19,7 @@ from logging import Logger
 
 from fink_broker.tester import spark_unit_tests
 
+
 def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
     """Initialise python logger. Suitable for both driver and executors.
 
@@ -59,6 +60,7 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
 
     return logger
 
+
 def inspect_application(logger):
     """Print INFO and DEBUG statements about the current application
 
@@ -74,9 +76,9 @@ def inspect_application(logger):
     """
     spark = SparkSession.builder.getOrCreate()
 
-    logger.debug('Application started')
-    logger.debug('Python version: {}'.format(spark.sparkContext.pythonVer))
-    logger.debug('Spark version: {}'.format(spark.sparkContext.version))
+    logger.debug("Application started")
+    logger.debug("Python version: {}".format(spark.sparkContext.pythonVer))
+    logger.debug("Spark version: {}".format(spark.sparkContext.version))
 
     # Debug statements
     conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])

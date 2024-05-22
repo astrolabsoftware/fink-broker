@@ -28,22 +28,22 @@ from fink_broker.parser import getargs
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
     """Format the raw TNS data for HBase ingestion"""
     # Add new or rename columns
-    pdf['fullname'] = pdf['name_prefix'] + ' ' + pdf['name']
-    pdf['internalname'] = pdf['internal_names']
+    pdf["fullname"] = pdf["name_prefix"] + " " + pdf["name"]
+    pdf["internalname"] = pdf["internal_names"]
 
     # Apply quality cuts
-    mask = pdf['internalname'].apply(lambda x: (x is not None) and (x == x))  # NOSONAR
+    mask = pdf["internalname"].apply(lambda x: (x is not None) and (x == x))  # NOSONAR
     pdf_val = pdf[mask]
-    pdf_val['type'] = pdf_val['type'].astype('str')
+    pdf_val["type"] = pdf_val["type"].astype("str")
 
-    pdf_val['internalname'] = pdf_val['internalname'].apply(
-        lambda x: [i.strip() for i in x.split(',')]
+    pdf_val["internalname"] = pdf_val["internalname"].apply(
+        lambda x: [i.strip() for i in x.split(",")]
     )
 
-    pdf_explode = pdf_val.explode('internalname')
+    pdf_explode = pdf_val.explode("internalname")
 
     # Select columns of interest -- and create a Spark DataFrame
-    cols = ['fullname', 'ra', 'declination', 'type', 'redshift', 'internalname']
+    cols = ["fullname", "ra", "declination", "type", "redshift", "internalname"]
 
     return pdf_explode[cols]
 
@@ -54,54 +54,47 @@ def main():
     args = getargs(parser)
 
     # construct the index view 'fullname_internalname'
-    index_row_key_name = 'fullname_internalname'
-    columns = index_row_key_name.split('_')
-    index_name = '.tns_resolver'
+    index_row_key_name = "fullname_internalname"
+    columns = index_row_key_name.split("_")
+    index_name = ".tns_resolver"
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="tns_resolver_{}".format(args.night),
-        shuffle_partitions=2
+        name="tns_resolver_{}".format(args.night), shuffle_partitions=2
     )
 
-    with open('{}/tns_marker.txt'.format(args.tns_folder)) as f:
-        tns_marker = f.read().replace('\n', '')
+    with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
+        tns_marker = f.read().replace("\n", "")
 
-    pdf_tns = download_catalog(os.environ['TNS_API_KEY'], tns_marker)
+    pdf_tns = download_catalog(os.environ["TNS_API_KEY"], tns_marker)
 
     # Push to HBase
     df_index = spark.createDataFrame(format_tns_for_hbase(pdf_tns))
 
-    df_index = add_row_key(
-        df_index,
-        row_key_name=index_row_key_name,
-        cols=columns
-    )
+    df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
 
     # make the rowkey lower case
     df_index = df_index.withColumn(index_row_key_name, F.lower(index_row_key_name))
 
-    cf = {i: 'd' for i in df_index.columns}
+    cf = {i: "d" for i in df_index.columns}
 
     push_to_hbase(
         df=df_index,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=args.science_db_catalogs
+        catfolder=args.science_db_catalogs,
     )
 
     # Save raw data
-    pdf_tns.to_parquet('{}/tns_raw.parquet'.format(args.tns_raw_output))
+    pdf_tns.to_parquet("{}/tns_raw.parquet".format(args.tns_raw_output))
 
     # Filter TNS confirmed data
-    f1 = ~pdf_tns['type'].isna()
+    f1 = ~pdf_tns["type"].isna()
     pdf_tns_filt = pdf_tns[f1]
-    pdf_tns_filt['type'] = pdf_tns_filt['type'].apply(
-        lambda x: '(TNS) {}'.format(x)
-    )
+    pdf_tns_filt["type"] = pdf_tns_filt["type"].apply(lambda x: "(TNS) {}".format(x))
 
-    pdf_tns_filt.to_parquet('{}/tns.parquet'.format(args.tns_raw_output))
+    pdf_tns_filt.to_parquet("{}/tns.parquet".format(args.tns_raw_output))
 
 
 if __name__ == "__main__":

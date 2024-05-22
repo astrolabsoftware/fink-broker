@@ -14,15 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for Slack. Mostly deprecated."""
+
 import os
 import slack
 from fink_broker.tester import spark_unit_tests
 from pyspark.sql import DataFrame
 from fink_broker.loggingUtils import get_fink_logger
+
 logger = get_fink_logger(__name__, "INFO")
+
 
 class FinkSlackClient:
     """Wrapper around Slack client for Fink. Deprecated."""
+
     def __init__(self, api_token):
         self._client = slack.WebClient(token=api_token)
 
@@ -32,14 +36,14 @@ class FinkSlackClient:
             logger.error("Authentication Error: Invalid Token")
 
         # create a dict of {channelName: ID}
-        channels = self._client.channels_list()['channels']
-        self._channel_ids = {
-            x['name']: x['id'] for x in channels if 'name' in x.keys()}
+        channels = self._client.channels_list()["channels"]
+        self._channel_ids = {x["name"]: x["id"] for x in channels if "name" in x.keys()}
 
         # create a dict of {userName: ID}
-        members = self._client.users_list()['members']
+        members = self._client.users_list()["members"]
         self._user_ids = {
-            x['real_name']: x['id'] for x in members if 'real_name' in x.keys()}
+            x["real_name"]: x["id"] for x in members if "real_name" in x.keys()
+        }
 
     def send_message(self, recipient, msg):
         """Sends a message to a given channel/user on the slack workspace
@@ -53,19 +57,23 @@ class FinkSlackClient:
             message payload to send
         """
         # if recipient is a channel e.g. #general
-        if recipient[0] == '#':
+        if recipient[0] == "#":
             name = recipient[1:]
             if name not in self._channel_ids:
                 logger.warn("Private or Invalid Channel Name")
-        else:   # user
+        else:  # user
             name = recipient
             if recipient not in self._user_ids:
                 logger.error("User is not member of your slack workspace")
                 return
 
         self._client.chat_postMessage(
-            channel=name, text=msg, as_user="false",
-            username="fink-alert", icon_emoji="strend:")
+            channel=name,
+            text=msg,
+            as_user="false",
+            username="fink-alert",
+            icon_emoji="strend:",
+        )
 
 
 def get_api_token():
@@ -85,6 +93,7 @@ def get_api_token():
 
     return api_token
 
+
 def get_slack_client():
     """Returns an object of class FinkSlackClient
 
@@ -100,9 +109,10 @@ def get_slack_client():
     else:
         logger.error("please set the env variable: SLACK_API_TOKEN")
 
+
 def get_show_string(
-        df: DataFrame, n: int = 20,
-        truncate: int = 0, vertical: bool = False) -> str:
+    df: DataFrame, n: int = 20, truncate: int = 0, vertical: bool = False
+) -> str:
     """Returns the string printed by df.show()
 
     Parameters
@@ -138,6 +148,7 @@ def get_show_string(
     <BLANKLINE>
     """
     return df._jdf.showString(n, truncate, vertical)
+
 
 def send_slack_alerts(df: DataFrame, channels: str):
     """Send alerts to slack channel
@@ -176,27 +187,25 @@ def send_slack_alerts(df: DataFrame, channels: str):
     >>> os.remove(channels)
     """
     channels_list = []
-    with open(channels, 'rt') as f:
+    with open(channels, "rt") as f:
         for line in f:
             line = line.strip()
-            if line and not line.startswith('#'):
-                channels_list.append('#' + line)
+            if line and not line.startswith("#"):
+                channels_list.append("#" + line)
 
     finkSlack = get_slack_client()
 
     # filter out unknown object types
     df = df.filter("cross_match_alerts_per_batch!='Unknown'")
-    object_types = df \
-        .select("cross_match_alerts_per_batch")\
-        .distinct()\
-        .collect()
+    object_types = df.select("cross_match_alerts_per_batch").distinct().collect()
     object_types = [x[0] for x in object_types]
     # Send alerts to the respective channels
     for obj in object_types:
-        channel_name = '#' + ''.join(e.lower() for e in obj if e.isalpha())
+        channel_name = "#" + "".join(e.lower() for e in obj if e.isalpha())
         if channel_name in channels_list:
             alert_text = get_show_string(
-                df.filter(df.cross_match_alerts_per_batch == obj))
+                df.filter(df.cross_match_alerts_per_batch == obj)
+            )
             slack_alert = "```\n" + alert_text + "```"
 
             finkSlack.send_message(channel_name, slack_alert)

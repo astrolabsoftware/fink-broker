@@ -19,6 +19,7 @@
 2. groupby object ID
 4. Push data (single shot)
 """
+
 import pyspark.sql.functions as F
 
 import os
@@ -40,8 +41,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="object_archival_{}".format(args.night),
-        shuffle_partitions=2
+        name="object_archival_{}".format(args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -55,37 +55,33 @@ def main():
     # Load data from HBase
     catalog, rowkey = load_hbase_catalog_as_dict(
         os.path.join(
-            args.science_db_catalogs,
-            '{}.sso_cand.json'.format(args.science_db_name)
+            args.science_db_catalogs, "{}.sso_cand.json".format(args.science_db_name)
         )
     )
-    _, catalog_small = select_columns_in_catalog(
-        catalog, cols=['jd_trajectory_id']
-    )
+    _, catalog_small = select_columns_in_catalog(catalog, cols=["jd_trajectory_id"])
     df = load_hbase_data(catalog_small, rowkey)
 
     # group by
-    df_grouped = group_by_key(df, 'jd_trajectory_id', position=1)
-    df_grouped = df_grouped.withColumnRenamed('id', 'trajectory_id')
+    df_grouped = group_by_key(df, "jd_trajectory_id", position=1)
+    df_grouped = df_grouped.withColumnRenamed("id", "trajectory_id")
 
     # Definitions
-    index_row_key_name = 'count_trajectory_id'
-    index_name = '.ssocand_oid'
+    index_row_key_name = "count_trajectory_id"
+    index_name = ".ssocand_oid"
 
     # add the rowkey -- and select only it
     df_grouped = df_grouped.withColumn(
-        index_row_key_name,
-        F.concat_ws('_', *['count', 'trajectory_id'])
+        index_row_key_name, F.concat_ws("_", *["count", "trajectory_id"])
     ).select(index_row_key_name)
 
-    cf = {i: 'd' for i in df_grouped.columns}
+    cf = {i: "d" for i in df_grouped.columns}
 
     push_to_hbase(
         df=df_grouped,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=args.science_db_catalogs
+        catfolder=args.science_db_catalogs,
     )
 
     # Table 2: Known SSO
@@ -93,37 +89,33 @@ def main():
     # Load data from HBase
     catalog, rowkey = load_hbase_catalog_as_dict(
         os.path.join(
-            args.science_db_catalogs,
-            '{}.ssnamenr.json'.format(args.science_db_name)
+            args.science_db_catalogs, "{}.ssnamenr.json".format(args.science_db_name)
         )
     )
-    _, catalog_small = select_columns_in_catalog(
-        catalog, cols=['ssnamenr_jd']
-    )
+    _, catalog_small = select_columns_in_catalog(catalog, cols=["ssnamenr_jd"])
     df = load_hbase_data(catalog_small, rowkey)
 
     # group by
-    df_grouped = group_by_key(df, 'ssnamenr_jd', position=1)
-    df_grouped = df_grouped.withColumnRenamed('id', 'ssnamenr')
+    df_grouped = group_by_key(df, "ssnamenr_jd", position=1)
+    df_grouped = df_grouped.withColumnRenamed("id", "ssnamenr")
 
     # Definitions
-    index_row_key_name = 'count_ssnamenr'
-    index_name = '.sso_oid'
+    index_row_key_name = "count_ssnamenr"
+    index_name = ".sso_oid"
 
     # add the rowkey -- and select only it
     df_grouped = df_grouped.withColumn(
-        index_row_key_name,
-        F.concat_ws('_', *['count', 'ssnamenr'])
+        index_row_key_name, F.concat_ws("_", *["count", "ssnamenr"])
     ).select(index_row_key_name)
 
-    cf = {i: 'd' for i in df_grouped.columns}
+    cf = {i: "d" for i in df_grouped.columns}
 
     push_to_hbase(
         df=df_grouped,
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=args.science_db_catalogs
+        catfolder=args.science_db_catalogs,
     )
 
 
