@@ -35,7 +35,7 @@ from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_millitime
 
 def format_df_to_elasticc(df):
-    """ Take the input DataFrame, and format it for ELAsTICC post-processing
+    """Take the input DataFrame, and format it for ELAsTICC post-processing
 
     Comments:
     - We currently add non-existing columns on-the-fly. This includes:

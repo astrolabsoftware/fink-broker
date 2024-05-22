@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023 AstroLab Software
+# Copyright 2023-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct SSO index table, and push to HBase
-"""
+"""Construct SSO index table, and push to HBase"""
 import os
 import argparse
 import datetime
@@ -30,7 +29,7 @@ from fink_spins.ssoft import rockify
 
 
 def mark_as_duplicate(series, count=0):
-    """ Iteratively tag duplicates
+    """Iteratively tag duplicates
 
     Parameters
     ----------
@@ -40,13 +39,13 @@ def mark_as_duplicate(series, count=0):
         Counter, starting at 0.
 
     Returns
-    ----------
+    -------
     series: pd.Series
         Input series with duplicate markers of
         the form _{level of duplicate}
 
     Examples
-    ----------
+    --------
     >>> pdf = pd.DataFrame({'col': [['a', 'b', 'c'], ['a', 'b'], ['b', 'c']]}).explode('col')
     >>> mark_as_duplicate(pdf['col'].copy())
     0    a_0
@@ -74,7 +73,7 @@ def mark_as_duplicate(series, count=0):
 
 
 def sort_indices(pdf, column='ssodnet'):
-    """ Isolate decimal values in `column`, and sort the DataFrame by ascending order
+    """Isolate decimal values in `column`, and sort the DataFrame by ascending order
 
     Parameters
     ----------
@@ -84,7 +83,7 @@ def sort_indices(pdf, column='ssodnet'):
         Column name
 
     Returns
-    ----------
+    -------
     pdf: pd.DataFrame
         Sorted DataFrame
     """

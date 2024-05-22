@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2021 AstroLab Software
+# Copyright 2021-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compute statistics for a given observing night
-"""
+"""Compute statistics for a given observing night"""
 import argparse
 
 import numpy as np

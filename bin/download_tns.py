@@ -26,8 +26,7 @@ from fink_broker.parser import getargs
 
 
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
-    """ Format the raw TNS data for HBase ingestion
-    """
+    """Format the raw TNS data for HBase ingestion"""
     # Add new or rename columns
     pdf['fullname'] = pdf['name_prefix'] + ' ' + pdf['name']
     pdf['internalname'] = pdf['internal_names']
@@ -50,8 +49,7 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
 
 
 def main():
-    """ Download the TNS catalog, and load it in HBase
-    """
+    """Download the TNS catalog, and load it in HBase"""
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
