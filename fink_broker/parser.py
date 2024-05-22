@@ -16,7 +16,7 @@ from fink_broker.tester import regular_unit_tests
 import argparse
 
 def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
-    """ Parse command line arguments for fink services
+    """Parse command line arguments for fink services
 
     Parameters
     ----------
@@ -24,12 +24,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Empty parser
 
     Returns
-    ----------
+    -------
     args: argparse.Namespace
         Object containing CLI arguments parsed
 
     Examples
-    ----------
+    --------
     >>> import argparse
     >>> parser = argparse.ArgumentParser(description=__doc__)
     >>> args = getargs(parser)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan
+# Copyright 2019-2024 AstroLab Software
+# Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Utilities for Slack. Mostly deprecated."""
 import os
 import slack
 from fink_broker.tester import spark_unit_tests
@@ -21,7 +22,7 @@ from fink_broker.loggingUtils import get_fink_logger
 logger = get_fink_logger(__name__, "INFO")
 
 class FinkSlackClient:
-
+    """Wrapper around Slack client for Fink. Deprecated."""
     def __init__(self, api_token):
         self._client = slack.WebClient(token=api_token)
 
@@ -41,7 +42,7 @@ class FinkSlackClient:
             x['real_name']: x['id'] for x in members if 'real_name' in x.keys()}
 
     def send_message(self, recipient, msg):
-        """sends a message to a given channel/user on the slack workspace
+        """Sends a message to a given channel/user on the slack workspace
 
         Parameters
         ----------
@@ -68,10 +69,10 @@ class FinkSlackClient:
 
 
 def get_api_token():
-    """returns slack api token
+    """Returns slack api token
 
     Returns
-    ----------
+    -------
     api_token: str
         value of the env variable SLACK_API_TOKEN if set, or None
     """
@@ -85,10 +86,10 @@ def get_api_token():
     return api_token
 
 def get_slack_client():
-    """ returns an object of class FinkSlackClient
+    """Returns an object of class FinkSlackClient
 
     Returns
-    ----------
+    -------
     FinkSlackClient:
         an object of class FinkSlackClient initialized with OAuth token
     """
@@ -102,7 +103,7 @@ def get_slack_client():
 def get_show_string(
         df: DataFrame, n: int = 20,
         truncate: int = 0, vertical: bool = False) -> str:
-    """returns the string printed by df.show()
+    """Returns the string printed by df.show()
 
     Parameters
     ----------
@@ -116,12 +117,12 @@ def get_show_string(
         set true to get output in vertical format (not tabular)
 
     Returns
-    ----------
+    -------
     showString: str
         string printed by DataFrame.show()
 
     Examples
-    ----------
+    --------
     >>> df = spark.sparkContext.parallelize(zip(
     ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
     ...     ["Star", "Unknown"])).toDF([
@@ -150,7 +151,7 @@ def send_slack_alerts(df: DataFrame, channels: str):
         must be sent
 
     Examples
-    ----------
+    --------
     >>> df = spark.sparkContext.parallelize(zip(
     ...     ["ZTF18aceatkx", "ZTF18acsbjvw"],
     ...     [697251923115015002, 697251921215010004],

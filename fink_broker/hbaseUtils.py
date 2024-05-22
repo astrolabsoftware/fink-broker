@@ -1,4 +1,4 @@
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,10 +33,10 @@ from fink_broker.tester import spark_unit_tests
 _LOG = logging.getLogger(__name__)
 
 def load_fink_cols():
-    """ Fink-derived columns used in HBase tables with type.
+    """Fink-derived columns used in HBase tables with type.
 
     Returns
-    ---------
+    -------
     out: dictionary
         Keys are column names (flattened). Values are data type.
 
@@ -97,10 +97,10 @@ def load_fink_cols():
     return fink_cols, fink_nested_cols
 
 def load_all_cols():
-    """ Fink/ZTF columns used in HBase tables with type.
+    """Fink/ZTF columns used in HBase tables with type.
 
     Returns
-    ---------
+    -------
     out: dictionary
         Keys are column names (flattened). Values are data type.
 
@@ -238,7 +238,7 @@ def load_all_cols():
     return root_level, candidates, images, fink_cols, fink_nested_cols
 
 def bring_to_current_schema(df):
-    """ Check all columns exist, fill if necessary, and cast data
+    """Check all columns exist, fill if necessary, and cast data
 
     Parameters
     ----------
@@ -246,7 +246,7 @@ def bring_to_current_schema(df):
         Spark DataFrame with raw alert data
 
     Returns
-    ----------
+    -------
     out: DataFrame
         Spark DataFrame with HBase data structure
     """
@@ -286,14 +286,14 @@ def bring_to_current_schema(df):
 
     # check all columns exist, otherwise create it
     for colname, coltype_and_default in fink_nested_cols.items():
-        try:
+        try:  # noqa: PERF203
             # ony here to check if the column exists
             df.select(colname)
 
             # rename root.level into root_level
             name = F.col(colname).alias(colname.replace('.', '_')).cast(coltype_and_default['type'])
             tmp_d.append(name)
-        except AnalysisException:
+        except AnalysisException:  # noqa: PERF203
             _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
             _LOG.warn("Adding a new column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
             name = colname.replace('.', '_')
@@ -309,10 +309,10 @@ def bring_to_current_schema(df):
     return df, cols_i, cols_d, cols_b
 
 def load_ztf_index_cols():
-    """ Load columns used for index tables (flattened and casted before).
+    """Load columns used for index tables (flattened and casted before).
 
     Returns
-    ---------
+    -------
     out: list of string
         List of (flattened) column names
 
@@ -344,10 +344,10 @@ def load_ztf_index_cols():
     return common
 
 def load_ztf_crossmatch_cols():
-    """ Load columns used for the crossmatch table (casted).
+    """Load columns used for the crossmatch table (casted).
 
     Returns
-    ---------
+    -------
     out: list of string
         List of column names casted
 
@@ -376,7 +376,7 @@ def load_ztf_crossmatch_cols():
     return to_use
 
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
-    """ Load table data from HBase into a Spark DataFrame
+    """Load table data from HBase into a Spark DataFrame
 
     The row(s) containing the different schemas are skipped (only data is loaded)
 
@@ -389,7 +389,7 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
         Name of the rowkey
 
     Returns
-    ----------
+    -------
     df: DataFrame
         Spark DataFrame with the table data
     """
@@ -409,7 +409,7 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     return df
 
 def write_catalog_on_disk(catalog, catalogname) -> None:
-    """ Save HBase catalog in json format on disk
+    """Save HBase catalog in json format on disk
 
     Parameters
     ----------
@@ -423,7 +423,7 @@ def write_catalog_on_disk(catalog, catalogname) -> None:
         json.dump(catalog, json_file)
 
 def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> None:
-    """ Push DataFrame data to HBase
+    """Push DataFrame data to HBase
 
     Parameters
     ----------
@@ -492,7 +492,7 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> 
     )
 
 def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_create=None) -> DataFrame:
-    """ Select columns from `cols` that are actually in `df`.
+    """Select columns from `cols` that are actually in `df`.
 
     It would act as if `df.select(cols, skip_unknown_cols=True)` was possible. Note though
     that nested cols in `cols` will be flatten, and columns used in `to_create` have to be
@@ -517,11 +517,12 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
         Extra columns to create from others, and to include in the `select`.
         Example: df.select(['a', 'b', F.col('a') + F.col('c')])
 
-    Returns:
+    Returns
+    -------
     df: DataFrame
 
     Examples
-    ----------
+    --------
     >>> import pyspark.sql.functions as F
     >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
 
@@ -548,10 +549,10 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
     missing_cols = []
     for col_ in all_cols:
         # Dumb but simple
-        try:
+        try:  # noqa: PERF203
             df.select(col_)
             cnames.append(col_)
-        except AnalysisException:
+        except AnalysisException:  # noqa: PERF203
             missing_cols.append(col_)
 
     # flatten names
@@ -562,7 +563,7 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
     return df
 
 def assign_column_family_names(df, cols_i, cols_d, cols_b):
-    """ Assign a column family name to each column qualifier.
+    """Assign a column family name to each column qualifier.
 
     There are currently 3 column families:
         - i: for column that identify the alert (original alert)
@@ -581,7 +582,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
         List of DataFrame column names to use for the science portal.
 
     Returns
-    ---------
+    -------
     cf: dict
         Dictionary with keys being column names (also called
         column qualifiers), and the corresponding column family.
@@ -595,7 +596,7 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
 
 def construct_hbase_catalog_from_flatten_schema(
         schema: dict, catalogname: str, rowkeyname: str, cf: dict) -> str:
-    """ Convert a flatten DataFrame schema into a HBase catalog.
+    """Convert a flatten DataFrame schema into a HBase catalog.
 
     From
     {'name': 'schemavsn', 'type': 'string', 'nullable': True, 'metadata': {}}
@@ -617,7 +618,7 @@ def construct_hbase_catalog_from_flatten_schema(
         See `assign_column_family_names`.
 
     Returns
-    ----------
+    -------
     catalog : str
         Catalog for HBase.
 
@@ -690,8 +691,7 @@ def construct_hbase_catalog_from_flatten_schema(
     return catalog.replace("\'", "\"")
 
 def construct_schema_row(df, rowkeyname, version):
-    """ Construct a DataFrame whose columns are those of the
-    original ones, and one row containing schema types
+    """Construct a DataFrame whose columns are those of the original ones, and one row containing schema types
 
     Parameters
     ----------
@@ -703,7 +703,7 @@ def construct_schema_row(df, rowkeyname, version):
         Version of the HBase table (row value for the rowkey column).
 
     Returns
-    ---------
+    -------
     df_schema: Spark DataFrame
         Spark DataFrame with one row (the types of its column). Only the row
         key is the version of the HBase table.
@@ -747,8 +747,8 @@ def construct_schema_row(df, rowkeyname, version):
 
     return df_schema
 
-def add_row_key(df, row_key_name, cols=[]):
-    """ Create and attach the row key to a DataFrame
+def add_row_key(df, row_key_name, cols=None):
+    """Create and attach the row key to a DataFrame
 
     This should be typically called before `select_relevant_columns`.
 
@@ -762,17 +762,20 @@ def add_row_key(df, row_key_name, cols=[]):
         List of columns to concatenate
 
     Returns
-    ----------
+    -------
     out: DataFrame
         Original Spark DataFrame with a new column
     """
+    if cols is None:
+        cols = []
+
     row_key_col = F.concat_ws('_', *cols).alias(row_key_name)
     df = df.withColumn(row_key_name, row_key_col)
 
     return df
 
 def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
-    """ Push data stored in a Spark DataFrame into HBase
+    """Push data stored in a Spark DataFrame into HBase
 
     It assumes the main ZTF table schema
 
@@ -824,7 +827,7 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     )
 
 def cast_features(df):
-    """ Cast feature columns into string of array
+    """Cast feature columns into string of array
 
     Parameters
     ----------
@@ -832,18 +835,18 @@ def cast_features(df):
         DataFrame of alerts
 
     Returns
-    ----------
+    -------
     df: Spark DataFrame
 
     Examples
-    ----------
+    --------
     # Read alert from the raw database
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> df = cast_features(df)
     >>> assert 'lc_features_g' in df.columns, df.columns
 
-    >>> a_row = df.select('lc_features_g').limit(1).toPandas().values[0][0]
+    >>> a_row = df.select('lc_features_g').limit(1).toPandas().to_numpy()[0][0]
     >>> assert isinstance(a_row, str), a_row
     """
     if ('lc_features_g' in df.columns) and ('lc_features_r' in df.columns):

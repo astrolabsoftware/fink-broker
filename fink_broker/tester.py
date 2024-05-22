@@ -19,7 +19,7 @@ import numpy as np
 
 
 def regular_unit_tests(global_args: dict = None, verbose: bool = False):
-    """ Base commands for the regular unit test suite
+    """Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
     python3 mymodule.py
@@ -38,7 +38,7 @@ def regular_unit_tests(global_args: dict = None, verbose: bool = False):
         Default is False.
 
     Examples
-    ----------
+    --------
     Set "toto" to "myvalue", such that it can be used during tests:
     >>> globs = globals()
     >>> globs["toto"] = "myvalue"
@@ -57,7 +57,7 @@ def regular_unit_tests(global_args: dict = None, verbose: bool = False):
 def spark_unit_tests(
         global_args: dict = None, verbose: bool = False,
         withstreaming: bool = False):
-    """ Base commands for the regular unit test suite
+    """Base commands for the regular unit test suite
 
     Include this routine in the main of a module, and execute:
     python3 mymodule.py
@@ -76,7 +76,7 @@ def spark_unit_tests(
         Default is False.
 
     Examples
-    ----------
+    --------
     Set "toto" to "myvalue", such that it can be used during tests:
     >>> globs = globals()
     >>> globs["toto"] = "myvalue"

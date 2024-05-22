@@ -64,18 +64,16 @@ except ImportError:
     pass
 
 def dec2theta(dec: float) -> float:
-    """ Convert Dec (deg) to theta (rad)
-    """
+    """Convert Dec (deg) to theta (rad)"""
     return np.pi / 2.0 - np.pi / 180.0 * dec
 
 def ra2phi(ra: float) -> float:
-    """ Convert RA (deg) to phi (rad)
-    """
+    """Convert RA (deg) to phi (rad)"""
     return np.pi / 180.0 * ra
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
 def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
-    """ Compute pixel number at given nside
+    """Compute pixel number at given nside
 
     Parameters
     ----------
@@ -87,12 +85,12 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
         Spark column containing nside
 
     Returns
-    ----------
+    -------
     out: long
         Spark column containing pixel number
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
@@ -105,15 +103,15 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """
     return pd.Series(
         hp.ang2pix(
-            nside.values[0],
-            dec2theta(dec.values),
-            ra2phi(ra.values)
+            nside.to_numpy()[0],
+            dec2theta(dec.to_numpy()),
+            ra2phi(ra.to_numpy())
         )
     )
 
 @pandas_udf(StringType(), PandasUDFType.SCALAR)
 def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
-    """ Return a col string with the pixel numbers corresponding to the nsides
+    """Return a col string with the pixel numbers corresponding to the nsides
 
     pix@nside[0]_pix@nside[1]_...etc
 
@@ -127,12 +125,12 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
         Spark column containing list of nside
 
     Returns
-    ----------
+    -------
     out: str
         Spark column containing _ separated pixel values
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
@@ -148,9 +146,9 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     pixs = [
         hp.ang2pix(
             int(nside_),
-            dec2theta(dec.values),
-            ra2phi(ra.values)
-        ) for nside_ in nside.values[0]
+            dec2theta(dec.to_numpy()),
+            ra2phi(ra.to_numpy())
+        ) for nside_ in nside.to_numpy()[0]
     ]
 
     to_return = [
@@ -161,7 +159,7 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
 @pandas_udf(MapType(StringType(), FloatType()), PandasUDFType.SCALAR)
 def fake_t2(incol):
-    """ Return all t2 probabilities as zero
+    """Return all t2 probabilities as zero
 
     Only for test purposes.
     """
@@ -172,7 +170,7 @@ def fake_t2(incol):
         'mu-Lens-Single', 'EB', 'SNII'
     ]
     values = [0.0] * len(keys)
-    out = {k: v for k, v in zip(keys, values)}
+    out = {k: v for k, v in zip(keys, values)} # noqa: C416
     return pd.Series([out] * len(incol))
 
 def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
@@ -186,14 +184,14 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
         Spark (Streaming or SQL) DataFrame containing raw alert data
 
     Returns
-    ----------
+    -------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing enriched alert data
     noscience: bool
         Return untouched input dataframe, useful for Fink-broker infrastructure validation
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> from fink_broker.loggingUtils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_test', 'INFO')
@@ -442,12 +440,12 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         Spark (Streaming or SQL) DataFrame containing raw alert data
 
     Returns
-    ----------
+    -------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing enriched alert data
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> from fink_broker.loggingUtils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')

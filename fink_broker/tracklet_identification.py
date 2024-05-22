@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2021 AstroLab Software
+# Copyright 2021-2024 AstroLab Software
 # Author: Julien Peloton, Sergey Karpov
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Extract tracklet ID from the alert data
-"""
+"""Extract tracklet ID from the alert data"""
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
@@ -28,7 +27,7 @@ from astropy.time import Time
 from fink_broker.tester import spark_unit_tests
 
 def apply_tracklet_cuts(df: DataFrame) -> DataFrame:
-    """ Select potential tracklet candidates based on property cuts.
+    """Select potential tracklet candidates based on property cuts.
 
     We first apply 3 criteria to select interesting candidates:
 
@@ -45,13 +44,13 @@ def apply_tracklet_cuts(df: DataFrame) -> DataFrame:
         Input dataframe containing alert data
 
     Returns
-    ----------
+    -------
     df_filt: Spark DataFrame
         Spark DataFrame of smaller size containing only potential
         tracklet candidate data based on the cuts.
 
     Examples
-    ----------
+    --------
     >>> df = spark.read.format('parquet').load(ztf_alert_sample)
     >>> df_filt = apply_tracklet_cuts(df)
     >>> df_filt.count()
@@ -82,7 +81,7 @@ def apply_tracklet_cuts(df: DataFrame) -> DataFrame:
     return df_filt
 
 def add_tracklet_information(df: DataFrame) -> DataFrame:
-    """ Add a new column to the DataFrame with tracklet ID
+    """Add a new column to the DataFrame with tracklet ID
 
     Parameters
     ----------
@@ -90,13 +89,13 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         Input Spark DataFrame containing alert data
 
     Returns
-    ----------
+    -------
     df_out: Spark DataFrame
         Spark DataFrame containing alert data, plus a column `tracklet`
         with tracklet ID (str)
 
     Examples
-    ----------
+    --------
     >>> df = spark.read.format('parquet').load(ztf_alert_sample)
     >>> df_tracklet = add_tracklet_information(df)
     >>> df_tracklet.select('tracklet').take(2)[1][0]
@@ -124,7 +123,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
 
     @pandas_udf(df_filt_tracklet.schema, PandasUDFType.GROUPED_MAP)
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
-        """ Extract tracklet ID from a Spark DataFrame
+        """Extract tracklet ID from a Spark DataFrame
 
         This pandas UDF must be used with grouped functions (GROUPED_MAP),
         as it processes exposure-by-exposure.
@@ -137,21 +136,20 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             initially empty (string), and it is filled by this function.
 
         Returns
-        ----------
+        -------
         pdf: Pandas DataFrame
             The same Pandas DataFrame as the input one, but the column
             `tracklet` has been updated with tracklet ID information.
         """
-
         ra = pdf['ra']
         dec = pdf['dec']
         jd = pdf['jd']
-        time_str = Time(jd.values[0], format='jd').strftime('%Y%m%d_%H%M%S')
+        time_str = Time(jd.to_numpy()[0], format='jd').strftime('%Y%m%d_%H%M%S')
         # String - container for tracklet designation
         tracklet_names = pdf['tracklet']
 
         # Coordinates of the objects
-        coords = SkyCoord(ra.values, dec.values, unit='deg')
+        coords = SkyCoord(ra.to_numpy(), dec.to_numpy(), unit='deg')
         xyz = coords.cartesian
         # unit vectors corresponding to the points, Nx3
         xyz = xyz.xyz.value.T
@@ -189,7 +187,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         cidxs = []
 
         # Now let's cycle along first point of circle, N iterations
-        for i, point in enumerate(xyz):
+        for i in range(len(xyz)):
             # Here first index means second point of circle
             # while second one represent all points of dataset
 
@@ -263,7 +261,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             # Greedily capture more (or restrict to less) points using
             # polynomial correction and smaller acceptable residuals from
             # corrected (curved) trail
-            for iter in range(10):
+            for _ in range(10):
                 # TODO: robust fitting here?..
                 p = np.polyfit(dots[cidx], sindists[cidx], 2)
                 model = np.polyval(p, dots)

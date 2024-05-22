@@ -48,7 +48,7 @@ def get_kafka_df(
         New (>= 2023/01): full schema
 
     Returns
-    ----------
+    -------
     df: DataFrame
         A Spark DataFrame with an avro(binary) encoded Column named "value"
     """

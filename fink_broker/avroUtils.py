@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for manipulating Avro data and schemas.
+
 Some routines borrowed from lsst-dm/alert_stream and adapted.
 """
 import io
@@ -27,7 +28,7 @@ __all__ = [
     'readschemafromavrofile']
 
 def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
-    """ Encode json into Avro format given a schema.
+    """Encode json into Avro format given a schema.
 
     Parameters
     ----------
@@ -42,7 +43,7 @@ def writeavrodata(json_data: dict, json_schema: dict) -> io._io.BytesIO:
         Encoded data.
 
     Examples
-    ----------
+    --------
     >>> with open(ztf_alert_sample, mode='rb') as file_data:
     ...   data = readschemadata(file_data)
     ...   # Read the schema
@@ -70,7 +71,7 @@ def readschemadata(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
         Iterator over records (`dict`) in an avro file.
 
     Examples
-    ----------
+    --------
     Open an avro file, and read the schema and the records
     >>> with open(ztf_alert_sample, mode='rb') as file_data:
     ...   data = readschemadata(file_data)
@@ -86,7 +87,7 @@ def readschemadata(bytes_io: io._io.BytesIO) -> fastavro._read.reader:
     return message
 
 def readschemafromavrofile(fn: str) -> dict:
-    """ Reach schema from a binary avro file.
+    """Reach schema from a binary avro file.
 
     Parameters
     ----------
@@ -94,12 +95,12 @@ def readschemafromavrofile(fn: str) -> dict:
         Input Avro file with schema.
 
     Returns
-    ----------
+    -------
     schema: dict
         Dictionary (JSON) describing the schema.
 
     Examples
-    ----------
+    --------
     >>> schema = readschemafromavrofile(ztf_alert_sample)
     >>> print(schema['version'])
     3.3

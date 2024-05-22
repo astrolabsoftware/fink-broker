@@ -27,7 +27,7 @@ from fink_broker.sparkUtils import connect_to_raw_database, init_sparksession
 _LOG = logging.getLogger(__name__)
 
 def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
-    """ Extract AVRO schema from a static Spark DataFrame
+    """Extract AVRO schema from a static Spark DataFrame
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
         Temporary path on hdfs where the schema will be written
 
     Returns
-    ----------
+    -------
     schema: str
         Schema as string
     """
@@ -61,7 +61,7 @@ def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
     return schema
 
 def test_to_avro() -> None:
-    """ Extract AVRO schema from a static Spark DataFrame
+    """Extract AVRO schema from a static Spark DataFrame
 
     Parameters
     ----------
@@ -71,11 +71,10 @@ def test_to_avro() -> None:
         Temporary path on hdfs where the schema will be written
 
     Returns
-    ----------
+    -------
     schema: str
         Schema as string
     """
-
     spark = init_sparksession(name="pytest", shuffle_partitions=2)
 
     # data path
