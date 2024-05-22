@@ -27,6 +27,8 @@ jobs:
     - name: fink-broker
       run: |
         ruff check --statistics fink_broker/*.py
+        ruff format --check fink_broker/*.py
     - name: bin
       run: |
         ruff check --statistics bin/*.py
+        ruff format --check bin/*.py
