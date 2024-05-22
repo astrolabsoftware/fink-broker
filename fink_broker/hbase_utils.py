@@ -902,7 +902,8 @@ if __name__ == "__main__":
     )
 
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
-        root, "online/science/20200101")
+        root, "online/science/20200101"
+    )
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

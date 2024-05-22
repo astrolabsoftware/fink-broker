@@ -58,8 +58,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="distribute_{}_{}".format(args.producer, args.night),
-        shuffle_partitions=2
+        name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -69,15 +68,13 @@ def main():
     inspect_application(logger)
 
     # data path
-    scitmpdatapath = args.online_data_prefix + '/science/{}'.format(args.night)
-    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint/{}'.format(args.night)
+    scitmpdatapath = args.online_data_prefix + "/science/{}".format(args.night)
+    checkpointpath_kafka = args.online_data_prefix + "/kafka_checkpoint/{}".format(
+        args.night
+    )
 
     # Connect to the TMP science database
-    df = connect_to_raw_database(
-        scitmpdatapath,
-        scitmpdatapath,
-        latestfirst=False
-    )
+    df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
     df = connect_to_raw_database(input_sci, input_sci, latestfirst=False)
 
     # Cast fields to ease the distribution
@@ -104,7 +101,7 @@ def main():
         )
 
     # Extract schema
-    df_schema = spark.read.format('parquet').load(scitmpdatapath)
+    df_schema = spark.read.format("parquet").load(scitmpdatapath)
     df_schema = df_schema.selectExpr(cnames)
 
     schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
@@ -151,15 +148,14 @@ def main():
         df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
 
         # Ensure that the topic(s) exist on the Kafka Server)
-        disquery = df_kafka\
-            .writeStream\
-            .format("kafka")\
-            .option("kafka.bootstrap.servers", broker_list)\
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
-            .option("topic", topicname)\
-            .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+        disquery = (
+            df_kafka.writeStream.format("kafka")
+            .option("kafka.bootstrap.servers", broker_list)
+            .option("kafka.security.protocol", "SASL_PLAINTEXT")
+            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
+            .option("topic", topicname)
+            .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
+            .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
         )
 

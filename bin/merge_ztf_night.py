@@ -39,10 +39,10 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    print('Processing {}'.format(args.night))
+    print("Processing {}".format(args.night))
 
-    input_raw = '{}/raw/{}'.format(args.online_data_prefix, args.night)
-    input_science = '{}/science/{}'.format(args.online_data_prefix, args.night)
+    input_raw = "{}/raw/{}".format(args.online_data_prefix, args.night)
+    input_science = "{}/science/{}".format(args.online_data_prefix, args.night)
 
     # basepath
     output_raw = "{}/raw".format(args.agg_data_prefix)

@@ -54,7 +54,7 @@ def main():
     spark = init_sparksession(
         name="raw2science_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
-        tz=tz
+        tz=tz,
     )
 
     # Logger to print useful debug statements
@@ -64,36 +64,35 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + '/raw'
-    scitmpdatapath = args.online_data_prefix + '/science'
-    checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint/{}'.format(args.night)
+    rawdatapath = args.online_data_prefix + "/raw"
+    scitmpdatapath = args.online_data_prefix + "/science"
+    checkpointpath_sci_tmp = args.online_data_prefix + "/science_checkpoint/{}".format(
+        args.night
+    )
 
     if args.producer == "elasticc":
         df = connect_to_raw_database(rawdatapath, rawdatapath, latestfirst=False)
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
-            rawdatapath + '/{}'.format(args.night),
-            rawdatapath + '/{}'.format(args.night),
-            latestfirst=False
+            rawdatapath + "/{}".format(args.night),
+            rawdatapath + "/{}".format(args.night),
+            latestfirst=False,
         )
 
         # Add ingestion timestamp
         df = df.withColumn(
-            'brokerStartProcessTimestamp',
-            convert_to_millitime(
-                df['candidate.jd'],
-                F.lit('jd'),
-                F.lit(True)
-            )
+            "brokerStartProcessTimestamp",
+            convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
         )
 
     # Add library versions
-    df = df.withColumn('fink_broker_version', F.lit(fbvsn))\
-        .withColumn('fink_science_version', F.lit(fsvsn))
+    df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
+        "fink_science_version", F.lit(fsvsn)
+    )
 
     # Switch publisher
-    df = df.withColumn('publisher', F.lit('Fink'))
+    df = df.withColumn("publisher", F.lit("Fink"))
 
     # Apply science modules
     if "candidate" in df.columns:
@@ -105,56 +104,48 @@ def main():
 
         # Add ingestion timestamp
         df = df.withColumn(
-            'brokerEndProcessTimestamp',
-            convert_to_millitime(
-                df['candidate.jd'],
-                F.lit('jd'),
-                F.lit(True)
-            )
+            "brokerEndProcessTimestamp",
+            convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
         )
 
         # Append new rows in the tmp science database
-        countquery = df\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_sci_tmp) \
-            .option("path", scitmpdatapath)\
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+        countquery = (
+            df.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_sci_tmp)
+            .option("path", scitmpdatapath)
+            .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
+        )
 
-    elif 'diaSource' in df.columns:
+    elif "diaSource" in df.columns:
         df = apply_science_modules_elasticc(df)
         timecol = "diaSource.midPointTai"
         converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
         # re-create partitioning columns if needed.
-        if 'timestamp' not in df.columns:
-            df = df\
-                .withColumn("timestamp", converter(df[timecol]))
+        if "timestamp" not in df.columns:
+            df = df.withColumn("timestamp", converter(df[timecol]))
 
         if "year" not in df.columns:
-            df = df\
-                .withColumn("year", F.date_format("timestamp", "yyyy"))
+            df = df.withColumn("year", F.date_format("timestamp", "yyyy"))
 
         if "month" not in df.columns:
-            df = df\
-                .withColumn("month", F.date_format("timestamp", "MM"))
+            df = df.withColumn("month", F.date_format("timestamp", "MM"))
 
         if "day" not in df.columns:
-            df = df\
-                .withColumn("day", F.date_format("timestamp", "dd"))
+            df = df.withColumn("day", F.date_format("timestamp", "dd"))
 
         # Append new rows in the tmp science database
-        countquery = df\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_sci_tmp) \
-            .option("path", scitmpdatapath)\
-            .partitionBy("year", "month", "day") \
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
+        countquery = (
+            df.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_sci_tmp)
+            .option("path", scitmpdatapath)
+            .partitionBy("year", "month", "day")
+            .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
+        )
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

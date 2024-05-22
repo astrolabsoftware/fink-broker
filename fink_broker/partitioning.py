@@ -42,7 +42,7 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
         Unix milliseconds in UTC
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd']))
@@ -97,7 +97,7 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
         Datetime object in UTC
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
@@ -128,7 +128,7 @@ def compute_num_part(df, partition_size=128.0):
         Size of output partitions in MB
 
     Examples
-    ----------
+    --------
     >>> from fink_broker.sparkUtils import load_parquet_files
     >>> df = load_parquet_files("online/raw/20200101")
     >>> numpart = compute_num_part(df, partition_size=128.)

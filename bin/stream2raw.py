@@ -57,7 +57,7 @@ def main():
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
-        tz=tz
+        tz=tz,
     )
 
     # The level here should be controlled by an argument.
@@ -67,8 +67,10 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + '/raw'
-    checkpointpath_raw = args.online_data_prefix + '/raw_checkpoint/{}'.format(args.night)
+    rawdatapath = args.online_data_prefix + "/raw"
+    checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint/{}".format(
+        args.night
+    )
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
@@ -113,28 +115,24 @@ def main():
     cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
 
-    if 'candidate' in df_decoded.columns:
+    if "candidate" in df_decoded.columns:
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
-            'brokerIngestTimestamp',
-            convert_to_millitime(
-                df_decoded['candidate.jd'],
-                F.lit('jd'),
-                F.lit(True)
-            )
+            "brokerIngestTimestamp",
+            convert_to_millitime(df_decoded["candidate.jd"], F.lit("jd"), F.lit(True)),
         )
 
         # write unpartitioned data
-        countquery_tmp = df_decoded\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_raw) \
-            .option("path", rawdatapath + '/raw/{}'.format(args.night))
+        countquery_tmp = (
+            df_decoded.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_raw)
+            .option("path", rawdatapath + "/raw/{}".format(args.night))
+        )
 
-    elif 'diaSource' in df_decoded.columns:
-        timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+    elif "diaSource" in df_decoded.columns:
+        timecol = "diaSource.midPointTai"
+        converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
@@ -142,19 +140,20 @@ def main():
             convert_to_millitime(df_decoded[timecol], F.lit("mjd"), F.lit(True)),
         )
 
-        df_partitionedby = df_decoded\
-            .withColumn("timestamp", converter(df_decoded[timecol]))\
-            .withColumn("year", F.date_format("timestamp", "yyyy"))\
-            .withColumn("month", F.date_format("timestamp", "MM"))\
+        df_partitionedby = (
+            df_decoded.withColumn("timestamp", converter(df_decoded[timecol]))
+            .withColumn("year", F.date_format("timestamp", "yyyy"))
+            .withColumn("month", F.date_format("timestamp", "MM"))
             .withColumn("day", F.date_format("timestamp", "dd"))
+        )
 
-        countquery_tmp = df_partitionedby\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_raw) \
-            .option("path", rawdatapath)\
+        countquery_tmp = (
+            df_partitionedby.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_raw)
+            .option("path", rawdatapath)
             .partitionBy("year", "month", "day")
+        )
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
