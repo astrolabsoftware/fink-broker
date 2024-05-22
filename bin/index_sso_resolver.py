@@ -23,7 +23,7 @@ import pandas as pd
 import numpy as np
 
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.hbaseUtils import push_to_hbase
+from fink_broker.hbase_utils import push_to_hbase
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_spins.ssoft import rockify

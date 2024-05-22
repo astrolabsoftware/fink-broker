@@ -27,7 +27,7 @@ import argparse
 
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.hbaseUtils import push_to_hbase, load_hbase_data
+from fink_broker.hbase_utils import push_to_hbase, load_hbase_data
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_utils.hbase.utils import load_hbase_catalog_as_dict

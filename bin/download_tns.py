@@ -21,7 +21,7 @@ import os
 
 from fink_tns.utils import download_catalog
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.hbaseUtils import add_row_key, push_to_hbase
+from fink_broker.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.parser import getargs
 
 

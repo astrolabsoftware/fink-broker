@@ -27,7 +27,7 @@ import argparse
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
 
-from fink_broker.hbaseUtils import push_full_df_to_hbase
+from fink_broker.hbase_utils import push_full_df_to_hbase
 from fink_broker.sparkUtils import list_hdfs_files
 
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
