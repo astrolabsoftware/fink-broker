@@ -23,10 +23,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8
+        pip install ruff
     - name: fink-broker
       run: |
-        flake8 fink_broker/*.py --count --show-source --statistics --ignore=E302,E501,E731
+        ruff check --statistics fink_broker/*.py
     - name: bin
       run: |
-        flake8 bin/*.py --count --show-source --statistics --ignore=E302,E501,E731
+        ruff check --statistics bin/*.py
