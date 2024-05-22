@@ -23,7 +23,7 @@ from pyspark.sql.types import StructType
 import os
 import json
 
-from fink_broker.avroUtils import readschemafromavrofile
+from fink_broker.avro_utils import readschemafromavrofile
 from fink_broker.tester import spark_unit_tests
 
 

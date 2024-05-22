@@ -20,7 +20,7 @@ import tempfile
 
 from pyspark.sql import DataFrame
 
-from fink_broker.avroUtils import readschemafromavrofile
+from fink_broker.avro_utils import readschemafromavrofile
 from fink_utils.spark.schema_converter import to_avro
 from fink_broker.sparkUtils import connect_to_raw_database, init_sparksession
 
