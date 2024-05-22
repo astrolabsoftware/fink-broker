@@ -13,18 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Run the xmatch with Dwarf AGN, and push data to Slack
-"""
+"""Run the xmatch with Dwarf AGN, and push data to Slack"""
+
 import argparse
 
 from pyspark.sql import functions as F
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, load_parquet_files
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.filter_anomaly_notification.filter_utils import msg_handler_slack
-from fink_filters.filter_anomaly_notification.filter_utils import get_data_permalink_slack
+from fink_filters.filter_anomaly_notification.filter_utils import (
+    get_data_permalink_slack,
+)
 
 from fink_filters.filter_dwarf_agn.filter import crossmatch_dwarf_agn
 
@@ -35,8 +37,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="dwarf_AGN{}".format(args.night),
-        shuffle_partitions=2
+        name="dwarf_AGN{}".format(args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -46,38 +47,38 @@ def main():
     inspect_application(logger)
 
     # Connect to the aggregated science database
-    path = '{}/science/year={}/month={}/day={}'.format(
-        args.agg_data_prefix,
-        args.night[:4],
-        args.night[4:6],
-        args.night[6:8]
+    path = "{}/science/year={}/month={}/day={}".format(
+        args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
     )
     df = load_parquet_files(path)
 
     # Remove known asteroids
-    df = df.filter(df['roid'] != 3)
+    df = df.filter(df["roid"] != 3)
 
-    args = ['candidate.candid', 'candidate.ra', 'candidate.dec']
-    pdf = df\
-        .withColumn('manga', crossmatch_dwarf_agn(*args))\
-        .filter(F.col('manga') != 'Unknown')\
-        .select(['objectId', 'manga'] + args)\
+    args = ["candidate.candid", "candidate.ra", "candidate.dec"]
+    pdf = (
+        df.withColumn("manga", crossmatch_dwarf_agn(*args))
+        .filter(F.col("manga") != "Unknown")
+        .select(["objectId", "manga"] + args)
         .toPandas()
+    )
 
     if not pdf.empty:
         init_msg = "New association!"
 
         slack_data = []
         for _, row in pdf.iterrows():
-            t1 = f'{row.manga}: <https://fink-portal.org/{row.objectId}|{row.objectId}>'
+            t1 = f"{row.manga}: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
 
             # if you need lightcurve, etc.
-            cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId)
+            cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
+                row.objectId
+            )
             curve.seek(0)
             cutout.seek(0)
             cutout_perml = f"<{cutout_perml}|{' '}>"
             curve_perml = f"<{curve_perml}|{' '}>"
-            slack_data.append(f'''{t1}\n{cutout_perml}{curve_perml}''')
+            slack_data.append(f"""{t1}\n{cutout_perml}{curve_perml}""")
 
         msg_handler_slack(slack_data, "bot_manga", init_msg)
     else:
