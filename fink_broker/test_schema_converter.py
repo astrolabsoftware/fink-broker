@@ -22,7 +22,7 @@ from pyspark.sql import DataFrame
 
 from fink_broker.avro_utils import readschemafromavrofile
 from fink_utils.spark.schema_converter import to_avro
-from fink_broker.sparkUtils import connect_to_raw_database, init_sparksession
+from fink_broker.spark_utils import connect_to_raw_database, init_sparksession
 
 _LOG = logging.getLogger(__name__)
 

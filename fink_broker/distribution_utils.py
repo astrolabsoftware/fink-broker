@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fink_broker.sparkUtils import to_avro
+from fink_broker.spark_utils import to_avro
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit

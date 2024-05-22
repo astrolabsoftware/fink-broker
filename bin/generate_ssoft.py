@@ -19,7 +19,7 @@ import argparse
 import datetime
 
 from fink_broker.logging_utils import get_fink_logger, inspect_application
-from fink_broker.sparkUtils import init_sparksession
+from fink_broker.spark_utils import init_sparksession
 
 from fink_spins.ssoft import build_the_ssoft
 

@@ -28,7 +28,7 @@ import argparse
 import pandas as pd
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession
+from fink_broker.spark_utils import init_sparksession
 
 from fink_broker.hbase_utils import push_to_hbase
 

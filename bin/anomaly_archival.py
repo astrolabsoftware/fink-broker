@@ -18,7 +18,7 @@
 import argparse
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, load_parquet_files
+from fink_broker.spark_utils import init_sparksession, load_parquet_files
 
 from fink_filters.filter_anomaly_notification.filter import anomaly_notification_
 

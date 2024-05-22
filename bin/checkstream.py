@@ -19,7 +19,7 @@ import argparse
 import time
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
+from fink_broker.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.monitoring import monitor_progress_webui
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 

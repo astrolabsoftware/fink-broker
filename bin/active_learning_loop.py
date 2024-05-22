@@ -26,7 +26,7 @@ from fink_utils.spark.utils import concat_col
 from fink_utils.xmatch.simbad import return_list_of_eg_host
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, load_parquet_files
+from fink_broker.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
