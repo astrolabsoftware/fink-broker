@@ -28,7 +28,7 @@ import time
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
-from fink_broker.distributionUtils import get_kafka_df
+from fink_broker.distribution_utils import get_kafka_df
 from fink_broker.loggingUtils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
