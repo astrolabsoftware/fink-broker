@@ -59,8 +59,9 @@ try:
     from fink_science.fast_transient_rate.processor import magnitude_rate
     from fink_science.fast_transient_rate import rate_module_output_schema
     # from fink_science.t2.processor import t2
-except ImportError:
+except ImportError as e:
     _LOG.warning("Fink science modules are not available. ")
+    _LOG.warning(f"exception raised: {e}")
     pass
 
 def dec2theta(dec: float) -> float:
