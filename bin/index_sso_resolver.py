@@ -152,14 +152,14 @@ def main():
     sso_number_valid = sso_number[is_valid_number]
 
     # Vector contains (MPC_names, MPC_numbers, ZTF_ssnamenr)
-    index_ssodnet = np.concatenate((sso_name, sso_number_valid, pdf.ssnamenr.values))
+    index_ssodnet = np.concatenate((sso_name, sso_number_valid, pdf.ssnamenr.to_numpy()))
 
     # create index vector for Fink
     index_fink = np.concatenate(
         (
-            pdf.ssnamenr.values,
-            pdf.ssnamenr[is_valid_number].values,
-            pdf.ssnamenr.values
+            pdf.ssnamenr.to_numpy(),
+            pdf.ssnamenr[is_valid_number].to_numpy(),
+            pdf.ssnamenr.to_numpy()
         )
     )
     index_name = np.concatenate((sso_name, sso_name[is_valid_number], sso_name))

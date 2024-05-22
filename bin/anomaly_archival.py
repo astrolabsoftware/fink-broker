@@ -74,7 +74,7 @@ def main():
     )
 
     # Keep only candidates of interest for all sky anomalies
-    oids = [int(i) for i in pdf['candid'].values]
+    oids = [int(i) for i in pdf['candid'].to_numpy()]
     df_hbase = df.filter(df['candid'].isin(list(oids)))
 
     # Row key

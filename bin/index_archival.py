@@ -323,9 +323,9 @@ def main():
             idx, d2d, d3d = catalog_tns.match_to_catalog_sky(catalog_ztf)
 
             sub_pdf = pd.DataFrame({
-                'objectId': objectid.values,
-                'ra': ra.values,
-                'dec': dec.values,
+                'objectId': objectid.to_numpy(),
+                'ra': ra.to_numpy(),
+                'dec': dec.to_numpy(),
             })
 
             # cross-match
@@ -335,11 +335,11 @@ def main():
             sep_constraint2 = d2d2.degree < 1.5 / 3600
 
             sub_pdf['TNS'] = [''] * len(sub_pdf)
-            sub_pdf['TNS'][sep_constraint2] = type2.values[idx2[sep_constraint2]]
+            sub_pdf['TNS'][sep_constraint2] = type2.to_numpy()[idx2[sep_constraint2]]
 
             to_return = objectid.apply(
-                lambda x: '' if x not in sub_pdf['objectId'].values
-                else sub_pdf['TNS'][sub_pdf['objectId'] == x].values[0]
+                lambda x: '' if x not in sub_pdf['objectId'].to_numpy()
+                else sub_pdf['TNS'][sub_pdf['objectId'] == x].to_numpy()[0]
             )
 
             return to_return

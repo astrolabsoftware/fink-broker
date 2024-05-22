@@ -114,7 +114,7 @@ def main():
 
     out_class = df_sci.groupBy('class').count().collect()
     out_class_ = [o.asDict() for o in out_class]
-    out_class_ = [list(o.values()) for o in out_class_]
+    out_class_ = [list(o.to_numpy()()) for o in out_class_]
     for kv in out_class_:
         out_dic[kv[0]] = kv[1]
 

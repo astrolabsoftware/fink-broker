@@ -94,7 +94,7 @@ def main():
     for index, row in enumerate(pdf.iterrows()):
         alert = row[1]
         past_ids = read_past_ids(args.tns_folder)
-        if alert['objectId'] in past_ids.values:
+        if alert['objectId'] in past_ids.to_numpy():
             print('{} already sent!'.format(alert['objectId']))
             continue
         if check_tns:
