@@ -5,7 +5,9 @@ s3:
   bucket: fink-broker-online
 # General parameter used to run fink tasks
 run:
+  cpu: 1
   fink_trigger_update: "2"
+  night: "20200101"
   # Can be set using --image option
   # image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-broker:2.7.1-33-ge27a2aa-dirty
   # Default to s3a://<s3.bucket>
@@ -18,13 +20,12 @@ stream2raw:
   kafka_starting_offset: earliest
   kafka_topic: ztf-stream-sim
 raw2science:
+  instances: 2
+  cpu: 2
   memory: 3000m
-  night: "20200101"
 distribution:
   # Comma-separated list of kafka servers, default to stream2raw.kafka_socket
   distribution_servers: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
   distribution_schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
   substream_prefix: "fink_"
-  # Default to <stream2raw.night>
-  # night: "20200101"
 

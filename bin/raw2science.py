@@ -22,6 +22,7 @@ Step 4: Push alert data into the tmp science database (parquet)
 
 See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 """
+
 from pyspark.sql import functions as F
 
 import argparse
@@ -29,9 +30,9 @@ import time
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession
-from fink_broker.sparkUtils import connect_to_raw_database
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.spark_utils import init_sparksession
+from fink_broker.spark_utils import connect_to_raw_database
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 from fink_broker.science import apply_science_modules
@@ -39,12 +40,13 @@ from fink_broker.science import apply_science_modules_elasticc
 
 from fink_science import __version__ as fsvsn
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    if args.night == 'elasticc':
-        tz = 'UTC'
+    if args.night == "elasticc":
+        tz = "UTC"
     else:
         tz = None
 
@@ -66,10 +68,8 @@ def main():
     scitmpdatapath = args.online_data_prefix + '/science'
     checkpointpath_sci_tmp = args.online_data_prefix + '/science_checkpoint/{}'.format(args.night)
 
-    if args.producer == 'elasticc':
-        df = connect_to_raw_database(
-            rawdatapath, rawdatapath, latestfirst=False
-        )
+    if args.producer == "elasticc":
+        df = connect_to_raw_database(rawdatapath, rawdatapath, latestfirst=False)
     else:
         # assume YYYYMMHH
         df = connect_to_raw_database(
@@ -96,12 +96,10 @@ def main():
     df = df.withColumn('publisher', F.lit('Fink'))
 
     # Apply science modules
-    if 'candidate' in df.columns:
+    if "candidate" in df.columns:
         # Apply quality cuts
         logger.info("Applying quality cuts")
-        df = df\
-            .filter(df['candidate.nbad'] == 0)\
-            .filter(df['candidate.rb'] >= 0.55)
+        df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
         df = apply_science_modules(df, args.noscience)
 
@@ -127,8 +125,8 @@ def main():
 
     elif 'diaSource' in df.columns:
         df = apply_science_modules_elasticc(df)
-        timecol = 'diaSource.midPointTai'
-        converter = lambda x: convert_to_datetime(x, F.lit('mjd'))
+        timecol = "diaSource.midPointTai"
+        converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
         # re-create partitioning columns if needed.
         if 'timestamp' not in df.columns:

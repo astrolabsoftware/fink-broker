@@ -13,15 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Monitor Kafka stream received by Spark
-"""
+"""Monitor Kafka stream received by Spark"""
+
 import argparse
 import time
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
+from fink_broker.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.monitoring import monitor_progress_webui
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import get_fink_logger, inspect_application
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -38,25 +39,23 @@ def main():
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
-        servers=args.servers, topic=args.topic,
-        startingoffsets=args.startingoffsets_stream, failondataloss=False)
+        servers=args.servers,
+        topic=args.topic,
+        startingoffsets=args.startingoffsets_stream,
+        failondataloss=False,
+    )
 
     # Trigger the streaming computation,
     # by defining the sink (memory here) and starting it
-    countquery = df \
-        .writeStream \
-        .queryName("qraw")\
-        .format("console")\
-        .outputMode("update") \
-        .start()
+    countquery = (
+        df.writeStream.queryName("qraw").format("console").outputMode("update").start()
+    )
 
     # Monitor the progress of the stream, and save data for the webUI
     colnames = ["inputRowsPerSecond", "processedRowsPerSecond", "timestamp"]
     monitor_progress_webui(
-        countquery,
-        2,
-        colnames,
-        args.finkwebpath, "live_raw.csv", "live")
+        countquery, 2, colnames, args.finkwebpath, "live_raw.csv", "live"
+    )
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

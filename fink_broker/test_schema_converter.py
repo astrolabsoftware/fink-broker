@@ -20,14 +20,15 @@ import tempfile
 
 from pyspark.sql import DataFrame
 
-from fink_broker.avroUtils import readschemafromavrofile
+from fink_broker.avro_utils import readschemafromavrofile
 from fink_utils.spark.schema_converter import to_avro
-from fink_broker.sparkUtils import connect_to_raw_database, init_sparksession
+from fink_broker.spark_utils import connect_to_raw_database, init_sparksession
 
 _LOG = logging.getLogger(__name__)
 
+
 def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
-    """ Extract AVRO schema from a static Spark DataFrame
+    """Extract AVRO schema from a static Spark DataFrame
 
     Parameters
     ----------
@@ -37,7 +38,7 @@ def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
         Temporary path on hdfs where the schema will be written
 
     Returns
-    ----------
+    -------
     schema: str
         Schema as string
     """
@@ -50,18 +51,19 @@ def _save_and_load_schema(df: DataFrame, path_for_avro: str) -> str:
 
     # Write the schema to a file for decoding Kafka messages
     pre, _ = os.path.splitext(path_for_avro)
-    ref_avro_schema = pre + '.avsc'
-    with open(ref_avro_schema, 'w') as f:
+    ref_avro_schema = pre + ".avsc"
+    with open(ref_avro_schema, "w") as f:
         json.dump(avro_schema, f, indent=2)
 
     # reload the schema
-    with open(ref_avro_schema, 'r') as f:
+    with open(ref_avro_schema, "r") as f:
         schema = f.read()
 
     return schema
 
+
 def test_to_avro() -> None:
-    """ Extract AVRO schema from a static Spark DataFrame
+    """Extract AVRO schema from a static Spark DataFrame
 
     Parameters
     ----------
@@ -71,47 +73,48 @@ def test_to_avro() -> None:
         Temporary path on hdfs where the schema will be written
 
     Returns
-    ----------
+    -------
     schema: str
         Schema as string
     """
-
     spark = init_sparksession(name="pytest", shuffle_partitions=2)
 
     # data path
-    fink_home = os.environ['FINK_HOME']
+    fink_home = os.environ["FINK_HOME"]
     datapath = os.path.join(fink_home, "utest", "datasets")
     night = "20190903"
 
     # Connect to the TMP science database
-    input_sci = os.path.join(datapath,
-                             "science",
-                             f"year={night[0:4]}/month={night[4:6]}/day={night[6:8]}")
-    df = connect_to_raw_database(
-        input_sci,
-        input_sci,
-        latestfirst=False
+    input_sci = os.path.join(
+        datapath, "science", f"year={night[0:4]}/month={night[4:6]}/day={night[6:8]}"
     )
+    df = connect_to_raw_database(input_sci, input_sci, latestfirst=False)
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
+    df = df.drop("year").drop("month").drop("day")
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
-    cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
-    cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
-    cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
-    cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
-    cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
-    cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
-    cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
+    cnames[cnames.index("timestamp")] = "cast(timestamp as string) as timestamp"
+    cnames[cnames.index("cutoutScience")] = "struct(cutoutScience.*) as cutoutScience"
+    cnames[cnames.index("cutoutTemplate")] = (
+        "struct(cutoutTemplate.*) as cutoutTemplate"
+    )
+    cnames[cnames.index("cutoutDifference")] = (
+        "struct(cutoutDifference.*) as cutoutDifference"
+    )
+    cnames[cnames.index("prv_candidates")] = (
+        "explode(array(prv_candidates)) as prv_candidates"
+    )
+    cnames[cnames.index("candidate")] = "struct(candidate.*) as candidate"
+    cnames[cnames.index("lc_features_g")] = "struct(lc_features_g.*) as lc_features_g"
+    cnames[cnames.index("lc_features_r")] = "struct(lc_features_r.*) as lc_features_r"
 
     # Extract schema
-    df_schema = spark.read.format('parquet').load(input_sci)
+    df_schema = spark.read.format("parquet").load(input_sci)
     df_schema = df_schema.selectExpr(cnames)
 
-    avro_schema_fname = f'schema_{night}'
+    avro_schema_fname = f"schema_{night}"
     with tempfile.TemporaryDirectory() as tmpdir:
         path_for_avro = os.path.join(tmpdir, avro_schema_fname + ".avro")
         dumped_json_schema = _save_and_load_schema(df_schema, path_for_avro)
@@ -122,6 +125,6 @@ def test_to_avro() -> None:
     assert json_avro == dumped_json_schema, "Avro schema is not the expected one"
 
     ref_avro_schema = os.path.join(datapath, "schemas", avro_schema_fname + ".avsc")
-    with open(ref_avro_schema, 'r') as file:
+    with open(ref_avro_schema, "r") as file:
         data = file.read()
     assert json_avro == data, "Avro schema is not the expected one"

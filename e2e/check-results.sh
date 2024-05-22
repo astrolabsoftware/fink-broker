@@ -24,23 +24,28 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $DIR/../conf.sh
-
 # TODO improve management of expected topics
-# for example in the argo workflow job witch launch the alert simulator
-if [ $NOSCIENCE = true ]
+# for example in finkctl.yaml
+if [ "$SUFFIX" = "noscience" ];
 then
-  EXPECTED_TOPICS="11"
+  expected_topics="12"
 else
-  EXPECTED_TOPICS="1"
+  expected_topics="1"
 fi
 
 count=0
-while ! finkctl wait topics --expected "$EXPECTED_TOPICS" --timeout 60s -v1
+while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1
 do
-    echo "Waiting for expected topics: $EXPECTED_TOPICS"
+    echo "Waiting for expected topics: $expected_topics"
     sleep 5
     kubectl get pods
+    if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
+    then
+        echo "ERROR: fink-broker as crashed"
+        echo "ERROR: enabling interactive access for debugging purpose"
+        sleep 7200
+        exit 1
+    fi
     count=$((count+1))
     if [ $count -eq 10 ]; then
         echo "Timeout waiting for topics to be created"

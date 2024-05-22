@@ -1,0 +1,248 @@
+name: "Reusable workflow for Fink self-hosted e2e tests"
+on:
+  workflow_call:
+    inputs:
+      suffix:
+        required: true
+        type: string
+      ci_repo:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      kind_version:
+        required: true
+        type: string
+    secrets:
+      registry_username:
+        required: true
+      registry_token:
+        required: true
+      private_registry_username:
+        required: true
+      private_registry_token:
+        required: true
+env:
+  CIUXCONFIG: /tmp/ciux.sh
+  CIUX_VERSION: v0.0.3-rc3
+  GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  SUFFIX: ${{ inputs.suffix }}
+  CI_REPO: ${{ inputs.ci_repo }}
+  # Override the self-hosted runner value
+  POD_NAMESPACE: default
+jobs:
+  build:
+    name: Build image
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    outputs:
+      image: ${{ steps.export.outputs.IMAGE }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+      - name: Build fink-broker image for k8s
+        run: |
+          ./build.sh -s "${{ env.SUFFIX }}" -r "${{ env.CI_REPO }}"
+      - name: Export fink-broker image
+        id: export
+        run: |
+          # Cannot use CIUXCONFIG because it may not have been created yet
+          # TODO make it simpler!
+          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}" --env)
+          mkdir -p artifacts
+          if [ $CIUX_BUILD = true ]; then
+            if [ -n "${{ env.CI_REPO }}" ]; then
+              echo "Login to CI private registry"
+              echo ${{ secrets.private_registry_token }} | docker login --username ${{ secrets.private_registry_token }} --password-stdin ${{ env.CI_REPO }}
+              echo "Pushing image $CIUX_IMAGE_URL to CI private registry"
+              docker push $CIUX_IMAGE_URL
+              touch artifacts/empty
+            else
+              echo "Export $CIUX_IMAGE_URL to Github artifact store"
+              docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
+            fi
+          else
+            echo "Using existing image $CIUX_IMAGE_URL"
+            touch artifacts/empty
+          fi
+          echo "IMAGE=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v2
+        with:
+          name: docker-artifact
+          path: artifacts
+  integration-tests:
+    name: Run integration tests
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    outputs:
+      new_image: ${{ steps.promote.outputs.NEW_IMAGE }}
+      promoted_image: ${{ steps.promote.outputs.PROMOTED_IMAGE }}
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+      - name: Ciux project ignition
+        run: |
+          ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
+      - name: Create k8s (kind) cluster
+        run: |
+          # v0.20.0 does not work on self-hosted runners
+          ktbx install kind --kind-version=${{ inputs.kind_version }}
+          ktbx install kubectl
+          # Configure private registry if needed
+          ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
+          ktbx create -s
+      - name: Install olm and argocd operators
+        run: |
+          ktbx install olm
+          ktbx install argocd
+      - name: Install argo-workflows (fink-alert-simulator pre-requisite)
+        run: |
+          ktbx install argowf
+      - name: Run argoCD
+        run: |
+          ./e2e/argocd.sh
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load container image inside kind
+        run: |
+          . "$CIUXCONFIG"
+          if [ -f artifacts/image.tar ]; then
+            echo "Loading image from archive"
+            kind load image-archive artifacts/image.tar
+            docker exec -- kind-control-plane crictl image
+          else
+            echo "Using existing image: $CIUX_IMAGE_URL"
+          fi
+      - name: Run fink-alert-simulator
+        run: |
+          . "$CIUXCONFIG"
+          "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
+          argo watch @latest
+      # - name: Setup tmate session
+      # uses: mxschmitt/action-tmate@v3
+      - name: Install fink-broker pre-requisites (JDK, Spark)
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install openjdk-8-jdk-headless
+          ./e2e/prereq-install.sh
+      - name: Run fink-broker
+        run: |
+          ./e2e/fink-start.sh -e
+      - name: Check results
+        run: |
+          ./e2e/check-results.sh
+      - name: Promote fink-broker image
+        id: promote
+        run: |
+          . "$CIUXCONFIG"
+          echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME:$CIUX_IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
+  image-analysis:
+    name: Analyze image
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    permissions:
+      security-events: write
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load image in local registry
+        run: |
+          if [ -f artifacts/image.tar ]; then
+            echo "Loading image ${{ needs.build.outputs.image }} from archive"
+            docker load --input artifacts/image.tar
+          else
+            echo "Using existing image ${{ needs.build.outputs.image }}"
+          fi
+      - name: Scan fink-broker image
+        uses: anchore/scan-action@v3
+        id: scan
+        with:
+          image: "${{ needs.build.outputs.image }}"
+          fail-build: false
+      - name: Display SARIF report
+        run: |
+          cat ${{ steps.scan.outputs.sarif }}
+      - name: upload Anchore scan SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
+  push:
+    env:
+      NEW_IMAGE: ${{ needs.integration-tests.outputs.new_image }}
+      IMAGE: ${{ needs.build.outputs.image }}
+      PROMOTED_IMAGE: ${{ needs.integration-tests.outputs.promoted_image }}
+    name: Push fink-broker image to IN2P3 registry
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    needs: [build, integration-tests]
+    steps:
+      - name: Download image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+      - name: Load image in local registry
+        run: |
+          if [ $NEW_IMAGE = true ]; then
+            # GHA setup
+            if [ -f artifacts/image.tar ]; then
+              echo "Loading image "$IMAGE" from archive"
+              docker load --input artifacts/image.tar
+            # Self-hosted runners, new image is stored in the local registry
+            elif [ -n "$CI_REPO" ]; then
+              echo "Pulling image "$IMAGE" from $CI_REPO"
+              docker pull "$IMAGE"
+            else
+              echo "Error: no image found"
+              exit 1
+            fi
+          else
+            echo "Using existing image $IMAGE"
+          fi
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: gitlab-registry.in2p3.fr
+          username: ${{ secrets.registry_username }}
+          password: ${{ secrets.registry_token }}
+      - name: Push image to official registry
+        run: |
+          if [ $NEW_IMAGE = true ]; then
+            echo "Push image $PROMOTED_IMAGE"
+            docker tag "$IMAGE" "$PROMOTED_IMAGE"
+            docker push "$PROMOTED_IMAGE"
+          else
+            if which skopeo; then
+              echo "skopeo is already installed"
+            else
+              echo "Install skopeo"
+              sudo apt-get update -y
+              sudo apt-get install -y skopeo
+            fi
+            echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
+            skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
+          fi
+
+

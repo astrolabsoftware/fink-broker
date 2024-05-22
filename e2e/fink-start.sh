@@ -24,59 +24,121 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
+# Used only to set path to spark-submit.sh
 . $DIR/../conf.sh
 
-echo $IMAGE
+usage() {
+  echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
+  echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
+  echo "  -f: finkctl configuration file"
+  echo "  -i: fink-broker image, overriden by CIUX_IMAGE_URL environment variable if -e option is set"
+  echo "  -N: night to process, e.g. 20210101"
+  echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
+  echo "  -h: display this help"
+}
+
+E2E_TEST=false
+NOSCIENCE_OPT=""
+IMAGE_OPT=""
+NIGHT_OPT=""
+
+# Parse option for finkctl configuration file and fink-broker image
+while getopts "ef:i:N:th" opt; do
+  case $opt in
+    e) E2E_TEST=true;;
+    f) FINKCONFIG=$OPTARG ;;
+    h) usage ; exit 0 ;;
+    N) NIGHT_OPT="-N $OPTARG" ;;
+    t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
+    i) IMAGE_OPT="--image $OPTARG" ;;
+  esac
+done
 
 NS=spark
 echo "Create $NS namespace"
 kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 kubectl config set-context --current --namespace="$NS"
 
-echo "Create S3 bucket"
-kubectl port-forward -n minio svc/minio 9000 &
-# Wait to port-forward to start
-sleep 2
-
-if [ "$NOSCIENCE" = true ];
+if [ $E2E_TEST = true ];
 then
-  NOSCIENCE_OPT="--noscience"
-  export FINKCONFIG="$DIR/finkconfig_noscience"
-else
-  NOSCIENCE_OPT=""
-  export FINKCONFIG="$DIR/finkconfig"
+  . $CIUXCONFIG
+  IMAGE="$CIUX_IMAGE_URL"
+  IMAGE_OPT="--image $IMAGE"
+  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
+  if [[ "$IMAGE" =~ "-noscience" ]];
+  then
+    NOSCIENCE_OPT="--noscience"
+    FINKCONFIG="$DIR/finkconfig_noscience"
+  else
+    NOSCIENCE_OPT=""
+    FINKCONFIG="$DIR/finkconfig"
+  fi
+  kubectl port-forward -n minio svc/minio 9000 &
+  # Wait to port-forward to start
+  sleep 2
+  echo "Create S3 bucket"
+  export FINKCONFIG
+  finkctl --endpoint=localhost:9000 s3 makebucket
 fi
 
-
-finkctl --endpoint=localhost:9000 s3 makebucket
+if [ -z "$FINKCONFIG" ];
+then
+  echo "ERROR: FINKCONFIG is not set"
+  exit 1
+else
+  echo "Use FINKCONFIG: $FINKCONFIG"
+  export FINKCONFIG
+fi
 
 echo "Create spark ServiceAccount"
 # see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
 kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
 
 NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
+# FIXME  --namespace=default??? Create a rolebinding in the spark namespace??
 kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
   --namespace=default --dry-run=client -o yaml | kubectl apply -f -
 
 tasks="stream2raw raw2science distribution"
 for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task --image $IMAGE >& "/tmp/$task.log" &
+  finkctl run $NOSCIENCE_OPT $task $IMAGE_OPT $NIGHT_OPT >& "/tmp/$task.log" &
 done
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
-timeout="300s"
-if ! finkctl wait tasks --timeout="$timeout"
-then
+# Science setup is VERY slow to start, because of raw2science-exec pod
+
+# 5 minutes timeout
+timeout="300"
+
+counter=0
+max_retries=3
+# Sometimes spark pods crashes and finktctl wait may fail
+# even if Spark pod will be running after a while
+# TODO implement the retry in "finkctl wait"
+while ! finkctl wait tasks --timeout="${timeout}s"; do
+  if [ $counter -gt $max_retries ]; then
+    echo "ERROR: unable to start fink-broker in $timeout"
+    echo "ERROR: enabling interactive access for debugging purpose"
+    sleep 7200
+    exit 1
+  fi
+  echo "Spark log files"
+  echo "---------------"
   for task in $tasks; do
     echo "--------- $task log file ---------"
     cat "/tmp/$task.log"
   done
+  echo "Pods description"
+  echo "----------------"
   kubectl describe pods -l "spark-role in (executor, driver)"
   kubectl get pods
-  echo "ERROR: unable to start fink-broker in $timeout"
-  exit 1
-fi
+  echo "ERROR: Spark pods are not running after $timeout, retry $counter/$max_retries"
+  sleep 60
+  timeout=$((timeout+300))
+  counter=$((counter+1))
+done
 
 kubectl describe pods -l "spark-role in (executor, driver)"
 kubectl get pods
+echo "SUCCESS: fink-broker is running"

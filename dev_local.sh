@@ -8,7 +8,7 @@
 set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-. "$DIR/conf.sh"
+. "$CIUXCONFIG"
 
 CONTAINER="fink-broker"
 
@@ -50,4 +50,4 @@ docker run --net=host --name "$CONTAINER" \
   --env FINK_HOME="$FINK_HOME" \
   --env HOME="$HOME" \
   --user=$(id -u):$(id -g $USER) \
-  -it $MOUNTS --rm -w "$HOME" "$IMAGE" bash
+  -it $MOUNTS --rm -w "$HOME" "$CIUX_IMAGE_URL" bash

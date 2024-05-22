@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Store live stream data on disk.
+
 The output can be local FS or distributed FS (e.g. HDFS).
 Be careful though to have enough disk space!
 
@@ -25,6 +26,7 @@ in an HDFS-compatible fault-tolerant file system.
 See also https://spark.apache.org/docs/latest/
 structured-streaming-programming-guide.html#starting-streaming-queries
 """
+
 from pyspark.sql import functions as F
 
 import fastavro
@@ -35,18 +37,19 @@ import io
 
 from fink_broker.parser import getargs
 
-from fink_broker.sparkUtils import from_avro
-from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
-from fink_broker.sparkUtils import get_schemas_from_avro
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.spark_utils import from_avro
+from fink_broker.spark_utils import init_sparksession, connect_to_kafka
+from fink_broker.spark_utils import get_schemas_from_avro
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
-    if 'elasticc' in args.topic:
-        tz = 'UTC'
+    if "elasticc" in args.topic:
+        tz = "UTC"
     else:
         tz = None
 
@@ -72,48 +75,42 @@ def main():
         servers=args.servers,
         topic=args.topic,
         startingoffsets=args.startingoffsets_stream,
+        max_offsets_per_trigger=args.max_offsets_per_trigger,
         failondataloss=False,
-        kerberos=False)
+        kerberos=False,
+    )
 
     # Get Schema of alerts
-    if args.producer != 'elasticc':
+    if args.producer != "elasticc":
         alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    if args.producer == 'sims':
+    if args.producer == "sims":
         # using custom from_avro (not available for Spark 2.4.x)
         # it will be available from Spark 3.0 though
         df_decoded = df.select(
-            [
-                from_avro(df["value"], alert_schema_json).alias("decoded")
-            ]
+            [from_avro(df["value"], alert_schema_json).alias("decoded")]
         )
-    elif args.producer == 'elasticc':
+    elif args.producer == "elasticc":
         schema = fastavro.schema.load_schema(args.schema)
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
         df_decoded = df.select(
-            [
-                from_avro(df["value"], alert_schema_json).alias("decoded"),
-                df["topic"]
-            ]
+            [from_avro(df["value"], alert_schema_json).alias("decoded"), df["topic"]]
         )
-    elif args.producer == 'ztf':
+    elif args.producer == "ztf":
         # Decode on-the-fly using fastavro
         f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)
-        df_decoded = df.select(
-            [
-                f(df['value']).alias("decoded")
-            ]
-        )
+        df_decoded = df.select([f(df["value"]).alias("decoded")])
     else:
         msg = "Data source {} and producer {} is not known - a decoder must be set".format(
-            args.servers, args.producer)
+            args.servers, args.producer
+        )
         logger.warn(msg)
         spark.stop()
 
     # Flatten the data columns to match the incoming alert data schema
     cnames = df_decoded.columns
-    cnames[cnames.index('decoded')] = 'decoded.*'
+    cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
 
     if 'candidate' in df_decoded.columns:
@@ -141,12 +138,8 @@ def main():
 
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
-            'brokerIngestTimestamp',
-            convert_to_millitime(
-                df_decoded[timecol],
-                F.lit('mjd'),
-                F.lit(True)
-            )
+            "brokerIngestTimestamp",
+            convert_to_millitime(df_decoded[timecol], F.lit("mjd"), F.lit(True)),
         )
 
         df_partitionedby = df_decoded\
@@ -165,9 +158,9 @@ def main():
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:
-        countquery = countquery_tmp\
-            .trigger(processingTime='{} seconds'.format(args.tinterval)) \
-            .start()
+        countquery = countquery_tmp.trigger(
+            processingTime="{} seconds".format(args.tinterval)
+        ).start()
     else:
         countquery = countquery_tmp.start()
 

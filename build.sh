@@ -22,19 +22,54 @@
 
 set -euxo pipefail
 
-
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-ciux ignite refresh "$DIR"
-. $DIR/conf.sh
 
-if $NOSCIENCE
+usage() {
+  cat << EOD
+
+Usage: `basename $0` [options]
+
+  Available options:
+    -h          this message
+    -s          image suffix, default to none, only 'noscience' is supported
+
+Build image containing fink-broker for k8s
+EOD
+}
+
+suffix=""
+tmp_registry=""
+
+# get the options
+while getopts hr:s: c ; do
+    case $c in
+	    h) usage ; exit 0 ;;
+            r) tmp_registry=$OPTARG ;;
+	    s) suffix=$OPTARG ;;
+	    \?) usage ; exit 2 ;;
+    esac
+done
+shift `expr $OPTIND - 1`
+
+# This command avoid retrieving build dependencies if not needed
+$(ciux get image --check $DIR --suffix "$suffix" --tmp-registry "$tmp_registry" --env)
+
+if [ $CIUX_BUILD = false ];
 then
-    TARGET=noscience
+    echo "Build cancelled, image $CIUX_IMAGE_URL already exists and contains current source code"
+    exit 0
+fi
+
+ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
+. $CIUXCONFIG
+
+if [[ $suffix =~ ^noscience* ]]; then
+    target="noscience"
 else
-    TARGET=full
+    target="full"
 fi
 
 # Build image
-docker image build --tag "$IMAGE" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" "$DIR" --target $TARGET
+docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" "$DIR" --target $target
 

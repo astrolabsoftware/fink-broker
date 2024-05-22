@@ -21,14 +21,15 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
+
 import argparse
 import time
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database
-from fink_broker.distributionUtils import get_kafka_df
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.spark_utils import init_sparksession, connect_to_raw_database
+from fink_broker.distribution_utils import get_kafka_df
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
 
@@ -36,18 +37,20 @@ from fink_utils.spark.utils import apply_user_defined_filter
 
 # User-defined topics
 userfilters = [
-    'fink_filters.filter_early_sn_candidates.filter.early_sn_candidates',
-    'fink_filters.filter_sn_candidates.filter.sn_candidates',
-    'fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates',
-    'fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates',
-    'fink_filters.filter_kn_candidates.filter.kn_candidates',
-    'fink_filters.filter_early_kn_candidates.filter.early_kn_candidates',
-    'fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates',
-    'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
-    'fink_filters.filter_yso_candidates.filter.yso_candidates',
-    'fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates',
-    'fink_filters.filter_blazar.filter.blazar'
+    "fink_filters.filter_early_sn_candidates.filter.early_sn_candidates",
+    "fink_filters.filter_sn_candidates.filter.sn_candidates",
+    "fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
+    "fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates",
+    "fink_filters.filter_kn_candidates.filter.kn_candidates",
+    "fink_filters.filter_early_kn_candidates.filter.early_kn_candidates",
+    "fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
+    "fink_filters.filter_microlensing_candidates.filter.microlensing_candidates",
+    "fink_filters.filter_yso_candidates.filter.yso_candidates",
+    "fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
+    "fink_filters.filter_blazar.filter.blazar",
+    "fink_filters.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
 ]
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -75,19 +78,30 @@ def main():
         scitmpdatapath,
         latestfirst=False
     )
+    df = connect_to_raw_database(input_sci, input_sci, latestfirst=False)
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
-    cnames[cnames.index('cutoutScience')] = 'struct(cutoutScience.*) as cutoutScience'
-    cnames[cnames.index('cutoutTemplate')] = 'struct(cutoutTemplate.*) as cutoutTemplate'
-    cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
-    cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
-    cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
+    cnames[cnames.index("timestamp")] = "cast(timestamp as string) as timestamp"
+    cnames[cnames.index("cutoutScience")] = "struct(cutoutScience.*) as cutoutScience"
+    cnames[cnames.index("cutoutTemplate")] = (
+        "struct(cutoutTemplate.*) as cutoutTemplate"
+    )
+    cnames[cnames.index("cutoutDifference")] = (
+        "struct(cutoutDifference.*) as cutoutDifference"
+    )
+    cnames[cnames.index("prv_candidates")] = (
+        "explode(array(prv_candidates)) as prv_candidates"
+    )
+    cnames[cnames.index("candidate")] = "struct(candidate.*) as candidate"
     if not args.noscience:
         # This column is added by the science pipeline
-        cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
-        cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
+        cnames[cnames.index("lc_features_g")] = (
+            "struct(lc_features_g.*) as lc_features_g"
+        )
+        cnames[cnames.index("lc_features_r")] = (
+            "struct(lc_features_r.*) as lc_features_r"
+        )
 
     # Extract schema
     df_schema = spark.read.format('parquet').load(scitmpdatapath)
@@ -97,23 +111,32 @@ def main():
 
     # Retrieve time-series information
     to_expand = [
-        'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+        "jd",
+        "fid",
+        "magpsf",
+        "sigmapsf",
+        "magnr",
+        "sigmagnr",
+        "magzpsci",
+        "isdiffpos",
+        "diffmaglim",
     ]
 
     # Append temp columns with historical + current measurements
-    prefix = 'c'
+    prefix = "c"
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
 
     # quick fix for https://github.com/astrolabsoftware/fink-broker/issues/457
     for colname in to_expand:
-        df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
+        df = df.withColumnRenamed("c" + colname, "c" + colname + "c")
+
+    df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
     broker_list = args.distribution_servers
     for userfilter in userfilters:
         # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
+        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
         # Apply user-defined filter
         if args.noscience:
@@ -138,6 +161,7 @@ def main():
             .option("checkpointLocation", checkpointpath_kafka + '/' + topicname)\
             .trigger(processingTime='{} seconds'.format(args.tinterval)) \
             .start()
+        )
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:

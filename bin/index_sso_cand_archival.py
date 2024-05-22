@@ -20,6 +20,7 @@
 3. Construct HBase catalog
 4. Push data (single shot)
 """
+
 from pyspark.sql.functions import lit, concat_ws
 
 import os
@@ -27,11 +28,11 @@ import argparse
 import pandas as pd
 
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession
+from fink_broker.spark_utils import init_sparksession
 
-from fink_broker.hbaseUtils import push_to_hbase
+from fink_broker.hbase_utils import push_to_hbase
 
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 
 def main():
@@ -40,8 +41,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="index_sso_cand_archival_{}".format(args.night),
-        shuffle_partitions=2
+        name="index_sso_cand_archival_{}".format(args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -53,28 +53,25 @@ def main():
     # Table 1: orbital parameters
 
     # connect to fink_fat_output
-    pdf_orb = pd.read_parquet(
-        os.path.join(args.fink_fat_output, 'orbital.parquet')
-    )
+    pdf_orb = pd.read_parquet(os.path.join(args.fink_fat_output, "orbital.parquet"))
 
     # renaming
     for col_ in pdf_orb.columns:
-        if '. ' in col_:
-            pdf_orb = pdf_orb.rename({col_: col_.replace('. ', '_')}, axis='columns')
-        if ' ' in col_:
-            pdf_orb = pdf_orb.rename({col_: col_.replace(' ', '_')}, axis='columns')
+        if ". " in col_:
+            pdf_orb = pdf_orb.rename({col_: col_.replace(". ", "_")}, axis="columns")
+        if " " in col_:
+            pdf_orb = pdf_orb.rename({col_: col_.replace(" ", "_")}, axis="columns")
 
     df_orb = spark.createDataFrame(pdf_orb)
 
-    cf = {i: 'd' for i in df_orb.columns}
+    cf = {i: "d" for i in df_orb.columns}
 
-    index_row_key_name = 'cand_ssoCandId'
-    index_name = '.orb_cand'
+    index_row_key_name = "cand_ssoCandId"
+    index_name = ".orb_cand"
 
     # add the rowkey
     df_orb = df_orb.withColumn(
-        index_row_key_name,
-        concat_ws('_', *[lit('cand'), 'ssoCandId'])
+        index_row_key_name, concat_ws("_", *[lit("cand"), "ssoCandId"])
     )
 
     push_to_hbase(
@@ -82,30 +79,31 @@ def main():
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=os.environ['FINK_HOME']
+        catfolder=os.environ["FINK_HOME"],
     )
 
     # Table 2: candidates
 
     # connect to fink_fat_output
     pdf_cand = pd.read_parquet(
-        os.path.join(args.fink_fat_output, 'trajectory_orb.parquet')
+        os.path.join(args.fink_fat_output, "trajectory_orb.parquet")
     )
 
     # drop unused columns
-    pdf_cand = pdf_cand.drop(['ssnamenr', 'not_updated', 'last_assoc_date'], axis='columns')
+    pdf_cand = pdf_cand.drop(
+        ["ssnamenr", "not_updated", "last_assoc_date"], axis="columns"
+    )
 
     df_cand = spark.createDataFrame(pdf_cand)
 
-    cf = {i: 'd' for i in df_cand.columns}
+    cf = {i: "d" for i in df_cand.columns}
 
-    index_row_key_name = 'jd_ssoCandId'
-    index_name = '.sso_cand'
+    index_row_key_name = "jd_ssoCandId"
+    index_name = ".sso_cand"
 
     # add the rowkey
     df_cand = df_cand.withColumn(
-        index_row_key_name,
-        concat_ws('_', *['jd', 'ssoCandId'])
+        index_row_key_name, concat_ws("_", *["jd", "ssoCandId"])
     )
 
     push_to_hbase(
@@ -113,7 +111,7 @@ def main():
         table_name=args.science_db_name + index_name,
         rowkeyname=index_row_key_name,
         cf=cf,
-        catfolder=args.science_db_catalogs
+        catfolder=args.science_db_catalogs,
     )
 
 
