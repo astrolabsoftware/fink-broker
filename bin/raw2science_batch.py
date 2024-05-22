@@ -22,7 +22,7 @@ import argparse
 from fink_broker import __version__ as fbvsn
 from fink_broker.parser import getargs
 from fink_broker.sparkUtils import init_sparksession
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime
 from fink_broker.tracklet_identification import add_tracklet_information
 from fink_broker.science import apply_science_modules

@@ -40,7 +40,7 @@ from fink_broker.parser import getargs
 from fink_broker.sparkUtils import from_avro
 from fink_broker.sparkUtils import init_sparksession, connect_to_kafka
 from fink_broker.sparkUtils import get_schemas_from_avro
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 

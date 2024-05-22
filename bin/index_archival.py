@@ -40,7 +40,7 @@ from fink_broker.hbase_utils import load_ztf_crossmatch_cols
 from fink_broker.hbase_utils import select_relevant_columns
 from fink_broker.hbase_utils import bring_to_current_schema
 from fink_broker.sparkUtils import init_sparksession, load_parquet_files
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates

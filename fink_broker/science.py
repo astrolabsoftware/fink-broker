@@ -202,7 +202,7 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     Examples
     --------
     >>> from fink_broker.sparkUtils import load_parquet_files
-    >>> from fink_broker.loggingUtils import get_fink_logger
+    >>> from fink_broker.logging_utils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_test', 'INFO')
     >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(ztf_alert_sample)
@@ -475,7 +475,7 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     Examples
     --------
     >>> from fink_broker.sparkUtils import load_parquet_files
-    >>> from fink_broker.loggingUtils import get_fink_logger
+    >>> from fink_broker.logging_utils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')
     >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(elasticc_alert_sample)
