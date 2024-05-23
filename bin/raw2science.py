@@ -45,7 +45,6 @@ from fink_science import __version__ as fsvsn
 from fink_mm.init import get_config
 
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -130,7 +129,6 @@ def main():
         countquery_mm = None
 
         if args.exit_after is not None:
-
             # Keep the Streaming running until something or someone ends it!
             if config_path != "no-config":
                 config = get_config({"--config": config_path})

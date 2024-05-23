@@ -11,6 +11,7 @@ import time
 
 from fink_broker.loggingUtils import get_fink_logger
 
+
 def science2mm(
     args: argparse.Namespace,
     config: configparser.ConfigParser,

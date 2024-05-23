@@ -68,8 +68,10 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = os.path.join(args.online_data_prefix, 'raw')
-    checkpointpath_raw = os.path.join(args.online_data_prefix, f'raw_checkpoint/{args.night}')
+    rawdatapath = os.path.join(args.online_data_prefix, "raw")
+    checkpointpath_raw = os.path.join(
+        args.online_data_prefix, f"raw_checkpoint/{args.night}"
+    )
 
     # Create a streaming dataframe pointing to a Kafka stream
     df = connect_to_kafka(
@@ -122,12 +124,12 @@ def main():
         )
 
         # write unpartitioned data
-        countquery_tmp = df_decoded\
-            .writeStream\
-            .outputMode("append") \
-            .format("parquet") \
-            .option("checkpointLocation", checkpointpath_raw) \
-            .option("path", os.path.join(rawdatapath, f'{args.night}'))
+        countquery_tmp = (
+            df_decoded.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_raw)
+            .option("path", os.path.join(rawdatapath, f"{args.night}"))
+        )
 
     elif "diaSource" in df_decoded.columns:
         timecol = "diaSource.midPointTai"
