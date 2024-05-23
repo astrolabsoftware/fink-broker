@@ -28,7 +28,7 @@ import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.mm2distribute import mm2distribute
+from fink_broker.mm_utils import mm2distribute
 from fink_broker.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
