@@ -35,7 +35,7 @@ from fink_broker.spark_utils import init_sparksession
 from fink_broker.spark_utils import connect_to_raw_database
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
-from fink_broker.sparkUtils import path_exist
+from fink_broker.spark_utils import path_exist
 from fink_broker.science2mm import science2mm
 
 from fink_broker.science import apply_science_modules
