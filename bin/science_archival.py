@@ -62,16 +62,16 @@ def main():
     n_alerts = df.count()
 
     # Drop partitioning columns
-    df = df.drop('year').drop('month').drop('day')
+    df = df.drop("year").drop("month").drop("day")
 
     # push data to HBase
     push_full_df_to_hbase(
         df,
         row_key_name=row_key_name,
         table_name=args.science_db_name,
-        catalog_name=args.science_db_catalogs
+        catalog_name=args.science_db_catalogs,
     )
-    logger.info('{} alerts pushed to HBase'.format(n_alerts))
+    logger.info("{} alerts pushed to HBase".format(n_alerts))
 
 
 if __name__ == "__main__":

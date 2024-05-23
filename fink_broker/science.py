@@ -520,34 +520,39 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     # Apply level one processor: superNNova
     _LOG.info("New processor: supernnova - Ia")
-    args = [F.col('diaSource.diaSourceId')]
-    args += [F.col('cmidPointTai'), F.col('cfilterName'), F.col('cpsFlux'), F.col('cpsFluxErr')]
-    args += [F.col('roid'), F.col('cdsxmatch'), F.array_min('cmidPointTai')]
-    args += [F.col('diaObject.mwebv'), F.col('redshift'), F.col('redshift_err')]
+    args = [F.col("diaSource.diaSourceId")]
+    args += [
+        F.col("cmidPointTai"),
+        F.col("cfilterName"),
+        F.col("cpsFlux"),
+        F.col("cpsFluxErr"),
+    ]
+    args += [F.col("roid"), F.col("cdsxmatch"), F.array_min("cmidPointTai")]
+    args += [F.col("diaObject.mwebv"), F.col("redshift"), F.col("redshift_err")]
 
     # Binary Ia
-    full_args = args + [F.lit('elasticc_ia')]
-    df = df.withColumn('snn_snia_vs_nonia', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_ia")]
+    df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*full_args))
 
     # Binary SN
-    full_args = args + [F.lit('elasticc_binary_broad/SN_vs_other')]
-    df = df.withColumn('snn_sn_vs_others', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_binary_broad/SN_vs_other")]
+    df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*full_args))
 
     # Binary Periodic
-    full_args = args + [F.lit('elasticc_binary_broad/Periodic_vs_other')]
-    df = df.withColumn('snn_periodic_vs_others', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_binary_broad/Periodic_vs_other")]
+    df = df.withColumn("snn_periodic_vs_others", snn_ia_elasticc(*full_args))
 
     # Binary nonperiodic
-    full_args = args + [F.lit('elasticc_binary_broad/NonPeriodic_vs_other')]
-    df = df.withColumn('snn_nonperiodic_vs_others', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_binary_broad/NonPeriodic_vs_other")]
+    df = df.withColumn("snn_nonperiodic_vs_others", snn_ia_elasticc(*full_args))
 
     # Binary Long
-    full_args = args + [F.lit('elasticc_binary_broad/Long_vs_other')]
-    df = df.withColumn('snn_long_vs_others', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_binary_broad/Long_vs_other")]
+    df = df.withColumn("snn_long_vs_others", snn_ia_elasticc(*full_args))
 
     # Binary Fast
-    full_args = args + [F.lit('elasticc_binary_broad/Fast_vs_other')]
-    df = df.withColumn('snn_fast_vs_others', snn_ia_elasticc(*full_args))
+    full_args = args + [F.lit("elasticc_binary_broad/Fast_vs_other")]
+    df = df.withColumn("snn_fast_vs_others", snn_ia_elasticc(*full_args))
 
     _LOG.info("New processor: supernnova - Broad")
     args = [F.col("diaSource.diaSourceId")]
@@ -571,9 +576,11 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     }
     mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
 
-    df = df.withColumn('snn_argmax', F.expr('array_position(preds_snn, array_max(preds_snn)) - 1'))
-    df = df.withColumn('snn_broad_class', mapping_snn_expr[df['snn_argmax']])
-    df = df.withColumnRenamed('preds_snn', 'snn_broad_array_prob')
+    df = df.withColumn(
+        "snn_argmax", F.expr("array_position(preds_snn, array_max(preds_snn)) - 1")
+    )
+    df = df.withColumn("snn_broad_class", mapping_snn_expr[df["snn_argmax"]])
+    df = df.withColumnRenamed("preds_snn", "snn_broad_array_prob")
 
     # CBPF
     args = ["cmidPointTai", "cpsFlux", "cpsFluxErr", "cfilterName"]
@@ -596,9 +603,11 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         [F.lit(x) for x in chain(*mapping_cats_general.items())]
     )
 
-    df = df.withColumn('cats_argmax', F.expr('array_position(cbpf_preds, array_max(cbpf_preds)) - 1'))
-    df = df.withColumn('cats_broad_class', mapping_cats_general_expr[df['cats_argmax']])
-    df = df.withColumnRenamed('cbpf_preds', 'cats_broad_array_prob')
+    df = df.withColumn(
+        "cats_argmax", F.expr("array_position(cbpf_preds, array_max(cbpf_preds)) - 1")
+    )
+    df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
+    df = df.withColumnRenamed("cbpf_preds", "cats_broad_array_prob")
 
     # AGN & SLSN
     args_forced = [
@@ -619,7 +628,18 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(*['preds_snn', 'cbpf_preds', 'redshift', 'redshift_err', 'cdsxmatch', 'roid', 'cats_argmax', 'snn_argmax'])
+    df = df.drop(
+        *[
+            "preds_snn",
+            "cbpf_preds",
+            "redshift",
+            "redshift_err",
+            "cdsxmatch",
+            "roid",
+            "cats_argmax",
+            "snn_argmax",
+        ]
+    )
 
     return df
 
