@@ -374,7 +374,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         Path to fink_mm configuration file
         [MMCONFIGPATH]
-""",
+        """,
     )
     parser.add_argument(
         "-producer",
