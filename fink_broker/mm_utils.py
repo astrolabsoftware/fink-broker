@@ -60,7 +60,6 @@ def science2mm(
     wait = 5
     while True:
         try:
-            logger.info("successfully connect to the fink science and gcn database")
             ztf_dataframe = connect_to_raw_database(
                 scitmpdatapath, scitmpdatapath, latestfirst=False
             )
@@ -69,6 +68,7 @@ def science2mm(
                 gcndatapath,
                 latestfirst=False,
             )
+            logger.info("successfully connect to the fink science and gcn database")
             break
 
         except Exception:
