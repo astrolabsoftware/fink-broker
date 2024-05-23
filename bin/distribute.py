@@ -23,25 +23,25 @@
 """
 
 import argparse
+import logging
 import time
 import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.mm_utils import mm2distribute
 from fink_broker.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
     path_exist,
 )
 from fink_broker.distribution_utils import get_kafka_df
-from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
 
 from fink_utils.spark.utils import apply_user_defined_filter
 
-from fink_mm.init import get_config
+
+_LOG = logging.getLogger(__name__)
 
 # User-defined topics
 userfilters = [
@@ -60,6 +60,58 @@ userfilters = [
 ]
 
 
+def launch_fink_mm(spark, args: dict):
+    """Manage multimessenger operations
+
+    Parameters
+    ----------
+    spark: SparkSession
+        Spark Session
+    args: dict
+        Arguments from Fink configuration file
+
+    Returns
+    -------
+    time_spent_in_wait: int
+        Time spent in waiting for GCN to come
+        before launching the streaming query.
+    stream_distrib_list: list of StreamingQuery
+        List of Spark Streaming queries
+
+    """
+    if args.noscience:
+        _LOG.info("No science: fink-mm is not applied")
+        return 0, []
+    elif args.mmconfigpath != "no-config":
+        from fink_mm.init import get_config
+        from fink_broker.mm_utils import mm2distribute
+
+        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        config = get_config({"--config": args.mmconfigpath})
+
+        # Wait for GCN comming
+        time_spent_in_wait = 0
+        while time_spent_in_wait < args.exit_after:
+            mm_path_output = config["PATH"]["online_grb_data_prefix"]
+            mmtmpdatapath = os.path.join(mm_path_output, "online")
+
+            # if there is gcn and ztf data
+            if path_exist(mmtmpdatapath):
+                t_before = time.time()
+                _LOG.info("starting mm2distribute ...")
+                stream_distrib_list = mm2distribute(spark, config, args)
+                time_spent_in_wait += time.time() - t_before
+                break
+
+            time_spent_in_wait += 1
+            time.sleep(1.0)
+        _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+        return time_spent_in_wait, stream_distrib_list
+
+    _LOG.info("No configuration found for fink-mm -- no applied")
+    return 0, []
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -68,12 +120,6 @@ def main():
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2
     )
-
-    # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
-
-    # debug statements
-    inspect_application(logger)
 
     # data path
     scitmpdatapath = args.online_data_prefix + "/science/{}".format(args.night)
@@ -86,7 +132,6 @@ def main():
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    # cnames[cnames.index('timestamp')] = 'cast(timestamp as string) as timestamp'
 
     cnames[cnames.index("brokerEndProcessTimestamp")] = (
         "cast(brokerEndProcessTimestamp as string) as brokerEndProcessTimestamp"
@@ -162,7 +207,7 @@ def main():
         if args.noscience:
             df_tmp = df
         else:
-            df_tmp = apply_user_defined_filter(df, userfilter, logger)
+            df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
@@ -187,42 +232,19 @@ def main():
             .start()
         )
 
-    config_path = args.mmconfigpath
-    count = 0
-    stream_distrib_list = None
+    time_spent_in_wait, stream_distrib_list = launch_fink_mm(spark, args)
 
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
-        if config_path != "no-config":
-            config = get_config({"--config": config_path})
-
-            while count < args.exit_after:
-                mm_path_output = config["PATH"]["online_grb_data_prefix"]
-                mmtmpdatapath = os.path.join(mm_path_output, "online")
-
-                # if there is gcn and ztf data
-                if path_exist(mmtmpdatapath):
-                    t_before = time.time()
-                    logger.info("starting mm2distribute ...")
-                    stream_distrib_list = mm2distribute(spark, config, args)
-                    count += time.time() - t_before
-                    break
-
-                count += 1
-                time.sleep(1.0)
-
-        remaining_time = args.exit_after - count
+        remaining_time = args.exit_after - time_spent_in_wait
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         disquery.stop()
-        if stream_distrib_list is not None:
+        if stream_distrib_list != []:
             for stream in stream_distrib_list:
                 stream.stop()
-        logger.info("Exiting the distribute service normally...")
+        _LOG.info("Exiting the distribute service normally...")
     else:
-        if config_path != "no-config":
-            config = get_config({"--config": config_path})
-            stream_distrib_list = mm2distribute(spark, config, args)
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()
 

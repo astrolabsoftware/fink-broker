@@ -87,9 +87,7 @@ def launch_fink_mm(args: dict, scitmpdatapath: str):
                 # Start the GCN x ZTF cross-match stream
                 t_before = time.time()
                 _LOG.info("starting science2mm ...")
-                countquery_mm = science2mm(
-                    args, config, gcndatapath, scitmpdatapath
-                )
+                countquery_mm = science2mm(args, config, gcndatapath, scitmpdatapath)
                 time_spent_in_wait += time.time() - t_before
                 break
             else:
