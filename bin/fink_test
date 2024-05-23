@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,8 +89,7 @@ export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 export KAFKA_TOPIC="ztf-stream-sim"
-export NIGHT_STR="20231018"
-export NIGHT_INT=20231018
+export NIGHT=20231018
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -102,36 +101,36 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC --night $NIGHT_STR
+  fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC --night $NIGHT
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 120 -c $conf --night $NIGHT_STR
+  fink start raw2science --exit_after 120 -c $conf --night $NIGHT
 
   # Start the distribution service
-  fink start distribution --exit_after 30 -c $conf --night $NIGHT_STR
+  fink start distribution --exit_after 30 -c $conf --night $NIGHT
 fi
 
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
   # merge data
-  fink start merge -c $conf --night $NIGHT_STR
+  fink start merge -c $conf --night $NIGHT
 
   # Update science portal
-  fink start science_archival -c $conf --night $NIGHT_INT
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table jd_objectId
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table pixel128_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table pixel4096_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table pixel131072_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table class_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table upper_objectId_jd
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table uppervalid_objectId_jd
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table ssnamenr_jd
-  fink start index_archival -c $conf --night $NIGHT_INT --index_table tracklet_objectId
+  fink start science_archival -c $conf --night $NIGHT
+  fink start index_archival -c $conf --night $NIGHT --index_table jd_objectId
+  fink start index_archival -c $conf --night $NIGHT --index_table pixel128_jd_objectId
+  fink start index_archival -c $conf --night $NIGHT --index_table pixel4096_jd_objectId
+  fink start index_archival -c $conf --night $NIGHT --index_table pixel131072_jd_objectId
+  fink start index_archival -c $conf --night $NIGHT --index_table class_jd_objectId
+  fink start index_archival -c $conf --night $NIGHT --index_table upper_objectId_jd
+  fink start index_archival -c $conf --night $NIGHT --index_table uppervalid_objectId_jd
+  fink start index_archival -c $conf --night $NIGHT --index_table ssnamenr_jd
+  fink start index_archival -c $conf --night $NIGHT --index_table tracklet_objectId
 
   # SSO candidates
-  fink start index_sso_cand_archival -c $conf --night $NIGHT_INT
+  fink start index_sso_cand_archival -c $conf --night $NIGHT
 
-  fink start stats -c $conf --night $NIGHT_INT
+  fink start stats -c $conf --night $NIGHT
 
   fink start check_science_portal -c $conf
 fi
@@ -139,7 +138,7 @@ fi
 # MM offline test (need "fink start merge" before)
 if [[ "$WITH_MM_OFFLINE" = true ]] ; then
   # fink-mm offline mode
-  fink_mm join_stream offline --night $NIGHT_INT --config ${FINK_HOME}/conf/fink_mm.conf
+  fink_mm join_stream offline --night $NIGHT --config ${FINK_HOME}/conf/fink_mm.conf
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
