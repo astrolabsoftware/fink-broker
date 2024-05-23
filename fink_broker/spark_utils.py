@@ -281,7 +281,7 @@ def connect_to_kafka(
             )
 
     df = (
-        df.option("subscribe", topic)
+        df.option("subscribePattern", topic)
         .option("startingOffsets", startingoffsets)
         .option("failOnDataLoss", failondataloss)
         .load()

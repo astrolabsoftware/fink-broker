@@ -219,8 +219,6 @@ def main():
         disquery = (
             df_kafka.writeStream.format("kafka")
             .option("kafka.bootstrap.servers", broker_list)
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
             .option("kafka.sasl.username", username)
             .option("kafka.sasl.password", password)
             .option("kafka.buffer.memory", kafka_buf_mem)
