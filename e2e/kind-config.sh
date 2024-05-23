@@ -20,11 +20,33 @@
 
 # @author  Fabrice Jammes
 
-set -euo pipefail
+set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-. $DIR/../conf.sh
+private_registry=""
+# Get option -r for tmp-registry
+while getopts ":r:" opt; do
+  case $opt in
+    r) private_registry="$OPTARG"
+    ;;
+    \?) echo "Invalid option -$OPTARG" >&2
+    ;;
+  esac
+done
 
-finkctl wait topics --expected 11 --timeout 600s -v1
-finkctl get topics
+if [ -z "$private_registry" ]; then
+  echo "Option -r not set. Using default kind configuration"
+  exit 0
+fi
+
+echo "Using private registry: $private_registry"
+mkdir -p $HOME/.ktbx
+cat <<EOF > $HOME/.ktbx/config
+kind:
+  workers: 0
+
+  # Supported only for clusters with one node
+  # Certificates must be available on kind host at "/etc/docker/certs.d/{{ .PrivateRegistry }}"
+  privateRegistry: "$private_registry"
+EOF

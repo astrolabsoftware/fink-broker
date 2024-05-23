@@ -1,4 +1,4 @@
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,11 +32,12 @@ from fink_broker.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
 
+
 def load_fink_cols():
-    """ Fink-derived columns used in HBase tables with type.
+    """Fink-derived columns used in HBase tables with type.
 
     Returns
-    ---------
+    -------
     out: dictionary
         Keys are column names (flattened). Values are data type.
 
@@ -44,53 +45,60 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    19
+    29
 
     >>> print(len(fink_nested_cols))
     18
     """
     fink_cols = {
-        'DR3Name': {'type': 'string', 'default': 'Unknown'},
-        'Plx': {'type': 'float', 'default': 0.0},
-        'anomaly_score': {'type': 'double', 'default': 0.0},
-        'cdsxmatch': {'type': 'string', 'default': 'Unknown'},
-        'e_Plx': {'type': 'float', 'default': 0.0},
-        'gcvs': {'type': 'string', 'default': 'Unknown'},
-        'mulens': {'type': 'double', 'default': 0.0},
-        'nalerthist': {'type': 'int', 'default': 0},
-        'rf_kn_vs_nonkn': {'type': 'double', 'default': 0.0},
-        'rf_snia_vs_nonia': {'type': 'double', 'default': 0.0},
-        'roid': {'type': 'int', 'default': 0},
-        'snn_sn_vs_all': {'type': 'double', 'default': 0.0},
-        'snn_snia_vs_nonia': {'type': 'double', 'default': 0.0},
-        'tracklet': {'type': 'string', 'default': ''},
-        'vsx': {'type': 'string', 'default': 'Unknown'},
-        'x3hsp': {'type': 'string', 'default': 'Unknown'},
-        'x4lac': {'type': 'string', 'default': 'Unknown'},
-        'lc_features_g': {'type': 'string', 'default': '[]'},
-        'lc_features_r': {'type': 'string', 'default': '[]'},
+        "DR3Name": {"type": "string", "default": "Unknown"},
+        "Plx": {"type": "float", "default": 0.0},
+        "anomaly_score": {"type": "double", "default": 0.0},
+        "cdsxmatch": {"type": "string", "default": "Unknown"},
+        "e_Plx": {"type": "float", "default": 0.0},
+        "gcvs": {"type": "string", "default": "Unknown"},
+        "mulens": {"type": "double", "default": 0.0},
+        "nalerthist": {"type": "int", "default": 0},
+        "rf_kn_vs_nonkn": {"type": "double", "default": 0.0},
+        "rf_snia_vs_nonia": {"type": "double", "default": 0.0},
+        "roid": {"type": "int", "default": 0},
+        "snn_sn_vs_all": {"type": "double", "default": 0.0},
+        "snn_snia_vs_nonia": {"type": "double", "default": 0.0},
+        "tracklet": {"type": "string", "default": ""},
+        "vsx": {"type": "string", "default": "Unknown"},
+        "x3hsp": {"type": "string", "default": "Unknown"},
+        "x4lac": {"type": "string", "default": "Unknown"},
+        "lc_features_g": {"type": "string", "default": "[]"},
+        "lc_features_r": {"type": "string", "default": "[]"},
+        "jd_first_real_det": {"type": "double", "default": 0.0},
+        "jdstarthist_dt": {"type": "double", "default": 0.0},
+        "mag_rate": {"type": "double", "default": 0.0},
+        "sigma_rate": {"type": "double", "default": 0.0},
+        "lower_rate": {"type": "double", "default": 0.0},
+        "upper_rate": {"type": "double", "default": 0.0},
+        "delta_time": {"type": "double", "default": 0.0},
+        "from_upper": {"type": "boolean", "default": False},
+        "spicy_id": {"type": "int", "default": -1},
+        "spicy_class": {"type": "string", "default": "Unknown"},
     }
 
     fink_nested_cols = {}
     for col_ in MANGROVE_COLS:
-        name = 'mangrove.{}'.format(col_)
-        fink_nested_cols.update(
-            {name: {'type': 'string', 'default': 'None'}}
-        )
+        name = "mangrove.{}".format(col_)
+        fink_nested_cols.update({name: {"type": "string", "default": "None"}})
 
     for col_ in T2_COLS:
-        name = 't2.{}'.format(col_)
-        fink_nested_cols.update(
-            {name: {'type': 'float', 'default': 0.0}}
-        )
+        name = "t2.{}".format(col_)
+        fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
 
     return fink_cols, fink_nested_cols
 
+
 def load_all_cols():
-    """ Fink/ZTF columns used in HBase tables with type.
+    """Fink/ZTF columns used in HBase tables with type.
 
     Returns
-    ---------
+    -------
     out: dictionary
         Keys are column names (flattened). Values are data type.
 
@@ -99,136 +107,137 @@ def load_all_cols():
     >>> root_level, candidates, images, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **images, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    148
+    158
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
     root_level = {
-        'fink_broker_version': 'string',
-        'fink_science_version': 'string',
-        'objectId': 'string',
-        'publisher': 'string',
-        'candid': 'long',
-        'schemavsn': 'string',
+        "fink_broker_version": "string",
+        "fink_science_version": "string",
+        "objectId": "string",
+        "publisher": "string",
+        "candid": "long",
+        "schemavsn": "string",
     }
 
     candidates = {
-        'aimage': 'float',
-        'aimagerat': 'float',
-        'bimage': 'float',
-        'bimagerat': 'float',
-        'chinr': 'float',
-        'chipsf': 'float',
-        'classtar': 'float',
-        'clrcoeff': 'float',
-        'clrcounc': 'float',
-        'clrmed': 'float',
-        'clrrms': 'float',
-        'dec': 'double',
-        'decnr': 'double',
-        'diffmaglim': 'float',
-        'distnr': 'float',
-        'distpsnr1': 'float',
-        'distpsnr2': 'float',
-        'distpsnr3': 'float',
-        'drb': 'float',
-        'drbversion': 'string',
-        'dsdiff': 'float',
-        'dsnrms': 'float',
-        'elong': 'float',
-        'exptime': 'float',
-        'fid': 'int',
-        'field': 'int',
-        'fwhm': 'float',
-        'isdiffpos': 'string',
-        'jd': 'double',
-        'jdendhist': 'double',
-        'jdendref': 'double',
-        'jdstarthist': 'double',
-        'jdstartref': 'double',
-        'magap': 'float',
-        'magapbig': 'float',
-        'magdiff': 'float',
-        'magfromlim': 'float',
-        'maggaia': 'float',
-        'maggaiabright': 'float',
-        'magnr': 'float',
-        'magpsf': 'float',
-        'magzpsci': 'float',
-        'magzpscirms': 'float',
-        'magzpsciunc': 'float',
-        'mindtoedge': 'float',
-        'nbad': 'int',
-        'ncovhist': 'int',
-        'ndethist': 'int',
-        'neargaia': 'float',
-        'neargaiabright': 'float',
-        'nframesref': 'int',
-        'nid': 'int',
-        'nmatches': 'int',
-        'nmtchps': 'int',
-        'nneg': 'int',
-        'objectidps1': 'long',
-        'objectidps2': 'long',
-        'objectidps3': 'long',
-        'pdiffimfilename': 'string',
-        'pid': 'long',
-        'programid': 'int',
-        'programpi': 'string',
-        'ra': 'double',
-        'ranr': 'double',
-        'rb': 'float',
-        'rbversion': 'string',
-        'rcid': 'int',
-        'rfid': 'long',
-        'scorr': 'double',
-        'seeratio': 'float',
-        'sgmag1': 'float',
-        'sgmag2': 'float',
-        'sgmag3': 'float',
-        'sgscore1': 'float',
-        'sgscore2': 'float',
-        'sgscore3': 'float',
-        'sharpnr': 'float',
-        'sigmagap': 'float',
-        'sigmagapbig': 'float',
-        'sigmagnr': 'float',
-        'sigmapsf': 'float',
-        'simag1': 'float',
-        'simag2': 'float',
-        'simag3': 'float',
-        'sky': 'float',
-        'srmag1': 'float',
-        'srmag2': 'float',
-        'srmag3': 'float',
-        'ssdistnr': 'float',
-        'ssmagnr': 'float',
-        'ssnamenr': 'string',
-        'ssnrms': 'float',
-        'sumrat': 'float',
-        'szmag1': 'float',
-        'szmag2': 'float',
-        'szmag3': 'float',
-        'tblid': 'long',
-        'tooflag': 'int',
-        'xpos': 'float',
-        'ypos': 'float',
-        'zpclrcov': 'float',
-        'zpmed': 'float'
+        "aimage": "float",
+        "aimagerat": "float",
+        "bimage": "float",
+        "bimagerat": "float",
+        "chinr": "float",
+        "chipsf": "float",
+        "classtar": "float",
+        "clrcoeff": "float",
+        "clrcounc": "float",
+        "clrmed": "float",
+        "clrrms": "float",
+        "dec": "double",
+        "decnr": "double",
+        "diffmaglim": "float",
+        "distnr": "float",
+        "distpsnr1": "float",
+        "distpsnr2": "float",
+        "distpsnr3": "float",
+        "drb": "float",
+        "drbversion": "string",
+        "dsdiff": "float",
+        "dsnrms": "float",
+        "elong": "float",
+        "exptime": "float",
+        "fid": "int",
+        "field": "int",
+        "fwhm": "float",
+        "isdiffpos": "string",
+        "jd": "double",
+        "jdendhist": "double",
+        "jdendref": "double",
+        "jdstarthist": "double",
+        "jdstartref": "double",
+        "magap": "float",
+        "magapbig": "float",
+        "magdiff": "float",
+        "magfromlim": "float",
+        "maggaia": "float",
+        "maggaiabright": "float",
+        "magnr": "float",
+        "magpsf": "float",
+        "magzpsci": "float",
+        "magzpscirms": "float",
+        "magzpsciunc": "float",
+        "mindtoedge": "float",
+        "nbad": "int",
+        "ncovhist": "int",
+        "ndethist": "int",
+        "neargaia": "float",
+        "neargaiabright": "float",
+        "nframesref": "int",
+        "nid": "int",
+        "nmatches": "int",
+        "nmtchps": "int",
+        "nneg": "int",
+        "objectidps1": "long",
+        "objectidps2": "long",
+        "objectidps3": "long",
+        "pdiffimfilename": "string",
+        "pid": "long",
+        "programid": "int",
+        "programpi": "string",
+        "ra": "double",
+        "ranr": "double",
+        "rb": "float",
+        "rbversion": "string",
+        "rcid": "int",
+        "rfid": "long",
+        "scorr": "double",
+        "seeratio": "float",
+        "sgmag1": "float",
+        "sgmag2": "float",
+        "sgmag3": "float",
+        "sgscore1": "float",
+        "sgscore2": "float",
+        "sgscore3": "float",
+        "sharpnr": "float",
+        "sigmagap": "float",
+        "sigmagapbig": "float",
+        "sigmagnr": "float",
+        "sigmapsf": "float",
+        "simag1": "float",
+        "simag2": "float",
+        "simag3": "float",
+        "sky": "float",
+        "srmag1": "float",
+        "srmag2": "float",
+        "srmag3": "float",
+        "ssdistnr": "float",
+        "ssmagnr": "float",
+        "ssnamenr": "string",
+        "ssnrms": "float",
+        "sumrat": "float",
+        "szmag1": "float",
+        "szmag2": "float",
+        "szmag3": "float",
+        "tblid": "long",
+        "tooflag": "int",
+        "xpos": "float",
+        "ypos": "float",
+        "zpclrcov": "float",
+        "zpmed": "float",
     }
 
-    candidates = {'candidate.' + k: v for k, v in candidates.items()}
+    candidates = {"candidate." + k: v for k, v in candidates.items()}
 
     images = {
-        'cutoutScience.stampData': 'binary',
-        'cutoutTemplate.stampData': 'binary',
-        'cutoutDifference.stampData': 'binary'
+        "cutoutScience.stampData": "binary",
+        "cutoutTemplate.stampData": "binary",
+        "cutoutDifference.stampData": "binary",
     }
 
     return root_level, candidates, images, fink_cols, fink_nested_cols
 
+
 def bring_to_current_schema(df):
-    """ Check all columns exist, fill if necessary, and cast data
+    """Check all columns exist, fill if necessary, and cast data
 
     Parameters
     ----------
@@ -236,7 +245,7 @@ def bring_to_current_schema(df):
         Spark DataFrame with raw alert data
 
     Returns
-    ----------
+    -------
     out: DataFrame
         Spark DataFrame with HBase data structure
     """
@@ -252,13 +261,13 @@ def bring_to_current_schema(df):
 
     # assuming no missing columns
     for colname, coltype in candidates.items():
-        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split('.')[-1]))
+        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
 
     cols_i = df.select(tmp_i).columns
 
     # assuming no missing columns
     for colname, coltype in images.items():
-        name = F.col(colname).alias(colname.replace('.', '_')).cast(coltype)
+        name = F.col(colname).alias(colname.replace(".", "_")).cast(coltype)
         tmp_b.append(name)
 
     cols_b = df.select(tmp_b).columns
@@ -270,25 +279,37 @@ def bring_to_current_schema(df):
             df.select(colname)
         except AnalysisException:
             _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn("Adding a new column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
-            df = df.withColumn(colname, F.lit(coltype_and_default['default']))
-        tmp_d.append(F.col(colname).cast(coltype_and_default['type']))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            df = df.withColumn(colname, F.lit(coltype_and_default["default"]))
+        tmp_d.append(F.col(colname).cast(coltype_and_default["type"]))
 
     # check all columns exist, otherwise create it
     for colname, coltype_and_default in fink_nested_cols.items():
-        try:
+        try:  # noqa: PERF203
             # ony here to check if the column exists
             df.select(colname)
 
             # rename root.level into root_level
-            name = F.col(colname).alias(colname.replace('.', '_')).cast(coltype_and_default['type'])
+            name = (
+                F.col(colname)
+                .alias(colname.replace(".", "_"))
+                .cast(coltype_and_default["type"])
+            )
             tmp_d.append(name)
-        except AnalysisException:
+        except AnalysisException:  # noqa: PERF203
             _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn("Adding a new column with value `{}` and type `{}`".format(coltype_and_default['default'], coltype_and_default['type']))
-            name = colname.replace('.', '_')
-            df = df.withColumn(name, F.lit(coltype_and_default['default']))
-            tmp_d.append(F.col(name).cast(coltype_and_default['type']))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            name = colname.replace(".", "_")
+            df = df.withColumn(name, F.lit(coltype_and_default["default"]))
+            tmp_d.append(F.col(name).cast(coltype_and_default["type"]))
 
     cols_d = df.select(tmp_d).columns
 
@@ -298,11 +319,12 @@ def bring_to_current_schema(df):
 
     return df, cols_i, cols_d, cols_b
 
+
 def load_ztf_index_cols():
-    """ Load columns used for index tables (flattened and casted before).
+    """Load columns used for index tables (flattened and casted before).
 
     Returns
-    ---------
+    -------
     out: list of string
         List of (flattened) column names
 
@@ -310,58 +332,65 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    72
+    83
     """
+    # From `root` or `candidates.`
     common = [
-        'objectId', 'candid', 'publisher', 'rcid', 'chipsf', 'distnr',
-        'ra', 'dec', 'jd', 'fid', 'nid', 'field', 'xpos', 'ypos', 'rb',
-        'ssdistnr', 'ssmagnr', 'ssnamenr', 'jdstarthist', 'jdendhist', 'tooflag',
-        'sgscore1', 'distpsnr1', 'neargaia', 'maggaia', 'nmtchps', 'diffmaglim',
-        'magpsf', 'sigmapsf', 'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos',
-        'cdsxmatch',
-        'roid',
-        'mulens',
-        'DR3Name',
-        'Plx',
-        'e_Plx',
-        'gcvs',
-        'vsx',
-        'snn_snia_vs_nonia', 'snn_sn_vs_all', 'rf_snia_vs_nonia',
-        'classtar', 'drb', 'ndethist', 'rf_kn_vs_nonkn', 'tracklet',
-        'anomaly_score', 'x4lac', 'x3hsp', 'lc_features_g', 'lc_features_r'
+        "objectId",
+        "candid",
+        "publisher",
+        "rcid",
+        "chipsf",
+        "distnr",
+        "ra",
+        "dec",
+        "jd",
+        "fid",
+        "nid",
+        "field",
+        "xpos",
+        "ypos",
+        "rb",
+        "ssdistnr",
+        "ssmagnr",
+        "ssnamenr",
+        "jdstarthist",
+        "jdendhist",
+        "tooflag",
+        "sgscore1",
+        "distpsnr1",
+        "neargaia",
+        "maggaia",
+        "nmtchps",
+        "diffmaglim",
+        "magpsf",
+        "sigmapsf",
+        "magnr",
+        "sigmagnr",
+        "magzpsci",
+        "isdiffpos",
+        "classtar",
+        "drb",
+        "ndethist",
     ]
 
-    mangrove = [
-        'mangrove_2MASS_name',
-        'mangrove_HyperLEDA_name',
-        'mangrove_ang_dist',
-        'mangrove_lum_dist'
-    ]
+    # Add Fink added values
+    fink_cols, fink_nested_cols = load_fink_cols()
 
-    t2 = [
-        't2_AGN',
-        't2_EB',
-        't2_KN',
-        't2_M-dwarf',
-        't2_Mira',
-        't2_RRL',
-        't2_SLSN-I',
-        't2_SNII',
-        't2_SNIa',
-        't2_SNIa-91bg',
-        't2_SNIax',
-        't2_SNIbc',
-        't2_TDE',
-        't2_mu-Lens-Single',
-    ]
+    fink_cols_names = list(fink_cols.keys())
+    common += fink_cols_names
 
-    return common + mangrove + t2
+    fink_nested_cols_names = [i.replace(".", "_") for i in fink_nested_cols.keys()]
+    common += fink_nested_cols_names
+
+    return common
+
 
 def load_ztf_crossmatch_cols():
-    """ Load columns used for the crossmatch table (casted).
+    """Load columns used for the crossmatch table (casted).
 
     Returns
-    ---------
+    -------
     out: list of string
         List of column names casted
 
@@ -372,25 +401,26 @@ def load_ztf_crossmatch_cols():
     13
     """
     to_use = [
-        'objectId',
-        'candid',
-        'magpsf',
-        'sigmapsf',
-        'jd',
-        'jdstarthist',
-        'cdsxmatch',
-        'drb',
-        'ra',
-        'dec',
-        'fid',
-        'distnr',
-        'nalerthist'
+        "objectId",
+        "candid",
+        "magpsf",
+        "sigmapsf",
+        "jd",
+        "jdstarthist",
+        "cdsxmatch",
+        "drb",
+        "ra",
+        "dec",
+        "fid",
+        "distnr",
+        "nalerthist",
     ]
 
     return to_use
 
+
 def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
-    """ Load table data from HBase into a Spark DataFrame
+    """Load table data from HBase into a Spark DataFrame
 
     The row(s) containing the different schemas are skipped (only data is loaded)
 
@@ -403,27 +433,28 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
         Name of the rowkey
 
     Returns
-    ----------
+    -------
     df: DataFrame
         Spark DataFrame with the table data
     """
     # Grab the running Spark Session,
     # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
-    df = spark.read.option("catalog", catalog)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
-        .option("hbase.spark.pushdown.columnfilter", True)\
-        .load()\
-        .filter(~F.col(rowkey).startswith('schema_'))
+    df = (
+        spark.read.option("catalog", catalog)
+        .format("org.apache.hadoop.hbase.spark")
+        .option("hbase.spark.use.hbasecontext", False)
+        .option("hbase.spark.pushdown.columnfilter", True)
+        .load()
+        .filter(~F.col(rowkey).startswith("schema_"))
+    )
 
     return df
 
+
 def write_catalog_on_disk(catalog, catalogname) -> None:
-    """ Save HBase catalog in json format on disk
+    """Save HBase catalog in json format on disk
 
     Parameters
     ----------
@@ -433,11 +464,12 @@ def write_catalog_on_disk(catalog, catalogname) -> None:
     catalogname: str
         Name of the catalog on disk
     """
-    with open(catalogname, 'w') as json_file:
+    with open(catalogname, "w") as json_file:
         json.dump(catalog, json_file)
 
-def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> None:
-    """ Push DataFrame data to HBase
+
+def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> None:
+    """Push DataFrame data to HBase
 
     Parameters
     ----------
@@ -456,57 +488,47 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder='.') -> 
     """
     # construct the catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
-        df.schema,
-        table_name,
-        rowkeyname=rowkeyname,
-        cf=cf
+        df.schema, table_name, rowkeyname=rowkeyname, cf=cf
     )
 
     # Push table
-    df.write\
-        .options(catalog=hbcatalog_index, newtable=nregion)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
-        .save()
+    df.write.options(catalog=hbcatalog_index, newtable=nregion).format(
+        "org.apache.hadoop.hbase.spark"
+    ).option("hbase.spark.use.hbasecontext", False).save()
 
     # write catalog for the table data
-    file_name = table_name + '.json'
+    file_name = table_name + ".json"
     write_catalog_on_disk(hbcatalog_index, os.path.join(catfolder, file_name))
 
     # Construct the schema row - inplace replacement
-    schema_row_key_name = 'schema_version'
-    df = df.withColumnRenamed(
-        rowkeyname,
-        schema_row_key_name
-    )
+    schema_row_key_name = "schema_version"
+    df = df.withColumnRenamed(rowkeyname, schema_row_key_name)
 
     df_index_schema = construct_schema_row(
-        df,
-        rowkeyname=schema_row_key_name,
-        version='schema_{}_{}'.format(fbvsn, fsvsn))
+        df, rowkeyname=schema_row_key_name, version="schema_{}_{}".format(fbvsn, fsvsn)
+    )
 
     # construct the hbase catalog for the schema
     hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
-        df_index_schema.schema,
-        table_name,
-        rowkeyname=schema_row_key_name,
-        cf=cf)
-
-    # Push the data using the hbase connector
-    df_index_schema.write\
-        .options(catalog=hbcatalog_index_schema, newtable=nregion)\
-        .format("org.apache.hadoop.hbase.spark")\
-        .option("hbase.spark.use.hbasecontext", False)\
-        .save()
-
-    # write catalog for the schema row
-    file_name = table_name + '_schema_row.json'
-    write_catalog_on_disk(
-        hbcatalog_index_schema, os.path.join(catfolder, file_name)
+        df_index_schema.schema, table_name, rowkeyname=schema_row_key_name, cf=cf
     )
 
-def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_create=None) -> DataFrame:
-    """ Select columns from `cols` that are actually in `df`.
+    # Push the data using the hbase connector
+    df_index_schema.write.options(
+        catalog=hbcatalog_index_schema, newtable=nregion
+    ).format("org.apache.hadoop.hbase.spark").option(
+        "hbase.spark.use.hbasecontext", False
+    ).save()
+
+    # write catalog for the schema row
+    file_name = table_name + "_schema_row.json"
+    write_catalog_on_disk(hbcatalog_index_schema, os.path.join(catfolder, file_name))
+
+
+def select_relevant_columns(
+    df: DataFrame, cols: list, row_key_name: str, to_create=None
+) -> DataFrame:
+    """Select columns from `cols` that are actually in `df`.
 
     It would act as if `df.select(cols, skip_unknown_cols=True)` was possible. Note though
     that nested cols in `cols` will be flatten, and columns used in `to_create` have to be
@@ -531,11 +553,12 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
         Extra columns to create from others, and to include in the `select`.
         Example: df.select(['a', 'b', F.col('a') + F.col('c')])
 
-    Returns:
+    Returns
+    -------
     df: DataFrame
 
     Examples
-    ----------
+    --------
     >>> import pyspark.sql.functions as F
     >>> df = spark.createDataFrame([{'a': 1, 'b': 2, 'c': 3}])
 
@@ -562,10 +585,10 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
     missing_cols = []
     for col_ in all_cols:
         # Dumb but simple
-        try:
+        try:  # noqa: PERF203
             df.select(col_)
             cnames.append(col_)
-        except AnalysisException:
+        except AnalysisException:  # noqa: PERF203
             missing_cols.append(col_)
 
     # flatten names
@@ -575,8 +598,9 @@ def select_relevant_columns(df: DataFrame, cols: list, row_key_name: str, to_cre
 
     return df
 
+
 def assign_column_family_names(df, cols_i, cols_d, cols_b):
-    """ Assign a column family name to each column qualifier.
+    """Assign a column family name to each column qualifier.
 
     There are currently 3 column families:
         - i: for column that identify the alert (original alert)
@@ -595,21 +619,23 @@ def assign_column_family_names(df, cols_i, cols_d, cols_b):
         List of DataFrame column names to use for the science portal.
 
     Returns
-    ---------
+    -------
     cf: dict
         Dictionary with keys being column names (also called
         column qualifiers), and the corresponding column family.
 
     """
-    cf = {i: 'i' for i in df.select(['`{}`'.format(k) for k in cols_i]).columns}
-    cf.update({i: 'd' for i in df.select(['`{}`'.format(k) for k in cols_d]).columns})
-    cf.update({i: 'b' for i in df.select(['`{}`'.format(k) for k in cols_b]).columns})
+    cf = {i: "i" for i in df.select(["`{}`".format(k) for k in cols_i]).columns}
+    cf.update({i: "d" for i in df.select(["`{}`".format(k) for k in cols_d]).columns})
+    cf.update({i: "b" for i in df.select(["`{}`".format(k) for k in cols_b]).columns})
 
     return cf
 
+
 def construct_hbase_catalog_from_flatten_schema(
-        schema: dict, catalogname: str, rowkeyname: str, cf: dict) -> str:
-    """ Convert a flatten DataFrame schema into a HBase catalog.
+    schema: dict, catalogname: str, rowkeyname: str, cf: dict
+) -> str:
+    """Convert a flatten DataFrame schema into a HBase catalog.
 
     From
     {'name': 'schemavsn', 'type': 'string', 'nullable': True, 'metadata': {}}
@@ -631,7 +657,7 @@ def construct_hbase_catalog_from_flatten_schema(
         See `assign_column_family_names`.
 
     Returns
-    ----------
+    -------
     catalog : str
         Catalog for HBase.
 
@@ -652,7 +678,7 @@ def construct_hbase_catalog_from_flatten_schema(
     """
     schema_columns = schema.jsonValue()["fields"]
 
-    catalog = ''.join("""
+    catalog = "".join("""
     {{
         'table': {{
             'namespace': 'default',
@@ -675,7 +701,7 @@ def construct_hbase_catalog_from_flatten_schema(
             # column["type"]["type"]
             column["type"] = "string"
 
-        if column["type"] == 'timestamp':
+        if column["type"] == "timestamp":
             # column["type"]["type"]
             column["type"] = "string"
 
@@ -687,11 +713,7 @@ def construct_hbase_catalog_from_flatten_schema(
             catalog += """
             '{}': {{'cf': '{}', 'col': '{}', 'type': '{}'}}{}
             """.format(
-                column["name"],
-                cf[column["name"]],
-                column["name"],
-                column["type"],
-                sep
+                column["name"], cf[column["name"]], column["name"], column["type"], sep
             )
 
     # Push an empty column family 'a' for later annotations
@@ -701,11 +723,11 @@ def construct_hbase_catalog_from_flatten_schema(
     }
     """
 
-    return catalog.replace("\'", "\"")
+    return catalog.replace("'", '"')
+
 
 def construct_schema_row(df, rowkeyname, version):
-    """ Construct a DataFrame whose columns are those of the
-    original ones, and one row containing schema types
+    """Construct a DataFrame whose columns are those of the original ones, and one row containing schema types
 
     Parameters
     ----------
@@ -717,7 +739,7 @@ def construct_schema_row(df, rowkeyname, version):
         Version of the HBase table (row value for the rowkey column).
 
     Returns
-    ---------
+    -------
     df_schema: Spark DataFrame
         Spark DataFrame with one row (the types of its column). Only the row
         key is the version of the HBase table.
@@ -741,17 +763,15 @@ def construct_schema_row(df, rowkeyname, version):
     """
     # Grab the running Spark Session,
     # otherwise create it.
-    spark = SparkSession \
-        .builder \
-        .getOrCreate()
+    spark = SparkSession.builder.getOrCreate()
 
     # Original df columns, but values are types.
-    data = np.array([(c.jsonValue()['type']) for c in df.schema], dtype='<U75')
+    data = np.array([(c.jsonValue()["type"]) for c in df.schema], dtype="<U75")
 
     # binary types are too vague, so assign manually a description
-    names = np.array([(c.jsonValue()['name']) for c in df.schema])
-    mask = np.array(['cutout' in i for i in names])
-    data[mask] = 'fits/image'
+    names = np.array([(c.jsonValue()["name"]) for c in df.schema])
+    mask = np.array(["cutout" in i for i in names])
+    data[mask] = "fits/image"
 
     index = np.where(np.array(df.columns) == rowkeyname)[0][0]
     data[index] = version
@@ -761,8 +781,9 @@ def construct_schema_row(df, rowkeyname, version):
 
     return df_schema
 
-def add_row_key(df, row_key_name, cols=[]):
-    """ Create and attach the row key to a DataFrame
+
+def add_row_key(df, row_key_name, cols=None):
+    """Create and attach the row key to a DataFrame
 
     This should be typically called before `select_relevant_columns`.
 
@@ -776,17 +797,21 @@ def add_row_key(df, row_key_name, cols=[]):
         List of columns to concatenate
 
     Returns
-    ----------
+    -------
     out: DataFrame
         Original Spark DataFrame with a new column
     """
-    row_key_col = F.concat_ws('_', *cols).alias(row_key_name)
+    if cols is None:
+        cols = []
+
+    row_key_col = F.concat_ws("_", *cols).alias(row_key_name)
     df = df.withColumn(row_key_name, row_key_col)
 
     return df
 
+
 def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
-    """ Push data stored in a Spark DataFrame into HBase
+    """Push data stored in a Spark DataFrame into HBase
 
     It assumes the main ZTF table schema
 
@@ -817,9 +842,7 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     all_cols = cols_i + cols_d + cols_b
 
     df_flat = add_row_key(
-        df_flat,
-        row_key_name=row_key_name,
-        cols=row_key_name.split('_')
+        df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
     )
 
     # Flatten columns
@@ -834,11 +857,12 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
         table_name=table_name,
         rowkeyname=row_key_name,
         cf=cf,
-        catfolder=catalog_name
+        catfolder=catalog_name,
     )
 
+
 def cast_features(df):
-    """ Cast feature columns into string of array
+    """Cast feature columns into string of array
 
     Parameters
     ----------
@@ -846,30 +870,24 @@ def cast_features(df):
         DataFrame of alerts
 
     Returns
-    ----------
+    -------
     df: Spark DataFrame
 
     Examples
-    ----------
+    --------
     # Read alert from the raw database
     >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
 
     >>> df = cast_features(df)
     >>> assert 'lc_features_g' in df.columns, df.columns
 
-    >>> a_row = df.select('lc_features_g').limit(1).toPandas().values[0][0]
+    >>> a_row = df.select('lc_features_g').limit(1).toPandas().to_numpy()[0][0]
     >>> assert isinstance(a_row, str), a_row
     """
-    if ('lc_features_g' in df.columns) and ('lc_features_r' in df.columns):
-        df = df.withColumn(
-            'lc_features_g',
-            F.array('lc_features_g.*').astype('string')
-        )
+    if ("lc_features_g" in df.columns) and ("lc_features_r" in df.columns):
+        df = df.withColumn("lc_features_g", F.array("lc_features_g.*").astype("string"))
 
-        df = df.withColumn(
-            'lc_features_r',
-            F.array('lc_features_r.*').astype('string')
-        )
+        df = df.withColumn("lc_features_r", F.array("lc_features_r.*").astype("string"))
 
     return df
 
@@ -878,12 +896,14 @@ if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
     globs = globals()
-    root = os.environ['FINK_HOME']
+    root = os.environ["FINK_HOME"]
     globs["ztf_alert_sample"] = os.path.join(
-        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro")
+        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
+    )
 
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
-        root, "online/science/20200101")
+        root, "online/science/20200101"
+    )
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

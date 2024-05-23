@@ -20,33 +20,36 @@
 
 # @author  Fabrice Jammes
 
-set -euxo pipefail
+set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly  FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
-
-readonly MINIKUBE_VERSION="v1.27.0"
-if minikube version | grep "minikube version: $MINIKUBE_VERSION" > /dev/null
+# TODO improve management of expected topics
+# for example in finkctl.yaml
+if [ "$SUFFIX" = "noscience" ];
 then
-  echo "Use existing minikube version==$MINIKUBE_VERSION"
+  expected_topics="12"
 else
-  echo "Install minikube version==$MINIKUBE_VERSION"
-  curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/$MINIKUBE_VERSION/minikube-linux-amd64
-  chmod +x /tmp/minikube
-
-  sudo mkdir -p /usr/local/bin/
-  sudo install /tmp/minikube /usr/local/bin/
+  expected_topics="1"
 fi
 
-minikube delete
-
-NPROC=$(nproc)
-if [ $NPROC -lt $CPUS ]; then
-  EFFECTIVE_CPUS=$NPROC
-else
-  EFFECTIVE_CPUS=$CPUS
-fi
-
-minikube start --kubernetes-version "$K8S_VERSION" --driver=docker --cpus "$EFFECTIVE_CPUS" --cni=bridge
+count=0
+while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1
+do
+    echo "Waiting for expected topics: $expected_topics"
+    sleep 5
+    kubectl get pods
+    if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
+    then
+        echo "ERROR: fink-broker as crashed"
+        echo "ERROR: enabling interactive access for debugging purpose"
+        sleep 7200
+        exit 1
+    fi
+    count=$((count+1))
+    if [ $count -eq 10 ]; then
+        echo "Timeout waiting for topics to be created"
+        exit 1
+    fi
+done
+finkctl get topics

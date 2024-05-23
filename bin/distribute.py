@@ -21,16 +21,17 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
+
 import argparse
 import time
 import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.sparkUtils import init_sparksession, connect_to_raw_database, path_exist
-from fink_broker.distributionUtils import get_kafka_df
-from fink_broker.loggingUtils import get_fink_logger, inspect_application
 from fink_broker.mm2distribute import mm2distribute
+from fink_broker.spark_utils import init_sparksession, connect_to_raw_database
+from fink_broker.distribution_utils import get_kafka_df
+from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
 
@@ -40,18 +41,20 @@ from fink_mm.init import get_config
 
 # User-defined topics
 userfilters = [
-    'fink_filters.filter_early_sn_candidates.filter.early_sn_candidates',
-    'fink_filters.filter_sn_candidates.filter.sn_candidates',
-    'fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates',
-    'fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates',
-    'fink_filters.filter_kn_candidates.filter.kn_candidates',
-    'fink_filters.filter_early_kn_candidates.filter.early_kn_candidates',
-    'fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates',
-    'fink_filters.filter_microlensing_candidates.filter.microlensing_candidates',
-    'fink_filters.filter_yso_candidates.filter.yso_candidates',
-    'fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates',
-    'fink_filters.filter_blazar.filter.blazar'
+    "fink_filters.filter_early_sn_candidates.filter.early_sn_candidates",
+    "fink_filters.filter_sn_candidates.filter.sn_candidates",
+    "fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
+    "fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates",
+    "fink_filters.filter_kn_candidates.filter.kn_candidates",
+    "fink_filters.filter_early_kn_candidates.filter.early_kn_candidates",
+    "fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
+    "fink_filters.filter_microlensing_candidates.filter.microlensing_candidates",
+    "fink_filters.filter_yso_candidates.filter.yso_candidates",
+    "fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
+    "fink_filters.filter_blazar.filter.blazar",
+    "fink_filters.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
 ]
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -59,8 +62,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="distribute_{}_{}".format(args.producer, args.night),
-        shuffle_partitions=2
+        name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -70,15 +72,13 @@ def main():
     inspect_application(logger)
 
     # data path
-    scitmpdatapath = args.online_data_prefix + '/science/{}'.format(args.night)
-    checkpointpath_kafka = args.online_data_prefix + '/kafka_checkpoint/{}'.format(args.night)
+    scitmpdatapath = args.online_data_prefix + "/science/{}".format(args.night)
+    checkpointpath_kafka = args.online_data_prefix + "/kafka_checkpoint/{}".format(
+        args.night
+    )
 
     # Connect to the TMP science database
-    df = connect_to_raw_database(
-        scitmpdatapath,
-        scitmpdatapath,
-        latestfirst=False
-    )
+    df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
 
     # Cast fields to ease the distribution
     cnames = df.columns
@@ -93,31 +93,45 @@ def main():
     cnames[cnames.index('cutoutDifference')] = 'struct(cutoutDifference.*) as cutoutDifference'
     cnames[cnames.index('prv_candidates')] = 'explode(array(prv_candidates)) as prv_candidates'
     cnames[cnames.index('candidate')] = 'struct(candidate.*) as candidate'
+
     if not args.noscience:
         # This column is added by the science pipeline
-        cnames[cnames.index('lc_features_g')] = 'struct(lc_features_g.*) as lc_features_g'
-        cnames[cnames.index('lc_features_r')] = 'struct(lc_features_r.*) as lc_features_r'
+        cnames[cnames.index("lc_features_g")] = (
+            "struct(lc_features_g.*) as lc_features_g"
+        )
+        cnames[cnames.index("lc_features_r")] = (
+            "struct(lc_features_r.*) as lc_features_r"
+        )
 
     # Extract schema
-    df_schema = spark.read.format('parquet').load(scitmpdatapath)
+    df_schema = spark.read.format("parquet").load(scitmpdatapath)
     df_schema = df_schema.selectExpr(cnames)
 
     schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
 
     # Retrieve time-series information
     to_expand = [
-        'jd', 'fid', 'magpsf', 'sigmapsf',
-        'magnr', 'sigmagnr', 'magzpsci', 'isdiffpos'
+        "jd",
+        "fid",
+        "magpsf",
+        "sigmapsf",
+        "magnr",
+        "sigmagnr",
+        "magzpsci",
+        "isdiffpos",
+        "diffmaglim",
     ]
 
     # Append temp columns with historical + current measurements
-    prefix = 'c'
+    prefix = "c"
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
 
     # quick fix for https://github.com/astrolabsoftware/fink-broker/issues/457
     for colname in to_expand:
-        df = df.withColumnRenamed('c' + colname, 'c' + colname + 'c')
+        df = df.withColumnRenamed("c" + colname, "c" + colname + "c")
+
+    df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
     broker_list = args.distribution_servers
     username = args.kafka_sasl_username
@@ -126,7 +140,7 @@ def main():
     kafka_timeout_ms = args.kafka_delivery_timeout_ms
     for userfilter in userfilters:
         # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split('.')[-1] + '_ztf'
+        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
         # Apply user-defined filter
         if args.noscience:
@@ -145,6 +159,8 @@ def main():
             .writeStream\
             .format("kafka")\
             .option("kafka.bootstrap.servers", broker_list)\
+            .option("kafka.security.protocol", "SASL_PLAINTEXT")\
+            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")\
             .option("kafka.sasl.username", username)\
             .option("kafka.sasl.password", password)\
             .option("kafka.buffer.memory", kafka_buf_mem)\

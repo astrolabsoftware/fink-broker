@@ -1,0 +1,25 @@
+name: "e2e: science, self-hosted"
+on:
+  schedule:
+    # At 05:00 UTC on every day-of-week from Monday through Friday.
+    - cron:  '0 5 * * 1-5'
+  push:
+  # TODO ciux does not support pull_request when trying not to build image
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  call-workflow-passing-data:
+    uses: ./.github/workflows/e2e-common.yml
+    with:
+      suffix: ""
+      ci_repo: "gitlab.dsi.universite-paris-saclay.fr:5005/fink/fink-registry"
+      runner: "['arc-runners']"
+      kind_version: "v0.15.0"
+    secrets:
+      registry_username: ${{ secrets.REGISTRY_USERNAME }}
+      registry_token: ${{ secrets.REGISTRY_TOKEN }}
+      private_registry_username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+      private_registry_token: ${{ secrets.PRIVATE_REGISTRY_TOKEN }}

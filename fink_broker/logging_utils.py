@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,9 @@ from logging import Logger
 
 from fink_broker.tester import spark_unit_tests
 
+
 def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
-    """ Initialise python logger. Suitable for both driver and executors.
+    """Initialise python logger. Suitable for both driver and executors.
 
     Parameters
     ----------
@@ -31,12 +32,12 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
         Minimum level of log wanted: DEBUG, INFO, WARNING, ERROR, CRITICAL, OFF
 
     Returns
-    ----------
+    -------
     logger : logging.Logger
         Python Logger
 
     Examples
-    ----------
+    --------
     >>> log = get_fink_logger(__name__, "INFO")
     >>> log.info("Hi!")
     """
@@ -59,9 +60,9 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
 
     return logger
 
+
 def inspect_application(logger):
-    """Print INFO and DEBUG statements about the current application such
-    as the Spark configuration, the Spark & Python versions.
+    """Print INFO and DEBUG statements about the current application
 
     Parameters
     ----------
@@ -69,15 +70,15 @@ def inspect_application(logger):
         Logger initialised by get_fink_logger.
 
     Examples
-    -------
+    --------
     >>> log = get_fink_logger(__name__, "DEBUG")
     >>> inspect_application(log) # doctest: +SKIP
     """
     spark = SparkSession.builder.getOrCreate()
 
-    logger.debug('Application started')
-    logger.debug('Python version: {}'.format(spark.sparkContext.pythonVer))
-    logger.debug('Spark version: {}'.format(spark.sparkContext.version))
+    logger.debug("Application started")
+    logger.debug("Python version: {}".format(spark.sparkContext.pythonVer))
+    logger.debug("Spark version: {}".format(spark.sparkContext.version))
 
     # Debug statements
     conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])

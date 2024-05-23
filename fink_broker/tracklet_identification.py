@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2021 AstroLab Software
+# Copyright 2021-2024 AstroLab Software
 # Author: Julien Peloton, Sergey Karpov
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Extract tracklet ID from the alert data
-"""
+"""Extract tracklet ID from the alert data"""
+
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 from pyspark.sql.functions import pandas_udf, PandasUDFType
@@ -27,8 +27,9 @@ from astropy.time import Time
 
 from fink_broker.tester import spark_unit_tests
 
+
 def apply_tracklet_cuts(df: DataFrame) -> DataFrame:
-    """ Select potential tracklet candidates based on property cuts.
+    """Select potential tracklet candidates based on property cuts.
 
     We first apply 3 criteria to select interesting candidates:
 
@@ -45,44 +46,45 @@ def apply_tracklet_cuts(df: DataFrame) -> DataFrame:
         Input dataframe containing alert data
 
     Returns
-    ----------
+    -------
     df_filt: Spark DataFrame
         Spark DataFrame of smaller size containing only potential
         tracklet candidate data based on the cuts.
 
     Examples
-    ----------
+    --------
     >>> df = spark.read.format('parquet').load(ztf_alert_sample)
     >>> df_filt = apply_tracklet_cuts(df)
     >>> df_filt.count()
     16
     """
     # remove known asteroids
-    idx = df['candidate.ssnamenr'] == 'null'
+    idx = df["candidate.ssnamenr"] == "null"
 
     # Keep only objects unknown to SIMBAD - seems unnecessary
     # idx &= df['cdsxmatch'].isin(['Unknown'])
 
     # Keep only objects with 1 detection
-    idx &= df['candidate.ndethist'] == 1
+    idx &= df["candidate.ndethist"] == 1
 
     # Keep only positive detections
-    idx &= df['candidate.isdiffpos'] == 't'
+    idx &= df["candidate.isdiffpos"] == "t"
 
     # Simple definition of locus containing (most of) stellar variability
     # as well as bad subtraction - basically, the variations are fainter than
     # the template object itself, and distance is smaller than typical FWHM
-    shiftlog = F.log10(df['candidate.distnr']) + 0.2
-    nidx = (df['candidate.magnr'] - df['candidate.magpsf']) < 1.0
-    nidx &= (df['candidate.magnr'] - df['candidate.magpsf']) < (-4 * shiftlog)
-    nidx &= df['candidate.distnr'] < 2
+    shiftlog = F.log10(df["candidate.distnr"]) + 0.2
+    nidx = (df["candidate.magnr"] - df["candidate.magpsf"]) < 1.0
+    nidx &= (df["candidate.magnr"] - df["candidate.magpsf"]) < (-4 * shiftlog)
+    nidx &= df["candidate.distnr"] < 2
 
     df_filt = df.filter(idx & ~nidx).cache()
 
     return df_filt
 
+
 def add_tracklet_information(df: DataFrame) -> DataFrame:
-    """ Add a new column to the DataFrame with tracklet ID
+    """Add a new column to the DataFrame with tracklet ID
 
     Parameters
     ----------
@@ -90,13 +92,13 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         Input Spark DataFrame containing alert data
 
     Returns
-    ----------
+    -------
     df_out: Spark DataFrame
         Spark DataFrame containing alert data, plus a column `tracklet`
         with tracklet ID (str)
 
     Examples
-    ----------
+    --------
     >>> df = spark.read.format('parquet').load(ztf_alert_sample)
     >>> df_tracklet = add_tracklet_information(df)
     >>> df_tracklet.select('tracklet').take(2)[1][0]
@@ -106,25 +108,22 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     df_filt = apply_tracklet_cuts(df)
 
     # Initialise `tracklet` column
-    df_filt_tracklet = df_filt.withColumn(
-        'tracklet',
-        F.lit('')
-    ).select(
+    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select(
         [
-            'candid',
-            'candidate.jd',
-            'candidate.xpos',
-            'candidate.ypos',
-            'candidate.nid',
-            'tracklet',
-            'candidate.ra',
-            'candidate.dec'
+            "candid",
+            "candidate.jd",
+            "candidate.xpos",
+            "candidate.ypos",
+            "candidate.nid",
+            "tracklet",
+            "candidate.ra",
+            "candidate.dec",
         ]
     )
 
     @pandas_udf(df_filt_tracklet.schema, PandasUDFType.GROUPED_MAP)
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
-        """ Extract tracklet ID from a Spark DataFrame
+        """Extract tracklet ID from a Spark DataFrame
 
         This pandas UDF must be used with grouped functions (GROUPED_MAP),
         as it processes exposure-by-exposure.
@@ -137,21 +136,20 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             initially empty (string), and it is filled by this function.
 
         Returns
-        ----------
+        -------
         pdf: Pandas DataFrame
             The same Pandas DataFrame as the input one, but the column
             `tracklet` has been updated with tracklet ID information.
         """
-
-        ra = pdf['ra']
-        dec = pdf['dec']
-        jd = pdf['jd']
-        time_str = Time(jd.values[0], format='jd').strftime('%Y%m%d_%H%M%S')
+        ra = pdf["ra"]
+        dec = pdf["dec"]
+        jd = pdf["jd"]
+        time_str = Time(jd.to_numpy()[0], format="jd").strftime("%Y%m%d_%H%M%S")
         # String - container for tracklet designation
-        tracklet_names = pdf['tracklet']
+        tracklet_names = pdf["tracklet"]
 
         # Coordinates of the objects
-        coords = SkyCoord(ra.values, dec.values, unit='deg')
+        coords = SkyCoord(ra.to_numpy(), dec.to_numpy(), unit="deg")
         xyz = coords.cartesian
         # unit vectors corresponding to the points, Nx3
         xyz = xyz.xyz.value.T
@@ -168,11 +166,9 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         # points and represented as normal vectors
 
         # cross-products, NxNx3
-        circles = np.einsum('ijk,uj,vk->uvi', eijk, xyz, xyz, optimize=True)
+        circles = np.einsum("ijk,uj,vk->uvi", eijk, xyz, xyz, optimize=True)
         # norms, i.e. arc sine lengths, NxN
-        norms = np.sqrt(
-            np.einsum('uvi,uvi->uv', circles, circles, optimize=True)
-        )
+        norms = np.sqrt(np.einsum("uvi,uvi->uv", circles, circles, optimize=True))
 
         # Remove redundant entries corresponding to
         # the symmetry on point swapping
@@ -189,12 +185,12 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         cidxs = []
 
         # Now let's cycle along first point of circle, N iterations
-        for i, point in enumerate(xyz):
+        for i in range(len(xyz)):
             # Here first index means second point of circle
             # while second one represent all points of dataset
 
             # sine distance from the great circle, NxN
-            sindists = np.einsum('vi,ki->vk', circles[i], xyz, optimize=True)
+            sindists = np.einsum("vi,ki->vk", circles[i], xyz, optimize=True)
             # Good distances from great circles, NxN
             sin_idx = np.abs(sindists) < 5 / 206265
 
@@ -202,7 +198,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             good_idx = norm_idx[i, :, np.newaxis] & sin_idx
 
             # Numbers of good points along each great circle, N
-            nps = np.einsum('uv->u', good_idx.astype(np.int8), optimize=True)
+            nps = np.einsum("uv->u", good_idx.astype(np.int8), optimize=True)
             np_idx = nps >= 5
 
             # Tracklet candidates
@@ -231,22 +227,11 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
 
             # great circles formed by first point of a
             # tracklet and and all other points
-            scircles = np.einsum(
-                'ijk,j,vk->vi',
-                eijk,
-                xyz[cidx][0],
-                xyz,
-                optimize=True
-            )
+            scircles = np.einsum("ijk,j,vk->vi", eijk, xyz[cidx][0], xyz, optimize=True)
 
             # dot products between (0-1) circle of a tracklet and all others,
             # we will use it as a sort of distance along the great circle
-            dots = np.einsum(
-                'i,vi->v',
-                scircles[cidx][1],
-                scircles,
-                optimize=True
-            )
+            dots = np.einsum("i,vi->v", scircles[cidx][1], scircles, optimize=True)
 
             # sort the tracklet in increasing order
             aidx = np.argsort(dots[cidx])
@@ -263,7 +248,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             # Greedily capture more (or restrict to less) points using
             # polynomial correction and smaller acceptable residuals from
             # corrected (curved) trail
-            for iter in range(10):
+            for _ in range(10):
                 # TODO: robust fitting here?..
                 p = np.polyfit(dots[cidx], sindists[cidx], 2)
                 model = np.polyval(p, dots)
@@ -278,9 +263,11 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
 
                     # Pairwise distances
                     dists = np.arccos(
-                        np.einsum('vi,vi->v',
-                                  xyz[new_cidx][sort_idx][1:, :],
-                                  xyz[new_cidx][sort_idx][:-1, :])
+                        np.einsum(
+                            "vi,vi->v",
+                            xyz[new_cidx][sort_idx][1:, :],
+                            xyz[new_cidx][sort_idx][:-1, :],
+                        )
                     )
 
                     # Here we check whether first/last distance is more
@@ -330,9 +317,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
             if merge is not None:
                 tracklet_names[tracklet_positions] = merge
             else:
-                tracklet_names[tracklet_positions] = 'TRCK_{}_{:02d}'.format(
-                    time_str,
-                    index_tracklet
+                tracklet_names[tracklet_positions] = "TRCK_{}_{:02d}".format(
+                    time_str, index_tracklet
                 )
                 index_tracklet += 1
 
@@ -340,13 +326,14 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
 
     # extract tracklet information - beware there could be duplicated rows
     # so we use dropDuplicates to avoid these.
-    df_trck = df_filt_tracklet\
-        .cache()\
-        .dropDuplicates(['jd', 'xpos', 'ypos'])\
-        .groupBy('jd')\
-        .apply(extract_tracklet_number)\
-        .select(['candid', 'tracklet'])\
-        .filter(F.col('tracklet') != '')
+    df_trck = (
+        df_filt_tracklet.cache()
+        .dropDuplicates(["jd", "xpos", "ypos"])
+        .groupBy("jd")
+        .apply(extract_tracklet_number)
+        .select(["candid", "tracklet"])
+        .filter(F.col("tracklet") != "")
+    )
 
     return df_trck
 
@@ -355,9 +342,8 @@ if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
     globs = globals()
-    root = os.environ['FINK_HOME']
-    globs["ztf_alert_sample"] = os.path.join(
-        root, "datasim/tracklet_alerts")
+    root = os.environ["FINK_HOME"]
+    globs["ztf_alert_sample"] = os.path.join(root, "datasim/tracklet_alerts")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=True)

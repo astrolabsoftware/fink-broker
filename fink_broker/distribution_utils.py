@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fink_broker.sparkUtils import to_avro
+from fink_broker.spark_utils import to_avro
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
@@ -21,8 +21,8 @@ from pyspark.sql.avro.functions import to_avro as to_avro_native
 
 from fink_broker.tester import spark_unit_tests
 
-def get_kafka_df(
-        df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
+
+def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 
     For a kafka output the dataframe should have the following columns:
@@ -48,7 +48,7 @@ def get_kafka_df(
         New (>= 2023/01): full schema
 
     Returns
-    ----------
+    -------
     df: DataFrame
         A Spark DataFrame with an avro(binary) encoded Column named "value"
     """
@@ -68,15 +68,15 @@ def get_kafka_df(
         # The idea is to force the output schema
         # Need better handling of this though...
         jsonschema = open(
-            '/home/julien.peloton/elasticc/alert_schema/elasticc.v0_9.brokerClassification.avsc',
-            'r'
+            "/home/julien.peloton/elasticc/alert_schema/elasticc.v0_9.brokerClassification.avsc",
+            "r",
         ).read()
         df_kafka = df_struct.select(to_avro_native("struct", jsonschema).alias("value"))
     else:
         df_kafka = df_struct.select(to_avro("struct").alias("value"))
 
     # Add a key based on schema versions
-    df_kafka = df_kafka.withColumn('key', lit(key))
+    df_kafka = df_kafka.withColumn("key", lit(key))
 
     return df_kafka
 

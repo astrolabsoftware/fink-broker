@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Setup Kafka for Fink
+# Create docker image containing Fink packaged for k8s
 
 # @author  Fabrice Jammes
 
@@ -24,30 +24,18 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-readonly  FINKKUB=$(readlink -f "${DIR}/..")
-. $FINKKUB/conf.sh
+. $DIR/../conf.sh
 
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaUser
-metadata:
-  name: fink-producer
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  authentication:
-    type: scram-sha-512
-EOF
+mkdir -p "$SPARK_INSTALL_DIR"
 
-cat << EOF | kubectl create -n $KAFKA_NS -f -
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaTopic
-metadata:
-  name: ztf-stream-sim
-  labels:
-    strimzi.io/cluster: "$KAFKA_CLUSTER"
-spec:
-  partitions: 3
-  replicas: 1
-EOF
 
+if [ ! -d "$SPARK_HOME" ]
+then
+  readonly SPARK_ARCHIVE="${SPARK_NAME}.tgz"
+  echo "Download and extract Spark ($SPARK_NAME)"
+  # Download at this URL is too slow for CI
+  # URL="https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/${SPARK_ARCHIVE}"
+  URL="https://github.com/astrolabsoftware/fink-broker/releases/download/v3.1/${SPARK_ARCHIVE}"
+  curl -L "$URL" -o "${SPARK_INSTALL_DIR}/${SPARK_ARCHIVE}"
+  tar -C "$SPARK_INSTALL_DIR" -xf "${SPARK_INSTALL_DIR}/${SPARK_ARCHIVE}"
+fi
