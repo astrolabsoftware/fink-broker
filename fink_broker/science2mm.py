@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Utilities for multi-messenger activities (cross-match)"""
+
 from fink_mm.ztf_join_gcn import ztf_join_gcn_stream, DataMode
 from astropy.time import Time
 from datetime import timedelta
