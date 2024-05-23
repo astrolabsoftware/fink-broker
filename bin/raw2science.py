@@ -156,6 +156,11 @@ def main():
         _LOG.info("Applying quality cuts")
         df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
+        # Discard an alert if it is in i band
+        # or if it contains i band measurements in history
+        df = df.filter(df['candidate.fid'] != 3)
+        df = df.filter(~F.array_contains(df['prv_candidates.fid'], 3))
+
         # Apply science modules
         _LOG.info("Applying science modules")
         df = apply_science_modules(df, args.noscience)
