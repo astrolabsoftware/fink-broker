@@ -18,6 +18,7 @@ LEASETIME=68400
 nohup fink start stream2raw \
     -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw \
     --topic "ztf_${NIGHT}.*" \
+    --night $NIGHT \
     --exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 
 # raw2science
