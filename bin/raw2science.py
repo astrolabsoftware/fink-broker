@@ -74,20 +74,19 @@ def launch_fink_mm(args: dict, scitmpdatapath: str):
         _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
         gcndatapath = config["PATH"]["online_gcn_data_prefix"]
+        gcn_path = gcndatapath + "/year={}/month={}/day={}".format(
+            args.night[0:4], args.night[4:6], args.night[6:8]
+        )
 
         # Wait for GCN comming
         time_spent_in_wait = 0
         while time_spent_in_wait < args.exit_after:
-            gcn_path = gcndatapath + "/year={}/month={}/day={}".format(
-                args.night[0:4], args.night[4:6], args.night[6:8]
-            )
-
             # if there is gcn and ztf data
             if path_exist(gcn_path) and path_exist(scitmpdatapath):
                 # Start the GCN x ZTF cross-match stream
                 t_before = time.time()
                 _LOG.info("starting science2mm ...")
-                countquery_mm = science2mm(args, config, gcndatapath, scitmpdatapath)
+                countquery_mm = science2mm(args, config, gcn_path, scitmpdatapath)
                 time_spent_in_wait += time.time() - t_before
                 break
             else:
@@ -118,7 +117,7 @@ def main():
     )
 
     # data path
-    rawdatapath = os.path.join(args.online_data_prefix, "raw")
+    rawdatapath = os.path.join(args.online_data_prefix, "raw/{}".format(args.night))
     scitmpdatapath = os.path.join(
         args.online_data_prefix, "science/{}".format(args.night)
     )
