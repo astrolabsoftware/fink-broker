@@ -117,7 +117,7 @@ def main():
     )
 
     # data path
-    rawdatapath = os.path.join(args.online_data_prefix, "raw/{}".format(args.night))
+    rawdatapath = os.path.join(args.online_data_prefix, "raw")
     scitmpdatapath = os.path.join(
         args.online_data_prefix, "science/{}".format(args.night)
     )
