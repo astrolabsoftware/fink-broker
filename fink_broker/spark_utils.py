@@ -380,7 +380,10 @@ def path_exist(path: str) -> bool:
     uri = jvm.java.net.URI(path)
 
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
-    if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
+
+    path_glob = jvm.org.apache.hadoop.fs.Path(os.path.join(path, "*.parquet"))
+    status_list = fs.globStatus(path_glob)
+    if len(list(status_list)) > 0:
         return True
     else:
         return False
