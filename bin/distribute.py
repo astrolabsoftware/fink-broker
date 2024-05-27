@@ -107,7 +107,9 @@ def launch_fink_mm(spark, args: dict):
             time_spent_in_wait += 1
             time.sleep(1.0)
         if stream_distrib_list == []:
-            _LOG.warning(f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job.")
+            _LOG.warning(
+                f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job."
+            )
         else:
             _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
         return time_spent_in_wait, stream_distrib_list
