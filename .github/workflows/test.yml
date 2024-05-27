@@ -68,7 +68,7 @@ jobs:
       if: matrix.container == 'julienpeloton/fink-ci:dev'
       run: |
         # to remove
-        pip install fink-filters==3.29
+        pip install fink-filters==3.30
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
