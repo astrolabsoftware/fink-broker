@@ -91,6 +91,7 @@ def launch_fink_mm(spark, args: dict):
 
         # Wait for GCN comming
         time_spent_in_wait = 0
+        stream_distrib_list = []
         while time_spent_in_wait < args.exit_after:
             mm_path_output = config["PATH"]["online_grb_data_prefix"]
             mmtmpdatapath = os.path.join(mm_path_output, "online")
@@ -105,10 +106,13 @@ def launch_fink_mm(spark, args: dict):
 
             time_spent_in_wait += 1
             time.sleep(1.0)
-        _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+        if stream_distrib_list == []:
+            _LOG.warning(f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job.")
+        else:
+            _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
         return time_spent_in_wait, stream_distrib_list
 
-    _LOG.info("No configuration found for fink-mm -- no applied")
+    _LOG.warning("No configuration found for fink-mm -- not applied")
     return 0, []
 
 
