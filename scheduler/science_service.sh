@@ -11,6 +11,8 @@ while true; do
 	# check folder is not empty
 	isEmpty=$(hdfs dfs -count /user/julien.peloton/online/raw/${NIGHT} | awk '{print $2}')
 	if [[ $isEmpty > 0 ]]; then
+            echo "Data detected. Waiting 300 seconds for one batch to complete before launching..."
+            sleep 300
             echo "Launching service"
 
             # LEASETIME must be computed by taking the difference between now and max end (5pm CE(S)T)
@@ -24,6 +26,6 @@ while true; do
         fi
     fi
     DDATE=`date`
-    echo "${DDATE}: no data yet. Sleeping..."
+    echo "${DDATE}: no data yet. Sleeping 300 seconds..."
     sleep 300
 done
