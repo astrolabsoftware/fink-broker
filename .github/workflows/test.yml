@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        container: ["julienpeloton/fink-ci:dev"]
+        container: ["julienpeloton/fink-ci:latest"]
 
     container:
       image: ${{ matrix.container }}
@@ -35,11 +35,6 @@ jobs:
         echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
         echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
         echo "${BINPATH}" >> $GITHUB_PATH
-    #- name: Download test data
-    #  run: |
-    #    cd $FINK_HOME/datasim/basic_alerts
-    #    source $FINK_HOME/datasim/basic_alerts/download_ztf_alert_data.sh
-    #    cd $FINK_HOME
     - name: Download simulator
       run: |
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
@@ -64,8 +59,7 @@ jobs:
         echo "PYTHONPATH: $PYTHONPATH"
         echo "JAVA_HOME: $JAVA_HOME"
         echo `python -V`
-    - name: Run test suites [dev]
-      if: matrix.container == 'julienpeloton/fink-ci:dev'
+    - name: Run test suite
       run: |
         # to remove
         pip install fink-filters==3.30
@@ -73,13 +67,6 @@ jobs:
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
         fink_test -c conf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
-    - name: Run test suites [prod]
-      if: matrix.container == 'julienpeloton/fink-ci:prod'
-      run: |
-        cd $USRLIBS
-        source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
-        cd $FINK_HOME
-        fink_test -c conf/fink.conf.prod --stream-integration --db-integration --mm-offline --unit-tests
         curl -s https://codecov.io/bash | bash
     - uses: act10ns/slack@v1
       with:
