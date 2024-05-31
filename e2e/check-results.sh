@@ -50,6 +50,7 @@ do
     if [ $count -eq 10 ]; then
         echo "ERROR: Timeout waiting for topics to be created" 1>&2
         kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
+        sleep 7200
         exit 1
     fi
 done
