@@ -170,12 +170,6 @@ def main():
             "struct(lc_features_r.*) as lc_features_r"
         )
 
-    # Extract schema
-    df_schema = spark.read.format("parquet").load(scitmpdatapath)
-    df_schema = df_schema.selectExpr(cnames)
-
-    schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
-
     # Retrieve time-series information
     to_expand = [
         "jd",
@@ -217,6 +211,10 @@ def main():
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
+
+        # get schema from the streaming dataframe to
+        # avoid non-nullable bug #852
+        schema = schema_converter.to_avro(df_tmp.schema)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
