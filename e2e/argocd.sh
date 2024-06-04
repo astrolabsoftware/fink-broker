@@ -42,8 +42,9 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
 # Sync fink app-of-apps
 argocd app sync fink
 
-# Synk fink apps
-argocd app sync strimzi
+# Synk operators dependency for fink
+argocd app sync strimzi spark-operator
+
 # TODO Try to make it simpler, try a sync-wave on Strimzi Application?
 # see https://github.com/argoproj/argo-cd/discussions/16729
 # and https://stackoverflow.com/questions/77750481/argocd-app-of-apps-ensuring-strimzi-child-app-health-before-kafka-app-sync
