@@ -117,13 +117,6 @@ jobs:
       - name: Install argo-workflows (fink-alert-simulator pre-requisite)
         run: |
           ktbx install argowf
-      - name: Install spark-operator
-        run: |
-          # TODO move in argoCD or ktbx?
-          helm repo add spark-operator https://kubeflow.github.io/spark-operator
-          helm repo update
-          helm install spark-operator spark-operator/spark-operator --namespace spark-operator \
-          --create-namespace  --version 1.2.14 --set webhook.enable=true --set sparkJobNamespace=spark
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
