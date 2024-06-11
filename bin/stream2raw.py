@@ -34,6 +34,7 @@ import fastavro.schema
 import argparse
 import time
 import io
+import os
 
 from fink_broker.parser import getargs
 
@@ -67,9 +68,9 @@ def main():
     inspect_application(logger)
 
     # data path
-    rawdatapath = args.online_data_prefix + "/raw"
-    checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint/{}".format(
-        args.night
+    rawdatapath = os.path.join(args.online_data_prefix, "raw")
+    checkpointpath_raw = os.path.join(
+        args.online_data_prefix, f"raw_checkpoint/{args.night}"
     )
 
     # Create a streaming dataframe pointing to a Kafka stream
@@ -127,7 +128,7 @@ def main():
             df_decoded.writeStream.outputMode("append")
             .format("parquet")
             .option("checkpointLocation", checkpointpath_raw)
-            .option("path", rawdatapath + "/raw/{}".format(args.night))
+            .option("path", os.path.join(rawdatapath, f"{args.night}"))
         )
 
     elif "diaSource" in df_decoded.columns:

@@ -9,18 +9,17 @@
 
 source ~/.bash_profile
 
-# Next day
-#YEAR=`date +"%Y"`
-#MONTH=`date +"%m"`
-#DAY=`date +"%d" -d "now + 1 days"`
-#NIGHT=${YEAR}${MONTH}${DAY}
 NIGHT=`date +"%Y%m%d" -d "now + 1 days"`
 
 # 19 hours lease
 LEASETIME=68400
 
 # stream2raw
-nohup fink start stream2raw -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw --topic "ztf_${NIGHT}.*" --exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
+nohup fink start stream2raw \
+    -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw \
+    --topic "ztf_${NIGHT}.*" \
+    --night $NIGHT \
+    --exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 
 # raw2science
 nohup ${FINK_HOME}/scheduler/science_service.sh > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &

@@ -281,7 +281,7 @@ def connect_to_kafka(
             )
 
     df = (
-        df.option("subscribe", topic)
+        df.option("subscribePattern", topic)
         .option("startingOffsets", startingoffsets)
         .option("failOnDataLoss", failondataloss)
         .load()
@@ -380,7 +380,10 @@ def path_exist(path: str) -> bool:
     uri = jvm.java.net.URI(path)
 
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
-    if fs.exists(jvm.org.apache.hadoop.fs.Path(path)):
+
+    path_glob = jvm.org.apache.hadoop.fs.Path(os.path.join(path, "*.parquet"))
+    status_list = fs.globStatus(path_glob)
+    if len(list(status_list)) > 0:
         return True
     else:
         return False
@@ -485,10 +488,12 @@ if __name__ == "__main__":
 
     globs = globals()
     root = os.environ["FINK_HOME"]
+    alert_schema_path = os.environ["FINK_SCHEMA"]
+
     globs["ztf_alert_sample"] = os.path.join(root, "online/raw/20200101")
 
     globs["ztf_avro_sample"] = os.path.join(
-        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
+        alert_schema_path, "ztf/template_schema_ZTF_3p3.avro"
     )
 
     # Run the Spark test suite

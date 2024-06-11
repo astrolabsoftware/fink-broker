@@ -23,17 +23,25 @@
 """
 
 import argparse
+import logging
 import time
+import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
-from fink_broker.spark_utils import init_sparksession, connect_to_raw_database
+from fink_broker.spark_utils import (
+    init_sparksession,
+    connect_to_raw_database,
+    path_exist,
+)
 from fink_broker.distribution_utils import get_kafka_df
-from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_utils.spark.utils import concat_col
 
 from fink_utils.spark.utils import apply_user_defined_filter
+
+
+_LOG = logging.getLogger(__name__)
 
 # User-defined topics
 userfilters = [
@@ -52,6 +60,64 @@ userfilters = [
 ]
 
 
+def launch_fink_mm(spark, args: dict):
+    """Manage multimessenger operations
+
+    Parameters
+    ----------
+    spark: SparkSession
+        Spark Session
+    args: dict
+        Arguments from Fink configuration file
+
+    Returns
+    -------
+    time_spent_in_wait: int
+        Time spent in waiting for GCN to come
+        before launching the streaming query.
+    stream_distrib_list: list of StreamingQuery
+        List of Spark Streaming queries
+
+    """
+    if args.noscience:
+        _LOG.info("No science: fink-mm is not applied")
+        return 0, []
+    elif args.mmconfigpath != "no-config":
+        from fink_mm.init import get_config
+        from fink_broker.mm_utils import mm2distribute
+
+        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        config = get_config({"--config": args.mmconfigpath})
+
+        # Wait for GCN comming
+        time_spent_in_wait = 0
+        stream_distrib_list = []
+        while time_spent_in_wait < args.exit_after:
+            mm_path_output = config["PATH"]["online_grb_data_prefix"]
+            mmtmpdatapath = os.path.join(mm_path_output, "online")
+
+            # if there is gcn and ztf data
+            if path_exist(mmtmpdatapath):
+                t_before = time.time()
+                _LOG.info("starting mm2distribute ...")
+                stream_distrib_list = mm2distribute(spark, config, args)
+                time_spent_in_wait += time.time() - t_before
+                break
+
+            time_spent_in_wait += 1
+            time.sleep(1.0)
+        if stream_distrib_list == []:
+            _LOG.warning(
+                f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job."
+            )
+        else:
+            _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+        return time_spent_in_wait, stream_distrib_list
+
+    _LOG.warning("No configuration found for fink-mm -- not applied")
+    return 0, []
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -60,12 +126,6 @@ def main():
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2
     )
-
-    # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
-
-    # debug statements
-    inspect_application(logger)
 
     # data path
     scitmpdatapath = args.online_data_prefix + "/science/{}".format(args.night)
@@ -78,7 +138,17 @@ def main():
 
     # Cast fields to ease the distribution
     cnames = df.columns
-    cnames[cnames.index("timestamp")] = "cast(timestamp as string) as timestamp"
+
+    cnames[cnames.index("brokerEndProcessTimestamp")] = (
+        "cast(brokerEndProcessTimestamp as string) as brokerEndProcessTimestamp"
+    )
+    cnames[cnames.index("brokerStartProcessTimestamp")] = (
+        "cast(brokerStartProcessTimestamp as string) as brokerStartProcessTimestamp"
+    )
+    cnames[cnames.index("brokerIngestTimestamp")] = (
+        "cast(brokerIngestTimestamp as string) as brokerIngestTimestamp"
+    )
+
     cnames[cnames.index("cutoutScience")] = "struct(cutoutScience.*) as cutoutScience"
     cnames[cnames.index("cutoutTemplate")] = (
         "struct(cutoutTemplate.*) as cutoutTemplate"
@@ -90,6 +160,7 @@ def main():
         "explode(array(prv_candidates)) as prv_candidates"
     )
     cnames[cnames.index("candidate")] = "struct(candidate.*) as candidate"
+
     if not args.noscience:
         # This column is added by the science pipeline
         cnames[cnames.index("lc_features_g")] = (
@@ -98,12 +169,6 @@ def main():
         cnames[cnames.index("lc_features_r")] = (
             "struct(lc_features_r.*) as lc_features_r"
         )
-
-    # Extract schema
-    df_schema = spark.read.format("parquet").load(scitmpdatapath)
-    df_schema = df_schema.selectExpr(cnames)
-
-    schema = schema_converter.to_avro(df_schema.coalesce(1).limit(1).schema)
 
     # Retrieve time-series information
     to_expand = [
@@ -130,6 +195,10 @@ def main():
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
     broker_list = args.distribution_servers
+    username = args.kafka_sasl_username
+    password = args.kafka_sasl_password
+    kafka_buf_mem = args.kafka_buffer_memory
+    kafka_timeout_ms = args.kafka_delivery_timeout_ms
     for userfilter in userfilters:
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
@@ -138,10 +207,14 @@ def main():
         if args.noscience:
             df_tmp = df
         else:
-            df_tmp = apply_user_defined_filter(df, userfilter, logger)
+            df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
         # Wrap alert data
         df_tmp = df_tmp.selectExpr(cnames)
+
+        # get schema from the streaming dataframe to
+        # avoid non-nullable bug #852
+        schema = schema_converter.to_avro(df_tmp.schema)
 
         # Get the DataFrame for publishing to Kafka (avro serialized)
         df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
@@ -150,19 +223,29 @@ def main():
         disquery = (
             df_kafka.writeStream.format("kafka")
             .option("kafka.bootstrap.servers", broker_list)
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
+            .option("kafka.sasl.username", username)
+            .option("kafka.sasl.password", password)
+            .option("kafka.buffer.memory", kafka_buf_mem)
+            .option("kafka.delivery.timeout.ms", kafka_timeout_ms)
+            .option("kafka.auto.create.topics.enable", True)
             .option("topic", topicname)
             .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
             .trigger(processingTime="{} seconds".format(args.tinterval))
             .start()
         )
 
+    time_spent_in_wait, stream_distrib_list = launch_fink_mm(spark, args)
+
     # Keep the Streaming running until something or someone ends it!
     if args.exit_after is not None:
-        time.sleep(args.exit_after)
+        remaining_time = args.exit_after - time_spent_in_wait
+        remaining_time = remaining_time if remaining_time > 0 else 0
+        time.sleep(remaining_time)
         disquery.stop()
-        logger.info("Exiting the distribute service normally...")
+        if stream_distrib_list != []:
+            for stream in stream_distrib_list:
+                stream.stop()
+        _LOG.info("Exiting the distribute service normally...")
     else:
         # Wait for the end of queries
         spark.streams.awaitAnyTermination()
