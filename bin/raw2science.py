@@ -80,6 +80,7 @@ def launch_fink_mm(args: dict, scitmpdatapath: str):
 
         # Wait for GCN comming
         time_spent_in_wait = 0
+        countquery_mm = None
         while time_spent_in_wait < args.exit_after:
             # if there is gcn and ztf data
             if path_exist(gcn_path) and path_exist(scitmpdatapath):
@@ -93,10 +94,14 @@ def launch_fink_mm(args: dict, scitmpdatapath: str):
                 # wait for comming GCN
                 time_spent_in_wait += 1
                 time.sleep(1)
-        _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+
+        if countquery_mm is None:
+            _LOG.warning("science2mm could not start before the end of the job.")
+        else:
+            _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
         return time_spent_in_wait, countquery_mm
 
-    _LOG.info("No configuration found for fink-mm -- no applied")
+    _LOG.warning("No configuration found for fink-mm -- not applied")
     return 0, None
 
 
