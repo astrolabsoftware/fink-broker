@@ -1,4 +1,4 @@
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -211,6 +211,42 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-kafka_sasl_username",
+        type=str,
+        default="",
+        help="""
+        the sasl username authentication for kafka producer
+        [KAFKA_SASL_USERNAME]
+        """,
+    )
+    parser.add_argument(
+        "-kafka_sasl_password",
+        type=str,
+        default="",
+        help="""
+        the sasl password authentication for kafka producer
+        [KAFKA_SASL_PASSWORD]
+        """,
+    )
+    parser.add_argument(
+        "-kafka_buffer_memory",
+        type=int,
+        default=134217728,
+        help="""
+        the kafka buffer memory size
+        [KAFKA_BUFFER_MEMORY]
+        """,
+    )
+    parser.add_argument(
+        "-kafka_delivery_timeout_ms",
+        type=int,
+        default=1000,
+        help="""
+        the delivery kafka message timeout in ms
+        [KAFKA_DELIVERY_TIMEOUT_MS]
+        """,
+    )
+    parser.add_argument(
         "-startingOffset_dist",
         type=str,
         default="",
@@ -329,6 +365,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         Folder that contains fink-fat output parquet files
         [FINK_FAT_OUTPUT]
+        """,
+    )
+    parser.add_argument(
+        "-mmconfigpath",
+        type=str,
+        default="no-config",
+        help="""
+        Path to fink_mm configuration file
+        [MMCONFIGPATH]
         """,
     )
     parser.add_argument(

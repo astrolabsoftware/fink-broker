@@ -20,7 +20,7 @@ YEAR=${NIGHT:0:4}
 MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
-$(hdfs dfs -test -d /user/julien.peloton/online/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+$(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
 if [[ $? == 0 ]]; then
     echo "Download latest TNS data"
     fink start tns_resolver -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs --tns_raw_output /spark_mongo_tmp/julien.peloton > ${FINK_HOME}/broker_logs/tns_resolver_${NIGHT}.log 2>&1
@@ -34,8 +34,6 @@ if [[ $? == 0 ]]; then
     echo "Update index tables"
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table jd_objectId > ${FINK_HOME}/broker_logs/index_jd_objectId_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table pixel4096_jd_objectId > ${FINK_HOME}/broker_logs/index_pixel4096_jd_objectId_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table pixel131072_jd_objectId > ${FINK_HOME}/broker_logs/index_pixel131072_jd_objectId_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${NIGHT}.log 2>&1
     fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${NIGHT}.log 2>&1
@@ -74,5 +72,12 @@ fi
 # If yes, delete temp ones
 $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
 if [[ $? == 0 ]]; then
-  hdfs dfs -rm -r /user/julien.peloton/online
+  # Remove data path
+  hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
+  hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
+
+  # Remove checkpoints
+  hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
+  hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
+  hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
 fi
