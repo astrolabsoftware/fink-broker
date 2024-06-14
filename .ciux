@@ -14,12 +14,6 @@ dependencies:
       dev: "true"
       itest: "true"
       ci: "true"
-  - url: https://github.com/astrolabsoftware/finkctl
-    clone: true
-    labels:
-      dev: "true"
-      itest: "true"
-      ci: "true"
   - url: https://github.com/astrolabsoftware/fink-cd
     labels:
       dev: "true"
@@ -35,5 +29,10 @@ dependencies:
   - package: github.com/k8s-school/ktbx@v1.1.1-rc17
     labels:
       itest: "optional"
+      ci: "true"
+  - package: https://github.com/astrolabsoftware/finkctl@v3.1.2-rc3
+    labels:
+      dev: "true"
+      itest: "true"
       ci: "true"
 
