@@ -75,6 +75,11 @@ helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE" \
 kubectl config set-context --current --namespace="$NS"
 
 echo "Create secrets"
+while ! kubectl get secret fink-producer --namespace kafka
+do
+  echo "Waiting for secret/fink-producer in ns kafka"
+  sleep 10
+done
 finkctl createsecrets
 
 # Wait for Spark pods to be created and warm up
