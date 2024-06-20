@@ -39,6 +39,10 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
 
+argocd app set fink -p fink-broker.image.repository="$CIUX_IMAGE_REGISTRY" \
+    -p fink-broker.image.name="$CIUX_IMAGE_NAME" \
+    -p fink-broker.image.tag="$CIUX_IMAGE_TAG"
+
 # Sync fink app-of-apps
 argocd app sync fink
 
