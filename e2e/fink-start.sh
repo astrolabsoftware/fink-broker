@@ -54,23 +54,6 @@ else
   VALUE_FILE="$DIR/../chart/values-ci.yaml"
   FINKCONFIG="$DIR/finkconfig"
 fi
-kubectl port-forward -n minio svc/minio 9000 &
-# Wait to port-forward to start
-sleep 2
-echo "Create S3 bucket"
-# TODO find and alternate way to create bucket which remove use of FINKCONFIG
-# replaced by helm value file
-export FINKCONFIG
-finkctl --endpoint=localhost:9000 s3 makebucket
-
-# Start fink-broker
-echo "Start fink-broker"
-helm install --debug fink "$DIR/../chart" -f "$VALUE_FILE" \
-  --namespace "$NS" \
-  --create-namespace \
-  --set image.repository="$CIUX_IMAGE_REGISTRY" \
-  --set image.name="$CIUX_IMAGE_NAME" \
-  --set image.tag="$CIUX_IMAGE_TAG"
 
 kubectl config set-context --current --namespace="$NS"
 
