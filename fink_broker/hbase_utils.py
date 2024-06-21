@@ -826,12 +826,12 @@ def add_row_key(df, row_key_name, cols=None):
     >>> rowkey = "objectId_objectId"
     >>> df2 = add_row_key(df, rowkey, rowkey.split("_")) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    AssertionError: You have duplicated fields in your columns definition: objectId_objectId
+    AssertionError: You have duplicated fields in your columns definition: ['objectId', 'objectId']
 
     >>> rowkey = "objectId_toto"
     >>> df2 = add_row_key(df, rowkey, rowkey.split("_")) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
-    AssertionError: Cannot build the rowkey: toto is not in DataFrame Columns [utut]
+    AssertionError: Cannot build the rowkey: toto is not in DataFrame Columns ['objectId', 'jd', 'ra']
     """
     if not isinstance(cols, list):
         # should never happen in practice

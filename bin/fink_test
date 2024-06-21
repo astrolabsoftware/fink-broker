@@ -71,6 +71,10 @@ while [ "$#" -gt 0 ]; do
         echo "$1 requires an argument" >&2
         exit 1
         ;;
+    -single_file)
+	SINGLE_FILE=$2
+	shift 2
+	;;
   esac
 done
 
@@ -95,11 +99,13 @@ export NIGHT=20231018
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
-coverage run \
-   --source=${FINK_HOME} \
-   --rcfile ${FINK_HOME}/.coveragerc fink_broker/hbase_utils.py
-
-exit
+if [ -n "${SINGLE_FILE}" ]; then
+    echo "single file testing..."
+    coverage run \
+        --source=${FINK_HOME} \
+        --rcfile ${FINK_HOME}/.coveragerc $SINGLE_FILE
+    exit
+fi
 
 # Stream integration tests
 if [[ "$WITH_STREAM" = true ]] ; then
