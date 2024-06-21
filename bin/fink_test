@@ -95,6 +95,12 @@ export NIGHT=20231018
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
+coverage run \
+   --source=${FINK_HOME} \
+   --rcfile ${FINK_HOME}/.coveragerc fink_broker/hbase_utils.py
+
+exit
+
 # Stream integration tests
 if [[ "$WITH_STREAM" = true ]] ; then
   # Fire another stream
