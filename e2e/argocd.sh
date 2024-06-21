@@ -47,7 +47,7 @@ argocd app set fink -p fink-broker.image.repository="$CIUX_IMAGE_REGISTRY" \
 argocd app sync fink
 
 # Synk operators dependency for fink
-argocd app sync strimzi spark-operator
+argocd app sync strimzi minio-operator spark-operator
 
 # TODO Try to make it simpler, try a sync-wave on Strimzi Application?
 # see https://github.com/argoproj/argo-cd/discussions/16729
