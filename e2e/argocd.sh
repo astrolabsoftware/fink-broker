@@ -52,5 +52,7 @@ argocd app sync strimzi spark-operator
 # TODO Try to make it simpler, try a sync-wave on Strimzi Application?
 # see https://github.com/argoproj/argo-cd/discussions/16729
 # and https://stackoverflow.com/questions/77750481/argocd-app-of-apps-ensuring-strimzi-child-app-health-before-kafka-app-sync
-retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io crd/kafkatopics.kafka.strimzi.io
+retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io \
+  crd/kafkatopics.kafka.strimzi.io \
+  crd/sparkapplications.sparkoperator.k8s.io
 argocd app sync -l app.kubernetes.io/instance=fink
