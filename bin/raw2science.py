@@ -85,6 +85,7 @@ def main():
         )
 
     # DEBUG STATEMENTS
+    logger.info("XXXXXXXXXXXXX test logger")
     df_static = spark.read.format('parquet').load(
         rawdatapath + "/year={}/month={}/day={}".format(
             args.night[0:4],
@@ -92,6 +93,7 @@ def main():
             args.night[6:8]
         )
     )
+    logger.info("XXXXXXXXXXXXX test logger 2")
 
     print("COUNT BEFORE: {}".format(df_static.count()))
     df_filtered = df_static\
