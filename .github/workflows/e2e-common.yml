@@ -94,13 +94,19 @@ jobs:
         with:
           detached: true
       - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 30720
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
+        run: |
+          echo "Removing unwanted software... "
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          df -h
+          sudo rm -rf /opt/ghc
+          df -h
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+          sudo docker image prune --all --force
+          df -h
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21.4'
