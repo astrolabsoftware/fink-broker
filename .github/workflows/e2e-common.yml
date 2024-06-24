@@ -93,6 +93,14 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         with:
           detached: true
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21.4'
