@@ -20,6 +20,7 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
+    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
       version: 3.4.1
     serviceAccount: spark
@@ -29,6 +30,7 @@ spec:
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
     instances: {{ tpl .Values.distribution.instances . }}
+    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     memory: "512m"
     labels:
       version: 3.4.1

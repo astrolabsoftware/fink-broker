@@ -13,7 +13,7 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
-    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
       version: 3.4.1
     serviceAccount: spark
@@ -21,6 +21,7 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
+    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     instances: {{ tpl .Values.distribution.instances . }}
     labels:
       version: 3.4.1
