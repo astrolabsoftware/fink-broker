@@ -71,8 +71,8 @@ s3:
   use_ssl: "false"
   # {{.Night}} is optional and will be replaced by the value of run.night
   bucket: "fink-broker-online-{{.Values.night}}"
-  access_key: "minioadmin"
-  secret_key: "minioadmin"
+  access_key: "minio"
+  secret_key: "minio123"
 
 serviceAccount:
   # Specifies whether a service account should be created
