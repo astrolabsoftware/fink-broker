@@ -153,6 +153,8 @@ def main():
         "al_snia_vs_nonia",
         "rf_snia_vs_nonia",
         "candidate.ndethist",
+        "candidate.jdstarthist"
+        "candidate.jd"
     ]
 
     pdf = df_filt.select(cols_).toPandas()
@@ -166,8 +168,12 @@ def main():
 
     msg_handler_slack(slack_data, "bot_al_loop", init_msg)
 
+    # maximum 10 days between intial and final detection
+    c7 = (pdf["candidate.jd"] - pdf["candidate.jdstarthist"]) <= 10.0
+    pdf_early = pdf[c7]
+
     # Filter for high probabilities
-    pdf_hp = pdf[pdf["al_snia_vs_nonia"] > 0.5]
+    pdf_hp = pdf_early[pdf_early["al_snia_vs_nonia"] > 0.5]
     pdf_hp = pdf_hp.sort_values("al_snia_vs_nonia", ascending=False)
 
     init_msg = f"Number of candidates for the night {args.night} (high probability): {len(pdf_hp)} ({len(np.unique(pdf_hp.objectId))} unique objects)."
