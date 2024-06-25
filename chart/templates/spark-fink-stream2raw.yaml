@@ -20,11 +20,10 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
-    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
       version: 3.4.1
     serviceAccount: spark
-    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp"
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   executor:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
