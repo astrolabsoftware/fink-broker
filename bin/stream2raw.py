@@ -71,6 +71,7 @@ def main():
     checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint"
 
     # Create a streaming dataframe pointing to a Kafka stream
+    logger.debug("Connecting to Kafka input stream...")
     df = connect_to_kafka(
         servers=args.servers,
         topic=args.topic,
@@ -109,11 +110,13 @@ def main():
         spark.stop()
 
     # Flatten the data columns to match the incoming alert data schema
+    logger.debug("Flatten the data columns to match the incoming alert data schema")
     cnames = df_decoded.columns
     cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
 
     # Partition the data hourly
+    logger.debug("Partition the data hourly")
     if "candidate" in df_decoded.columns:
         timecol = "candidate.jd"
         converter = lambda x: convert_to_datetime(x)
@@ -140,6 +143,7 @@ def main():
         idcol = "candid"
         df_partitionedby = df_partitionedby.dropDuplicates([idcol])
 
+    logger.debug("Write data to storage")
     countquery_tmp = (
         df_partitionedby.writeStream.outputMode("append")
         .format("parquet")
