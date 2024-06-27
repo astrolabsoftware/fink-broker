@@ -63,14 +63,21 @@ def main():
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
 
+    print("XXXXXX")
+    logger.debug("before inspect_application")
     # debug statements
     inspect_application(logger)
+    logger.debug("after inspect_application")
 
+    print("YYYYYYY")
+    # debug statements
     # data path
     rawdatapath = args.online_data_prefix + "/raw"
     checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint"
 
     # Create a streaming dataframe pointing to a Kafka stream
+    print("ZZZZZZ")
+    # debug statements
     logger.debug("Connecting to Kafka input stream...")
     df = connect_to_kafka(
         servers=args.servers,
