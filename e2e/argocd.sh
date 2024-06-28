@@ -27,7 +27,6 @@ function retry {
   done
 }
 
-
 NS=argocd
 
 argocd login --core
@@ -54,7 +53,9 @@ retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.st
   crd/sparkapplications.sparkoperator.k8s.io \
   crd/workflows.argoproj.io
 
+# Add tag to avoid syncing fink-broker
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p image.name="$CIUX_IMAGE_NAME" \
     -p image.tag="$CIUX_IMAGE_TAG"
+    -p night="20200101"
 argocd app sync -l app.kubernetes.io/instance=fink
