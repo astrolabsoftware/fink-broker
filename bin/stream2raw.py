@@ -40,7 +40,7 @@ from fink_broker.parser import getargs
 from fink_broker.spark_utils import from_avro
 from fink_broker.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.spark_utils import get_schemas_from_avro
-from fink_broker.logging_utils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import init_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 
@@ -53,30 +53,27 @@ def main():
     else:
         tz = None
 
+    # FIXME args.log_level should be checked to be both compliant with python and spark!
+
     # Initialise Spark session
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
+        log_level=args.log_level
     )
 
-    # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+    logger = init_logger(args.log_level)
 
-    print("XXXXXX")
-    logger.debug("before inspect_application")
     # debug statements
     inspect_application(logger)
-    logger.debug("after inspect_application")
 
-    print("YYYYYYY")
     # debug statements
     # data path
     rawdatapath = args.online_data_prefix + "/raw"
     checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint"
 
     # Create a streaming dataframe pointing to a Kafka stream
-    print("ZZZZZZ")
     # debug statements
     logger.debug("Connecting to Kafka input stream...")
     df = connect_to_kafka(
@@ -168,6 +165,7 @@ def main():
         countquery = countquery_tmp.start()
 
     # Keep the Streaming running until something or someone ends it!
+    logger.info("Stream2raw service is running...")
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()

@@ -24,6 +24,8 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
+# This will avoid overriding user ciuxconfig during a build
+export CIUXCONFIG=/tmp/ciux.build.sh
 
 usage() {
   cat << EOD
@@ -52,12 +54,16 @@ while getopts hr:s: c ; do
 done
 shift `expr $OPTIND - 1`
 
+ignite_msg="Run following command to prepare integration tests:"
+ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
+
 # This command avoid retrieving build dependencies if not needed
 $(ciux get image --check $DIR --suffix "$suffix" --tmp-registry "$tmp_registry" --env)
 
 if [ $CIUX_BUILD = false ];
 then
     echo "Build cancelled, image $CIUX_IMAGE_URL already exists and contains current source code"
+    echo $ignite_msg
     exit 0
 fi
 
@@ -72,4 +78,8 @@ fi
 
 # Build image
 docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" "$DIR" --target $target
+
+
+echo "Build successful"
+echo $ignite_msg
 
