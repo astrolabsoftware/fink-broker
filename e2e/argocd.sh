@@ -52,12 +52,12 @@ retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.st
   crd/tenants.minio.min.io \
   crd/sparkapplications.sparkoperator.k8s.io \
   crd/workflows.argoproj.io
+# TODO Wait for kafkatopic to exist
+# TODO Wait for all applications to be synced (problem with spark-operator secret)
 
 # Set fink-broker parameters
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p image.name="$CIUX_IMAGE_NAME" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p night="20200101"
-# Wait for kafkatopic to exist
-
 argocd app sync -l app.kubernetes.io/instance=fink
