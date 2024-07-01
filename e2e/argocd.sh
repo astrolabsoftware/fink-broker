@@ -36,7 +36,7 @@ kubectl config set-context --current --namespace="$NS"
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
-    --path apps --revision "$FINK_CD_WORKBRANCH" \
+    --path apps --revision "$FINK_CD_WORKBRANCH"
 
 # Sync fink app-of-apps
 argocd app sync fink
@@ -58,4 +58,6 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p image.name="$CIUX_IMAGE_NAME" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p night="20200101"
+# Wait for kafkatopic to exist
+
 argocd app sync -l app.kubernetes.io/instance=fink
