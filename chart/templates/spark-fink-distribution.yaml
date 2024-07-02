@@ -1,0 +1,41 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: {{ include "fink.fullname" . }}-distribution
+spec:
+{{- include "fink.common" . | nindent 2 }}
+  mainApplicationFile: local:///home/fink/fink-broker/bin/distribute.py
+  arguments: {{- include "fink.commonargs" . | nindent 4 }}
+    - '-distribution_servers'
+    - '{{ .Values.distribution.kafka.out_sockets }}'
+    - '-distribution_schema'
+    - '{{ .Values.distribution.kafka.schema }}'
+    - '-substream_prefix'
+    - '{{ .Values.distribution.kafka.substream_prefix }}'
+    - '-night'
+    - '{{ .Values.night }}'
+  sparkVersion: "3.4.1"
+  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
+  volumes:
+  - name: kafka-secret
+    secret:
+      secretName: fink-kafka-jaas
+  driver:
+    cores: {{ tpl .Values.distribution.cores . }}
+    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
+    memory: "{{ tpl .Values.distribution.memory . }}"
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
+    labels:
+      version: 3.4.1
+    serviceAccount: {{ .Values.serviceAccount.name }}
+  executor:
+    cores: {{ tpl .Values.distribution.cores . }}
+    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
+    memory: "{{ tpl .Values.distribution.memory . }}"
+    instances: {{ tpl .Values.distribution.instances . }}
+    javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf -Dcom.amazonaws.sdk.disableCertChecking=true"
+    labels:
+      version: 3.4.1
+    volumeMounts:
+    - name: kafka-secret
+      mountPath: /etc/fink-broker

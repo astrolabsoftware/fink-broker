@@ -27,7 +27,6 @@ function retry {
   done
 }
 
-
 NS=argocd
 
 argocd login --core
@@ -37,15 +36,31 @@ kubectl config set-context --current --namespace="$NS"
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
-    --path apps --revision "$FINK_CD_WORKBRANCH" \
+    --path apps --revision "$FINK_CD_WORKBRANCH"
 
 # Sync fink app-of-apps
 argocd app sync fink
 
-# Synk fink apps
-argocd app sync strimzi
+# Synk operators dependency for fink
+argocd app sync strimzi minio-operator spark-operator
+
 # TODO Try to make it simpler, try a sync-wave on Strimzi Application?
 # see https://github.com/argoproj/argo-cd/discussions/16729
 # and https://stackoverflow.com/questions/77750481/argocd-app-of-apps-ensuring-strimzi-child-app-health-before-kafka-app-sync
-retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io crd/kafkatopics.kafka.strimzi.io
+retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io \
+  crd/kafkatopics.kafka.strimzi.io \
+  crd/tenants.minio.min.io \
+  crd/sparkapplications.sparkoperator.k8s.io \
+  crd/workflows.argoproj.io
+
+# Wait for kafkatopic to exist
+retry kubectl wait --for condition=ready kafkatopics -n kafka  ztf-stream-sim
+
+# TODO Wait for all applications to be synced (problem with spark-operator secret)
+
+# Set fink-broker parameters
+argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
+    -p image.name="$CIUX_IMAGE_NAME" \
+    -p image.tag="$CIUX_IMAGE_TAG" \
+    -p night="20200101"
 argocd app sync -l app.kubernetes.io/instance=fink

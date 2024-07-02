@@ -25,7 +25,7 @@ on:
         required: true
 env:
   CIUXCONFIG: /tmp/ciux.sh
-  CIUX_VERSION: v0.0.3-rc3
+  CIUX_VERSION: v0.0.4-rc2
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
@@ -86,9 +86,27 @@ jobs:
     needs: build
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+      - name: Maximize build space
+        run: |
+          echo "Removing unwanted software... "
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          df -h
+          sudo rm -rf /opt/ghc
+          df -h
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
+          sudo docker image prune --all --force
+          df -h
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21.4'
@@ -102,6 +120,7 @@ jobs:
           # v0.20.0 does not work on self-hosted runners
           ktbx install kind --kind-version=${{ inputs.kind_version }}
           ktbx install kubectl
+          ktbx install helm
           # Configure private registry if needed
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           ktbx create -s
@@ -133,18 +152,14 @@ jobs:
       - name: Run fink-alert-simulator
         run: |
           . "$CIUXCONFIG"
+          kubectl config set-context --current --namespace=argo
           "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
           argo watch @latest
       # - name: Setup tmate session
       # uses: mxschmitt/action-tmate@v3
-      - name: Install fink-broker pre-requisites (JDK, Spark)
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install openjdk-8-jdk-headless
-          ./e2e/prereq-install.sh
       - name: Run fink-broker
         run: |
-          ./e2e/fink-start.sh -e
+          ./e2e/fink-start.sh
       - name: Check results
         run: |
           ./e2e/check-results.sh

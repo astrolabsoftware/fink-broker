@@ -40,7 +40,7 @@ from fink_broker.parser import getargs
 from fink_broker.spark_utils import from_avro
 from fink_broker.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.spark_utils import get_schemas_from_avro
-from fink_broker.logging_utils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import init_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 
@@ -53,24 +53,29 @@ def main():
     else:
         tz = None
 
+    # FIXME args.log_level should be checked to be both compliant with python and spark!
+
     # Initialise Spark session
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
+        log_level=args.log_level
     )
 
-    # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+    logger = init_logger(args.log_level)
 
     # debug statements
     inspect_application(logger)
 
+    # debug statements
     # data path
     rawdatapath = args.online_data_prefix + "/raw"
     checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint"
 
     # Create a streaming dataframe pointing to a Kafka stream
+    # debug statements
+    logger.debug("Connecting to Kafka input stream...")
     df = connect_to_kafka(
         servers=args.servers,
         topic=args.topic,
@@ -109,11 +114,13 @@ def main():
         spark.stop()
 
     # Flatten the data columns to match the incoming alert data schema
+    logger.debug("Flatten the data columns to match the incoming alert data schema")
     cnames = df_decoded.columns
     cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
 
     # Partition the data hourly
+    logger.debug("Partition the data hourly")
     if "candidate" in df_decoded.columns:
         timecol = "candidate.jd"
         converter = lambda x: convert_to_datetime(x)
@@ -140,6 +147,7 @@ def main():
         idcol = "candid"
         df_partitionedby = df_partitionedby.dropDuplicates([idcol])
 
+    logger.debug("Write data to storage")
     countquery_tmp = (
         df_partitionedby.writeStream.outputMode("append")
         .format("parquet")
@@ -157,6 +165,7 @@ def main():
         countquery = countquery_tmp.start()
 
     # Keep the Streaming running until something or someone ends it!
+    logger.info("Stream2raw service is running...")
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()

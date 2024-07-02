@@ -142,7 +142,10 @@ def write_to_csv(batchdf: DataFrame, batchid: int, fn: str = "web/data/simbadtyp
 
 
 def init_sparksession(
-    name: str, shuffle_partitions: int = None, tz=None
+    name: str,
+    shuffle_partitions: int = None,
+    tz = None,
+    log_level: str = "WARN"
 ) -> SparkSession:
     """Initialise SparkSession, the level of log for Spark and some configuration parameters
 
@@ -179,7 +182,7 @@ def init_sparksession(
         spark.conf.set("spark.sql.session.timeZone", tz)
 
     # Set spark log level to WARN
-    spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel(log_level)
 
     return spark
 

@@ -84,6 +84,23 @@ def main():
             latestfirst=False,
         )
 
+    # DEBUG STATEMENTS
+    logger.info("XXXXXXXXXXXXX test logger")
+    df_static = spark.read.format('parquet').load(
+        rawdatapath + "/year={}/month={}/day={}".format(
+            args.night[0:4],
+            args.night[4:6],
+            args.night[6:8]
+        )
+    )
+    logger.info("XXXXXXXXXXXXX test logger 2")
+
+    print("COUNT BEFORE: {}".format(df_static.count()))
+    df_filtered = df_static\
+        .filter(df_static['candidate.nbad'] == 0)\
+        .filter(df_static['candidate.rb'] >= 0.55)
+    print("COUNT AFTER: {}".format(df_filtered.count()))
+
     # Apply science modules
     if "candidate" in df.columns:
         # Apply quality cuts
