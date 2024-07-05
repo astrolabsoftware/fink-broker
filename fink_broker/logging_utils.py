@@ -19,10 +19,12 @@ from logging import Logger
 
 from fink_broker.tester import spark_unit_tests
 
+
 # Used for reverse compatibility
 # Should be removed and everything should use root logger as recommended by logging module maintener: https://stackoverflow.com/a/2631396/2784039
 def get_fink_logger(name: str, log_level: str = "INFO") -> Logger:
     return init_logger(log_level)
+
 
 def init_logger(log_level: str = "INFO") -> logging.Logger:
     """Initialise python root logger. Suitable for both driver and executors.
@@ -79,7 +81,6 @@ def inspect_application(logger):
     >>> log = get_fink_logger(__name__, "DEBUG")
     >>> inspect_application(log) # doctest: +SKIP
     """
-
     if logger.isEnabledFor(logging.DEBUG):
         spark = SparkSession.builder.getOrCreate()
 

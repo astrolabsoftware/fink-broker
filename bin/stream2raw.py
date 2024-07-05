@@ -60,7 +60,7 @@ def main():
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
-        log_level=args.log_level
+        log_level=args.log_level,
     )
 
     logger = init_logger(args.log_level)
@@ -93,15 +93,16 @@ def main():
     if args.producer == "sims":
         # using custom from_avro (not available for Spark 2.4.x)
         # it will be available from Spark 3.0 though
-        df_decoded = df.select(
-            [from_avro(df["value"], alert_schema_json).alias("decoded")]
-        )
+        df_decoded = df.select([
+            from_avro(df["value"], alert_schema_json).alias("decoded")
+        ])
     elif args.producer == "elasticc":
         schema = fastavro.schema.load_schema(args.schema)
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
-        df_decoded = df.select(
-            [from_avro(df["value"], alert_schema_json).alias("decoded"), df["topic"]]
-        )
+        df_decoded = df.select([
+            from_avro(df["value"], alert_schema_json).alias("decoded"),
+            df["topic"],
+        ])
     elif args.producer == "ztf":
         # Decode on-the-fly using fastavro
         f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)

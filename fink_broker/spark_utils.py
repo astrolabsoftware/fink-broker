@@ -142,10 +142,7 @@ def write_to_csv(batchdf: DataFrame, batchid: int, fn: str = "web/data/simbadtyp
 
 
 def init_sparksession(
-    name: str,
-    shuffle_partitions: int = None,
-    tz = None,
-    log_level: str = "WARN"
+    name: str, shuffle_partitions: int = None, tz=None, log_level: str = "WARN"
 ) -> SparkSession:
     """Initialise SparkSession, the level of log for Spark and some configuration parameters
 
@@ -272,8 +269,12 @@ def connect_to_kafka(
         df = df.option("kafka.sasl.kerberos.service.name", "kafka")
 
     # Naive check for secure connection - this can be improved...
-    to_secure = sum(["-Djava.security.auth.login.config=" in i[1] for i in conf])
-    if to_secure > 0:
+    to_secure = False
+    for i in conf:
+        if "-Djava.security.auth.login.config=" in i[1]:
+            to_secure = True
+            break
+    if to_secure:
         if kerberos:
             df = df.option("kafka.security.protocol", "SASL_PLAINTEXT").option(
                 "kafka.sasl.mechanism", "GSSAPI"

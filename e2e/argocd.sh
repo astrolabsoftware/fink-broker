@@ -7,6 +7,8 @@
 
 set -euxo pipefail
 
+CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciuxconfig"}
+echo "CIUXCONFIG=${CIUXCONFIG}"
 . $CIUXCONFIG
 
 function retry {
