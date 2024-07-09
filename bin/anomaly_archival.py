@@ -87,9 +87,7 @@ def main():
 
     # Row key
     row_key_name = "jd_objectId"
-    df_hbase = add_row_key(
-        df_hbase, row_key_name=row_key_name, cols=["jd", "objectId"]
-    )
+    df_hbase = add_row_key(df_hbase, row_key_name=row_key_name, cols=["jd", "objectId"])
 
     # push data to HBase
     push_full_df_to_hbase(
