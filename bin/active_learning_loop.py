@@ -153,8 +153,8 @@ def main():
         "al_snia_vs_nonia",
         "rf_snia_vs_nonia",
         "candidate.ndethist",
-        "candidate.jdstarthist"
-        "candidate.jd"
+        "candidate.jdstarthist",
+        "candidate.jd",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
