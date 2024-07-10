@@ -169,7 +169,7 @@ def main():
     msg_handler_slack(slack_data, "bot_al_loop", init_msg)
 
     # maximum 10 days between intial and final detection
-    c7 = (pdf["candidate.jd"] - pdf["candidate.jdstarthist"]) <= 10.0
+    c7 = (pdf["jd"] - pdf["jdstarthist"]) <= 10.0
     pdf_early = pdf[c7]
 
     # Filter for high probabilities
