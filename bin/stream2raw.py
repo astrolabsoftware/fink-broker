@@ -120,8 +120,6 @@ def main():
     cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
 
-    # Partition the data hourly
-    logger.debug("Partition the data hourly")
     if "candidate" in df_decoded.columns:
         timecol = "candidate.jd"
         converter = lambda x: convert_to_datetime(x)
