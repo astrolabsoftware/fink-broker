@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - master
+  schedule:
+    # At 03:00 UTC on every day-of-week from Monday through Friday.
+    - cron:  '0 3 * * 1-5'
 jobs:
   call-workflow-passing-data:
     uses: ./.github/workflows/e2e-common.yml
