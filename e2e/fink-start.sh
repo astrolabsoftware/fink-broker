@@ -29,84 +29,46 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 usage() {
   echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
-  echo "  -e: run end-to-end tests, fink configuration file and fink-broker image are automatically set and -f/-i options are ignored"
-  echo "  -f: finkctl configuration file"
-  echo "  -i: fink-broker image, overriden by CIUX_IMAGE_URL environment variable if -e option is set"
-  echo "  -N: night to process, e.g. 20210101"
-  echo "  -t: process night for the current date, e.g. $(date +%Y%m%d), overrides -N option"
+  echo "  Run end-to-end tests, fink configuration file and fink-broker image are automatically set"
   echo "  -h: display this help"
 }
 
-E2E_TEST=false
-NOSCIENCE_OPT=""
-IMAGE_OPT=""
-NIGHT_OPT=""
-
 # Parse option for finkctl configuration file and fink-broker image
-while getopts "ef:i:N:th" opt; do
+while getopts "h" opt; do
   case $opt in
-    e) E2E_TEST=true;;
-    f) FINKCONFIG=$OPTARG ;;
     h) usage ; exit 0 ;;
-    N) NIGHT_OPT="-N $OPTARG" ;;
-    t) NIGHT_OPT="-N $(date +%Y%m%d)" ;;
-    i) IMAGE_OPT="--image $OPTARG" ;;
   esac
 done
 
 NS=spark
-echo "Create $NS namespace"
-kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+
+# Prepare e2e tests
+. $CIUXCONFIG
+IMAGE="$CIUX_IMAGE_URL"
+echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
+if [[ "$IMAGE" =~ "-noscience" ]];
+then
+  VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
+  FINKCONFIG="$DIR/finkconfig_noscience"
+else
+  VALUE_FILE="$DIR/../chart/values-ci.yaml"
+  FINKCONFIG="$DIR/finkconfig"
+fi
+
 kubectl config set-context --current --namespace="$NS"
 
-if [ $E2E_TEST = true ];
-then
-  . $CIUXCONFIG
-  IMAGE="$CIUX_IMAGE_URL"
-  IMAGE_OPT="--image $IMAGE"
-  echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
-  if [[ "$IMAGE" =~ "-noscience" ]];
-  then
-    NOSCIENCE_OPT="--noscience"
-    FINKCONFIG="$DIR/finkconfig_noscience"
-  else
-    NOSCIENCE_OPT=""
-    FINKCONFIG="$DIR/finkconfig"
-  fi
-  kubectl port-forward -n minio svc/minio 9000 &
-  # Wait to port-forward to start
-  sleep 2
-  echo "Create S3 bucket"
-  export FINKCONFIG
-  finkctl --endpoint=localhost:9000 s3 makebucket
-fi
-
-if [ -z "$FINKCONFIG" ];
-then
-  echo "ERROR: FINKCONFIG is not set"
-  exit 1
-else
-  echo "Use FINKCONFIG: $FINKCONFIG"
-  export FINKCONFIG
-fi
-
-echo "Create spark ServiceAccount"
-# see https://spark.apache.org/docs/latest/running-on-kubernetes.html#rbac
-kubectl create serviceaccount spark --dry-run=client -o yaml | kubectl apply -f -
-
-NS=$(kubectl get sa -o=jsonpath='{.items[0]..metadata.namespace}')
-# FIXME  --namespace=default??? Create a rolebinding in the spark namespace??
-kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=$NS:spark \
-  --namespace=default --dry-run=client -o yaml | kubectl apply -f -
-
-tasks="stream2raw raw2science distribution"
-for task in $tasks; do
-  finkctl run $NOSCIENCE_OPT $task $IMAGE_OPT $NIGHT_OPT >& "/tmp/$task.log" &
+echo "Create secrets"
+while ! kubectl get secret fink-producer --namespace kafka
+do
+  echo "Waiting for secret/fink-producer in ns kafka"
+  sleep 10
 done
+finkctl createsecrets
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour
 # Science setup is VERY slow to start, because of raw2science-exec pod
+# TODO use helm --wait with a pod which monitor the status of the Spark pods?
 
 # 5 minutes timeout
 timeout="300"
@@ -123,12 +85,10 @@ while ! finkctl wait tasks --timeout="${timeout}s"; do
     sleep 7200
     exit 1
   fi
-  echo "Spark log files"
+  echo "Spark applications"
   echo "---------------"
-  for task in $tasks; do
-    echo "--------- $task log file ---------"
-    cat "/tmp/$task.log"
-  done
+  kubectl get sparkapplications
+  kubectl logs -n spark-operator -l app.kubernetes.io/instance=spark-operator
   echo "Pods description"
   echo "----------------"
   kubectl describe pods -l "spark-role in (executor, driver)"

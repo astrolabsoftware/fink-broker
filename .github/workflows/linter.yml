@@ -26,9 +26,9 @@ jobs:
         pip install ruff
     - name: fink-broker
       run: |
-        ruff check --statistics fink_broker/*.py
-        ruff format --check fink_broker/*.py
+        ruff check --statistics --preview fink_broker/*.py
+        ruff format --check --preview fink_broker/*.py
     - name: bin
       run: |
-        ruff check --statistics bin/*.py
-        ruff format --check bin/*.py
+        ruff check --preview --statistics bin/*.py
+        ruff format --check --preview bin/*.py

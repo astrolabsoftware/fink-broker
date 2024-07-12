@@ -10,7 +10,7 @@ jobs:
     with:
       suffix: "noscience"
       ci_repo: ""
-      runner: "['ubuntu-latest']"
+      runner: "['ubuntu-22.04']"
       kind_version: "v0.20.0"
     secrets:
       registry_username: ${{ secrets.REGISTRY_USERNAME }}

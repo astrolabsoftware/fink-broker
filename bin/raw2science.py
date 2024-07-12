@@ -84,6 +84,19 @@ def main():
             latestfirst=False,
         )
 
+    df_static = spark.read.format("parquet").load(
+        rawdatapath
+        + "/year={}/month={}/day={}".format(
+            args.night[0:4], args.night[4:6], args.night[6:8]
+        )
+    )
+
+    logger.debug("Alerts before filtering: {}".format(df_static.count()))
+    df_filtered = df_static.filter(df_static["candidate.nbad"] == 0).filter(
+        df_static["candidate.rb"] >= 0.55
+    )
+    logger.debug("Alerts after filtering: {}".format(df_filtered.count()))
+
     # Apply science modules
     if "candidate" in df.columns:
         # Apply quality cuts
@@ -92,8 +105,8 @@ def main():
 
         # Discard an alert if it is in i band
         # or if it contains i band measurements in history
-        df = df.filter(df['candidate.fid'] != 3)
-        df = df.filter(~F.array_contains(df['prv_candidates.fid'], 3))
+        df = df.filter(df["candidate.fid"] != 3)
+        df = df.filter(~F.array_contains(df["prv_candidates.fid"], 3))
 
         df = apply_science_modules(df, args.noscience)
         timecol = "candidate.jd"
