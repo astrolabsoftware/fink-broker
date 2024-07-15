@@ -66,13 +66,16 @@ ENV FINK_JARS ""
 ENV FINK_PACKAGES ""
 # pytest requirements
 ADD deps/requirements-test.txt $FINK_HOME/deps
-RUN pip install -r $FINK_HOME/deps/requirements-test.txt
+# Listing all requirements helps pip in computing a correct dependencies tree
+# See additional explanation in https://github.com/astrolabsoftware/fink-broker/issues/865
+RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt
 
 ADD --chown=${spark_uid} . $FINK_HOME/
 
 FROM noscience AS full
 
 ADD deps/requirements-science.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science.txt
+# Listing all requirements helps pip in computing a correct dependencies tree
+RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/requirements-science.txt
 ADD deps/requirements-science-no-deps.txt $FINK_HOME/
 RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps

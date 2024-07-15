@@ -58,7 +58,9 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="distribute_{}_{}".format(args.producer, args.night), shuffle_partitions=2
+        name="distribute_{}_{}".format(args.producer, args.night),
+        shuffle_partitions=2,
+        log_level=args.spark_log_level,
     )
 
     # The level here should be controlled by an argument.

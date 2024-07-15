@@ -33,10 +33,10 @@ stream2raw:
 # Parameters used to run the raw2science task
 #
 raw2science:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
+  cores: "2"
+  coreRequest: "0"
+  memory: "3000m"
+  instances: "2"
 
 #
 # Parameters used to run the distribution task

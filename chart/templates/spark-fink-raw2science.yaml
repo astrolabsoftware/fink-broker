@@ -10,18 +10,18 @@ spec:
     - '{{ .Values.night }}'
   sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   driver:
-    cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
-    memory: "{{ tpl .Values.distribution.memory . }}"
+    cores: {{ tpl .Values.raw2science.cores . }}
+    coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
+    memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
       version: 3.4.1
     serviceAccount: spark
   executor:
-    cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
-    memory: "{{ tpl .Values.distribution.memory . }}"
+    cores: {{ tpl .Values.raw2science.cores . }}
+    coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
+    memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
-    instances: {{ tpl .Values.distribution.instances . }}
+    instances: {{ tpl .Values.raw2science.instances . }}
     labels:
       version: 3.4.1
