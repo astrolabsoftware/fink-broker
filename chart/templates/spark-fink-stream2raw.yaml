@@ -18,16 +18,16 @@ spec:
   sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   driver:
     cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
-    memory: "{{ tpl .Values.distribution.memory . }}"
+    coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
+    memory: "{{ tpl .Values.stream2raw.memory . }}"
     labels:
       version: 3.4.1
     serviceAccount: spark
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   executor:
     cores: {{ tpl .Values.distribution.cores . }}
-    coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
-    memory: "{{ tpl .Values.distribution.memory . }}"
+    coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
+    memory: "{{ tpl .Values.stream2raw.memory . }}"
     instances: {{ tpl .Values.distribution.instances . }}
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     memory: "512m"

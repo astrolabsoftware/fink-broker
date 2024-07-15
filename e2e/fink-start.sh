@@ -48,10 +48,8 @@ IMAGE="$CIUX_IMAGE_URL"
 echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
 if [[ "$IMAGE" =~ "-noscience" ]];
 then
-  VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
   FINKCONFIG="$DIR/finkconfig_noscience"
 else
-  VALUE_FILE="$DIR/../chart/values-ci.yaml"
   FINKCONFIG="$DIR/finkconfig"
 fi
 
