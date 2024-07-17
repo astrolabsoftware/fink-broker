@@ -105,7 +105,7 @@ jobs:
           df -h
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h
-          sudo docker image prune --all --force
+          docker image prune --all --force
           df -h
       - uses: actions/setup-go@v4
         with:
