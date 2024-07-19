@@ -89,10 +89,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
       - name: Maximize build space
         run: |
           echo "Removing unwanted software... "
@@ -155,8 +151,6 @@ jobs:
           kubectl config set-context --current --namespace=argo
           "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
           argo watch @latest
-      # - name: Setup tmate session
-      # uses: mxschmitt/action-tmate@v3
       - name: Run fink-broker
         run: |
           ./e2e/fink-start.sh
