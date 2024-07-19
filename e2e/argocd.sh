@@ -37,20 +37,12 @@ argocd login --core
 kubectl config set-context --current --namespace="$NS"
 
 # Create fink app
-IMAGE="$CIUX_IMAGE_URL"
-echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$IMAGE" =~ "-noscience" ]];
-then
-  valueFile=values-ci-noscience.yaml
-else
-  valueFile=values-ci-science.yaml
-fi
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH" \
-    -p finkbroker.valueFile="$valueFile" \
+    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH"
+
 
 # Sync fink app-of-apps
 argocd app sync fink
@@ -70,7 +62,15 @@ retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.st
 # TODO Wait for all applications to be synced (problem with spark-operator secret)
 
 # Set fink-broker parameters
+echo "Use fink-broker image: $CIUX_IMAGE_URL"
+if [[ "$$CIUX_IMAGE_URL" =~ "-noscience" ]];
+then
+  valueFile=values-ci-noscience.yaml
+else
+  valueFile=values-ci-science.yaml
+fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
+    --values "$valueFile" \
     -p image.name="$CIUX_IMAGE_NAME" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
