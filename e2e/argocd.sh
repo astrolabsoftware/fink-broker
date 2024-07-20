@@ -10,13 +10,12 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
-echo "CIUXCONFIG=${CIUXCONFIG}"
 . $CIUXCONFIG
 
 function retry {
   local n=1
-  local max=5
-  local delay=5
+  local max=10
+  local delay=15
   while true; do
     "$@" && break || {
       if [[ $n -lt $max ]]; then
@@ -51,7 +50,7 @@ argocd app sync fink
 argocd app sync strimzi minio-operator spark-operator
 
 # TODO Try to make it simpler, try a sync-wave on Strimzi Application?
-# see https://github.com/argoproj/argo-cd/discussions/16729argocd app set
+# see https://github.com/argoproj/argo-cd/discussions/16729
 # and https://stackoverflow.com/questions/77750481/argocd-app-of-apps-ensuring-strimzi-child-app-health-before-kafka-app-sync
 retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io \
   crd/kafkatopics.kafka.strimzi.io \
@@ -63,7 +62,7 @@ retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.st
 
 # Set fink-broker parameters
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$$CIUX_IMAGE_URL" =~ "-noscience" ]];
+if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
 then
   valueFile=values-ci-noscience.yaml
 else
@@ -80,5 +79,25 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
 
 argocd app sync -l app.kubernetes.io/instance=fink
 
-# TODO Wait for kafkatopic to exist
-retry kubectl wait --for condition=ready kafkatopics -n kafka  ztf-stream-sim
+kafka_topic="ztf-stream-sim"
+echo "Wait for kafkatopic $kafka_topic to exist"
+retry kubectl wait --for condition=ready kafkatopics -n kafka  "$kafka_topic"
+
+# Check if kafka namespace exists,
+# if yes, it means that the e2e tests are running
+if kubectl get namespace kafka; then
+  echo "Retrieve kafka secrets for e2e tests"
+  if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
+  then
+    FINKCONFIG="$DIR/finkconfig_noscience"
+  else
+    FINKCONFIG="$DIR/finkconfig"
+  fi
+  while ! kubectl get secret fink-producer --namespace kafka
+  do
+    echo "Waiting for secret/fink-producer in ns kafka"
+    sleep 10
+  done
+  kubectl config set-context --current --namespace="spark"
+  finkctl createsecrets
+fi
