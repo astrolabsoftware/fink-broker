@@ -7,14 +7,15 @@
 
 set -euxo pipefail
 
-CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciuxconfig"}
-echo "CIUXCONFIG=${CIUXCONFIG}"
+DIR=$(cd "$(dirname "$0")"; pwd -P)
+
+CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
 . $CIUXCONFIG
 
 function retry {
   local n=1
-  local max=5
-  local delay=5
+  local max=10
+  local delay=15
   while true; do
     "$@" && break || {
       if [[ $n -lt $max ]]; then
@@ -38,7 +39,9 @@ kubectl config set-context --current --namespace="$NS"
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
-    --path apps --revision "$FINK_CD_WORKBRANCH"
+    --path apps --revision "$FINK_CD_WORKBRANCH" \
+    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH"
+
 
 # Sync fink app-of-apps
 argocd app sync fink
@@ -58,11 +61,43 @@ retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.st
 # TODO Wait for all applications to be synced (problem with spark-operator secret)
 
 # Set fink-broker parameters
+echo "Use fink-broker image: $CIUX_IMAGE_URL"
+if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
+then
+  valueFile=values-ci-noscience.yaml
+else
+  valueFile=values-ci-science.yaml
+fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
+    --values "$valueFile" \
     -p image.name="$CIUX_IMAGE_NAME" \
     -p image.tag="$CIUX_IMAGE_TAG" \
+    -p log_level="DEBUG" \
     -p night="20200101"
+# TODO pass parameters using a valuefile here, and not in 'argocd app create fink'
+# see https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app_set/
+
 argocd app sync -l app.kubernetes.io/instance=fink
 
-# TODO Wait for kafkatopic to exist
-retry kubectl wait --for condition=ready kafkatopics -n kafka  ztf-stream-sim
+kafka_topic="ztf-stream-sim"
+echo "Wait for kafkatopic $kafka_topic to exist"
+retry kubectl wait --for condition=ready kafkatopics -n kafka  "$kafka_topic"
+
+# Check if kafka namespace exists,
+# if yes, it means that the e2e tests are running
+if kubectl get namespace kafka; then
+  echo "Retrieve kafka secrets for e2e tests"
+  if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
+  then
+    FINKCONFIG="$DIR/finkconfig_noscience"
+  else
+    FINKCONFIG="$DIR/finkconfig"
+  fi
+  while ! kubectl get secret fink-producer --namespace kafka
+  do
+    echo "Waiting for secret/fink-producer in ns kafka"
+    sleep 10
+  done
+  kubectl config set-context --current --namespace="spark"
+  finkctl createsecrets
+fi

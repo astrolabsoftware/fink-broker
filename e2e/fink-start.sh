@@ -24,8 +24,8 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-# Used only to set path to spark-submit.sh
-. $DIR/../conf.sh
+CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
+. $CIUXCONFIG
 
 usage() {
   echo "Usage: $0 [-e] [-f finkconfig] [-i image]"
@@ -42,28 +42,9 @@ done
 
 NS=spark
 
-# Prepare e2e tests
-. $CIUXCONFIG
-IMAGE="$CIUX_IMAGE_URL"
-echo "Use CIUX_IMAGE_URL to set fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$IMAGE" =~ "-noscience" ]];
-then
-  VALUE_FILE="$DIR/../chart/values-ci-noscience.yaml"
-  FINKCONFIG="$DIR/finkconfig_noscience"
-else
-  VALUE_FILE="$DIR/../chart/values-ci.yaml"
-  FINKCONFIG="$DIR/finkconfig"
-fi
+
 
 kubectl config set-context --current --namespace="$NS"
-
-echo "Create secrets"
-while ! kubectl get secret fink-producer --namespace kafka
-do
-  echo "Waiting for secret/fink-producer in ns kafka"
-  sleep 10
-done
-finkctl createsecrets
 
 # Wait for Spark pods to be created and warm up
 # Debug in case of not expected behaviour

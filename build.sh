@@ -25,7 +25,7 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 # This will avoid overriding user ciuxconfig during a build
-export CIUXCONFIG=/tmp/ciux.build.sh
+export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
 
 usage() {
   cat << EOD

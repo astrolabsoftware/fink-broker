@@ -60,7 +60,7 @@ def main():
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
-        log_level=args.log_level,
+        log_level=args.spark_log_level,
     )
 
     logger = init_logger(args.log_level)
