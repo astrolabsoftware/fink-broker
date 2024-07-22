@@ -15,23 +15,22 @@ dependencies:
       dev: "true"
       itest: "true"
       ci: "true"
+      release: "true"
   - url: https://github.com/astrolabsoftware/finkctl
     clone: true
     labels:
       dev: "true"
+      release: "true"
   - url: https://github.com/astrolabsoftware/fink-cd
     labels:
       dev: "true"
       itest: "true"
       ci: "true"
-  - url: https://github.com/k8s-school/ktbx
-    clone: true
-    labels:
-      dev: "true"
+      release: "true"
   - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1
     labels:
       build: "true"
-  - package: github.com/k8s-school/ktbx@v1.1.3-rc1
+  - package: github.com/k8s-school/ktbx@v1.1.3-rc2
     labels:
       itest: "optional"
       ci: "true"
