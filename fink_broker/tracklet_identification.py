@@ -108,18 +108,16 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     df_filt = apply_tracklet_cuts(df)
 
     # Initialise `tracklet` column
-    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select(
-        [
-            "candid",
-            "candidate.jd",
-            "candidate.xpos",
-            "candidate.ypos",
-            "candidate.nid",
-            "tracklet",
-            "candidate.ra",
-            "candidate.dec",
-        ]
-    )
+    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select([
+        "candid",
+        "candidate.jd",
+        "candidate.xpos",
+        "candidate.ypos",
+        "candidate.nid",
+        "tracklet",
+        "candidate.ra",
+        "candidate.dec",
+    ])
 
     @pandas_udf(df_filt_tracklet.schema, PandasUDFType.GROUPED_MAP)
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
