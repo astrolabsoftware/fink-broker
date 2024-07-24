@@ -119,6 +119,7 @@ def main():
         name="raw2science_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
+        log_level=args.spark_log_level,
     )
 
     # data path

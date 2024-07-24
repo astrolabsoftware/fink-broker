@@ -1,0 +1,36 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: {{ include "fink.fullname" . }}-stream2raw
+spec:
+{{- include "fink.common" . | nindent 2 }}
+  mainApplicationFile: local:///home/fink/fink-broker/bin/stream2raw.py
+  arguments: {{- include "fink.commonargs" . | nindent 4 }}
+    - '-servers'
+    - '{{ .Values.stream2raw.kafka.in_sockets }}'
+    - '-schema'
+    - '{{ .Values.stream2raw.fink_alert_schema }}'
+    - '-startingoffsets_stream'
+    - '{{ .Values.stream2raw.kafka.starting_offset }}'
+    - '-topic'
+    - '{{ .Values.stream2raw.kafka.topic }}'
+  sparkVersion: "3.4.1"
+  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
+  driver:
+    cores: {{ tpl .Values.distribution.cores . }}
+    coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
+    memory: "{{ tpl .Values.stream2raw.memory . }}"
+    labels:
+      version: 3.4.1
+    serviceAccount: spark
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
+  executor:
+    cores: {{ tpl .Values.distribution.cores . }}
+    coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
+    memory: "{{ tpl .Values.stream2raw.memory . }}"
+    instances: {{ tpl .Values.distribution.instances . }}
+    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
+    memory: "512m"
+    labels:
+      version: 3.4.1
+
