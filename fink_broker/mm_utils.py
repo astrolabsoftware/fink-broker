@@ -21,7 +21,7 @@ from astropy.time import Time
 from datetime import timedelta
 
 from fink_broker.spark_utils import connect_to_raw_database
-from fink_broker.logging_utils import get_fink_logger
+from fink_broker.logging_utils import init_logger
 
 from pyspark.sql.streaming import StreamingQuery
 
@@ -56,7 +56,7 @@ def science2mm(
     StreamingQuery
         the fink_mm query, used by the caller
     """
-    logger = get_fink_logger()
+    logger = init_logger(args.spark_log_level)
     wait = 5
     while True:
         try:
@@ -128,7 +128,7 @@ def mm2distribute(spark, config: configparser.ConfigParser, args: argparse.Names
     )
     checkpointpath_mm = os.path.join(mm_data_path, "mm_distribute_checkpoint")
 
-    logger = get_fink_logger()
+    logger = init_logger(args.spark_log_level)
     wait = 5
     while True:
         try:
