@@ -21,6 +21,7 @@ Ensure you have the code checked out onto your local environment.
 
 ```bash
 git clone github.com/astrolabsoftware/fink-broker
+cd fink-broker
 ```
 
 ### Install ciux
@@ -28,7 +29,7 @@ git clone github.com/astrolabsoftware/fink-broker
 Install the `ciux` tool based on the provided version.
 
 ```bash
-CIUX_VERSION=v0.0.3-rc2
+CIUX_VERSION=v0.0.4-rc6
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
@@ -43,42 +44,18 @@ mkdir -p ~/.ciux
 export SUFFIX="noscience"
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 # Ignite the project
-cd fink-broker
-ciux ignite --selector ci $PWD --suffix "$SUFFIX"
+ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 ```
 
-### Install pre-requisites
+### Install pre-requisites, Fink-Alert-Simulator and Fink-Broker
 
 ```bash
 # Create a Kubernetes cluster (Kind)
-ktbx install kind
-ktbx install kubectl
-ktbx create -s
 # Install OLM and ArgoCD operators.
-ktbx install olm
-ktbx install argocd
-# Install Argo Workflows
-ktbx install argowf
+./e2e/prereq-install.sh
+
 # Run ArgoCD
 ./e2e/argocd.sh
-```
-
-### Run Fink-Alert-Simulator
-
-Run the Fink-Alert-Simulator.
-
-```bash
-. "$CIUXCONFIG"
-"$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
-argo watch @latest
-```
-
-### Run Fink-Broker
-
-Run the Fink-Broker.
-
-```bash
-./e2e/fink-start.sh
 ```
 
 ### Check Results
@@ -88,15 +65,6 @@ Check the results of the tests.
 ```bash
 ./e2e/check-results.sh
 ```
-
-
-    Promote the Fink-Broker image.
-
-    ```bash
-        . "$CIUXCONFIG"
-        echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME/$FINKCTL_VERSION" >> "$GITHUB_OUTPUT"
-        echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
-    ```
 
 ## Conclusion
 
