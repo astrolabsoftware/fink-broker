@@ -125,16 +125,11 @@ jobs:
           # Configure private registry if needed
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           ktbx create -s
-      - name: Install olm and argocd operators
+      - name: Install olm, argocd operator and argo-workflows (fink-alert-simulator pre-requisites)
         run: |
           ktbx install olm
           ktbx install argocd
-      - name: Install argo-workflows (fink-alert-simulator pre-requisite)
-        run: |
           ktbx install argowf
-      - name: Run argoCD
-        run: |
-          ./e2e/argocd.sh
       - name: Download image
         uses: actions/download-artifact@v3
         with:
@@ -142,23 +137,25 @@ jobs:
           path: artifacts
       - name: Load container image inside kind
         run: |
-          . "$HOME/.ciux/ciux.sh"
           if [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
             kind load image-archive artifacts/image.tar
             docker exec -- kind-control-plane crictl image
           else
-            echo "Using existing image: $CIUX_IMAGE_URL"
+            echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
           fi
+      - name: Run argoCD
+        run: |
+          ./e2e/argocd.sh
       - name: Run fink-alert-simulator
         run: |
           export CIUXCONFIG="$HOME/.ciux/ciux.sh"
           . "$CIUXCONFIG"
           "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
           argo watch -n argo @latest
-      - name: Run fink-broker
+      - name: Wait fink-broker to be up and running
         run: |
-          ./e2e/fink-start.sh
+          ./e2e/wait-fink.sh
       - name: Check results
         run: |
           ./e2e/check-results.sh

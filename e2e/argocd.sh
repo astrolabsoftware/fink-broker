@@ -40,7 +40,8 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH"
+    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH" \
+    -p fink-alert-simulator.revision="$FINK_ALERT_SIMULATOR_WORKBRANCH"
 
 
 # Sync fink app-of-apps
@@ -74,8 +75,11 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
     -p night="20200101"
-# TODO pass parameters using a valuefile here, and not in 'argocd app create fink'
-# see https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app_set/
+
+# WIP try to avoid non-deterministic error below:
+# GROUP                 KIND              NAMESPACE  NAME                    STATUS     HEALTH   HOOK  MESSAGE
+# sparkoperator.k8s.io  SparkApplication  spark      fink-broker-stream2raw  OutOfSync  Missing        resource mapping not found for name: "fink-broker-stream2raw" namespace: "spark" from "/dev/shm/826567269": no matches for kind "SparkApplication" in version "sparkoperator.k8s.io/v1beta2"
+kubectl rollout status -n spark-operator  deployment spark-operator
 
 argocd app sync -l app.kubernetes.io/instance=fink
 
@@ -87,6 +91,7 @@ retry kubectl wait --for condition=ready kafkatopics -n kafka  "$kafka_topic"
 # if yes, it means that the e2e tests are running
 if kubectl get namespace kafka; then
   echo "Retrieve kafka secrets for e2e tests"
+  # TODO remove useless ciux config for "finkctl createsecrets" command
   if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
   then
     FINKCONFIG="$DIR/finkconfig_noscience"
