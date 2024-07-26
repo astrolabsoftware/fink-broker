@@ -20,14 +20,17 @@ from logging import Logger
 from fink_broker.tester import spark_unit_tests
 
 
-def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
-    """Initialise python logger. Suitable for both driver and executors.
+# Used for reverse compatibility
+# Should be removed and everything should use root logger as recommended by logging module maintener: https://stackoverflow.com/a/2631396/2784039
+def get_fink_logger(name: str, log_level: str = "INFO") -> Logger:
+    return init_logger(log_level)
+
+
+def init_logger(log_level: str = "INFO") -> logging.Logger:
+    """Initialise python root logger. Suitable for both driver and executors.
 
     Parameters
     ----------
-    name : str
-        Name of the application to be logged. Typically __name__ of a
-        function or module.
     log_level : str
         Minimum level of log wanted: DEBUG, INFO, WARNING, ERROR, CRITICAL, OFF
 
@@ -38,7 +41,7 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
 
     Examples
     --------
-    >>> log = get_fink_logger(__name__, "INFO")
+    >>> log = init_logger("INFO")
     >>> log.info("Hi!")
     """
     # Format of the log message to be printed
@@ -52,11 +55,15 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
     # Date format
     DATEFORMAT = "%y/%m/%d %H:%M:%S"
 
-    logging.basicConfig(format=FORMAT, datefmt=DATEFORMAT)
-    logger = logging.getLogger(name)
+    logger = logging.getLogger()
 
     # Set the minimum log level
     logger.setLevel(log_level)
+
+    streamHandler = logging.StreamHandler()
+    formatter = logging.Formatter(FORMAT, DATEFORMAT)
+    streamHandler.setFormatter(formatter)
+    logger.addHandler(streamHandler)
 
     return logger
 
@@ -74,15 +81,16 @@ def inspect_application(logger):
     >>> log = get_fink_logger(__name__, "DEBUG")
     >>> inspect_application(log) # doctest: +SKIP
     """
-    spark = SparkSession.builder.getOrCreate()
+    if logger.isEnabledFor(logging.DEBUG):
+        spark = SparkSession.builder.getOrCreate()
 
-    logger.debug("Application started")
-    logger.debug("Python version: {}".format(spark.sparkContext.pythonVer))
-    logger.debug("Spark version: {}".format(spark.sparkContext.version))
+        logger.debug("Application started")
+        logger.debug("Python version: {}".format(spark.sparkContext.pythonVer))
+        logger.debug("Spark version: {}".format(spark.sparkContext.version))
 
-    # Debug statements
-    conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])
-    logger.debug(conf)
+        # Debug statements
+        conf = "\n".join([str(i) for i in spark.sparkContext.getConf().getAll()])
+        logger.debug(conf)
 
 
 if __name__ == "__main__":

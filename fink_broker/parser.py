@@ -127,6 +127,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-spark_log_level",
+        type=str,
+        default="WARN",
+        help="""
+        The minimum level of log for the Spark framework: OFF, DEBUG, INFO, WARN, ERROR, CRITICAL
+        [LOG_LEVEL]
+        """,
+    )
+    parser.add_argument(
         "-finkwebpath",
         type=str,
         default="",

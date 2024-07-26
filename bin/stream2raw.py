@@ -41,7 +41,7 @@ from fink_broker.parser import getargs
 from fink_broker.spark_utils import from_avro
 from fink_broker.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.spark_utils import get_schemas_from_avro
-from fink_broker.logging_utils import get_fink_logger, inspect_application
+from fink_broker.logging_utils import init_logger, inspect_application
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
 
@@ -54,19 +54,22 @@ def main():
     else:
         tz = None
 
+    # FIXME args.log_level should be checked to be both compliant with python and spark!
+
     # Initialise Spark session
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
+        log_level=args.spark_log_level,
     )
 
-    # The level here should be controlled by an argument.
-    logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
+    logger = init_logger(args.log_level)
 
     # debug statements
     inspect_application(logger)
 
+    # debug statements
     # data path
     rawdatapath = os.path.join(args.online_data_prefix, "raw")
     checkpointpath_raw = os.path.join(
@@ -74,6 +77,8 @@ def main():
     )
 
     # Create a streaming dataframe pointing to a Kafka stream
+    # debug statements
+    logger.debug("Connecting to Kafka input stream...")
     df = connect_to_kafka(
         servers=args.servers,
         topic=args.topic,
@@ -91,15 +96,16 @@ def main():
     if args.producer == "sims":
         # using custom from_avro (not available for Spark 2.4.x)
         # it will be available from Spark 3.0 though
-        df_decoded = df.select(
-            [from_avro(df["value"], alert_schema_json).alias("decoded")]
-        )
+        df_decoded = df.select([
+            from_avro(df["value"], alert_schema_json).alias("decoded")
+        ])
     elif args.producer == "elasticc":
         schema = fastavro.schema.load_schema(args.schema)
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
-        df_decoded = df.select(
-            [from_avro(df["value"], alert_schema_json).alias("decoded"), df["topic"]]
-        )
+        df_decoded = df.select([
+            from_avro(df["value"], alert_schema_json).alias("decoded"),
+            df["topic"],
+        ])
     elif args.producer == "ztf":
         # Decode on-the-fly using fastavro
         f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)
@@ -112,6 +118,7 @@ def main():
         spark.stop()
 
     # Flatten the data columns to match the incoming alert data schema
+    logger.debug("Flatten the data columns to match the incoming alert data schema")
     cnames = df_decoded.columns
     cnames[cnames.index("decoded")] = "decoded.*"
     df_decoded = df_decoded.selectExpr(cnames)
@@ -165,6 +172,7 @@ def main():
         countquery = countquery_tmp.start()
 
     # Keep the Streaming running until something or someone ends it!
+    logger.info("Stream2raw service is running...")
     if args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()

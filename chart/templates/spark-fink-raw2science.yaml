@@ -1,0 +1,27 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: {{ include "fink.fullname" . }}-raw2science
+spec:
+{{- include "fink.common" . | nindent 2 }}
+  mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
+  arguments: {{- include "fink.commonargs" . | nindent 4 }}
+    - '-night'
+    - '{{ .Values.night }}'
+  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
+  driver:
+    cores: {{ tpl .Values.raw2science.cores . }}
+    coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
+    memory: "{{ tpl .Values.raw2science.memory . }}"
+    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
+    labels:
+      version: 3.4.1
+    serviceAccount: spark
+  executor:
+    cores: {{ tpl .Values.raw2science.cores . }}
+    coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
+    memory: "{{ tpl .Values.raw2science.memory . }}"
+    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
+    instances: {{ tpl .Values.raw2science.instances . }}
+    labels:
+      version: 3.4.1

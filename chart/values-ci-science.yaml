@@ -1,0 +1,53 @@
+# Can be overriden in stream2raw, raw2science and distribution sections
+cores: 1
+coreRequest: 0
+instances: 1
+memory: 1g
+# instances: 1
+
+fink_trigger_update: "2"
+
+# Can be overriden using --image option
+
+# Default to s3a://<s3.bucket>
+# online_data_prefix: s3a://fink-broker-online
+producer: sims
+
+log_level: INFO
+
+#
+# Parameters used to run the stream2raw task
+#
+stream2raw:
+  cores: "{{.Values.cores}}"
+  coreRequest: "{{.Values.coreRequest}}"
+  memory: "{{.Values.memory}}"
+  instances: "{{.Values.instances}}"
+  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
+  kafka:
+    in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
+    starting_offset: earliest
+    topic: ztf-stream-sim
+
+#
+# Parameters used to run the raw2science task
+#
+raw2science:
+  cores: "2"
+  coreRequest: "0"
+  memory: "3000m"
+  instances: "2"
+
+#
+# Parameters used to run the distribution task
+#
+distribution:
+  cores: "{{.Values.cores}}"
+  coreRequest: "{{.Values.coreRequest}}"
+  memory: "{{.Values.memory}}"
+  instances: "{{.Values.instances}}"
+  kafka:
+    out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
+    schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
+    substream_prefix: "fink_"
+

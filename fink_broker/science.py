@@ -599,9 +599,9 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         3: 21,
         4: 22,
     }
-    mapping_cats_general_expr = F.create_map(
-        [F.lit(x) for x in chain(*mapping_cats_general.items())]
-    )
+    mapping_cats_general_expr = F.create_map([
+        F.lit(x) for x in chain(*mapping_cats_general.items())
+    ])
 
     df = df.withColumn(
         "cats_argmax", F.expr("array_position(cbpf_preds, array_max(cbpf_preds)) - 1")
@@ -628,18 +628,16 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(
-        *[
-            "preds_snn",
-            "cbpf_preds",
-            "redshift",
-            "redshift_err",
-            "cdsxmatch",
-            "roid",
-            "cats_argmax",
-            "snn_argmax",
-        ]
-    )
+    df = df.drop(*[
+        "preds_snn",
+        "cbpf_preds",
+        "redshift",
+        "redshift_err",
+        "cdsxmatch",
+        "roid",
+        "cats_argmax",
+        "snn_argmax",
+    ])
 
     return df
 

@@ -305,18 +305,16 @@ def main():
             )
 
             # cross-match
-            idx, d2d, d3d = catalog_tns.match_to_catalog_sky(catalog_ztf)
+            _, _, _ = catalog_tns.match_to_catalog_sky(catalog_ztf)
 
-            sub_pdf = pd.DataFrame(
-                {
-                    "objectId": objectid.to_numpy(),
-                    "ra": ra.to_numpy(),
-                    "dec": dec.to_numpy(),
-                }
-            )
+            sub_pdf = pd.DataFrame({
+                "objectId": objectid.to_numpy(),
+                "ra": ra.to_numpy(),
+                "dec": dec.to_numpy(),
+            })
 
             # cross-match
-            idx2, d2d2, d3d2 = catalog_ztf.match_to_catalog_sky(catalog_tns)
+            idx2, d2d2, _ = catalog_ztf.match_to_catalog_sky(catalog_tns)
 
             # set separation length
             sep_constraint2 = d2d2.degree < 1.5 / 3600
