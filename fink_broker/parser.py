@@ -249,7 +249,7 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
     parser.add_argument(
         "-kafka_delivery_timeout_ms",
         type=int,
-        default=1000,
+        default=120000,
         help="""
         the delivery kafka message timeout in ms
         [KAFKA_DELIVERY_TIMEOUT_MS]
