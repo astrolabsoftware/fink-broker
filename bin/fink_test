@@ -92,8 +92,8 @@ source $conf
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
-export KAFKA_TOPIC="ztf-stream-sim"
-export NIGHT=20231018
+export KAFKA_TOPIC="ztf_public_20200101"
+export NIGHT=20200101
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
