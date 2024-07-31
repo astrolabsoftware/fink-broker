@@ -53,6 +53,9 @@ if [[ $? == 0 ]]; then
     echo "Push Active Learning loop candidates"
     fink start al_loop -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/al_loop_${NIGHT}.log 2>&1
 
+    echo "Push Hostless candidates"
+    fink start hostless -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/hostless_${NIGHT}.log 2>&1
+
     echo "Send Dwarf AGN candidates"
     fink start dwarf_agn -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/dwarf_agn_${NIGHT}.log 2>&1
 
