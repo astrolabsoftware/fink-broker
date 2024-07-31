@@ -28,7 +28,7 @@ git clone github.com/astrolabsoftware/fink-broker
 Install the `ciux` tool based on the provided version.
 
 ```bash
-CIUX_VERSION=v0.0.3-rc2
+CIUX_VERSION=v0.0.4-rc3
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
