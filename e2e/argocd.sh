@@ -56,8 +56,7 @@ argocd app sync strimzi minio-operator spark-operator
 retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io \
   crd/kafkatopics.kafka.strimzi.io \
   crd/tenants.minio.min.io \
-  crd/sparkapplications.sparkoperator.k8s.io \
-  crd/workflows.argoproj.io
+  crd/sparkapplications.sparkoperator.k8s.io
 
 # TODO Wait for all applications to be synced (problem with spark-operator secret)
 
