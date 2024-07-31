@@ -41,7 +41,7 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
     -p finkbroker.revision="$FINK_BROKER_WORKBRANCH" \
-    -p fink-alert-simulator.revision="$FINK_ALERT_SIMULATOR_WORKBRANCH"
+    -p finkalertsimulator.revision="$FINK_ALERT_SIMULATOR_WORKBRANCH"
 
 
 # Sync fink app-of-apps
