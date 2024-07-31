@@ -51,14 +51,9 @@ ciux ignite --selector ci $PWD --suffix "$SUFFIX"
 
 ```bash
 # Create a Kubernetes cluster (Kind)
-ktbx install kind
-ktbx install kubectl
-ktbx create -s
 # Install OLM and ArgoCD operators.
-ktbx install olm
-ktbx install argocd
-# Install Argo Workflows
-ktbx install argowf
+./e2e/prereq-install.sh
+
 # Run ArgoCD
 ./e2e/argocd.sh
 ```
