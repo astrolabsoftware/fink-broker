@@ -23,7 +23,6 @@ import numpy as np
 from pyspark.sql import functions as F
 
 from fink_utils.spark.utils import concat_col
-from fink_utils.xmatch.simbad import return_list_of_eg_host
 
 from fink_broker.parser import getargs
 from fink_broker.spark_utils import init_sparksession, load_parquet_files
@@ -149,6 +148,9 @@ def main():
     ]
 
     pdf = df.filter(df["kstest_static"] >= 0).select(cols_).toPandas()
+
+    # log the number of candidates
+    # sort by score
 
     init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
 
