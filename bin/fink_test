@@ -119,7 +119,11 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink start raw2science --exit_after 120 -c $conf --night $NIGHT
 
   # Start the distribution service
-  fink start distribution --exit_after 30 -c $conf --night $NIGHT
+  fink start distribution --exit_after 60 -c $conf --night $NIGHT
+
+  # check we have all topics
+  echo "TOPICS FOUND:"
+  /home/libs/kafka_2.12-2.8.1/bin/kafka-topics.sh --list --zookeeper localhost:2181
 fi
 
 # DB Integration tests
