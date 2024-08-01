@@ -198,10 +198,10 @@ def main():
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
     broker_list = args.distribution_servers
-    username = args.kafka_sasl_username
-    password = args.kafka_sasl_password
-    kafka_buf_mem = args.kafka_buffer_memory
-    kafka_timeout_ms = args.kafka_delivery_timeout_ms
+    # username = args.kafka_sasl_username
+    # password = args.kafka_sasl_password
+    # kafka_buf_mem = args.kafka_buffer_memory
+    # kafka_timeout_ms = args.kafka_delivery_timeout_ms
     for userfilter in userfilters:
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
@@ -228,11 +228,11 @@ def main():
             .option("kafka.bootstrap.servers", broker_list)
             .option("kafka.security.protocol", "SASL_PLAINTEXT")
             .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
-            #.option("kafka.sasl.username", username)
-            #.option("kafka.sasl.password", password)
-            #.option("kafka.buffer.memory", kafka_buf_mem)
-            #.option("kafka.delivery.timeout.ms", kafka_timeout_ms)
-            #.option("kafka.auto.create.topics.enable", True)
+            # .option("kafka.sasl.username", username)
+            # .option("kafka.sasl.password", password)
+            # .option("kafka.buffer.memory", kafka_buf_mem)
+            # .option("kafka.delivery.timeout.ms", kafka_timeout_ms)
+            # .option("kafka.auto.create.topics.enable", True)
             .option("topic", topicname)
             .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
             .trigger(processingTime="{} seconds".format(args.tinterval))
