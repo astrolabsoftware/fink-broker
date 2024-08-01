@@ -44,7 +44,7 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
     Examples
     --------
     >>> from fink_broker.spark_utils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd']))
     >>> pdf = df.select('millis').toPandas()
 
@@ -99,7 +99,7 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     Examples
     --------
     >>> from fink_broker.spark_utils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
     >>> pdf = df.select('datetime').toPandas()
     """
@@ -130,7 +130,7 @@ def compute_num_part(df, partition_size=128.0):
     Examples
     --------
     >>> from fink_broker.spark_utils import load_parquet_files
-    >>> df = load_parquet_files("online/raw")
+    >>> df = load_parquet_files("online/raw/20200101")
     >>> numpart = compute_num_part(df, partition_size=128.)
     >>> print(numpart)
     1

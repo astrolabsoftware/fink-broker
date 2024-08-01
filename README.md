@@ -40,6 +40,7 @@ All are open source, and we thank all contributors!
 - Publications: https://fink-broker.org/papers
 - Release notes: https://fink-broker.readthedocs.io/en/latest/release-notes
 
+
 ## Outside academia
 
 Fink has participated to a number of events with the private sector, in particular:

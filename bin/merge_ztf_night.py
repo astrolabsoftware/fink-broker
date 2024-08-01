@@ -39,18 +39,10 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    year = args.night[:4]
-    month = args.night[4:6]
-    day = args.night[6:8]
+    print("Processing {}".format(args.night))
 
-    print("Processing {}/{}/{}".format(year, month, day))
-
-    input_raw = "{}/raw/year={}/month={}/day={}".format(
-        args.online_data_prefix, year, month, day
-    )
-    input_science = "{}/science/year={}/month={}/day={}".format(
-        args.online_data_prefix, year, month, day
-    )
+    input_raw = "{}/raw/{}".format(args.online_data_prefix, args.night)
+    input_science = "{}/science/{}".format(args.online_data_prefix, args.night)
 
     # basepath
     output_raw = "{}/raw".format(args.agg_data_prefix)
@@ -61,11 +53,17 @@ def main():
     print("Num partitions before: ", df_raw.rdd.getNumPartitions())
     print("Num partitions after : ", compute_num_part(df_raw))
 
+    # We do not use the timestamp for the partitioning
+    # to stay coherent with the analysis which rely on
+    # the fact that we explicitly pass --night YYYYMMDD
+    # as an argument of all scripts. It also allows to
+    # run test data with any candidate.jd under the same
+    # fake night.
     df_raw.withColumn(
         "timestamp", convert_to_datetime(df_raw["candidate.jd"])
-    ).withColumn("year", F.date_format("timestamp", "yyyy")).withColumn(
-        "month", F.date_format("timestamp", "MM")
-    ).withColumn("day", F.date_format("timestamp", "dd")).coalesce(
+    ).withColumn("year", F.lit(args.night[0:4])).withColumn(
+        "month", F.lit(args.night[4:6])
+    ).withColumn("day", F.lit(args.night[6:8])).coalesce(
         compute_num_part(df_raw)
     ).write.mode("append").partitionBy("year", "month", "day").parquet(output_raw)
 
@@ -86,11 +84,11 @@ def main():
 
     df_science.withColumn(
         "timestamp", convert_to_datetime(df_science["candidate.jd"])
-    ).withColumn("year", F.date_format("timestamp", "yyyy")).withColumn(
-        "month", F.date_format("timestamp", "MM")
-    ).withColumn("day", F.date_format("timestamp", "dd")).coalesce(
-        npart_after
-    ).write.mode("append").partitionBy("year", "month", "day").parquet(output_science)
+    ).withColumn("year", F.lit(args.night[0:4])).withColumn(
+        "month", F.lit(args.night[4:6])
+    ).withColumn("day", F.lit(args.night[6:8])).coalesce(npart_after).write.mode(
+        "append"
+    ).partitionBy("year", "month", "day").parquet(output_science)
 
 
 if __name__ == "__main__":

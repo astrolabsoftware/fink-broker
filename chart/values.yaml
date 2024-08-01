@@ -39,7 +39,7 @@ stream2raw:
   kafka:
     in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest
-    topic: "ztf-stream-{{.Values.night}}"
+    topic: "ztf_public_{{.Values.night}}"
 
 #
 # Parameters used to run the raw2science task
