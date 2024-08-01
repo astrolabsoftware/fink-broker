@@ -134,6 +134,10 @@ while [ "$#" -gt 0 ]; do
       ELASTICC=true
       shift 1
       ;;
+    --noscience)
+      NOSCIENCE=true
+      shift 1
+      ;;
     --exit_after)
         EXIT_AFTER="-exit_after $2"
         shift 2
@@ -272,6 +276,11 @@ elif [[ $service == "stream2raw" ]]; then
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
+  if [[ $NOSCIENCE == true ]]; then
+    NOSCIENCE="--noscience"
+  else
+    NOSCIENCE=""
+  fi
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
@@ -285,7 +294,7 @@ elif [[ $service == "raw2science" ]]; then
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -night ${NIGHT} \
     -mmconfigpath ${FINK_MM_CONFIG} \
-    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -log_level ${LOG_LEVEL} ${NOSCIENCE} ${EXIT_AFTER}
 elif [[ $service == "raw2science_elasticc_paper" ]]; then
     # Store the stream of alerts
     spark-submit --master ${SPARK_MASTER} \
@@ -299,6 +308,12 @@ elif [[ $service == "distribution" ]]; then
     SCRIPT=${FINK_HOME}/bin/distribute_elasticc.py
   else
     SCRIPT=${FINK_HOME}/bin/distribute.py
+  fi
+
+  if [[ $NOSCIENCE == true ]]; then
+    NOSCIENCE="--noscience"
+  else
+    NOSCIENCE=""
   fi
 
   # Check if the conf file exists
@@ -336,7 +351,7 @@ elif [[ $service == "distribution" ]]; then
   -tinterval ${FINK_TRIGGER_UPDATE} \
   -mmconfigpath ${FINK_MM_CONFIG} \
   -night ${NIGHT} \
-  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+  -log_level ${LOG_LEVEL} ${NOSCIENCE} ${EXIT_AFTER}
 elif [[ $service == "distribution_replayed" ]]; then
   # Check if the conf file exists
   if [[ -f $conf_distribution ]]; then
