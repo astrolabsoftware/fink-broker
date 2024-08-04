@@ -100,6 +100,7 @@ def main():
             df["rf_kn_vs_nonkn"],
             df["finkclass"],
             df["tnsclass"],
+            df["candidate.jd"] - df["candidate.jdstarthist"],
         ),
     )
 
