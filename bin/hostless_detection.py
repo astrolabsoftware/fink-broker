@@ -18,7 +18,6 @@
 import argparse
 import os
 
-import numpy as np
 
 from pyspark.sql import functions as F
 
@@ -34,7 +33,6 @@ from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import get_cutout
 from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
 
-from fink_science import __file__
 from fink_science.hostless_detection.processor import run_potential_hostless
 
 
@@ -113,7 +111,7 @@ def main():
         "finkclass",
         "tnsclass",
         F.col("cutoutScience.stampData").alias("cutoutScience"),
-        F.col("cutoutTemplate.stampData").alias("cutoutTemplate")
+        F.col("cutoutTemplate.stampData").alias("cutoutTemplate"),
     ]
 
     cond_science = df["kstest_static"][0] >= 0
