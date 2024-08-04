@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023-2024 AstroLab Software
+# Copyright 2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,46 +29,13 @@ from fink_broker.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
-from fink_filters.filter_anomaly_notification.filter_utils import msg_handler_slack
-from fink_filters.filter_anomaly_notification.filter_utils import (
-    get_data_permalink_slack,
-)
+
+from fink_utils.tg_bot.utils import get_curve
+from fink_utils.tg_bot.utils import get_cutout
+from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
 
 from fink_science import __file__
 from fink_science.hostless_detection.processor import run_potential_hostless
-
-
-def append_slack_messages(slack_data: list, row: dict) -> None:
-    """Append messages to list for Slack distribution.
-
-    Parameters
-    ----------
-    slack_data: list
-        List containing all Slack messages. Each element
-        is a message (string).
-    row: dict
-        Pandas DataFrame row as dictionary. Contains
-        Fink data.
-    """
-    t1 = f"ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
-    t2 = f"""
-EQU: {row.ra},   {row.dec}"""
-
-    t3 = f"Score: {round(row.kstest_static, 3)}"
-    t4 = f"Fink classification: {row.finkclass}"
-    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId)
-    curve.seek(0)
-    cutout.seek(0)
-    cutout_perml = f"<{cutout_perml}|{' '}>"
-    curve_perml = f"<{curve_perml}|{' '}>"
-    slack_data.append(
-        f"""==========================
-{t1}
-{t2}
-{t3}
-{t4}
-{cutout_perml}{curve_perml}"""
-    )
 
 
 def main():
@@ -145,21 +112,42 @@ def main():
         "kstest_static",
         "finkclass",
         "tnsclass",
+        F.col("cutoutScience.stampData").alias("cutoutScience"),
+        F.col("cutoutTemplate.stampData").alias("cutoutTemplate")
     ]
 
-    pdf = df.filter(df["kstest_static"] >= 0).select(cols_).toPandas()
+    cond_science = df["kstest_static"][0] >= 0
+    cond_template = df["kstest_static"][1] >= 0
+    pdf = df.filter(cond_science).filter(cond_template).select(cols_).toPandas()
 
-    # log the number of candidates
-    # sort by score
+    # Loop over matches & send to Telegram
+    if ("FINK_TG_TOKEN" in os.environ) and os.environ["FINK_TG_TOKEN"] != "":
+        payloads = []
+        for _, alert in pdf.iterrows():
+            curve_png = get_curve(
+                objectId=alert["objectId"],
+                origin="API",
+            )
 
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
+            cutout_science = get_cutout(cutout=alert["cutoutScience"])
+            cutout_template = get_cutout(cutout=alert["cutoutTemplate"])
 
-    slack_data = []
-    # limit to the first 100th (guard against processing error)
-    for _, row in pdf.head(30).iterrows():
-        append_slack_messages(slack_data, row)
+            text = """
+*Object ID*: [{}](https://fink-portal.org/{})
+*Scores:*\n- Science: {:.2f}\n- Template: {:.2f}
+*Fink class*: {}
+            """.format(
+                alert["objectId"],
+                alert["objectId"],
+                alert["kstest_static"][0],
+                alert["kstest_static"][1],
+                alert["finkclass"],
+            )
 
-    msg_handler_slack(slack_data, "bot_hostless", init_msg)
+            payloads.append((text, curve_png, [cutout_science, cutout_template]))
+
+        if len(payloads) > 0:
+            msg_handler_tg_cutouts(payloads, channel_id="@fink_hostless", init_msg="")
 
 
 if __name__ == "__main__":
