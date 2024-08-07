@@ -44,7 +44,7 @@ export SUFFIX="noscience"
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 # Ignite the project
 cd fink-broker
-ciux ignite --selector ci $PWD --suffix "$SUFFIX"
+ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 ```
 
 ### Install pre-requisites
