@@ -39,7 +39,7 @@ do
     echo "Waiting for expected topics: $expected_topics"
     sleep 5
     kubectl get pods
-    if [ $(kubectl get pods --field-selector=status.phase!=Running | wc -l) -ge 1 ];
+    if [ $(kubectl get pods -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
         echo "ERROR: fink-broker has crashed" 1>&2
         echo "ERROR: enabling interactive access for debugging purpose" 1>&2
