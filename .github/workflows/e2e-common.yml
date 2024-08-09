@@ -139,12 +139,6 @@ jobs:
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
-      - name: Run fink-alert-simulator
-        run: |
-          . "$HOME/.ciux/ciux.sh"
-          helm install fink-alert-simulator \
-            --repo https://github.com/astrolabsoftware/fink-alert-simulator/tree/$FINK_ALERT_SIMULATOR_WORKBRANCH \
-            chart --set image.tag=$FINK_ALERT_SIMULATOR_VERSION --namespace spark
       - name: Wait fink-broker to be up and running
         run: |
           ./e2e/wait-fink.sh
