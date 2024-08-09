@@ -90,13 +90,6 @@ retry kubectl wait --for condition=ready kafkatopics -n kafka  "$kafka_topic"
 # if yes, it means that the e2e tests are running
 if kubectl get namespace kafka; then
   echo "Retrieve kafka secrets for e2e tests"
-  # TODO remove useless ciux config for "finkctl createsecrets" command
-  if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
-  then
-    FINKCONFIG="$DIR/finkconfig_noscience"
-  else
-    FINKCONFIG="$DIR/finkconfig"
-  fi
   while ! kubectl get secret fink-producer --namespace kafka
   do
     echo "Waiting for secret/fink-producer in ns kafka"
