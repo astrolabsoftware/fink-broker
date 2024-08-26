@@ -81,7 +81,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=2
+        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=20
     )
 
     # The level here should be controlled by an argument.

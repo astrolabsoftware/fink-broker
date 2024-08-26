@@ -1,11 +1,23 @@
 # Fink ZTF scheduler
 
-Operations for the night N start at 9pm UTC on the night N-1. There are 2 cronjobs scheduled:
+Operations for the night N start at 21.45pm UTC on the night N-1. There are 2 cronjobs scheduled:
 
 ```bash
-# Paris Time (UTC+1)
-0 22 * * * /home/julien.peloton/fink-broker/launch_fink.sh
-5 21 * * * /home/julien.peloton/fink-broker/database_service.sh
+# Paris time
+
+# Fink real-time
+45 23 * * * /home/julien.peloton/fink-broker/scheduler/launch_fink.sh
+
+# Database service
+05 20 * * * /home/julien.peloton/fink-broker/scheduler/database_service.sh
+
+# Fink MM
+0 01 * * * /home/julien.peloton/Fink_MM/scheduler/science2grb.sh
+0 01 * * * /home/julien.peloton/Fink_MM/scheduler/grb2distribution.sh
+1 17 * * * /home/julien.peloton/Fink_MM/scheduler/science2grb_offline.sh
+
+# SSOFT
+0 0 1 * * /home/julien.peloton/fink-broker/scheduler/launch_ssoft.sh
 ```
 
 The first script is for live operations:

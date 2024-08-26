@@ -113,12 +113,12 @@ def readschemafromavrofile(fn: str) -> dict:
 
 
 if __name__ == "__main__":
-    """ Execute the test suite """
+    """Execute the test suite"""
     # Add sample file to globals
     globs = globals()
-    root = os.environ["FINK_HOME"]
+    alert_schema_path = os.environ["FINK_SCHEMA"]
     globs["ztf_alert_sample"] = os.path.join(
-        root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
+        alert_schema_path, "ztf/template_schema_ZTF_3p3.avro"
     )
 
     # Run the regular test suite

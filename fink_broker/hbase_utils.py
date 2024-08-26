@@ -792,17 +792,63 @@ def add_row_key(df, row_key_name, cols=None):
     df: DataFrame
         Spark DataFrame
     row_key_name: str
-        Row key name (typically columns seprated by _)
+        Row key name (typically columns separated by _)
     cols: list
-        List of columns to concatenate
+        List of columns to concatenate (typically split row_key_name)
 
     Returns
     -------
     out: DataFrame
         Original Spark DataFrame with a new column
+
+    Examples
+    --------
+    # Read alert from the raw database
+    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
+
+    # Flatten columns
+    >>> df = df.select(["objectId", "candidate.jd", "candidate.ra"])
+
+    >>> df2 = add_row_key(df, None, None)
+    >>> extra_cols = [col for col in df2.columns if col not in df.columns]
+    >>> assert len(extra_cols) == 0, "Found {}".format(extra_cols)
+
+    >>> rowkey = "objectId"
+    >>> df2 = add_row_key(df, rowkey, rowkey.split("_"))
+    >>> extra_cols = [col for col in df2.columns if col not in df.columns]
+    >>> assert len(extra_cols) == 0, "Found {}".format(extra_cols)
+
+    >>> rowkey = "objectId_jd"
+    >>> df2 = add_row_key(df, rowkey, rowkey.split("_"))
+    >>> extra_cols = [col for col in df2.columns if col not in df.columns]
+    >>> assert extra_cols == [rowkey], "Found {}".format(extra_cols)
+
+    >>> rowkey = "objectId_objectId"
+    >>> df2 = add_row_key(df, rowkey, rowkey.split("_")) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    AssertionError: You have duplicated fields in your columns definition: ['objectId', 'objectId']
+
+    >>> rowkey = "objectId_toto"
+    >>> df2 = add_row_key(df, rowkey, rowkey.split("_")) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    AssertionError: Cannot build the rowkey: toto is not in DataFrame Columns ['objectId', 'jd', 'ra']
     """
-    if cols is None:
-        cols = []
+    if not isinstance(cols, list):
+        # should never happen in practice
+        return df
+
+    if len(cols) == 1:
+        # single field rowkey
+        return df
+
+    # check all fields exist
+    msg = "Cannot build the rowkey: {} is not in DataFrame Columns {}"
+    for col in cols:
+        assert col in df.columns, msg.format(col, df.columns)
+
+    # check there is no duplicates
+    msg = "You have duplicated fields in your columns definition: {}".format(cols)
+    assert len(np.unique(cols)) == len(cols), msg
 
     row_key_col = F.concat_ws("_", *cols).alias(row_key_name)
     df = df.withColumn(row_key_name, row_key_col)
@@ -901,7 +947,9 @@ if __name__ == "__main__":
         root, "fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro"
     )
 
-    globs["ztf_alert_sample_scidatabase"] = os.path.join(root, "online/science")
+    globs["ztf_alert_sample_scidatabase"] = os.path.join(
+        root, "online/science/20200101"
+    )
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

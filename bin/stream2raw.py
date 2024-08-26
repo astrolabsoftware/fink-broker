@@ -34,6 +34,7 @@ import fastavro.schema
 import argparse
 import time
 import io
+import os
 
 from fink_broker.parser import getargs
 
@@ -70,8 +71,10 @@ def main():
 
     # debug statements
     # data path
-    rawdatapath = args.online_data_prefix + "/raw"
-    checkpointpath_raw = args.online_data_prefix + "/raw_checkpoint"
+    rawdatapath = os.path.join(args.online_data_prefix, "raw")
+    checkpointpath_raw = os.path.join(
+        args.online_data_prefix, f"raw_checkpoint/{args.night}"
+    )
 
     # Create a streaming dataframe pointing to a Kafka stream
     # debug statements
@@ -121,8 +124,20 @@ def main():
     df_decoded = df_decoded.selectExpr(cnames)
 
     if "candidate" in df_decoded.columns:
-        timecol = "candidate.jd"
-        converter = lambda x: convert_to_datetime(x)
+        # Add ingestion timestamp
+        df_decoded = df_decoded.withColumn(
+            "brokerIngestTimestamp",
+            convert_to_millitime(df_decoded["candidate.jd"], F.lit("jd"), F.lit(True)),
+        )
+
+        # write unpartitioned data
+        countquery_tmp = (
+            df_decoded.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_raw)
+            .option("path", os.path.join(rawdatapath, f"{args.night}"))
+        )
+
     elif "diaSource" in df_decoded.columns:
         timecol = "diaSource.midPointTai"
         converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
@@ -133,27 +148,20 @@ def main():
             convert_to_millitime(df_decoded[timecol], F.lit("mjd"), F.lit(True)),
         )
 
-    df_partitionedby = (
-        df_decoded.withColumn("timestamp", converter(df_decoded[timecol]))
-        .withColumn("year", F.date_format("timestamp", "yyyy"))
-        .withColumn("month", F.date_format("timestamp", "MM"))
-        .withColumn("day", F.date_format("timestamp", "dd"))
-    )
+        df_partitionedby = (
+            df_decoded.withColumn("timestamp", converter(df_decoded[timecol]))
+            .withColumn("year", F.date_format("timestamp", "yyyy"))
+            .withColumn("month", F.date_format("timestamp", "MM"))
+            .withColumn("day", F.date_format("timestamp", "dd"))
+        )
 
-    # Append new rows every `tinterval` seconds
-    # and drop duplicates see fink-broker/issues/443
-    if "candid" in df_decoded.columns:
-        idcol = "candid"
-        df_partitionedby = df_partitionedby.dropDuplicates([idcol])
-
-    logger.debug("Write data to storage")
-    countquery_tmp = (
-        df_partitionedby.writeStream.outputMode("append")
-        .format("parquet")
-        .option("checkpointLocation", checkpointpath_raw)
-        .option("path", rawdatapath)
-        .partitionBy("year", "month", "day")
-    )
+        countquery_tmp = (
+            df_partitionedby.writeStream.outputMode("append")
+            .format("parquet")
+            .option("checkpointLocation", checkpointpath_raw)
+            .option("path", rawdatapath)
+            .partitionBy("year", "month", "day")
+        )
 
     # Fixed interval micro-batches or ASAP
     if args.tinterval > 0:

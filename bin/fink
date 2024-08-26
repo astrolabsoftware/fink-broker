@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,7 @@ while [ "$#" -gt 0 ]; do
         echo -e "$nservice Fink service(s) running: "
         ps aux | head -1
         ps aux | grep -i 'fink start' | grep -v grep
+        ps aux | grep -i 'gcn_stream start' | grep -v grep
         echo "Use <fink stop service_name> to stop a service."
         exit
         ;;
@@ -92,6 +93,10 @@ while [ "$#" -gt 0 ]; do
     --conf)
         echo "$1 requires an argument" >&2
         exit 1
+        ;;
+    -conf_distribution)
+        conf_distribution="$2"
+        shift 2
         ;;
     --simulator)
         SIM_ONLY=true
@@ -127,6 +132,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --elasticc)
       ELASTICC=true
+      shift 1
+      ;;
+    --noscience)
+      NOSCIENCE=true
       shift 1
       ;;
     --exit_after)
@@ -255,12 +264,23 @@ elif [[ $service == "stream2raw" ]]; then
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
     ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
-    ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} -producer ${PRODUCER} -servers ${KAFKA_IPPORT} -topic ${KAFKA_TOPIC} \
-    -schema ${FINK_ALERT_SCHEMA} -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
+    ${FINK_HOME}/bin/stream2raw.py ${HELP_ON_SERVICE} \
+    -producer ${PRODUCER} \
+    -servers ${KAFKA_IPPORT} \
+    -topic ${KAFKA_TOPIC} \
+    -night ${NIGHT} \
+    -schema ${FINK_ALERT_SCHEMA} \
+    -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
     -max_offsets_per_trigger ${MAX_OFFSETS_PER_TRIGGER} \
     -online_data_prefix ${ONLINE_DATA_PREFIX} \
-    -tinterval ${FINK_TRIGGER_UPDATE} -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -tinterval ${FINK_TRIGGER_UPDATE} \
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "raw2science" ]]; then
+  if [[ $NOSCIENCE == true ]]; then
+    NOSCIENCE="--noscience"
+  else
+    NOSCIENCE=""
+  fi
 
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
@@ -273,15 +293,37 @@ elif [[ $service == "raw2science" ]]; then
     -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -night ${NIGHT} \
-    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -mmconfigpath ${FINK_MM_CONFIG} \
+    -log_level ${LOG_LEVEL} ${NOSCIENCE} ${EXIT_AFTER}
+elif [[ $service == "raw2science_elasticc_paper" ]]; then
+    # Store the stream of alerts
+    spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} \
+      --jars ${FINK_JARS} \
+      ${PYTHON_EXTRA_FILE} \
+      ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
+      ${FINK_HOME}/bin/raw2science_elasticc_batch.py -night ${NIGHT} ${HELP_ON_SERVICE}
 elif [[ $service == "distribution" ]]; then
   if [[ $ELASTICC == true ]]; then
     SCRIPT=${FINK_HOME}/bin/distribute_elasticc.py
   else
     SCRIPT=${FINK_HOME}/bin/distribute.py
   fi
-  # Read configuration for redistribution
-  source ${FINK_HOME}/conf/fink.conf.distribution
+
+  if [[ $NOSCIENCE == true ]]; then
+    NOSCIENCE="--noscience"
+  else
+    NOSCIENCE=""
+  fi
+
+  # Check if the conf file exists
+  if [[ -f $conf_distribution ]]; then
+    echo "Reading custom Fink distribution configuration file from " $conf_distribution
+    source $conf_distribution
+  else
+    echo "Reading default Fink distribution conf from " ${FINK_HOME}/conf/fink.conf.distribution
+    source ${FINK_HOME}/conf/fink.conf.distribution
+  fi
   # Start the Spark Producer
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
@@ -290,8 +332,44 @@ elif [[ $service == "distribution" ]]; then
   --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
   --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
+  --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK}\
+  --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK}\
+  --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL}\
+  --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES}\
+  --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF}\
+  --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN} \
   $SCRIPT ${HELP_ON_SERVICE} \
   -producer ${PRODUCER} \
+  -online_data_prefix ${ONLINE_DATA_PREFIX} \
+  -distribution_servers ${DISTRIBUTION_SERVERS} \
+  -distribution_schema ${DISTRIBUTION_SCHEMA} \
+  -kafka_sasl_username ${KAFKA_SASL_USERNAME} \
+  -kafka_sasl_password ${KAFKA_SASL_PASSWORD} \
+  -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} \
+  -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS} \
+  -substream_prefix ${SUBSTREAM_PREFIX} \
+  -tinterval ${FINK_TRIGGER_UPDATE} \
+  -mmconfigpath ${FINK_MM_CONFIG} \
+  -night ${NIGHT} \
+  -log_level ${LOG_LEVEL} ${NOSCIENCE} ${EXIT_AFTER}
+elif [[ $service == "distribution_replayed" ]]; then
+  # Check if the conf file exists
+  if [[ -f $conf_distribution ]]; then
+    echo "Reading custom Fink distribution configuration file from " $conf_distribution
+    source $conf_distribution
+  else
+    echo "Reading default Fink distribution conf from " ${FINK_HOME}/conf/fink.conf.distribution
+    source ${FINK_HOME}/conf/fink.conf.distribution
+  fi
+  # Start the Spark Producer
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  --files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf \
+  --driver-java-options "-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
+  --conf "spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}" \
+  --conf "spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS}"  \
+  ${FINK_HOME}/bin/distribute.py ${HELP_ON_SERVICE} \
   -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -distribution_servers ${DISTRIBUTION_SERVERS} \
   -distribution_schema ${DISTRIBUTION_SCHEMA} \
@@ -308,6 +386,21 @@ elif [[ $service == "merge" ]]; then
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "sanitize" ]]; then
+    spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} \
+    --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+    ${FINK_HOME}/bin/sanitize.py ${HELP_ON_SERVICE} \
+    -agg_data_prefix ${AGG_DATA_PREFIX} \
+    -night ${NIGHT} \
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "cast" ]]; then
+     spark-submit --master ${SPARK_MASTER} \
+     --packages ${FINK_PACKAGES} \
+     --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+     ${FINK_HOME}/bin/cast_df.py ${HELP_ON_SERVICE} \
+     -night ${NIGHT} \
+     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 elif [[ $service == "stats" ]]; then
   spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} \
@@ -402,6 +495,14 @@ elif [[ $service == "al_loop" ]]; then
   --packages ${FINK_PACKAGES} \
   --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/active_learning_loop.py ${HELP_ON_SERVICE} \
+  -agg_data_prefix ${AGG_DATA_PREFIX} \
+  -night ${NIGHT} \
+  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+elif [[ $service == "hostless" ]]; then
+  spark-submit --master ${SPARK_MASTER} \
+  --packages ${FINK_PACKAGES} \
+  --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} ${EXTRA_SPARK_CONFIG} \
+  ${FINK_HOME}/bin/hostless_detection.py ${HELP_ON_SERVICE} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
   -night ${NIGHT} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
