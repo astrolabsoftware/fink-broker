@@ -37,6 +37,9 @@ if [[ $? == 0 ]]; then
     echo "Send Dwarf AGN candidates"
     fink start dwarf_agn -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/dwarf_agn_${NIGHT}.log 2>&1
 
+    echo "Send Known TDE candidates"
+    fink start known_tde -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/known_tde_${NIGHT}.log 2>&1
+
     echo "Update statistics"
     fink start stats -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/stats_${NIGHT}.log 2>&1
 
