@@ -55,11 +55,11 @@ def main():
     # Remove known asteroids
     df = df.filter(df["roid"] != 3)
 
-    args = ["candidate.ra", "candidate.dec"]
+    args_func = ["candidate.ra", "candidate.dec"]
     pdf = (
-        df.withColumn("tde", known_tde(*args))
+        df.withColumn("tde", known_tde(*args_func))
         .filter(F.col("tde") != "Unknown")
-        .select(["objectId", "tde"] + args)
+        .select(["objectId", "tde"] + args_func)
         .toPandas()
     )
 
