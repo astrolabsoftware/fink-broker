@@ -38,8 +38,8 @@ while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1
 do
     echo "Waiting for expected topics: $expected_topics"
     sleep 5
-    kubectl get pods
-    if [ $(kubectl get pods -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
+    kubectl get pods -n spark
+    if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
         echo "ERROR: fink-broker has crashed" 1>&2
         echo "ERROR: enabling interactive access for debugging purpose" 1>&2
@@ -50,6 +50,10 @@ do
     if [ $count -eq 10 ]; then
         echo "ERROR: Timeout waiting for topics to be created" 1>&2
         kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
+        echo "PODS"
+        kubectl get pods -A
+        echo "KAFKA TOPICS"
+        kubectl get kafkatopics -A
         sleep 7200
         exit 1
     fi
