@@ -53,10 +53,10 @@ echo "Delete the cluster $cluster_name if it already exists"
 ktbx delete --name "$cluster_name" || true
 
 echo "Create a Kubernetes cluster (Kind), Install OLM and ArgoCD operators."
-$DIR/e2e/prereq-install.sh
+$DIR/prereq-install.sh
 
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-$DIR/e2e/argocd.sh
+$DIR/argocd.sh
 
 echo "Check the results of the tests."
-$DIR/e2e/check-results.sh
+$DIR/check-results.sh
