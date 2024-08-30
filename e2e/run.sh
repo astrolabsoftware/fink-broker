@@ -48,8 +48,8 @@ mkdir -p ~/.ciux
 
 ciux ignite --selector itest $PWD --suffix "$suffix"
 
-echo "Delete the cluster $cluster_name if it already exists"
 cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD)"
+echo "Delete the cluster $cluster_name if it already exists"
 ktbx delete --name "$cluster_name" || true
 
 echo "Create a Kubernetes cluster (Kind), Install OLM and ArgoCD operators."
