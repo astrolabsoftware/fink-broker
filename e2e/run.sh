@@ -23,11 +23,11 @@ while getopts hs opt; do
       suffix=""
       ;;
     h )
-      echo "Usage: cmd [-s]"
+      usage
       exit 0
       ;;
     \? )
-      echo "Usage: cmd [-s]"
+      usage
       exit 1
       ;;
   esac
@@ -43,7 +43,7 @@ git pull
 ciux_version=v0.0.4-rc6
 go install github.com/k8s-school/ciux@"$ciux_version"
 
-echo "Ignite the project using `ciux`."
+echo "Ignite the project using ciux"
 mkdir -p ~/.ciux
 
 ciux ignite --selector itest $PWD --suffix "$suffix"
