@@ -141,9 +141,6 @@ jobs:
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
-      - name: Wait fink-broker to be up and running
-        run: |
-          ./e2e/wait-fink.sh
       - name: Check results
         run: |
           ./e2e/check-results.sh
