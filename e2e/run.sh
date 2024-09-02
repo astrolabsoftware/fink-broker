@@ -46,6 +46,11 @@ go install github.com/k8s-school/ciux@"$ciux_version"
 echo "Ignite the project using ciux"
 mkdir -p ~/.ciux
 
+
+# Build step
+$DIR/../build.sh -s suffix
+
+# e2e tests step
 ciux ignite --selector itest $PWD --suffix "$suffix"
 
 cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD)"
@@ -54,6 +59,11 @@ ktbx delete --name "$cluster_name" || true
 
 echo "Create a Kubernetes cluster (Kind), Install OLM and ArgoCD operators."
 $DIR/prereq-install.sh
+
+. $CIUXCONFIG
+if [ $CIUX_BUILD = true ]; then
+  kind load docker-image $CIUX_IMAGE_URL --name "$cluster_name"
+fi
 
 echo "Run ArgoCD to install the whole fink e2e tests stack"
 $DIR/argocd.sh
