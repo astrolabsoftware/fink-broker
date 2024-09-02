@@ -48,7 +48,7 @@ mkdir -p ~/.ciux
 
 
 # Build step
-$DIR/../build.sh -s $SUFFIX
+$DIR/../build.sh -s "$SUFFIX"
 
 # e2e tests step
 ciux ignite --selector itest $PWD --suffix "$SUFFIX"
