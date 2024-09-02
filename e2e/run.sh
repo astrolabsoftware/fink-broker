@@ -14,13 +14,13 @@ usage () {
   exit 1
 }
 
-suffix="noscience"
+SUFFIX="noscience"
 
 # Get options for suffix
 while getopts hs opt; do
   case ${opt} in
     s )
-      suffix=""
+      SUFFIX=""
       ;;
     h )
       usage
@@ -33,7 +33,7 @@ while getopts hs opt; do
   esac
 done
 
-export suffix
+export SUFFIX
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 echo "Update source code"
@@ -48,10 +48,10 @@ mkdir -p ~/.ciux
 
 
 # Build step
-$DIR/../build.sh -s suffix
+$DIR/../build.sh -s $SUFFIX
 
 # e2e tests step
-ciux ignite --selector itest $PWD --suffix "$suffix"
+ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 
 cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD)"
 echo "Delete the cluster $cluster_name if it already exists"
