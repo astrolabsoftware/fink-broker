@@ -47,6 +47,7 @@ def init_logger(log_level: str = "INFO") -> logging.Logger:
     # Format of the log message to be printed
     FORMAT = "%(asctime)-15s "
     FORMAT += "%(levelname)s "
+    FORMAT += "%(name)s "
     FORMAT += "%(funcName)s "
     FORMAT += "(%(filename)s "
     FORMAT += "line %(lineno)d): "

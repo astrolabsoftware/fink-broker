@@ -14,21 +14,83 @@
 # limitations under the License.
 """Utilities for multi-messenger activities"""
 
+import argparse
+import configparser
+import logging
+import os
+import time
+
 from fink_mm.ztf_join_gcn import ztf_join_gcn_stream, DataMode
 from fink_mm.distribution.distribution import grb_distribution_stream
 
 from astropy.time import Time
 from datetime import timedelta
 
-from fink_broker.spark_utils import connect_to_raw_database
+from fink_broker.spark_utils import connect_to_raw_database, path_exist
 from fink_broker.logging_utils import init_logger
 
 from pyspark.sql.streaming import StreamingQuery
 
-import argparse
-import configparser
-import os
-import time
+_LOG = logging.getLogger(__name__)
+
+def launch_fink_mm(args: dict, scitmpdatapath: str):
+    """Manage multimessenger operations
+
+    Parameters
+    ----------
+    args: dict
+        Arguments from Fink configuration file
+    scitmpdatapath: str
+        Path to Fink alert data (science)
+
+    Returns
+    -------
+    time_spent_in_wait: int
+        Time spent in waiting for GCN to come
+        before launching the streaming query.
+    countquery_mm: StreamingQuery
+        Spark Streaming query
+
+    """
+    if args.noscience:
+        _LOG.info("No science: fink-mm is not applied")
+        return 0, None
+    elif args.mmconfigpath != "no-config":
+        from fink_mm.init import get_config
+        from fink_broker.mm_utils import science2mm
+
+        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        config = get_config({"--config": args.mmconfigpath})
+        gcndatapath = config["PATH"]["online_gcn_data_prefix"]
+        gcn_path = gcndatapath + "/year={}/month={}/day={}".format(
+            args.night[0:4], args.night[4:6], args.night[6:8]
+        )
+
+        # Wait for GCN comming
+        time_spent_in_wait = 0
+        countquery_mm = None
+        while time_spent_in_wait < args.exit_after:
+            # if there is gcn and ztf data
+            if path_exist(gcn_path) and path_exist(scitmpdatapath):
+                # Start the GCN x ZTF cross-match stream
+                t_before = time.time()
+                _LOG.info("starting science2mm ...")
+                countquery_mm = science2mm(args, config, gcn_path, scitmpdatapath)
+                time_spent_in_wait += time.time() - t_before
+                break
+            else:
+                # wait for comming GCN
+                time_spent_in_wait += 1
+                time.sleep(1)
+
+        if countquery_mm is None:
+            _LOG.warning("science2mm could not start before the end of the job.")
+        else:
+            _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+        return time_spent_in_wait, countquery_mm
+
+    _LOG.warning("No configuration found for fink-mm -- not applied")
+    return 0, None
 
 
 def science2mm(
