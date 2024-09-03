@@ -52,10 +52,7 @@ def launch_fink_mm(args: dict, scitmpdatapath: str):
         Spark Streaming query
 
     """
-    if args.noscience:
-        _LOG.info("No science: fink-mm is not applied")
-        return 0, None
-    elif args.mmconfigpath != "no-config":
+    if args.mmconfigpath != "no-config":
         from fink_mm.init import get_config
         from fink_broker.mm_utils import science2mm
 

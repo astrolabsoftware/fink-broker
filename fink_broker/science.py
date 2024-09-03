@@ -176,7 +176,7 @@ def fake_t2(incol):
     return pd.Series([out] * len(incol))
 
 
-def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
+def apply_science_modules(df: DataFrame) -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
     Focus on ZTF stream
@@ -205,8 +205,6 @@ def apply_science_modules(df: DataFrame, noscience: bool = False) -> DataFrame:
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
     """
-    if noscience:
-        return df
 
     # Retrieve time-series information
     to_expand = [

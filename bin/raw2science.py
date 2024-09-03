@@ -37,8 +37,6 @@ from fink_broker.spark_utils import connect_to_raw_database
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 from fink_broker.spark_utils import path_exist
 
-from fink_broker.mm_utils import launch_fink_mm
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -130,8 +128,12 @@ def main():
             .start()
         )
 
-        logger.debug("Perform multi-messenger operations")
-        time_spent_in_wait, countquery_mm = launch_fink_mm(args, scitmpdatapath)
+        if args.noscience:
+            logger.info("Do not perform multi-messenger operations")
+        else:
+            logger.debug("Perform multi-messenger operations")
+            from fink_broker.mm_utils import launch_fink_mm
+            time_spent_in_wait, countquery_mm = launch_fink_mm(args, scitmpdatapath)
 
 
         if args.exit_after is not None:
