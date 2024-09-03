@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Run the xmatch with Dwarf AGN, and push data to Slack"""
+"""Run the xmatch with known TDE, and push data to Slack"""
 
 import argparse
 
@@ -28,7 +28,7 @@ from fink_filters.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
 
-from fink_filters.filter_dwarf_agn.filter import crossmatch_dwarf_agn
+from fink_filters.filter_known_tde.filter import known_tde
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="dwarf_AGN{}".format(args.night), shuffle_partitions=2
+        name="known_tde_{}".format(args.night), shuffle_partitions=2
     )
 
     # The level here should be controlled by an argument.
@@ -55,11 +55,11 @@ def main():
     # Remove known asteroids
     df = df.filter(df["roid"] != 3)
 
-    args_func = ["candidate.candid", "candidate.ra", "candidate.dec"]
+    args_func = ["candidate.ra", "candidate.dec"]
     pdf = (
-        df.withColumn("manga", crossmatch_dwarf_agn(*args_func))
-        .filter(F.col("manga") != "Unknown")
-        .select(["objectId", "manga"] + args_func)
+        df.withColumn("tde", known_tde(*args_func))
+        .filter(F.col("tde") != "Unknown")
+        .select(["objectId", "tde"] + args_func)
         .toPandas()
     )
 
@@ -68,7 +68,7 @@ def main():
 
         slack_data = []
         for _, row in pdf.iterrows():
-            t1 = f"{row.manga}: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+            t1 = f"{row.tde}: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
 
             # if you need lightcurve, etc.
             cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
@@ -80,9 +80,11 @@ def main():
             curve_perml = f"<{curve_perml}|{' '}>"
             slack_data.append(f"""{t1}\n{cutout_perml}{curve_perml}""")
 
-        msg_handler_slack(slack_data, "bot_manga", init_msg)
+        msg_handler_slack(slack_data, "bot_known_tde_follow_up", init_msg)
     else:
-        msg_handler_slack([], "bot_manga", "{}: no associations".format(args.night))
+        msg_handler_slack(
+            [], "bot_known_tde_follow_up", "{}: no associations".format(args.night)
+        )
 
 
 if __name__ == "__main__":
