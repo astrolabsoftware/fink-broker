@@ -40,8 +40,6 @@ from fink_broker.spark_utils import path_exist
 from fink_broker.science import apply_science_modules
 from fink_broker.science import apply_science_modules_elasticc
 
-from fink_science import __version__ as fsvsn
-
 _LOG = logging.getLogger(__name__)
 
 
@@ -148,6 +146,12 @@ def main():
         )
 
     # Add library versions
+    if args.noscience:
+        fsvn = "no-science"
+    else:
+        # Do not import fink_science if --noscience is set
+        from fink_science import __version__ as fsvsn
+
     df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
         "fink_science_version", F.lit(fsvsn)
     )
