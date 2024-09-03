@@ -37,8 +37,6 @@ from fink_broker.spark_utils import connect_to_raw_database
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 from fink_broker.spark_utils import path_exist
 
-from fink_broker.science import apply_science_modules
-from fink_broker.science import apply_science_modules_elasticc
 from fink_broker.mm_utils import launch_fink_mm
 
 def main():
@@ -92,6 +90,7 @@ def main():
         # Do not import fink_science if --noscience is set
         from fink_science import __version__ as fsvsn
 
+
     df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
         "fink_science_version", F.lit(fsvsn)
     )
@@ -101,15 +100,19 @@ def main():
 
     logger.debug("Prepare and analyse the data")
     if "candidate" in df.columns:
-        logger.debug("Apply quality cuts")
-        _LOG.info("Applying quality cuts")
+        logger.info("Apply quality cuts")
         df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
         logger.debug("Discard an alert if it is in i band")
         df = df.filter(df["candidate.fid"] != 3)
 
-        _LOG.info("Apply science modules")
-        df = apply_science_modules(df, args.noscience)
+        if args.noscience:
+            logger.info("Do not apply science modules")
+        else:
+            # Do not import fink_science if --noscience is set
+            from fink_science import apply_science_modules
+            logger.info("Apply science modules")
+            df = apply_science_modules(df)
 
         logger.debug("Add ingestion timestamp")
         df = df.withColumn(
@@ -145,7 +148,13 @@ def main():
             spark.streams.awaitAnyTermination()
 
     elif "diaSource" in df.columns:
-        df = apply_science_modules_elasticc(df)
+        if args.noscience:
+            logger.fatal("Elasticc data cannot be processed without science modules")
+        else:
+            from fink_science import apply_science_modules_elasticc
+            logger.info("Apply elasticc science modules")
+            df = apply_science_modules_elasticc(df)
+
         timecol = "diaSource.midPointTai"
         converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
 
