@@ -66,6 +66,8 @@ def init_logger(log_level: str = "INFO") -> logging.Logger:
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
 
+    logging.getLogger('py4j').setLevel(logging.INFO)
+
     return logger
 
 
