@@ -29,13 +29,6 @@ from fink_utils.spark.utils import concat_col
 
 from fink_broker.tester import spark_unit_tests
 
-
-# ---------------------------------
-# Local non-exported definitions --
-# ---------------------------------
-_LOG = logging.getLogger(__name__)
-
-
 # Import of science modules
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import xmatch_cds
@@ -58,6 +51,11 @@ from fink_science.slsn.processor import slsn_elasticc
 from fink_science.fast_transient_rate.processor import magnitude_rate
 from fink_science.fast_transient_rate import rate_module_output_schema
 # from fink_science.t2.processor import t2
+
+# ---------------------------------
+# Local non-exported definitions --
+# ---------------------------------
+_LOG = logging.getLogger(__name__)
 
 def dec2theta(dec: float) -> float:
     """Convert Dec (deg) to theta (rad)"""
@@ -205,7 +203,6 @@ def apply_science_modules(df: DataFrame) -> DataFrame:
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
     """
-
     # Retrieve time-series information
     to_expand = [
         "jd",

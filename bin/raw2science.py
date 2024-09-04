@@ -35,7 +35,6 @@ from fink_broker.parser import getargs
 from fink_broker.spark_utils import init_sparksession
 from fink_broker.spark_utils import connect_to_raw_database
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
-from fink_broker.spark_utils import path_exist
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
