@@ -106,6 +106,7 @@ def main():
         frac=args.frac,
         model=args.model,
         version=version,
+        sb_method="auto"  # TODO: nifty crashes on the cluster
     )
 
     pdf.to_parquet("ssoft_{}_{}.parquet".format(args.model, version))
