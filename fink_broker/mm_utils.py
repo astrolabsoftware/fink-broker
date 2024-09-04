@@ -19,6 +19,7 @@ import configparser
 import logging
 import os
 import time
+from typing import Tuple, List
 
 from fink_mm.ztf_join_gcn import ztf_join_gcn_stream, DataMode
 from fink_mm.distribution.distribution import grb_distribution_stream
@@ -33,7 +34,62 @@ from pyspark.sql.streaming import StreamingQuery
 
 _LOG = logging.getLogger(__name__)
 
-def launch_fink_mm(args: dict, scitmpdatapath: str):
+
+def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
+    """Manage multimessenger operations
+
+    Parameters
+    ----------
+    spark: SparkSession
+        Spark Session
+    args: dict
+        Arguments from Fink configuration file
+
+    Returns
+    -------
+    time_spent_in_wait: int
+        Time spent in waiting for GCN to come
+        before launching the streaming query.
+    stream_distrib_list: list of StreamingQuery
+        List of Spark Streaming queries
+
+    """
+    if args.mmconfigpath != "no-config":
+        from fink_mm.init import get_config
+        from fink_broker.mm_utils import mm2distribute
+
+        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        config = get_config({"--config": args.mmconfigpath})
+
+        # Wait for GCN comming
+        time_spent_in_wait = 0
+        stream_distrib_list = []
+        while time_spent_in_wait < args.exit_after:
+            mm_path_output = config["PATH"]["online_grb_data_prefix"]
+            mmtmpdatapath = os.path.join(mm_path_output, "online")
+
+            # if there is gcn and ztf data
+            if path_exist(mmtmpdatapath):
+                t_before = time.time()
+                _LOG.info("starting mm2distribute ...")
+                stream_distrib_list = mm2distribute(spark, config, args)
+                time_spent_in_wait += time.time() - t_before
+                break
+
+            time_spent_in_wait += 1
+            time.sleep(1.0)
+        if stream_distrib_list == []:
+            _LOG.warning(
+                f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job."
+            )
+        else:
+            _LOG.info("Time spent in waiting for Fink-MM: {time_spent_in_wait} seconds")
+        return time_spent_in_wait, stream_distrib_list
+
+    _LOG.warning("No configuration found for fink-mm -- not applied")
+    return 0, []
+
+def raw2science_launch_fink_mm(args: dict, scitmpdatapath: str) -> Tuple[int, StreamingQuery]:
     """Manage multimessenger operations
 
     Parameters

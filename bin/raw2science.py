@@ -132,8 +132,8 @@ def main():
             time_spent_in_wait, countquery_mm = 0, None
         else:
             logger.debug("Perform multi-messenger operations")
-            from fink_broker.mm_utils import launch_fink_mm
-            time_spent_in_wait, countquery_mm = launch_fink_mm(args, scitmpdatapath)
+            from fink_broker.mm_utils import raw2science_launch_fink_mm
+            time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(args, scitmpdatapath)
 
 
         if args.exit_after is not None:
