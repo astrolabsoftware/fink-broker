@@ -6,8 +6,10 @@
 
 set -euxo pipefail
 
+DIR=$(cd "$(dirname "$0")"; pwd -P)
+
 kind_version_opt=""
-cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD | tr '[:upper:]' '[:lower:]')"
+cluster_name=$(ciux get clustername $DIR/..)
 
 # Get kind version from option -k
 while getopts k: flag
