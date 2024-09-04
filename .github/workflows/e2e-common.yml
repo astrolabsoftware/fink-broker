@@ -24,7 +24,7 @@ on:
       private_registry_token:
         required: true
 env:
-  CIUX_VERSION: v0.0.4-rc2
+  CIUX_VERSION: v0.0.4-rc6
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
@@ -115,26 +115,13 @@ jobs:
       - name: Ciux project ignition
         run: |
           mkdir -p $HOME/.ciux
-          ciux ignite --selector ci --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
-      - name: Create k8s (kind) cluster
+          ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
+      - name: Boostrap k8s (kind) cluster
         run: |
-          # v0.20.0 does not work on self-hosted runners
-          ktbx install kind --kind-version=${{ inputs.kind_version }}
-          ktbx install kubectl
-          ktbx install helm
           # Configure private registry if needed
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
-          ktbx create -s
-      - name: Install olm and argocd operators
-        run: |
-          ktbx install olm
-          ktbx install argocd
-      - name: Install argo-workflows (fink-alert-simulator pre-requisite)
-        run: |
-          ktbx install argowf
-      - name: Run argoCD
-        run: |
-          ./e2e/argocd.sh
+          # v0.20.0 does not work on self-hosted runners
+          ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}"
       - name: Download image
         uses: actions/download-artifact@v3
         with:
@@ -142,23 +129,21 @@ jobs:
           path: artifacts
       - name: Load container image inside kind
         run: |
-          . "$HOME/.ciux/ciux.sh"
           if [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
-            kind load image-archive artifacts/image.tar
-            docker exec -- kind-control-plane crictl image
+            cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD)"
+            kind load image-archive artifacts/image.tar --name "$cluster_name"
+            node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+            docker exec -- $node crictl image
           else
-            echo "Using existing image: $CIUX_IMAGE_URL"
+            echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
           fi
-      - name: Run fink-alert-simulator
+      - name: Run argoCD
         run: |
-          export CIUXCONFIG="$HOME/.ciux/ciux.sh"
-          . "$CIUXCONFIG"
-          "$FINK_ALERT_SIMULATOR_DIR"/argo-submit.sh
-          argo watch -n argo @latest
-      - name: Run fink-broker
+          ./e2e/argocd.sh
+      - name: Wait fink-broker to be up and running
         run: |
-          ./e2e/fink-start.sh
+          ./e2e/wait-fink.sh
       - name: Check results
         run: |
           ./e2e/check-results.sh
@@ -166,7 +151,7 @@ jobs:
         id: promote
         run: |
           . "$HOME/.ciux/ciux.sh"
-          echo "PROMOTED_IMAGE=$CIUX_IMAGE_REGISTRY/$CIUX_IMAGE_NAME:$CIUX_IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image

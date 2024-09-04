@@ -31,6 +31,7 @@ function retry {
 }
 
 NS=argocd
+e2e_enabled="true"
 
 argocd login --core
 kubectl config set-context --current --namespace="$NS"
@@ -40,25 +41,12 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    -p finkbroker.revision="$FINK_BROKER_WORKBRANCH"
-
+    -p spec.source.targetRevision.default="$FINK_CD_WORKBRANCH" \
+    -p spec.source.targetRevision.finkbroker="$FINK_BROKER_WORKBRANCH" \
+    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH"
 
 # Sync fink app-of-apps
 argocd app sync fink
-
-# Synk operators dependency for fink
-argocd app sync strimzi minio-operator spark-operator
-
-# TODO Try to make it simpler, try a sync-wave on Strimzi Application?
-# see https://github.com/argoproj/argo-cd/discussions/16729
-# and https://stackoverflow.com/questions/77750481/argocd-app-of-apps-ensuring-strimzi-child-app-health-before-kafka-app-sync
-retry kubectl wait --for condition=established --timeout=60s crd/kafkas.kafka.strimzi.io \
-  crd/kafkatopics.kafka.strimzi.io \
-  crd/tenants.minio.min.io \
-  crd/sparkapplications.sparkoperator.k8s.io \
-  crd/workflows.argoproj.io
-
-# TODO Wait for all applications to be synced (problem with spark-operator secret)
 
 # Set fink-broker parameters
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
@@ -70,29 +58,26 @@ else
 fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
-    -p image.name="$CIUX_IMAGE_NAME" \
+    -p e2e.enabled="$e2e_enabled" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
     -p night="20200101"
-# TODO pass parameters using a valuefile here, and not in 'argocd app create fink'
-# see https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app_set/
 
+argocd app set fink-alert-simulator -p image.tag="$FINK_ALERT_SIMULATOR_VERSION"
+
+# Synk operators dependency for fink
+argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
+argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
+
+# Synk storage dependency for fink
+argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+
+# Sync fink-broker
 argocd app sync -l app.kubernetes.io/instance=fink
 
-kafka_topic="ztf-stream-sim"
-echo "Wait for kafkatopic $kafka_topic to exist"
-retry kubectl wait --for condition=ready kafkatopics -n kafka  "$kafka_topic"
-
-# Check if kafka namespace exists,
-# if yes, it means that the e2e tests are running
-if kubectl get namespace kafka; then
+if [ $e2e_enabled == "true" ]; then
   echo "Retrieve kafka secrets for e2e tests"
-  if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
-  then
-    FINKCONFIG="$DIR/finkconfig_noscience"
-  else
-    FINKCONFIG="$DIR/finkconfig"
-  fi
   while ! kubectl get secret fink-producer --namespace kafka
   do
     echo "Waiting for secret/fink-producer in ns kafka"
@@ -100,4 +85,7 @@ if kubectl get namespace kafka; then
   done
   kubectl config set-context --current --namespace="spark"
   finkctl createsecrets
+  kubectl config set-context --current --namespace="argocd"
 fi
+
+argocd app wait -l app.kubernetes.io/instance=fink
