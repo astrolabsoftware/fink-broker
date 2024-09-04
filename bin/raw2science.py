@@ -130,6 +130,7 @@ def main():
 
         if args.noscience:
             logger.info("Do not perform multi-messenger operations")
+            time_spent_in_wait, countquery_mm = 0, None
         else:
             logger.debug("Perform multi-messenger operations")
             from fink_broker.mm_utils import launch_fink_mm
