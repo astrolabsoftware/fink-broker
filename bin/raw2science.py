@@ -107,7 +107,7 @@ def main():
             logger.info("Do not apply science modules")
         else:
             # Do not import fink_science if --noscience is set
-            from fink_science import apply_science_modules
+            from fink_broker.science import apply_science_modules
             logger.info("Apply science modules")
             df = apply_science_modules(df)
 
@@ -153,7 +153,7 @@ def main():
         if args.noscience:
             logger.fatal("Elasticc data cannot be processed without science modules")
         else:
-            from fink_science import apply_science_modules_elasticc
+            from fink_broker.science import apply_science_modules_elasticc
             logger.info("Apply elasticc science modules")
             df = apply_science_modules_elasticc(df)
 
