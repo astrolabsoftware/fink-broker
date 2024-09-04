@@ -83,7 +83,7 @@ def main():
 
     # Add library versions
     if args.noscience:
-        fsvn = "no-science"
+        fsvsn = "no-science"
     else:
         # Do not import fink_science if --noscience is set
         from fink_science import __version__ as fsvsn
