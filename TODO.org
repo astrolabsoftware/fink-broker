@@ -1,5 +1,5 @@
-* TODO use gitlab@virtualdata as a CI repo
-* TODO check fink-alert-simulator error message in CI:
+* DONE use gitlab@virtualdata as a CI repo
+* DONE check fink-alert-simulator error message in CI:
  ⚠ fink-alert-simulator-cjxv2  main      fink-alert-simulator-cjxv2  5m        Error (exit code 1): pods "fink-alert-simulator-cjxv2" is forbidden: User "system:serviceaccount:argocd:default" cannot patch resource "pods" in API group "" in the namespace "argocd"
 * DONE trigger ci for OOMkill
 * 729
@@ -40,7 +40,7 @@ hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
 which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
 cf. Julien are they required?
 2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
-* TODO document minio install and bucket creation:
+* DONE document minio install and bucket creation:
     5  curl https://dl.min.io/client/mc/release/linux-amd64/mc  --create-dirs -o $HOME/minio-binaries/mc
     6  chmod +x $HOME/minio-binaries/mc
    15  export PATH=$PATH:$HOME/minio-binaries/
