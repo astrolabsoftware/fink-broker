@@ -131,6 +131,7 @@ jobs:
         run: |
           if [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
+            USER=${USER:-fink-ci}
             cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD)"
             kind load image-archive artifacts/image.tar --name "$cluster_name"
             node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')

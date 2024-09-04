@@ -7,6 +7,9 @@
 set -euxo pipefail
 
 kind_version_opt=""
+
+# TODO manage cluster name inside ktbx
+USER=${USER:-fink-ci}
 cluster_name="$USER-$(git rev-parse --abbrev-ref HEAD | tr '[:upper:]' '[:lower:]')"
 
 # Get kind version from option -k
