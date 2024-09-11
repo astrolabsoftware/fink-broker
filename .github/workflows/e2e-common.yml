@@ -73,7 +73,7 @@ jobs:
             touch artifacts/empty
           fi
           echo "IMAGE=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -119,7 +119,7 @@ jobs:
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}"
       - name: Download image
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -160,7 +160,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Download image
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -195,7 +195,7 @@ jobs:
     needs: [build, integration-tests]
     steps:
       - name: Download image
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
