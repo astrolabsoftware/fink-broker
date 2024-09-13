@@ -30,7 +30,7 @@ if [ "$SUFFIX" = "noscience" ];
 then
   expected_topics="12"
 else
-  expected_topics="1"
+  expected_topics="8"
 fi
 
 count=0

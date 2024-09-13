@@ -33,6 +33,7 @@ RUN xargs -n 1 curl --fail --output-dir /opt/spark/jars -O < $FINK_HOME/jars-url
 # Main process will run as spark_uid
 ENV HOME /home/fink
 RUN mkdir $HOME && chown ${spark_uid} $HOME
+
 USER ${spark_uid}
 
 WORKDIR $HOME
@@ -56,7 +57,7 @@ ENV PIP_NO_CACHE_DIR 1
 ADD deps/requirements.txt $FINK_HOME/deps
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && pip install -r $FINK_HOME/deps/requirements.txt
 
-RUN git clone -c advice.detachedHead=false --depth 1 -b "latest" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
+RUN git clone -c advice.detachedHead=false --depth 1 -b "v0.0.1" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
 
 # TODO add a development image which include tools below
 # doctest requirements
