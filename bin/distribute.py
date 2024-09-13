@@ -149,12 +149,11 @@ def main():
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
-
         if args.noscience:
-            logger.debug("Do not apply user-defined filter in no-science mode")
+            logger.debug("Do not apply user-defined filter %s in no-science mode", userfilter)
             df_tmp = df
         else:
-            logger.debug("Apply user-defined filter")
+            logger.debug("Apply user-defined filter %s", userfilter)
             df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
         logger.debug("Wrap alert data")
@@ -164,10 +163,10 @@ def main():
         # avoid non-nullable bug #852
         schema = schema_converter.to_avro(df_tmp.schema)
 
-        logger.debug("Get the DataFrame for publishing to Kafka (avro serialized)")
+        logger.debug("Get the DataFrame for publishing to Kafka (avro serialized): %s", df_tmp)
         df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
 
-        logger.debug("Ensure that the topic(s) exist on the Kafka Server")
+        logger.debug("Ensure that the topic '%s' exist on the Kafka Server", topicname)
         disquery = (
             df_kafka.writeStream.format("kafka")
             .option("kafka.bootstrap.servers", broker_list)

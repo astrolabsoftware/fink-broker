@@ -48,9 +48,6 @@ e2e=false
 push=false
 
 {
-echo "Update source code"
-cd $DIR/..
-git pull
 
 ciux_version=v0.0.4-rc8
 go install github.com/k8s-school/ciux@"$ciux_version"
