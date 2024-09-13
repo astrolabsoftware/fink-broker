@@ -89,7 +89,10 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
     _LOG.warning("No configuration found for fink-mm -- not applied")
     return 0, []
 
-def raw2science_launch_fink_mm(args: dict, scitmpdatapath: str) -> Tuple[int, StreamingQuery]:
+
+def raw2science_launch_fink_mm(
+    args: dict, scitmpdatapath: str
+) -> Tuple[int, StreamingQuery]:
     """Manage multimessenger operations
 
     Parameters

@@ -57,6 +57,7 @@ from fink_science.fast_transient_rate import rate_module_output_schema
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
 
+
 def dec2theta(dec: float) -> float:
     """Convert Dec (deg) to theta (rad)"""
     return np.pi / 2.0 - np.pi / 180.0 * dec
@@ -65,6 +66,7 @@ def dec2theta(dec: float) -> float:
 def ra2phi(ra: float) -> float:
     """Convert RA (deg) to phi (rad)"""
     return np.pi / 180.0 * ra
+
 
 @pandas_udf(LongType(), PandasUDFType.SCALAR)
 def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:

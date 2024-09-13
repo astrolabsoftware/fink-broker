@@ -67,7 +67,7 @@ def init_logger(log_level: str = "INFO") -> logging.Logger:
     logger.addHandler(streamHandler)
 
     # TODO use a configuration file in a configmap to set the log level of the py4j logger
-    logging.getLogger('py4j').setLevel(logging.INFO)
+    logging.getLogger("py4j").setLevel(logging.INFO)
 
     return logger
 

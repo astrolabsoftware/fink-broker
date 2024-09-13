@@ -32,6 +32,7 @@ from fink_broker.tester import spark_unit_tests
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
 
+
 def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
     """Decode the Avro data contained in a DataFrame column into a struct.
 
