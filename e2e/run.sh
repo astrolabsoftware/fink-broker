@@ -17,6 +17,15 @@ usage () {
 
 SUFFIX="noscience"
 
+ciux_version=v0.0.4-rc8
+export CIUXCONFIG=$HOME/.ciux/ciux.sh
+
+src_dir=$DIR/..
+cleanup=false
+build=false
+e2e=false
+push=false
+
 token="${TOKEN:-}"
 
 # Get options for suffix
@@ -40,29 +49,50 @@ while getopts hcs opt; do
 done
 
 export SUFFIX
-export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
-cleanup=false
-build=false
-e2e=false
-push=false
-
+function dispatch()
 {
+    url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
 
-ciux_version=v0.0.4-rc8
+    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
+    echo "Payload: $payload"
+
+    if [ -z "$token" ]; then
+      echo "No token provided, skipping GitHub dispatch"
+    else
+      echo "Dispatching event to GitHub"
+      curl -L \
+      -X POST \
+      -H "Accept: application/vnd.github+json" \
+      -H "Authorization: Bearer $token" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      $url \
+      -d "{\"event_type\":\"e2e-science\",\"client_payload\":$payload}" || echo "ERROR Failed to dispatch event" >&2
+    fi
+
+    if [ $cleanup = true -a $e2e = true ]; then
+      echo "Delete the cluster $cluster"
+      ktbx delete --name "$cluster"
+    else
+      echo "Cluster $cluster kept for debugging"
+    fi
+}
+
+trap dispatch EXIT
+
 go install github.com/k8s-school/ciux@"$ciux_version"
 
 echo "Ignite the project using ciux"
 mkdir -p ~/.ciux
 
 # Build step
-$DIR/../build.sh -s "$SUFFIX"
+$src_dir/build.sh -s "$SUFFIX"
 build=true
 
 # e2e tests step
-ciux ignite --selector itest $PWD --suffix "$SUFFIX"
+ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 
-cluster=$(ciux get clustername $DIR/..)
+cluster=$(ciux get clustername "$src_dir")
 echo "Delete the cluster $cluster if it already exists"
 ktbx delete --name "$cluster" || true
 
@@ -82,34 +112,6 @@ $DIR/check-results.sh
 e2e=true
 
 echo "Push the image to Container Registry"
-$DIR/../push-image.sh
+$src_dir/push-image.sh
 push=true
-}
-
-url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
-
-payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
-echo "Payload: $payload"
-
-if [ -z "$token" ]; then
-  echo "No token provided, skipping GitHub dispatch"
-else
-  echo "Dispatching event to GitHub"
-  curl -L \
-  -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $token" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  $url \
-  -d "{\"event_type\":\"e2e-science\",\"client_payload\":$payload}" || echo "ERROR Failed to dispatch event" >&2
-fi
-
-if [ $cleanup = true -a $e2e = true ]; then
-  echo "Delete the cluster $cluster"
-  ktbx delete --name "$cluster"
-else
-  echo "Cluster $cluster kept for debugging"
-fi
-
-
 

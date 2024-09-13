@@ -25,14 +25,12 @@
 import argparse
 import logging
 import time
-import os
 
 from fink_utils.spark import schema_converter
 from fink_broker.parser import getargs
 from fink_broker.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
-    path_exist,
 )
 from fink_broker.distribution_utils import get_kafka_df
 from fink_broker.logging_utils import init_logger
@@ -150,7 +148,9 @@ def main():
         topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
         if args.noscience:
-            logger.debug("Do not apply user-defined filter %s in no-science mode", userfilter)
+            logger.debug(
+                "Do not apply user-defined filter %s in no-science mode", userfilter
+            )
             df_tmp = df
         else:
             logger.debug("Apply user-defined filter %s", userfilter)
@@ -163,7 +163,9 @@ def main():
         # avoid non-nullable bug #852
         schema = schema_converter.to_avro(df_tmp.schema)
 
-        logger.debug("Get the DataFrame for publishing to Kafka (avro serialized): %s", df_tmp)
+        logger.debug(
+            "Get the DataFrame for publishing to Kafka (avro serialized): %s", df_tmp
+        )
         df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
 
         logger.debug("Ensure that the topic '%s' exist on the Kafka Server", topicname)
@@ -189,6 +191,7 @@ def main():
     else:
         logger.debug("Perform multi-messenger operations")
         from fink_broker.mm_utils import distribute_launch_fink_mm
+
         time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 
     if args.exit_after is not None:

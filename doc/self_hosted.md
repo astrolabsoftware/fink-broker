@@ -5,8 +5,9 @@ Here's a documented procedure for creating a Linux user account on Ubuntu, addin
 ## Pre-requisites
 
 - a Linux server with sudo access
-- Docker
-- git
+- Docker 24.0.2+
+- git 2.17.1+
+- go 1.22.5+
 - A Github token with the "Content" permission on the `fink-broker` Github repository.
 
 ## Steps
@@ -26,28 +27,27 @@ sudo su - fink-ci
 echo "your_github_token" > /home/fink-ci/.token
 chmod 600 /home/fink-ci/.token
 
-cat <<EOF >> /home/fink-ci/fink-ci.sh
+cat <<EOF > /home/fink-ci/fink-ci.sh
 #!/bin/bash
 
 set -euxo pipefail
 
 # Load GitHub token
-TOKEN=$(cat /home/fink-ci/.token)
+export TOKEN=$(cat /home/fink-ci/.token)
+export USER="fink-ci"
+repo_url="https://github.com/astrolabsoftware/fink-broker.git"
+tmpdir=\$(mktemp -d --suffix -fink-broker-ci)
+repo=\$tmpdir/fink-broker
+branchname="877-automated-e2e-tests"
 
-REPO_URL="https://github.com/astrolabsoftware/fink-broker.git"
+# Set go path according to go install method
+PATH=\$HOME/go/bin:/usr/local/go/bin:/usr/local/bin:\$PATH
 
-REPO=/home/fink-ci/fink-broker
-
-# Clone the repository or pull the latest changes
-if [ ! -d "\$REPO" ]; then
-    git clone \$REPO_URL \$REPO
-else
-    cd \$REPO
-    git -C \$REPO pull
-fi
+# Clone the repository
+git clone --single-branch \$repo_url \$repo --branch \$branchname
 
 # Run fink ci in science mode
-\$REPO/e2e/run.sh -s
+\$repo/e2e/run.sh -s -c
 EOF
 
 # Make the script executable

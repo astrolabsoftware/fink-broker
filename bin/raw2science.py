@@ -36,6 +36,7 @@ from fink_broker.spark_utils import init_sparksession
 from fink_broker.spark_utils import connect_to_raw_database
 from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -87,7 +88,6 @@ def main():
         # Do not import fink_science if --noscience is set
         from fink_science import __version__ as fsvsn
 
-
     df = df.withColumn("fink_broker_version", F.lit(fbvsn)).withColumn(
         "fink_science_version", F.lit(fsvsn)
     )
@@ -108,6 +108,7 @@ def main():
         else:
             # Do not import fink_science if --noscience is set
             from fink_broker.science import apply_science_modules
+
             logger.info("Apply science modules")
             df = apply_science_modules(df)
 
@@ -133,11 +134,15 @@ def main():
         else:
             logger.debug("Perform multi-messenger operations")
             from fink_broker.mm_utils import raw2science_launch_fink_mm
-            time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(args, scitmpdatapath)
 
+            time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
+                args, scitmpdatapath
+            )
 
         if args.exit_after is not None:
-            logger.debug("Keep the Streaming running until something or someone ends it!")
+            logger.debug(
+                "Keep the Streaming running until something or someone ends it!"
+            )
             # If GCN arrived, wait for the remaining time since the launch of raw2science
             remaining_time = args.exit_after - time_spent_in_wait
             remaining_time = remaining_time if remaining_time > 0 else 0
@@ -154,6 +159,7 @@ def main():
             logger.fatal("Elasticc data cannot be processed without science modules")
         else:
             from fink_broker.science import apply_science_modules_elasticc
+
             logger.info("Apply elasticc science modules")
             df = apply_science_modules_elasticc(df)
 
@@ -185,7 +191,9 @@ def main():
         )
 
         if args.exit_after is not None:
-            logger.debug("Keep the Streaming running until something or someone ends it!")
+            logger.debug(
+                "Keep the Streaming running until something or someone ends it!"
+            )
             time.sleep(args.exit_after)
             countquery.stop()
         else:
