@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+import logging
 from typing import Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -25,6 +26,11 @@ import json
 
 from fink_broker.avro_utils import readschemafromavrofile
 from fink_broker.tester import spark_unit_tests
+
+# ---------------------------------
+# Local non-exported definitions --
+# ---------------------------------
+_LOG = logging.getLogger(__name__)
 
 
 def from_avro(dfcol: Column, jsonformatschema: str) -> Column:
@@ -324,7 +330,7 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
 
     wait_sec = 5
     while not path_exist(basepath):
-        print("Waiting for data to arrive in {}".format(basepath))
+        _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
         time.sleep(wait_sec)
         # Sleep for longer and longer
         wait_sec = increase_wait_time(wait_sec)
