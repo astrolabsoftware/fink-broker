@@ -52,6 +52,15 @@ export SUFFIX
 
 function dispatch()
 {
+
+    if [ $SUFFIX = "" ]; then
+      echo "Running e2e tests with science algorithms"
+      event_type="e2e-science"
+    else
+      echo "Running e2e tests without science algorithms"
+      event_type="e2e-noscience"
+    fi
+
     url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
 
     payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
@@ -67,7 +76,7 @@ function dispatch()
       -H "Authorization: Bearer $token" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
       $url \
-      -d "{\"event_type\":\"e2e-science\",\"client_payload\":$payload}" || echo "ERROR Failed to dispatch event" >&2
+      -d "{\"event_type\":\"$event_type\",\"client_payload\":$payload}" || echo "ERROR Failed to dispatch event" >&2
     fi
 
     if [ $cleanup = true -a $e2e = true ]; then
