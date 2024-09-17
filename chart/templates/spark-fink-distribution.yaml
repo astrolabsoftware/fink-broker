@@ -39,3 +39,9 @@ spec:
     volumeMounts:
     - name: kafka-secret
       mountPath: /etc/fink-broker
+  monitoring:
+    exposeDriverMetrics: true
+    exposeExecutorMetrics: true
+    prometheus:
+      jmxExporterJar: /prometheus/jmx_prometheus_javaagent-0.11.0.jar
+      port: 8090
