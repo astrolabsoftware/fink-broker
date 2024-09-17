@@ -25,6 +25,7 @@ cleanup=false
 build=false
 e2e=false
 push=false
+cluster=""
 
 token="${TOKEN:-}"
 
