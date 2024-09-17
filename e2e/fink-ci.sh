@@ -49,4 +49,4 @@ shift "$((OPTIND-1))"
 git clone --single-branch $repo_url $repo --branch $branchname
 
 # Run fink ci in science mode
-$repo/e2e/run.sh "$cleanup_opt" $science_opt
+$repo/e2e/run.sh $cleanup_opt $science_opt
