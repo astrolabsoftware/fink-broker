@@ -33,6 +33,20 @@ RUN xargs -n 1 curl --fail --output-dir /opt/spark/jars -O < $FINK_HOME/jars-url
 # Main process will run as spark_uid
 ENV HOME /home/fink
 RUN mkdir $HOME && chown ${spark_uid} $HOME
+
+# Setup for the Prometheus JMX exporter.
+# TODO:
+# 1. check
+# jmx_prometheus_javaagent-1.0.1.jar.asc            2024-05-31 03:50       833
+# jmx_prometheus_javaagent-1.0.1.jar.md5            2024-05-31 03:50        32
+# jmx_prometheus_javaagent-1.0.1.jar.sha1           2024-05-31 03:50        40
+# 2. add the jar to the spark_py_image once dev is finished
+# Add the Prometheus JMX exporter Java agent jar for exposing metrics sent to the JmxSink to Prometheus.
+# 3. Update the version of the JMX exporter agent if needed to v1.0.1 (latest)
+ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /prometheus/
+RUN chmod 644 /prometheus/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
+
 USER ${spark_uid}
 
 WORKDIR $HOME
@@ -72,18 +86,6 @@ RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requireme
 
 ADD --chown=${spark_uid} . $FINK_HOME/
 
-# Setup for the Prometheus JMX exporter.
-# TODO:
-# 1. check
-# jmx_prometheus_javaagent-1.0.1.jar.asc            2024-05-31 03:50       833
-# jmx_prometheus_javaagent-1.0.1.jar.md5            2024-05-31 03:50        32
-# jmx_prometheus_javaagent-1.0.1.jar.sha1           2024-05-31 03:50        40
-# 2. add the jar to the spark_py_image once dev is finished
-# Add the Prometheus JMX exporter Java agent jar for exposing metrics sent to the JmxSink to Prometheus.
-# 3. Update the version of the JMX exporter agent if needed to v1.0.1 (latest)
-ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
-ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /prometheus/
-RUN chmod 644 /prometheus/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
 
 # TODO Use COPY --exclude and move deps to rootfs!!!
 COPY rootfs/ /
