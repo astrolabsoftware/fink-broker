@@ -85,10 +85,7 @@ ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
 ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /prometheus/
 RUN chmod 644 /prometheus/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
 
-# TODO
-RUN mkdir -p /etc/metrics/conf
-COPY conf/metrics.properties /etc/metrics/conf
-COPY conf/prometheus.yaml /etc/metrics/conf
+COPY rootfs/ /
 
 FROM noscience AS full
 
