@@ -85,6 +85,7 @@ ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
 ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /prometheus/
 RUN chmod 644 /prometheus/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
 
+# TODO Use COPY --exclude and move deps to rootfs!!!
 COPY rootfs/ /
 
 FROM noscience AS full
