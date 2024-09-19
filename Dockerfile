@@ -86,10 +86,6 @@ RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requireme
 
 ADD --chown=${spark_uid} . $FINK_HOME/
 
-
-# TODO Use COPY --exclude and move deps to rootfs!!!
-COPY rootfs/ /
-
 FROM noscience AS full
 
 ADD deps/requirements-science.txt $FINK_HOME/
