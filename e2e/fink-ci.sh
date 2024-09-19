@@ -34,7 +34,7 @@ EOD
 }
 
 # Get the options
-while getopts hsb: c ; do
+while getopts hcsb: c ; do
     case $c in
         h) usage ; exit 0 ;;
         b) branchname=$OPTARG ;;
