@@ -53,7 +53,7 @@ export SUFFIX
 function dispatch()
 {
 
-    if [ $SUFFIX = "" ]; then
+    if [ "$SUFFIX" = "" ]; then
       echo "Running e2e tests with science algorithms"
       event_type="e2e-science"
     else
