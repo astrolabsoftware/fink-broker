@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    prometheus: "true"
+  name: spark-metrics-collector
+  namespace: spark
+spec:
+  podMetricsEndpoints:
+  - port: jmx-exporter 
+  selector:
+    matchLabels:
+      sparkoperator.k8s.io/launched-by-spark-operator: "true"

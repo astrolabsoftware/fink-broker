@@ -1,0 +1,10 @@
+prometheus:
+  prometheusSpec:
+    podMonitorSelector:
+      matchLabels:
+        prometheus: "true"
+
+    ## If nil, select own namespace. Namespaces to be selected for PodMonitor discovery.
+    podMonitorNamespaceSelector:
+      matchLabels:
+        prometheus: "true"
