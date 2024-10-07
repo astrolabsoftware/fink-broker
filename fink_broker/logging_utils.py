@@ -47,6 +47,7 @@ def init_logger(log_level: str = "INFO") -> logging.Logger:
     # Format of the log message to be printed
     FORMAT = "%(asctime)-15s "
     FORMAT += "%(levelname)s "
+    FORMAT += "%(name)s "
     FORMAT += "%(funcName)s "
     FORMAT += "(%(filename)s "
     FORMAT += "line %(lineno)d): "
@@ -64,6 +65,9 @@ def init_logger(log_level: str = "INFO") -> logging.Logger:
     formatter = logging.Formatter(FORMAT, DATEFORMAT)
     streamHandler.setFormatter(formatter)
     logger.addHandler(streamHandler)
+
+    # TODO use a configuration file in a configmap to set the log level of the py4j logger
+    logging.getLogger("py4j").setLevel(logging.INFO)
 
     return logger
 

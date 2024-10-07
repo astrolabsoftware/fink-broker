@@ -81,7 +81,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=20
+        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=200
     )
 
     # The level here should be controlled by an argument.
@@ -106,7 +106,7 @@ def main():
         frac=args.frac,
         model=args.model,
         version=version,
-        sb_method="auto"  # TODO: nifty crashes on the cluster
+        sb_method="fastnifty",
     )
 
     pdf.to_parquet("ssoft_{}_{}.parquet".format(args.model, version))

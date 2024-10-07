@@ -73,7 +73,7 @@ jobs:
             touch artifacts/empty
           fi
           echo "IMAGE=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -89,10 +89,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     detached: true
       - name: Maximize build space
         run: |
           echo "Removing unwanted software... "
@@ -123,7 +119,7 @@ jobs:
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}"
       - name: Download image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -131,7 +127,7 @@ jobs:
         run: |
           if [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
-            cluster_name=$(ciux get cluster-name $PWD)
+            cluster_name=$(ciux get clustername $PWD)
             kind load image-archive artifacts/image.tar --name "$cluster_name"
             node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
             docker exec -- $node crictl image
@@ -141,9 +137,10 @@ jobs:
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
-      - name: Wait fink-broker to be up and running
-        run: |
-          ./e2e/wait-fink.sh
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
       - name: Check results
         run: |
           ./e2e/check-results.sh
@@ -163,7 +160,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Download image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts
@@ -198,7 +195,7 @@ jobs:
     needs: [build, integration-tests]
     steps:
       - name: Download image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-artifact
           path: artifacts

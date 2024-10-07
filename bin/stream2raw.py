@@ -56,15 +56,15 @@ def main():
 
     # FIXME args.log_level should be checked to be both compliant with python and spark!
 
-    # Initialise Spark session
+    logger = init_logger(args.log_level)
+
+    logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
         shuffle_partitions=2,
         tz=tz,
         log_level=args.spark_log_level,
     )
-
-    logger = init_logger(args.log_level)
 
     # debug statements
     inspect_application(logger)
