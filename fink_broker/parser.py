@@ -351,6 +351,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-hostless_folder",
+        type=str,
+        default="hostless_ids",
+        help="""
+        Folder to store ids for hostless detection
+        [HOSTLESS_FOLDER]
+        """,
+    )
+    parser.add_argument(
         "--tns_sandbox",
         action="store_true",
         help="""
