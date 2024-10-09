@@ -46,7 +46,6 @@ from fink_science.anomaly_detection.processor import anomaly_score
 from fink_science.random_forest_snia.processor import rfscore_rainbow_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
-from fink_science.agn.processor import agn_elasticc
 from fink_science.slsn.processor import slsn_elasticc
 from fink_science.fast_transient_rate.processor import magnitude_rate
 from fink_science.fast_transient_rate import rate_module_output_schema
@@ -613,7 +612,6 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         "diaObject.hostgal_ra",
         "diaObject.hostgal_dec",
     ]
-    df = df.withColumn("rf_agn_vs_nonagn", agn_elasticc(*args_forced))
     df = df.withColumn("rf_slsn_vs_nonslsn", slsn_elasticc(*args_forced))
 
     # Drop temp columns
