@@ -21,7 +21,7 @@ import datetime
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 from fink_broker.spark_utils import init_sparksession
 
-from fink_spins.ssoft import build_the_ssoft
+from fink_science.ssoft.processor import build_the_ssoft
 
 
 def main():
@@ -81,7 +81,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=20
+        name="ssoft_{}_{}".format(args.model, version), shuffle_partitions=200
     )
 
     # The level here should be controlled by an argument.
@@ -106,6 +106,7 @@ def main():
         frac=args.frac,
         model=args.model,
         version=version,
+        sb_method="fastnifty",
     )
 
     pdf.to_parquet("ssoft_{}_{}.parquet".format(args.model, version))
