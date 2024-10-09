@@ -1,13 +1,13 @@
 # Fink-science dependencies
 # WARNING: fink-science pip module is deprecated and fink-science is now installed from source
 
-git+https://github.com/astrolabsoftware/fink-science@5.15.0
+git+https://github.com/astrolabsoftware/fink-science@5.20.0
 
 # xmatch_cds
 line_profiler==4.1.3
 
 # Active learning
--e git+https://github.com/emilleishida/fink_sn_activelearning.git@4f46b3a1e29de45793125452974e71e92c1ea454#egg=actsnfink
+-e git+https://github.com/emilleishida/fink_sn_activelearning.git@cb61bbb34630c7811862050389b0f993de9639c7#egg=actsnfink
 -e git+https://github.com/COINtoolbox/ActSNClass.git@2c61da91a9d13834d39804fc35aeb3245ba20755#egg=actsnclass
 joblib==1.2.0
 
@@ -22,7 +22,7 @@ colorama
 seaborn
 
 # SNAD
-light-curve[full]==0.8.2
+light-curve[full]==0.9.6
 
 # AGN
 iminuit==2.21.0
@@ -31,8 +31,7 @@ iminuit==2.21.0
 -e git+https://github.com/b-biswas/kndetect@kndetect#egg=kndetect
 
 # CATS dependencies
-tensorflow==2.9.2
-tensorflow_addons==0.18.0
+tensorflow==2.15
 
 # Anomalies
 onnxruntime
