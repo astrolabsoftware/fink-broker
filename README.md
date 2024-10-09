@@ -45,6 +45,7 @@ All are open source, and we thank all contributors!
 
 Fink has participated to a number of events with the private sector, in particular:
 
+* 06/24: Fink was featured at the [Kubecon Europe 2024](https://kccnceu2024.sched.com/event/1YeOZ/fink-on-kubernetes-efficient-management-of-massive-alert-streams-for-astronomical-objects-identific-fabrice-jammes-julien-peloton-cnrs-etienne-fayen-universite-paris-saclay?linkback=grid-full).
 * 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year. _Focus on graph database with JanusGraph_
 * 10/19: Fink was featured at the [Spark+AI Summit Europe 2019](https://www.databricks.com/session_eu19/accelerating-astronomical-discoveries-with-apache-spark).
 * 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [abhishekchauhn](https://github.com/abhishekchauhn) who will work on the project this year. _Focus on alert redistribution with Apache Kafka_
