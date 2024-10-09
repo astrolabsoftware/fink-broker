@@ -67,7 +67,7 @@ def main():
     df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
 
     # Apply science modules
-    df = apply_science_modules(df, logger)
+    df = apply_science_modules(df)
 
     # Add tracklet information
     df_trck = spark.read.format("parquet").load(input_raw)
