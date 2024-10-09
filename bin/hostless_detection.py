@@ -17,7 +17,7 @@
 
 import argparse
 import os
-
+import pandas as pd
 
 from pyspark.sql import functions as F
 
@@ -32,6 +32,8 @@ from fink_filters.classification import extract_fink_classification
 from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import get_cutout
 from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
+
+from fink_tns.utils import read_past_ids
 
 from fink_science.hostless_detection.processor import run_potential_hostless
 
@@ -119,10 +121,20 @@ def main():
     cond_template = df["kstest_static"][1] <= 0.85
     pdf = df.filter(cond_science).filter(cond_template).select(cols_).toPandas()
 
+    # load hostless IDs
+    past_ids = read_past_ids(args.hostless_folder)
+
+    new_ids = []
     # Loop over matches & send to Telegram
     if ("FINK_TG_TOKEN" in os.environ) and os.environ["FINK_TG_TOKEN"] != "":
         payloads = []
         for _, alert in pdf.iterrows():
+            # Do not send request if the object
+            # has been already reported by the bot
+            if alert["objectId"] in past_ids.to_numpy():
+                print("{} already sent!".format(alert["objectId"]))
+                continue
+
             curve_png = get_curve(
                 objectId=alert["objectId"],
                 origin="API",
@@ -144,9 +156,16 @@ def main():
             )
 
             payloads.append((text, curve_png, [cutout_science, cutout_template]))
+            new_ids.append(alert["objectId"])
 
         if len(payloads) > 0:
+            # Send to tg
             msg_handler_tg_cutouts(payloads, channel_id="@fink_hostless", init_msg="")
+
+            # Save ids on disk
+            pdf_ids = pd.DataFrame.from_dict({"id": new_ids})
+            name = "{}{}{}".format(args.night[:4], args.night[4:6], args.night[6:8])
+            pdf_ids.to_csv("{}/{}.csv".format(args.hostless_folder, name), index=False)
 
 
 if __name__ == "__main__":
