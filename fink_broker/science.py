@@ -46,7 +46,7 @@ from fink_science.anomaly_detection.processor import anomaly_score
 from fink_science.random_forest_snia.processor import rfscore_rainbow_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
 from fink_science.cats.processor import predict_nn
-from fink_science.slsn.processor import slsn_elasticc
+from fink_science.slsn.processor import slsn_elasticc_with_md
 from fink_science.fast_transient_rate.processor import magnitude_rate
 from fink_science.fast_transient_rate import rate_module_output_schema
 # from fink_science.t2.processor import t2
@@ -598,7 +598,7 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
     df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
     df = df.withColumnRenamed("cbpf_preds", "cats_broad_array_prob")
 
-    # AGN & SLSN
+    # SLSN
     args_forced = [
         "diaObject.diaObjectId",
         "cmidPointTai",
@@ -609,10 +609,9 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         "diaSource.decl",
         "diaObject.hostgal_zphot",
         "diaObject.hostgal_zphot_err",
-        "diaObject.hostgal_ra",
-        "diaObject.hostgal_dec",
+        "diaObject.hostgal_snsep",
     ]
-    df = df.withColumn("rf_slsn_vs_nonslsn", slsn_elasticc(*args_forced))
+    df = df.withColumn("rf_slsn_vs_nonslsn", slsn_elasticc_with_md(*args_forced))
 
     # Drop temp columns
     df = df.drop(*expanded)
