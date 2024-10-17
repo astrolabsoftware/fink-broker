@@ -34,7 +34,7 @@ EOD
 }
 
 # Get the options
-while getopts hsb: c ; do
+while getopts hcsb: c ; do
     case $c in
         h) usage ; exit 0 ;;
         b) branchname=$OPTARG ;;
@@ -49,4 +49,4 @@ shift "$((OPTIND-1))"
 git clone --single-branch $repo_url $repo --branch $branchname
 
 # Run fink ci in science mode
-$repo/e2e/run.sh "$cleanup_opt" $science_opt
+$repo/e2e/run.sh $cleanup_opt $science_opt
