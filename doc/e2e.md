@@ -24,6 +24,14 @@ git clone github.com/astrolabsoftware/fink-broker
 cd fink-broker
 ```
 
+### Quick procedure (beta)
+
+This one-liner will run the full procedure.
+
+```bash
+./e2e/fink-ci.sh -b <branch_name>
+```
+
 ### Install ciux
 
 Install the `ciux` tool based on the provided version.
