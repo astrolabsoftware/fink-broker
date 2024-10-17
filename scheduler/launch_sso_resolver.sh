@@ -9,7 +9,7 @@ NCORES=8
 
 FINK_VERSION=`fink --version`
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
-PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-                  py${PYTHON_VERSION}.egg"
+PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
 
 spark-submit \
     --master mesos://vm-75063.lal.in2p3.fr:5050 \
