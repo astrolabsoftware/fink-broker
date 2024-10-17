@@ -3,21 +3,23 @@
 Operations for the night N start at 21.45pm UTC on the night N-1. There are 2 cronjobs scheduled:
 
 ```bash
-# Paris time
+# Paris time @ VD
 
 # Fink real-time
 45 23 * * * /home/julien.peloton/fink-broker/scheduler/launch_fink.sh
 
 # Database service
-05 20 * * * /home/julien.peloton/fink-broker/scheduler/database_service.sh
+35 20 * * * /home/julien.peloton/fink-broker/scheduler/database_service.sh
+30 21 * * * /home/julien.peloton/fink-broker/scheduler/database_auxilliary.sh
 
 # Fink MM
 0 01 * * * /home/julien.peloton/Fink_MM/scheduler/science2grb.sh
 0 01 * * * /home/julien.peloton/Fink_MM/scheduler/grb2distribution.sh
 1 17 * * * /home/julien.peloton/Fink_MM/scheduler/science2grb_offline.sh
 
-# SSOFT
+# SSOFT - once a month
 0 0 1 * * /home/julien.peloton/fink-broker/scheduler/launch_ssoft.sh
+0 12 1 * * /home/julien.peloton/fink-broker/scheduler/launch_sso_resolver.sh
 ```
 
 The first script is for live operations:
