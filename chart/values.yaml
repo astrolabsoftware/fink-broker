@@ -1,6 +1,5 @@
 # Default values for chart.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# These values are used for fink-broker e2e tests
 
 night: "20240101"
 
@@ -14,7 +13,7 @@ image:
 cores: 1
 coreRequest: 0
 instances: 1
-memory: 1g
+memory: 1500m 
 # instances: 1
 
 fink_trigger_update: "2"
@@ -35,7 +34,7 @@ stream2raw:
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
-  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
+  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/datasim_basic_alerts_all_distribute_topics.avro
   kafka:
     in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest

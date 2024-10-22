@@ -30,7 +30,7 @@ if [ "$SUFFIX" = "noscience" ];
 then
   expected_topics="12"
 else
-  expected_topics="1"
+  expected_topics="8"
 fi
 
 count=0
@@ -42,7 +42,9 @@ do
     if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
         echo "ERROR: fink-broker has crashed" 1>&2
+        # Useful for debugging on github actions
         echo "ERROR: enabling interactive access for debugging purpose" 1>&2
+        kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker
         sleep 7200
         exit 1
     fi

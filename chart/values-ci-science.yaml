@@ -5,7 +5,6 @@ image:
 cores: 1
 coreRequest: 0
 instances: 1
-memory: 1g
 # instances: 1
 
 fink_trigger_update: "2"
@@ -26,10 +25,7 @@ stream2raw:
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
-  fink_alert_schema: /home/fink/fink-alert-schemas/ztf/ztf_public_20190903.schema.avro
   kafka:
-    in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
-    starting_offset: earliest
     topic: ztf_public_20200101
 
 #
@@ -49,8 +45,4 @@ distribution:
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
   instances: "{{.Values.instances}}"
-  kafka:
-    out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
-    schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
-    substream_prefix: "fink_"
 

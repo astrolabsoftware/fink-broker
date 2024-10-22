@@ -15,3 +15,11 @@ kubectl run -it --rm s5cmd --image=peakcom/s5cmd --env AWS_ACCESS_KEY_ID=minio -
 /s5cmd --log debug --no-verify-ssl ls -H  "s3://fink-broker-online/raw/20200101/"
 /s5cmd --log debug --no-verify-ssl ls "s3://fink-broker-online/*"
 ```
+
+## Restart fink-broker
+
+```shell
+## Use --all if needed
+kubectl delete -n spark sparkapplication fink-broker-distribution
+argocd app sync fink-broker
+```
