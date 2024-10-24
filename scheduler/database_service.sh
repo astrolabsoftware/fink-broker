@@ -55,4 +55,9 @@ if [[ $? == 0 ]]; then
   hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
   hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
   hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
+
+  # Remove checkpoints for fink-mm
+  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
+  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
+
 fi

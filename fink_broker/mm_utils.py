@@ -58,7 +58,7 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
         from fink_mm.init import get_config
         from fink_broker.mm_utils import mm2distribute
 
-        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
 
         # Wait for GCN comming
@@ -71,13 +71,14 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
             # if there is gcn and ztf data
             if path_exist(mmtmpdatapath):
                 t_before = time.time()
-                _LOG.info("starting mm2distribute ...")
+                _LOG.info("starting mm2distribute in 300 seconds...")
+                time.sleep(300)
                 stream_distrib_list = mm2distribute(spark, config, args)
                 time_spent_in_wait += time.time() - t_before
                 break
 
-            time_spent_in_wait += 1
-            time.sleep(1.0)
+            time_spent_in_wait += 300
+            time.sleep(300)
         if stream_distrib_list == []:
             _LOG.warning(
                 f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job."
@@ -115,7 +116,7 @@ def raw2science_launch_fink_mm(
         from fink_mm.init import get_config
         from fink_broker.mm_utils import science2mm
 
-        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
         gcndatapath = config["PATH"]["online_gcn_data_prefix"]
         gcn_path = gcndatapath + "/year={}/month={}/day={}".format(
@@ -130,14 +131,15 @@ def raw2science_launch_fink_mm(
             if path_exist(gcn_path) and path_exist(scitmpdatapath):
                 # Start the GCN x ZTF cross-match stream
                 t_before = time.time()
-                _LOG.info("starting science2mm ...")
+                _LOG.info("starting science2mm in 300 seconds...")
+                time.sleep(300)
                 countquery_mm = science2mm(args, config, gcn_path, scitmpdatapath)
                 time_spent_in_wait += time.time() - t_before
                 break
             else:
                 # wait for comming GCN
-                time_spent_in_wait += 1
-                time.sleep(1)
+                time_spent_in_wait += 300
+                time.sleep(300)
 
         if countquery_mm is None:
             _LOG.warning("science2mm could not start before the end of the job.")
