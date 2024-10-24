@@ -58,7 +58,7 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
         from fink_mm.init import get_config
         from fink_broker.mm_utils import mm2distribute
 
-        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
 
         # Wait for GCN comming
@@ -115,7 +115,7 @@ def raw2science_launch_fink_mm(
         from fink_mm.init import get_config
         from fink_broker.mm_utils import science2mm
 
-        _LOG.info("Fink-MM configuration file: {args.mmconfigpath}")
+        _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
         gcndatapath = config["PATH"]["online_gcn_data_prefix"]
         gcn_path = gcndatapath + "/year={}/month={}/day={}".format(

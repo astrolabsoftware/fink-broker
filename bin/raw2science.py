@@ -132,7 +132,7 @@ def main():
             logger.info("Do not perform multi-messenger operations")
             time_spent_in_wait, countquery_mm = 0, None
         else:
-            logger.debug("Perform multi-messenger operations")
+            logger.info("Perform multi-messenger operations")
             from fink_broker.mm_utils import raw2science_launch_fink_mm
 
             time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
