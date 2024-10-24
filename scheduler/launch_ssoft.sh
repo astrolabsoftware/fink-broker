@@ -17,6 +17,9 @@ set -e
 
 source ~/.bash_profile
 
+# re-download latest information
+export ROCKS_CACHE_DIR="no-cache"
+
 NCORES=100
 AGGREGATE="--pre_aggregate_data"
 EXTRA_OPT=
