@@ -117,9 +117,16 @@ def main():
         F.col("cutoutTemplate.stampData").alias("cutoutTemplate"),
     ]
 
-    cond_science = df["kstest_static"][0] <= 0.5
-    cond_template = df["kstest_static"][1] <= 0.85
-    pdf = df.filter(cond_science).filter(cond_template).select(cols_).toPandas()
+    cond_science_low = df["kstest_static"][0] >= 0.
+    cond_science_high = df["kstest_static"][0] <= 0.5
+    cond_template_low = df["kstest_static"][1] >= 0.
+    cond_template_high = df["kstest_static"][1] <= 0.85
+
+    pdf = df\
+        .filter(cond_science_low & cond_science_high)\
+        .filter(cond_template_low & cond_template_high)\
+        .select(cols_)\
+        .toPandas()
 
     # load hostless IDs
     past_ids = read_past_ids(args.hostless_folder)
