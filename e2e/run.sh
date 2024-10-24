@@ -24,18 +24,22 @@ src_dir=$DIR/..
 cleanup=false
 build=false
 e2e=false
+monitoring=false
 push=false
 
 token="${TOKEN:-}"
 
 # Get options for suffix
-while getopts hcs opt; do
+while getopts hcms opt; do
   case ${opt} in
     s )
       SUFFIX=""
       ;;
     c )
       cleanup=true
+      ;;
+    m )
+      monitoring=true
       ;;
     h )
       usage
@@ -105,7 +109,12 @@ echo "Delete the cluster $cluster if it already exists"
 ktbx delete --name "$cluster" || true
 
 echo "Create a Kubernetes cluster (Kind), Install OLM and ArgoCD operators."
-$DIR/prereq-install.sh
+monitoring_opt=""
+if [ $monitoring = true ]
+then
+  monitoring_opt="-m"
+fi
+$DIR/prereq-install.sh $monitoring_opt
 
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
