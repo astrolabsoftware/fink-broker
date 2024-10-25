@@ -277,75 +277,14 @@ def main():
         # Remove unused columns
         df_index = df_index.drop(*["rb", "nbad"])
     elif columns[0] == "tns":
-        with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
-            tns_marker = f.read().replace("\n", "")
-
-        pdf_tns = download_catalog(os.environ["TNS_API_KEY"], tns_marker)
-
-        # Filter TNS confirmed data
-        f1 = ~pdf_tns["type"].isna()
-        pdf_tns_filt = pdf_tns[f1]
-
-        pdf_tns_filt_b = spark.sparkContext.broadcast(pdf_tns_filt)
-
-        @pandas_udf(StringType(), PandasUDFType.SCALAR)
-        def crossmatch_with_tns(objectid, ra, dec):
-            # TNS
-            pdf = pdf_tns_filt_b.value
-            ra2, dec2, type2 = pdf["ra"], pdf["declination"], pdf["type"]
-
-            # create catalogs
-            catalog_ztf = SkyCoord(
-                ra=np.array(ra, dtype=np.float) * u.degree,
-                dec=np.array(dec, dtype=np.float) * u.degree,
-            )
-            catalog_tns = SkyCoord(
-                ra=np.array(ra2, dtype=np.float) * u.degree,
-                dec=np.array(dec2, dtype=np.float) * u.degree,
-            )
-
-            # cross-match
-            _, _, _ = catalog_tns.match_to_catalog_sky(catalog_ztf)
-
-            sub_pdf = pd.DataFrame({
-                "objectId": objectid.to_numpy(),
-                "ra": ra.to_numpy(),
-                "dec": dec.to_numpy(),
-            })
-
-            # cross-match
-            idx2, d2d2, _ = catalog_ztf.match_to_catalog_sky(catalog_tns)
-
-            # set separation length
-            sep_constraint2 = d2d2.degree < 1.5 / 3600
-
-            sub_pdf["TNS"] = [""] * len(sub_pdf)
-            sub_pdf["TNS"][sep_constraint2] = type2.to_numpy()[idx2[sep_constraint2]]
-
-            to_return = objectid.apply(
-                lambda x: ""
-                if x not in sub_pdf["objectId"].to_numpy()
-                else sub_pdf["TNS"][sub_pdf["objectId"] == x].to_numpy()[0]
-            )
-
-            return to_return
-
-        df = df.withColumn(
-            "tns", crossmatch_with_tns(df["objectId"], df["ra"], df["dec"])
-        )
+        # Flag only objects with counterpart in TNS
+        df_index = df.filter(df["tns"] != "")
 
         # Row key
-        df = add_row_key(df, row_key_name=index_row_key_name, cols=columns)
-
-        df = select_relevant_columns(
-            df, cols=common_cols + ["tns"], row_key_name=index_row_key_name
+        df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
+        df_index = select_relevant_columns(
+            df_index, cols=common_cols, row_key_name=index_row_key_name
         )
-
-        df = df.cache()
-        df_index = df.filter(df["tns"] != "").drop("tns")
-        # trigger the cache - not the cache might be a killer for LSST...
-        n = df_index.count()
-        print("TNS objects: {}".format(n))
     else:
         # Row key
         df = add_row_key(df, row_key_name=index_row_key_name, cols=columns)
