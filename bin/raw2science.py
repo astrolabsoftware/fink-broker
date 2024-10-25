@@ -110,7 +110,7 @@ def main():
             from fink_broker.science import apply_science_modules
 
             logger.info("Apply science modules")
-            df = apply_science_modules(df)
+            df = apply_science_modules(df, args.tns_raw_output)
 
         logger.debug("Add ingestion timestamp")
         df = df.withColumn(
