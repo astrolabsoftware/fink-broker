@@ -333,7 +333,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    83
+    84
     """
     # From `root` or `candidates.`
     common = [
