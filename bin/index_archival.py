@@ -22,14 +22,9 @@
 4. Push data (single shot)
 """
 
-import os
 import argparse
-import numpy as np
-import pandas as pd
 
 import pyspark.sql.functions as F
-from pyspark.sql.types import StringType
-from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 from fink_broker.parser import getargs
 from fink_broker.science import ang2pix
@@ -44,11 +39,6 @@ from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
-
-from fink_tns.utils import download_catalog
-
-from astropy.coordinates import SkyCoord
-from astropy import units as u
 
 
 def main():
