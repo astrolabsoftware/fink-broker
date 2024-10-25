@@ -45,7 +45,7 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    29
+    30
 
     >>> print(len(fink_nested_cols))
     18
@@ -80,6 +80,7 @@ def load_fink_cols():
         "from_upper": {"type": "boolean", "default": False},
         "spicy_id": {"type": "int", "default": -1},
         "spicy_class": {"type": "string", "default": "Unknown"},
+        "tns": {"type": "string", "default": "Unknown"},
     }
 
     fink_nested_cols = {}
@@ -107,7 +108,7 @@ def load_all_cols():
     >>> root_level, candidates, images, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **images, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    158
+    159
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
