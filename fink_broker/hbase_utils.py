@@ -80,7 +80,7 @@ def load_fink_cols():
         "from_upper": {"type": "boolean", "default": False},
         "spicy_id": {"type": "int", "default": -1},
         "spicy_class": {"type": "string", "default": "Unknown"},
-        "tns": {"type": "string", "default": "Unknown"},
+        "tns": {"type": "string", "default": ""},
     }
 
     fink_nested_cols = {}
