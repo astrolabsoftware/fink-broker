@@ -230,10 +230,10 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         df = concat_col(df, colname, prefix=prefix)
     expanded = [prefix + i for i in to_expand]
 
-    LOG.info("New processor: cdsxmatch")
+    _LOG.info("New processor: cdsxmatch")
     df = xmatch_cds(df)
 
-    LOG.info("New processor: TNS")
+    _LOG.info("New processor: TNS")
     df = xmatch_tns(df, tns_raw_output=tns_raw_output)
 
     _LOG.info("New processor: Gaia xmatch (1.0 arcsec)")
