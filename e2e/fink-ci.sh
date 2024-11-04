@@ -27,18 +27,19 @@ Available options:
   -s            Use the science algorithms during the tests
   -b <branch>   Branch name to clone (default: master)
 
-Clone Fink-broker source code in a tempory directory and run e2e test
-designed to be run as a cron job.
+Clone Fink-broker source code in a tempory directory and run e2e test.
+Designed to be run as a cron job.
 
 EOD
 }
 
 # Get the options
-while getopts hcsb: c ; do
+while getopts chmsb: c ; do
     case $c in
         h) usage ; exit 0 ;;
         b) branchname=$OPTARG ;;
         c) cleanup_opt="-c" ;;
+        m) monitoring_opt="-m" ;;
         s) science_opt="-s" ;;
         \?) usage ; exit 2 ;;
     esac
@@ -49,4 +50,4 @@ shift "$((OPTIND-1))"
 git clone --single-branch $repo_url $repo --branch $branchname
 
 # Run fink ci in science mode
-$repo/e2e/run.sh $cleanup_opt $science_opt
+$repo/e2e/run.sh $cleanup_opt $science_opt $monitoring_opt
