@@ -1,0 +1,12 @@
+---
+apiVersion: zookeeper.stackable.tech/v1alpha1
+kind: ZookeeperCluster
+metadata:
+  name: simple-zk
+spec:
+  image:
+    productVersion: 3.9.2
+  servers:
+    roleGroups:
+      default:
+        replicas: 1
