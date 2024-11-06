@@ -137,10 +137,10 @@ jobs:
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     detached: true
       - name: Check results
         run: |
           ./e2e/check-results.sh
