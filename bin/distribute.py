@@ -54,6 +54,7 @@ userfilters = [
     "fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
     "fink_filters.filter_blazar.filter.blazar",
     "fink_filters.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
+    "fink_filters.filter_tns_match.filter.tns_match",
 ]
 
 

@@ -282,6 +282,12 @@ elif [[ $service == "raw2science" ]]; then
     NOSCIENCE=""
   fi
 
+  if [[ $TNS_RAW_OUTPUT ]]; then
+    TNS_OPTION="-tns_raw_output ${TNS_RAW_OUTPUT}"
+  else
+    TNS_OPTION=""
+  fi
+
   # Store the stream of alerts
   spark-submit --master ${SPARK_MASTER} \
     --packages ${FINK_PACKAGES} \
@@ -294,7 +300,7 @@ elif [[ $service == "raw2science" ]]; then
     -tinterval ${FINK_TRIGGER_UPDATE} \
     -night ${NIGHT} \
     -mmconfigpath ${FINK_MM_CONFIG} \
-    -log_level ${LOG_LEVEL} ${NOSCIENCE} ${EXIT_AFTER}
+    -log_level ${LOG_LEVEL} ${TNS_OPTION} ${NOSCIENCE} ${EXIT_AFTER}
 elif [[ $service == "raw2science_elasticc_paper" ]]; then
     # Store the stream of alerts
     spark-submit --master ${SPARK_MASTER} \

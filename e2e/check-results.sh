@@ -28,9 +28,9 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="12"
+  expected_topics="13"
 else
-  expected_topics="8"
+  expected_topics="9"
 fi
 
 count=0

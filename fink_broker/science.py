@@ -32,6 +32,7 @@ from fink_broker.tester import spark_unit_tests
 # Import of science modules
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
 from fink_science.xmatch.processor import xmatch_cds
+from fink_science.xmatch.processor import xmatch_tns
 from fink_science.xmatch.processor import crossmatch_other_catalog
 from fink_science.xmatch.processor import crossmatch_mangrove
 
@@ -175,7 +176,7 @@ def fake_t2(incol):
     return pd.Series([out] * len(incol))
 
 
-def apply_science_modules(df: DataFrame) -> DataFrame:
+def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
     Focus on ZTF stream
@@ -184,13 +185,19 @@ def apply_science_modules(df: DataFrame) -> DataFrame:
     ----------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing raw alert data
+    tns_catalog: str, optional
+        Folder that contains raw TNS catalog. Inside, it is expected
+        to find the file `tns_raw.parquet` downloaded using
+        `fink-broker/bin/download_tns.py`. Default is "", in
+        which case the catalog will be downloaded. Beware that
+        to download the catalog, you need to set environment variables:
+        - TNS_API_MARKER: path to the TNS API marker (tns_marker.txt)
+        - TNS_API_KEY: path to the TNS API key (tns_api.key)
 
     Returns
     -------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing enriched alert data
-    noscience: bool
-        Return untouched input dataframe, useful for Fink-broker infrastructure validation
 
     Examples
     --------
@@ -223,9 +230,11 @@ def apply_science_modules(df: DataFrame) -> DataFrame:
         df = concat_col(df, colname, prefix=prefix)
     expanded = [prefix + i for i in to_expand]
 
-    # Apply level one processor: cdsxmatch
     _LOG.info("New processor: cdsxmatch")
     df = xmatch_cds(df)
+
+    _LOG.info("New processor: TNS")
+    df = xmatch_tns(df, tns_raw_output=tns_raw_output)
 
     _LOG.info("New processor: Gaia xmatch (1.0 arcsec)")
     df = xmatch_cds(
