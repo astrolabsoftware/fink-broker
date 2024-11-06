@@ -76,7 +76,8 @@ argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=st
 # Sync fink-broker
 argocd app sync -l app.kubernetes.io/instance=fink
 
-if [ $e2e_enabled == "true" ]; then
+if [ $e2e_enabled == "true" ]
+then
   echo "Retrieve kafka secrets for e2e tests"
   while ! kubectl get secret fink-producer --namespace kafka
   do

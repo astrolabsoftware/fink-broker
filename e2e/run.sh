@@ -21,7 +21,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.4-rc8
+ciux_version=v0.0.4-rc10
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 src_dir=$DIR/..
@@ -30,6 +30,7 @@ build=false
 e2e=false
 monitoring=false
 push=false
+CIUX_IMAGE_URL="undefined"
 
 token="${TOKEN:-}"
 
@@ -119,6 +120,7 @@ then
   monitoring_opt="-m"
 fi
 $DIR/prereq-install.sh $monitoring_opt
+
 
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
