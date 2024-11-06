@@ -24,7 +24,7 @@ on:
       private_registry_token:
         required: true
 env:
-  CIUX_VERSION: v0.0.4-rc9
+  CIUX_VERSION: v0.0.4-rc10
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
@@ -134,13 +134,13 @@ jobs:
           else
             echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
           fi
-      - name: Run argoCD
-        run: |
-          ./e2e/argocd.sh
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
       #   with:
       #     detached: true
+      - name: Run argoCD
+        run: |
+          ./e2e/argocd.sh
       - name: Check results
         run: |
           ./e2e/check-results.sh

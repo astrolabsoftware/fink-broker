@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hdfs-init
+  namespace: hdfs
+  annotations:
+    "helm.sh/hook": "pre-install"
+spec:
+  template:
+    spec:
+      containers:
+      - name: hdfs-client
+        image: apache/hadoop:3.4.0
+        command: ["sh", "-c"]
+        args:
+          - |
+            hdfs dfs -fs $HDFS_URL -mkdir -p /user/185 && \
+            hdfs dfs -fs $HDFS_URL -chown 185:hdfs /user/185 && \
+            hdfs dfs -fs $HDFS_URL -chmod 700 /user/185
+        env:
+        - name: HDFS_URL
+          value: hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020
+        - name: HADOOP_USER_NAME
+          value: stackable
+      restartPolicy: OnFailure

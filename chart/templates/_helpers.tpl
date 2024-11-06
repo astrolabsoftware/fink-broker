@@ -85,7 +85,11 @@ restartPolicy:
 - '-log_level'
 - '{{ .Values.log_level }}'
 - '-online_data_prefix'
+{{- if .Values.online_data_prefix }}
+- '{{ .Values.online_data_prefix }}'
+{{- else }}
 - 's3a://{{ tpl .Values.s3.bucket . }}'
+{{- end }}
 - '-producer'
 - '{{ .Values.producer }}'
 - '-tinterval'

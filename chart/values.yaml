@@ -3,6 +3,7 @@
 
 night: "20240101"
 
+hadoop_user_name: "185"
 image:
   pullPolicy: IfNotPresent
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
@@ -13,7 +14,7 @@ image:
 cores: 1
 coreRequest: 0
 instances: 1
-memory: 1500m 
+memory: "1000m"
 # instances: 1
 
 fink_trigger_update: "2"
@@ -21,7 +22,7 @@ fink_trigger_update: "2"
 # Can be overriden using --image option
 
 # Default to s3a://<s3.bucket>
-# online_data_prefix: s3a://fink-broker-online
+online_data_prefix: hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185
 producer: sims
 
 log_level: INFO
