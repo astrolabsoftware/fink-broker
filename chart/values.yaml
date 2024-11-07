@@ -3,6 +3,7 @@
 
 night: "20240101"
 
+hadoop_user_name: "stackable"
 image:
   pullPolicy: IfNotPresent
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
@@ -21,7 +22,7 @@ fink_trigger_update: "2"
 # Can be overriden using --image option
 
 # Default to s3a://<s3.bucket>
-# online_data_prefix: s3a://fink-broker-online
+online_data_prefix: hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.default.svc.cluster.local:8020
 producer: sims
 
 log_level: INFO
