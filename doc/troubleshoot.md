@@ -1,6 +1,5 @@
 # Troubleshooting guide
 
-
 ## Run s5cmd (s3 client)
 
 From inside the k8s cluster:
@@ -22,4 +21,11 @@ kubectl run -it --rm s5cmd --image=peakcom/s5cmd --env AWS_ACCESS_KEY_ID=minio -
 ## Use --all if needed
 kubectl delete -n spark sparkapplication fink-broker-distribution
 argocd app sync fink-broker
+```
+
+## Debug fink-broker helm chart
+
+```shell
+cd fink-broker
+helm install --debug fink ./chart -f ./chart/values-ci-noscience.yaml --dry-run
 ```

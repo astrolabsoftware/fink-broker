@@ -121,7 +121,7 @@ fi
 $DIR/prereq-install.sh $monitoring_opt
 
 echo "Install hdfs"
-kubectl apply -f $DIR/hdfs
+kubectl apply -f $DIR/../hdfs
 
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
