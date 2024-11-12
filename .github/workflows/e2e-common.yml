@@ -141,6 +141,10 @@ jobs:
       #   uses: mxschmitt/action-tmate@v3
       #   with:
       #     detached: true
+      - name: Install HDFS
+        run: |
+          ./hdfs/install-operators.sh
+          kubectl apply -f ./hdfs/
       - name: Check results
         run: |
           ./e2e/check-results.sh
