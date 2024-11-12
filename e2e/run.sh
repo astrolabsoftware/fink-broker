@@ -31,6 +31,7 @@ e2e=false
 monitoring=false
 push=false
 image_url=""
+CIUX_IMAGE_URL=""
 
 token="${TOKEN:-}"
 
