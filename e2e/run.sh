@@ -30,6 +30,7 @@ build=false
 e2e=false
 monitoring=false
 push=false
+image_url=""
 
 token="${TOKEN:-}"
 
@@ -68,9 +69,15 @@ function dispatch()
       event_type="e2e-noscience"
     fi
 
+    if [ -z $CIUX_IMAGE_URL ]; then
+      image_url="undefined"
+    else
+      image_url=$CIUX_IMAGE_URL
+    fi
+
     url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
 
-    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
+    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$image_url\"}"
     echo "Payload: $payload"
 
     if [ -z "$token" ]; then
