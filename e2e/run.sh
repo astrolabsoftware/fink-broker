@@ -128,6 +128,7 @@ fi
 $DIR/prereq-install.sh $monitoring_opt
 
 echo "Install hdfs"
+$DIR/../hdfs/install-operators.sh
 kubectl apply -f $DIR/../hdfs
 
 . $CIUXCONFIG
