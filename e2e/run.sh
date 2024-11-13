@@ -21,7 +21,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.4-rc8
+ciux_version=v0.0.4-rc10
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 src_dir=$DIR/..
@@ -30,8 +30,7 @@ build=false
 e2e=false
 monitoring=false
 push=false
-image_url=""
-CIUX_IMAGE_URL=""
+CIUX_IMAGE_URL="undefined"
 
 token="${TOKEN:-}"
 
@@ -70,15 +69,9 @@ function dispatch()
       event_type="e2e-noscience"
     fi
 
-    if [ -z $CIUX_IMAGE_URL ]; then
-      image_url="undefined"
-    else
-      image_url=$CIUX_IMAGE_URL
-    fi
-
     url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
 
-    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$image_url\"}"
+    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
     echo "Payload: $payload"
 
     if [ -z "$token" ]; then
@@ -129,8 +122,7 @@ fi
 $DIR/prereq-install.sh $monitoring_opt
 
 echo "Install hdfs"
-$DIR/../hdfs/install-operators.sh
-kubectl apply -f $DIR/../hdfs
+$DIR/../hdfs/install.sh
 
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
