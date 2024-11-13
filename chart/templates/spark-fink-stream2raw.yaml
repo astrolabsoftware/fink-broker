@@ -24,7 +24,6 @@ spec:
     env:
       - name: HADOOP_USER_NAME
         value: {{ .Values.hadoop_user_name }}
-    env:
       - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.stream2raw.memory . }}"
@@ -38,7 +37,6 @@ spec:
     env:
       - name: HADOOP_USER_NAME
         value: {{ .Values.hadoop_user_name }}
-    env:
       - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.stream2raw.memory . }}"
