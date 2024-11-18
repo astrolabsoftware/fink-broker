@@ -13,7 +13,7 @@ spec:
     cores: {{ tpl .Values.raw2science.cores . }}
     coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
     env:
-      - name: HADOOP_USER_NAME
+      - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
@@ -24,7 +24,7 @@ spec:
     cores: {{ tpl .Values.raw2science.cores . }}
     coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
     env:
-      - name: HADOOP_USER_NAME
+      - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
