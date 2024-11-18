@@ -66,8 +66,8 @@ def main():
     cf = assign_column_family_names(
         df,
         cols_i=["objectId", "candid", "jd"],
-        cols_d=[],
-        cols_b=["hdfs_path"],
+        cols_d=["hdfs_path"],
+        cols_b=[],
     )
 
     push_to_hbase(
