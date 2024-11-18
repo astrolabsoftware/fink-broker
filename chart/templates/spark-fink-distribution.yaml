@@ -24,7 +24,7 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     env:
-      - name: HADOOP_USER_NAME
+      - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.distribution.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
@@ -35,7 +35,7 @@ spec:
     cores: {{ tpl .Values.distribution.cores . }}
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     env:
-      - name: HADOOP_USER_NAME
+      - name: SPARK_USER
         value: {{ .Values.hadoop_user_name }}
     memory: "{{ tpl .Values.distribution.memory . }}"
     instances: {{ tpl .Values.distribution.instances . }}
