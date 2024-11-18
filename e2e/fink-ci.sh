@@ -46,6 +46,9 @@ while getopts chmsb: c ; do
 done
 shift "$((OPTIND-1))"
 
+# Delete all previous clusters on fink_lpc
+ktbx delete --pattern fink-ci-master
+
 # Clone the repository
 git clone --single-branch $repo_url $repo --branch $branchname
 
