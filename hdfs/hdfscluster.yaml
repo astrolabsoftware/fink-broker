@@ -5,7 +5,7 @@ metadata:
   name: simple-hdfs
 spec:
   image:
-    productVersion: 3.3.6
+    custom: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/stackable-hadoop:v0.0.2-rc1"
   clusterConfig:
     zookeeperConfigMapName: simple-hdfs-znode
     dfsReplication: 1
