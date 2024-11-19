@@ -13,3 +13,5 @@ $STCK_BIN operator install commons=24.7.0   secret=24.7.0 listener=24.7.0  zooke
 
 ink "Install HDFS instance"
 kubectl apply -f $DIR -n default
+
+$DIR/mkdir.sh
