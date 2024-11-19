@@ -23,7 +23,7 @@ spec:
     coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
     env:
       - name: SPARK_USER
-        value: {{ .Values.hadoop_user_name }}
+        value: "{{ .Values.hadoop_user_name }}"
     memory: "{{ tpl .Values.stream2raw.memory . }}"
     labels:
       version: 3.4.1
@@ -34,7 +34,7 @@ spec:
     coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
     env:
       - name: SPARK_USER
-        value: {{ .Values.hadoop_user_name }}
+        value: "{{ .Values.hadoop_user_name }}"
     memory: "{{ tpl .Values.stream2raw.memory . }}"
     instances: {{ tpl .Values.distribution.instances . }}
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
