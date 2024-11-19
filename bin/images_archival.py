@@ -61,13 +61,17 @@ def main():
     df = df.select(cols)
 
     # Push to HBase
-    row_key_name = "objectId"
+    row_key_name = "objectId_jd"
 
     cf = assign_column_family_names(
         df,
         cols_i=["objectId", "candid", "jd"],
         cols_d=["hdfs_path"],
         cols_b=[],
+    )
+
+    df = add_row_key(
+        df, row_key_name=row_key_name, cols=row_key_name.split("_")
     )
 
     push_to_hbase(
