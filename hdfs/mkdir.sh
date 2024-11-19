@@ -6,7 +6,13 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-hdfs_url="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.default.svc.cluster.local:8020"
+# Wait for HDFS statefulset to be available
+# TODO improve this
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=hdfs --timeout=300s -n default
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=zookeeper --timeout=300s -n default
+sleep 10
+
+hdfs_url="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.default:8020"
 
 # Check if pod hdfs-client exists
 if ! kubectl get pod hdfs-client &> /dev/null; then
