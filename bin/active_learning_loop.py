@@ -106,7 +106,9 @@ def main():
     # Add the last upper limits per band if it exists
     df = df.withColumn(
         "ext",
-        extend_lc_with_upper_limits("cmagpsf", "csigmapsf", "cfid", "cdiffmaglim"),
+        extend_lc_with_upper_limits(
+            "cmagpsf", "csigmapsf", "cfid", "cdiffmaglim", onlyfainterlimits=True
+        ),
     )
     df = df.withColumn("cmagpsf_ext", df["ext"].getItem("cmagpsf_ext"))
     df = df.withColumn("csigmapsf_ext", df["ext"].getItem("csigmapsf_ext"))
