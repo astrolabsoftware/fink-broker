@@ -22,7 +22,7 @@ import pyspark.sql.functions as F
 from fink_broker.parser import getargs
 from fink_broker.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.hbase_utils import assign_column_family_names
-from fink_broker.hbase_utils import push_to_hbase
+from fink_broker.hbase_utils import push_to_hbase, add_row_key
 
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 
@@ -70,9 +70,7 @@ def main():
         cols_b=[],
     )
 
-    df = add_row_key(
-        df, row_key_name=row_key_name, cols=row_key_name.split("_")
-    )
+    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
 
     push_to_hbase(
         df=df,
