@@ -25,7 +25,7 @@ spec:
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     env:
       - name: SPARK_USER
-        value: {{ .Values.hadoop_user_name }}
+        value: "{{ .Values.hadoop_user_name }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
@@ -36,7 +36,7 @@ spec:
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     env:
       - name: SPARK_USER
-        value: {{ .Values.hadoop_user_name }}
+        value: "{{ .Values.hadoop_user_name }}"
     memory: "{{ tpl .Values.distribution.memory . }}"
     instances: {{ tpl .Values.distribution.instances . }}
     javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf -Dcom.amazonaws.sdk.disableCertChecking=true"
