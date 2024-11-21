@@ -21,7 +21,7 @@ fi
 
 kubectl wait -n default --for=condition=ready pod/hdfs-client
 
-kubectl exec -it hdfs-client -- sh -c "export HADOOP_USER_NAME=stackable && \
+kubectl exec -n default -it hdfs-client -- sh -c "export HADOOP_USER_NAME=stackable && \
     hdfs dfs -fs $hdfs_url -mkdir -p /user/185 && \
     hdfs dfs -fs $hdfs_url -chown 185:hdfs /user/185 && \
     hdfs dfs -fs $hdfs_url -chmod 700 /user/185"
