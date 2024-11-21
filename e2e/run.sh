@@ -121,8 +121,6 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
-echo "Install hdfs"
-$DIR/../hdfs/install.sh
 
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
