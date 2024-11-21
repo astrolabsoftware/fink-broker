@@ -118,9 +118,6 @@ jobs:
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}"
-      - name: Install HDFS
-        run: |
-          ./hdfs/install.sh
       - name: Download image
         uses: actions/download-artifact@v4
         with:
