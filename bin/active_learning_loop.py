@@ -21,6 +21,7 @@ import os
 import numpy as np
 
 from pyspark.sql import functions as F
+from fink_utils.spark.utils import extend_lc_with_upper_limits
 
 from fink_utils.spark.utils import concat_col
 from fink_utils.xmatch.simbad import return_list_of_eg_host
@@ -95,12 +96,22 @@ def main():
     df = load_parquet_files(path)
 
     # Retrieve time-series information
-    to_expand = ["jd", "fid", "magpsf", "sigmapsf"]
+    to_expand = ["jd", "fid", "magpsf", "sigmapsf", "diffmaglim", "sigmapsf"]
 
     # Append temp columns with historical + current measurements
     prefix = "c"
     for colname in to_expand:
         df = concat_col(df, colname, prefix=prefix)
+
+    # Add the last upper limits per band if it exists
+    df = df.withColumn(
+        "ext",
+        extend_lc_with_upper_limits(
+            "cmagpsf", "csigmapsf", "cfid", "cdiffmaglim", onlyfainterlimits=True
+        ),
+    )
+    df = df.withColumn("cmagpsf_ext", df["ext"].getItem("cmagpsf_ext"))
+    df = df.withColumn("csigmapsf_ext", df["ext"].getItem("csigmapsf_ext"))
 
     # Add classification
     cols = [
@@ -125,7 +136,7 @@ def main():
     model = curdir + "/data/models/for_al_loop/model_20240821.pkl"
 
     # Run SN classification using AL model
-    rfscore_args = ["cjd", "cfid", "cmagpsf", "csigmapsf"]
+    rfscore_args = ["cjd", "cfid", "cmagpsf_ext", "csigmapsf_ext"]
     rfscore_args += [F.col("cdsxmatch"), F.col("candidate.ndethist")]
     rfscore_args += [F.lit(1), F.lit(3), F.lit("diff")]
     rfscore_args += [F.lit(model)]
