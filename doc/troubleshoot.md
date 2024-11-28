@@ -29,3 +29,11 @@ argocd app sync fink-broker
 cd fink-broker
 helm install --debug fink ./chart -f ./chart/values-ci-noscience.yaml --dry-run
 ```
+
+## Access argoCD web UI
+
+```bash
+kubectl port-forward -n argocd $(kubectl get  pods --selector=app.kubernetes.io/name=argocd-server -n argocd --output=jsonpath="{.items..metadata.name}") 8080
+# Login is "admin, Password is set to "password", fix this in production
+kubectl -n argocd patch secret argocd-secret  -p '{"stringData": {"admin.password": "$2a$10$rRyBsGSHK6.uc8fntPwVIuLVHgsAhAX7TcdrqW/RADU0uh7CaChLa", "admin.passwordMtime": "'$(date +%FT%T%Z)'"  }}'
+```
