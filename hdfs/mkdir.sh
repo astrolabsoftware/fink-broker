@@ -14,7 +14,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=hdfs --timeout=
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=zookeeper --timeout=300s -n $NS
 sleep 60
 
-hdfs_url="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.default:8020"
+hdfs_url="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.$NS:8020"
 
 # Check if pod hdfs-client exists
 if ! kubectl get -n "$NS" pod hdfs-client &> /dev/null; then
