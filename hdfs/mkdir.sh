@@ -10,7 +10,7 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 # TODO improve this
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=hdfs --timeout=300s -n default
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=zookeeper --timeout=300s -n default
-sleep 10
+sleep 60
 
 hdfs_url="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.default:8020"
 

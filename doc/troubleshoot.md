@@ -30,10 +30,23 @@ cd fink-broker
 helm install --debug fink ./chart -f ./chart/values-ci-noscience.yaml --dry-run
 ```
 
-## Access argoCD web UI
+## ArgoCD
+
+### Access argoCD web UI
 
 ```bash
 kubectl port-forward -n argocd $(kubectl get  pods --selector=app.kubernetes.io/name=argocd-server -n argocd --output=jsonpath="{.items..metadata.name}") 8080
 # Login is "admin, Password is set to "password", fix this in production
 kubectl -n argocd patch secret argocd-secret  -p '{"stringData": {"admin.password": "$2a$10$rRyBsGSHK6.uc8fntPwVIuLVHgsAhAX7TcdrqW/RADU0uh7CaChLa", "admin.passwordMtime": "'$(date +%FT%T%Z)'"  }}'
+```
+
+### Fine-tune "ignoreDifferences" field of an ArgoCD Application
+
+```bash
+# Install yq
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\\n    sudo chmod +x /usr/bin/yq
+# Retrieve failedsyncmanifest.yaml file in ArgoCD web UI
+yq failedsyncmanifest.yaml -o json > failedsyncmanifest.json
+# Fine-tune 'jqPathExpressions'
+cat failedsyncmanifest.json | jq '.spec.versions[].additionalPrinterColumns | select(. == [])'
 ```
