@@ -1,4 +1,4 @@
-# Minio should be disabled in fink-cd
+# Minio should be disabled in fink-cd!
 
 kubectl run --image apache/hadoop:3.4.0 hdfs-client -- sleep infinity
 
