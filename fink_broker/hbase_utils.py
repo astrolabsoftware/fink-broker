@@ -752,9 +752,6 @@ def construct_schema_row(df, rowkeyname, version):
     # Original df columns, but values are types.
     data = np.array([(c.jsonValue()["type"]) for c in df.schema], dtype="<U75")
 
-    # binary types are too vague, so assign manually a description
-    names = np.array([(c.jsonValue()["name"]) for c in df.schema])
-
     index = np.where(np.array(df.columns) == rowkeyname)[0][0]
     data[index] = version
 
