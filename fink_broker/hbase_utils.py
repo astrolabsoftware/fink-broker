@@ -108,7 +108,7 @@ def load_all_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    159
+    156
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
