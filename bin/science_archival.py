@@ -64,6 +64,9 @@ def main():
     # Drop partitioning columns
     df = df.drop("year").drop("month").drop("day")
 
+    # Drop images
+    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
     # push data to HBase
     push_full_df_to_hbase(
         df,

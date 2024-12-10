@@ -72,11 +72,11 @@ def main():
     data = data.drop("year").drop("month").drop("day")
 
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d, cols_b = bring_to_current_schema(data)
+    df_flat, cols_i, cols_d = bring_to_current_schema(data)
 
     # Assign each column to a specific column family
     # This is independent from the final structure
-    cf = assign_column_family_names(df_flat, cols_i, cols_d, cols_b)
+    cf = assign_column_family_names(df_flat, cols_i, cols_d)
 
     # Restrict the input DataFrame to the subset of wanted columns,
     # except for tables containing uppervalid & upper limit data
