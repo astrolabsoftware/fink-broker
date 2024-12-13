@@ -186,53 +186,14 @@ if [[ "$SIM_ONLY" = true ]] ; then
   KAFKA_IPPORT=$KAFKA_IPPORT_SIM
 fi
 
-# Stop services
+# Stop a service
 if [[ $MODE == "stop" ]]; then
   if [[ $service == "all" ]]; then
-    SIGNAL=${SIGNAL:-TERM}
-
-    # Kill instance of HBase connector running if needed
-    PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
-
-    if [ -z "$PIDS" ]; then
-      echo "No HBase connection to stop"
-    else
-      echo "Stopping HBase connection..."
-      kill -s $SIGNAL $PIDS
-    fi
-
-    # Kill other services
-    PIDS=$(ps ax | grep -i 'fink' | awk '{print $1}')
-    if [ -z "$PIDS" ]; then
-      echo "No fink service(s) to stop"
-    else
-      echo "Stopping all services..."
-      kill -s $SIGNAL $PIDS
-    fi
+    pkill -f stream2raw
+    pkill -f raw2science
+    pkill -f distribute
   else
-    SIGNAL=${SIGNAL:-TERM}
-
-    # Kill instance of HBase connector running if needed
-    if [[ $service == "raw2science" ]]; then
-      PIDS=$(ps ax | grep -i 'fink' | grep "hbase" | awk '{print $1}')
-
-      if [ -z "$PIDS" ]; then
-        echo "No fink $service service to stop"
-      else
-        echo "Stopping $service (HBase connection)..."
-        kill -s $SIGNAL $PIDS
-      fi
-    fi
-
-    PIDS=$(ps ax | grep -i 'fink' | grep $service | awk '{print $1}')
-
-    if [ -z "$PIDS" ]; then
-      echo "No fink $service service to stop"
-    else
-      echo "Stopping $service..."
-      kill -s $SIGNAL $PIDS
-    fi
-  fi
+    pkill -f $service
   exit 1
 fi
 
