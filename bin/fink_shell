@@ -101,6 +101,8 @@ fi
 PYSPARK_DRIVER_PYTHON=${PYSPARK_DRIVER_PYTHON} pyspark \
   --master ${SPARK_MASTER} ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
   --files ${HBASE_XML_CONF} ${PYTHON_EXTRA_FILE} \
+  --conf spark.sql.execution.arrow.pyspark.enabled=true\
+  --conf spark.sql.execution.arrow.maxRecordsPerBatch=1000000\
   --jars ${FINK_EXTRA_JARS} --packages ${FINK_PACKAGES}
 
 unset PYSPARK_DRIVER_PYTHON
