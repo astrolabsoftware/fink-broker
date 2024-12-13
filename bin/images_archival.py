@@ -67,7 +67,6 @@ def main():
         df,
         cols_i=["objectId", "candid", "jd"],
         cols_d=["hdfs_path"],
-        cols_b=[],
     )
 
     df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
