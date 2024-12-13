@@ -22,6 +22,12 @@ Operations for the night N start at 21.45pm UTC on the night N-1. There are 2 cr
 0 12 1 * * /home/julien.peloton/fink-broker/scheduler/launch_sso_resolver.sh
 ```
 
+```bash
+# root user
+30 21 * * * /home/julien.peloton/fink-broker/scripts/broadcast.sh
+30 21 * * * /home/julien.peloton/fink-broker/scripts/sso/sso_broadcast.sh
+```
+
 The first script is for live operations:
 
 - `stream2raw`: Wrapped in `launch_fink.sh`. It listens to the ZTF stream, collect alerts, and store them on disks. Starts at 9pm UTC on night N-1.
