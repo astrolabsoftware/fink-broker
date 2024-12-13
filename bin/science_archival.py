@@ -60,10 +60,10 @@ def main():
     row_key_name = "objectId_jd"
 
     n_alerts = 0
-    step = 10 # 10 files at once
+    step = 10  # 10 files at once
     for index in range(0, len(paths), step):
-        logger.info('Processing {} files'.format(len(paths[index: index + step])))
-        df = load_parquet_files(paths[index: index + step])
+        logger.info("Processing {} files".format(len(paths[index : index + step])))
+        df = load_parquet_files(paths[index : index + step])
         n_alerts_parquet = df.count()
         n_alerts += n_alerts_parquet
 
