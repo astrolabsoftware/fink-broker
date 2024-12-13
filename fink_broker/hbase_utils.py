@@ -440,7 +440,7 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     return df
 
 
-def write_catalog_on_disk(catalog, catalogname) -> None:
+def write_catalog_on_disk(catalog, catfolder, file_name) -> None:
     """Save HBase catalog in json format on disk
 
     Parameters
@@ -451,6 +451,9 @@ def write_catalog_on_disk(catalog, catalogname) -> None:
     catalogname: str
         Name of the catalog on disk
     """
+    if not os.path.isdir(catfolder):
+        os.makedirs(catfolder, exist_ok=True)
+    catalogname = os.path.join(catfolder, file_name)
     with open(catalogname, "w") as json_file:
         json.dump(catalog, json_file)
 
@@ -485,7 +488,7 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
 
     # write catalog for the table data
     file_name = table_name + ".json"
-    write_catalog_on_disk(hbcatalog_index, os.path.join(catfolder, file_name))
+    write_catalog_on_disk(hbcatalog_index, catfolder, file_name)
 
     # Construct the schema row - inplace replacement
     schema_row_key_name = "schema_version"
@@ -509,7 +512,7 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
 
     # write catalog for the schema row
     file_name = table_name + "_schema_row.json"
-    write_catalog_on_disk(hbcatalog_index_schema, os.path.join(catfolder, file_name))
+    write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
 
 
 def select_relevant_columns(
