@@ -13,13 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-source ~/.bash_profile
+source /home/julien.peloton/.bash_profile
+
+message_help="./check_results <--night NIGHT> <--telegram>"
 
 # Grab the command line arguments
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -h)
-        echo -e $message_help
+        echo -e "$message_help"
         exit
         ;;
     --night)
@@ -35,14 +37,17 @@ done
 
 broadcastMessage () {
     if [[ $TELEGRAM == true ]]; then
-        curl -X POST -d 'chat_id=@fink_bot_error' -d "text=$1" https://api.telegram.org/bot$FINK_TG_TOKEN/sendMessage
+        curl -X POST -d 'chat_id=@fink_bot_error' -d "text=$1" https://api.telegram.org/bot"$FINK_TG_TOKEN"/sendMessage
     else
-        echo $1
+        echo "$1"
     fi
 }
 
+if [[ -z "$NIGHT" ]]; then
+    NIGHT=$(date +"%Y%m%d")
+fi
 
-FILES=`/usr/bin/ls $FINK_HOME/broker_logs/*${NIGHT}*`
+FILES=$(/usr/bin/ls "$FINK_HOME"/broker_logs/*"${NIGHT}"*)
 
 if [[ -z "$FILES" ]]; then
     broadcastMessage "Nothing found for $NIGHT"
@@ -52,29 +57,29 @@ fi
 newline=$'\n'
 MESSAGE=""
 for file in $FILES; do
-    isPythonProblem=`grep -n Traceback $file`
+    isPythonProblem=$(grep -n Traceback "$file")
     if [[ $isPythonProblem != "" ]]; then
         MESSAGE+="SPARK FAILURE: $(basename $file) $newline"
     fi
 
-    isHdfsProblem=`grep -n "Name node is in safe mode" $file`
+    isHdfsProblem=$(grep -n "Name node is in safe mode" "$file")
     if [[ $isHdfsProblem != "" ]]; then
         MESSAGE+="HDFS FAILURE: $(basename $file) $newline"
     fi
 
-    isHdfsProblem=`grep -n "Dead nodes" $file`
+    isHdfsProblem=$(grep -n "Dead nodes" "$file")
     if [[ $isHdfsProblem != "" ]]; then
         MESSAGE+="HDFS FAILURE: $(basename $file) $newline"
     fi
 
-    isHbaseProblem=`grep -n "RetriesExhaustedWithDetailsException" $file`
+    isHbaseProblem=$(grep -n "RetriesExhaustedWithDetailsException" "$file")
     if [[ $isHbaseProblem != "" ]]; then
         MESSAGE+="HBase FAILURE: $(basename $file) $newline"
-        hasProcessed=`grep -n "alerts pushed to HBase" $file`
+        hasProcessed=$(grep -n "alerts pushed to HBase" "$file")
         if [[ $hasProcessed != "" ]]; then
             MESSAGE+="|--> PUSHED OK $newline"
         fi
-        hasProcessed=`grep -n "Output Path is null in commitJob" $file`
+        hasProcessed=$(grep -n "Output Path is null in commitJob" "$file")
         if [[ $hasProcessed != "" ]]; then
             MESSAGE+="|--> PUSHED OK $newline"
         fi
