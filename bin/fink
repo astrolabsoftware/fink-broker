@@ -194,6 +194,7 @@ if [[ $MODE == "stop" ]]; then
     pkill -f distribute
   else
     pkill -f $service
+  fi
   exit 1
 fi
 
