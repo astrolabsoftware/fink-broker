@@ -21,7 +21,7 @@ from fink_broker.parser import getargs
 from fink_broker.spark_utils import init_sparksession, load_parquet_files
 
 from fink_filters.filter_anomaly_notification.filter import anomaly_notification_
-
+from fink_science.anomaly_detection.processor import ANOMALY_MODELS
 from fink_broker.logging_utils import get_fink_logger, inspect_application
 
 from fink_broker.hbase_utils import push_full_df_to_hbase
@@ -80,6 +80,14 @@ def main():
         channel_name="bot_anomaly_area",
         cut_coords=True,
     )
+
+    for model in ANOMALY_MODELS:
+        df_proc = df.select(
+            'objectId', 'candidate.ra',
+            'candidate.dec', 'candidate.rb',
+            f'anomaly_score{model}', 'timestamp')
+        anomaly_notification_(df_proc, send_to_tg=False,
+        send_to_slack=False, send_to_anomaly_base=True, model=model)
 
     # Keep only candidates of interest for all sky anomalies
     oids = [int(i) for i in pdf["candid"].to_numpy()]
