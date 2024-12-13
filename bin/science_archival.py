@@ -58,22 +58,29 @@ def main():
 
     # Row key
     row_key_name = "objectId_jd"
-    df = load_parquet_files(folder)
-    n_alerts = df.count()
 
-    # Drop partitioning columns
-    df = df.drop("year").drop("month").drop("day")
+    n_alerts = 0
+    step = 10  # 10 files at once
+    for index in range(0, len(paths), step):
+        logger.info("Processing {} files".format(len(paths[index : index + step])))
+        df = load_parquet_files(paths[index : index + step])
+        n_alerts_parquet = df.count()
+        n_alerts += n_alerts_parquet
 
-    # Drop images
-    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+        # Drop unused partitioning columns
+        df = df.drop("year").drop("month").drop("day")
 
-    # push data to HBase
-    push_full_df_to_hbase(
-        df,
-        row_key_name=row_key_name,
-        table_name=args.science_db_name,
-        catalog_name=args.science_db_catalogs,
-    )
+        # Drop images
+        df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
+        # push data to HBase
+        push_full_df_to_hbase(
+            df,
+            row_key_name=row_key_name,
+            table_name=args.science_db_name,
+            catalog_name=args.science_db_catalogs,
+        )
+
     logger.info("{} alerts pushed to HBase".format(n_alerts))
 
 

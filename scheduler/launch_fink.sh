@@ -12,7 +12,7 @@ source ~/.bash_profile
 NIGHT=`date +"%Y%m%d" -d "now + 1 days"`
 
 # 20 hours lease
-LEASETIME=72900
+LEASETIME=72000
 
 # stream2raw
 nohup fink start stream2raw \

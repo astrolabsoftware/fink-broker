@@ -107,7 +107,7 @@ def main():
     df = df.withColumn(
         "ext",
         extend_lc_with_upper_limits(
-            "cmagpsf", "csigmapsf", "cfid", "cdiffmaglim", onlyfainterlimits=True
+            "cmagpsf", "csigmapsf", "cfid", "cdiffmaglim", F.lit(True)
         ),
     )
     df = df.withColumn("cmagpsf_ext", df["ext"].getItem("cmagpsf_ext"))
