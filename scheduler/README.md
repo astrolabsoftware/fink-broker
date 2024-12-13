@@ -21,8 +21,9 @@ Operations for the night N start at 21.45pm UTC on the night N-1. There are 2 cr
 0 0 1 * * /home/julien.peloton/fink-broker/scheduler/launch_ssoft.sh
 0 12 1 * * /home/julien.peloton/fink-broker/scheduler/launch_sso_resolver.sh
 
-# Operation reports twice a day
+# Operation reports three times a day
 0 12 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
+0 17 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
 0 23 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
 ```
 
