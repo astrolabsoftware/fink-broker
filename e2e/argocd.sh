@@ -73,10 +73,6 @@ argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=op
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
-# TODO move to argoCD
-echo "Install hdfs"
-$DIR/../hdfs/install.sh
-
 # Sync fink-broker
 argocd app sync -l app.kubernetes.io/instance=fink
 
