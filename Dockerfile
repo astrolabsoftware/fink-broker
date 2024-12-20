@@ -27,6 +27,7 @@ RUN apt-get update && \
     apt install -y --no-install-recommends wget git apt-transport-https ca-certificates gnupg-agent apt-utils build-essential && \
     rm -rf /var/cache/apt/*
 
+# Download and install Spark dependencies listed in jars-urls.txt
 ADD deps/jars-urls.txt $FINK_HOME/
 RUN xargs -n 1 curl --fail --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
 

@@ -1,9 +1,3 @@
-* DONE use gitlab@virtualdata as a CI repo
-* DONE check fink-alert-simulator error message in CI:
- ⚠ fink-alert-simulator-cjxv2  main      fink-alert-simulator-cjxv2  5m        Error (exit code 1): pods "fink-alert-simulator-cjxv2" is forbidden: User "system:serviceaccount:argocd:default" cannot patch resource "pods" in API group "" in the namespace "argocd"
-* DONE trigger ci for OOMkill
-* 729
-** DONE use "kubectl get kafkatopics.kafka.strimzi.io  -n kafka" to check success of integration tests, maybe in fnkctl?
 ** TODO DELAYED BECAUSE IT NOT BLOCKS BUT WARN create topic in distribute before sending alerts in order to avoid error below: https://fink-broker.slack.com/archives/D03KJ390F17/p1692008729660549
 Du coup ça fonctionne avec un compte utilisateur, par contre j'ai pas activé les autorisations dans kafka car le fink-alert-simulator aurait pu plus écrire dans le topic sans authentification.
 12 h 28
@@ -15,24 +9,9 @@ En fait c'est du au fait que le topic existe pas, ça fonctionne si on relance l
 Tu crois qu'on pourrais pré-créer les topic pour éviter ce problème
 @JulienPeloton
 ?
-** DONE add user authentication in kafka https://stackoverflow.com/questions/65729535/how-to-do-i-connect-kafka-python-to-accept-username-and-password-for-jaas-like-i
 * TODO Enable authZ in kafka (require authN setup in fink-alert-simulator)
-* TODO [#B] distribute should wait for data to appear instead of crashing in connect_to_raw_database()
 * TODO move nodeport to internal for svc kafka-cluster-kafka-external-bootstrap
-* DONE improve final test in CI (check Kafka with fink-client https://github.com/astrolabsoftware/fink-client)
 * TODO run code-check.sh in CI
-* DONE add unit test for schema_converter
-* TODO https://stackoverflow.com/questions/30385981/how-to-access-s3a-files-from-apache-spark
-Document +add SO post?:
-Download hadoop binary release: https://www.apache.org/dyn/closer.cgi/hadoop/common/hadoop-3.2.4/hadoop-3.2.4.tar.gz
-extract and copy jar:
- fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/hadoop-aws-3.2.4.jar ~/src/k8s-spark-py/custom/jars
- fjammes@clrinfopo18  ~/Downloads/hadoop-3.2.4  cp ./share/hadoop/tools/lib/aws-java-sdk-bundle-1.11.901.jar ~/src/k8s-spark-py/custom/jars
-	// WARNING package are not deployed in spark-executor
-	// see https://stackoverflow.com/a/67299668/2784039
-* TODO document hack to retrieve Maven URLs
-kubectl logs stream2raw-py-f529af864f8dee60-driver | grep downlo | cut -d' ' -f2 > jars-urls.txt
-OR add mnv copy:dependencies when building the image?
 * TODO manage dependencies
 What to do with:
 1. hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar
@@ -40,16 +19,43 @@ hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
 which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
 cf. Julien are they required?
 2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
-* DONE document minio install and bucket creation:
-    5  curl https://dl.min.io/client/mc/release/linux-amd64/mc  --create-dirs -o $HOME/minio-binaries/mc
-    6  chmod +x $HOME/minio-binaries/mc
-   15  export PATH=$PATH:$HOME/minio-binaries/
-   17  mc alias set s3 http://minio.minio:9000 minioadmin minioadmin
-   19  mc ls s3
-   27  mc mb s3/fink-broker-online
- mc ls f1 --recursive fink-broker-online/
-* TODO test removal of options below
+* TODO test removal of options below whith useing hdfs
 +    --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" \
      --conf spark.hadoop.fs.s3a.path.style.access=true \
 +    --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \
-* DONE INSTALL MINIO https://min.io/docs/minio/kubernetes/upstream/index.html?
+* TODO hdfs operator management
+
+** limit and request for memory: see https://github.com/stackabletech/hdfs-operator/issues/625
+** TODO: open issue: zkfc on datanode is not compliant with memory setting
+
+In the example below memory limit is 256Mi for nameNode in hdfscluster CR, but it become 768Mi in each related pod because the `zkfs` container is not impacted by the CR configuration.
+This should be fixed because it prevents running the setup on CI platforms with low memory like Github Action for instances.
+
+kubectl get -n hdfs hdfscluster simple-hdfs  -o yaml -o jsonpath  -o=jsonpath='{.spec.nameNodes.config.resources}'
+{"cpu":{"min":"0"},"memory":{"limit":"256Mi"}}
+
+kubectl describe nodes | grep namenode
+  hdfs                        simple-hdfs-namenode-default-0                                                         100m (0%)     1400m (1%)  768Mi (0%)       768Mi (0%)     34m
+  hdfs                        simple-hdfs-namenode-default-1                                                         100m (0%)     1400m (1%)  768Mi (0%)       768Mi (0%)     31m
+
+kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath='{.spec.containers[1].name}'
+zkfc
+
+kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath='{.spec.containers[1].resources}'  | jq
+{
+  "limits": {
+    "cpu": "400m",
+    "memory": "512Mi"
+  },
+  "requests": {
+    "cpu": "100m",
+    "memory": "512Mi"
+  }
+}
+
+
+** management of argoCD default values (jqpath expression): https://github.com/stackabletech/hdfs-operator/issues/626
+** TODO: open issue: be able to run only one dataNode on CI
+
+* Add helm option on HDFS cpu.min (also for operators!)
+* Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
