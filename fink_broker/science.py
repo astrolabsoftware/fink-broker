@@ -413,9 +413,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("lc_features", extract_features_ad(*ad_args))
     # Apply level one processor: anomaly_score
     _LOG.info("New processor: Anomaly score")
-    global ANOMALY_MODELS
-    ANOMALY_MODELS = [''] + ANOMALY_MODELS # '' - model for a public channel
-    for model in ANOMALY_MODELS:
+    LIST_OF_MODELS = [''] + ANOMALY_MODELS # '' - model for a public channel
+    for model in LIST_OF_MODELS:
         _LOG.info(f"...Anomaly score{model}")
         df = df.withColumn(f'anomaly_score{model}', anomaly_score("lc_features", F.lit(model)))
 
