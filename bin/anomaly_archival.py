@@ -83,11 +83,20 @@ def main():
 
     for model in ANOMALY_MODELS:
         df_proc = df.select(
-            'objectId', 'candidate.ra',
-            'candidate.dec', 'candidate.rb',
-            f'anomaly_score{model}', 'timestamp')
-        anomaly_notification_(df_proc, send_to_tg=False,
-        send_to_slack=False, send_to_anomaly_base=True, model=model)
+            "objectId",
+            "candidate.ra",
+            "candidate.dec",
+            "candidate.rb",
+            f"anomaly_score{model}",
+            "timestamp",
+        )
+        anomaly_notification_(
+            df_proc,
+            send_to_tg=False,
+            send_to_slack=False,
+            send_to_anomaly_base=True,
+            model=model,
+        )
 
     # Keep only candidates of interest for all sky anomalies
     oids = [int(i) for i in pdf["candid"].to_numpy()]
