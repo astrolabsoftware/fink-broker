@@ -413,10 +413,12 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("lc_features", extract_features_ad(*ad_args))
     # Apply level one processor: anomaly_score
     _LOG.info("New processor: Anomaly score")
-    LIST_OF_MODELS = [''] + ANOMALY_MODELS  # '' - model for a public channel
+    LIST_OF_MODELS = [""] + ANOMALY_MODELS  # '' - model for a public channel
     for model in LIST_OF_MODELS:
         _LOG.info(f"...Anomaly score{model}")
-        df = df.withColumn(f'anomaly_score{model}', anomaly_score("lc_features", F.lit(model)))
+        df = df.withColumn(
+            f"anomaly_score{model}", anomaly_score("lc_features", F.lit(model))
+        )
 
     # split features
     df = (
@@ -600,9 +602,9 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
         3: 21,
         4: 22,
     }
-    mapping_cats_general_expr = F.create_map([
-        F.lit(x) for x in chain(*mapping_cats_general.items())
-    ])
+    mapping_cats_general_expr = F.create_map(
+        [F.lit(x) for x in chain(*mapping_cats_general.items())]
+    )
 
     df = df.withColumn(
         "cats_argmax", F.expr("array_position(cbpf_preds, array_max(cbpf_preds)) - 1")
@@ -627,16 +629,18 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(*[
-        "preds_snn",
-        "cbpf_preds",
-        "redshift",
-        "redshift_err",
-        "cdsxmatch",
-        "roid",
-        "cats_argmax",
-        "snn_argmax",
-    ])
+    df = df.drop(
+        *[
+            "preds_snn",
+            "cbpf_preds",
+            "redshift",
+            "redshift_err",
+            "cdsxmatch",
+            "roid",
+            "cats_argmax",
+            "snn_argmax",
+        ]
+    )
 
     return df
 
