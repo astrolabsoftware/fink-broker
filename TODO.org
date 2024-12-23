@@ -1,33 +1,8 @@
-** TODO DELAYED BECAUSE IT NOT BLOCKS BUT WARN create topic in distribute before sending alerts in order to avoid error below: https://fink-broker.slack.com/archives/D03KJ390F17/p1692008729660549
-Du coup ça fonctionne avec un compte utilisateur, par contre j'ai pas activé les autorisations dans kafka car le fink-alert-simulator aurait pu plus écrire dans le topic sans authentification.
-12 h 28
-J'ai maintenant ce message d'erreur:
-23/08/14 10:26:52 WARN NetworkClient: [Producer clientId=producer-1] Error while fetching metadata with correlation id 29 : {fink_simbad_grav_candidates_ztf=LEADER_NOT_AVAILABLE}
-12 h 32
-En fait c'est du au fait que le topic existe pas, ça fonctionne si on relance lae job distribute...
-12 h 33
-Tu crois qu'on pourrais pré-créer les topic pour éviter ce problème
-@JulienPeloton
-?
-* TODO Enable authZ in kafka (require authN setup in fink-alert-simulator)
-* TODO move nodeport to internal for svc kafka-cluster-kafka-external-bootstrap
-* TODO run code-check.sh in CI
-* TODO manage dependencies
-What to do with:
-1. hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar
-hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
-which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
-cf. Julien are they required?
-2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
-* TODO test removal of options below whith useing hdfs
-+    --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" \
-     --conf spark.hadoop.fs.s3a.path.style.access=true \
-+    --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \
+#+TITLE: current
 * TODO hdfs operator management
 
-** limit and request for memory: see https://github.com/stackabletech/hdfs-operator/issues/625
-** TODO: open issue: zkfc on datanode is not compliant with memory setting
-
+** TODO limit and request for memory: monitor issue https://github.com/stackabletech/hdfs-operator/issues/625
+** TODO open issue: zkfc on datanode is not compliant with memory setting
 In the example below memory limit is 256Mi for nameNode in hdfscluster CR, but it become 768Mi in each related pod because the `zkfs` container is not impacted by the CR configuration.
 This should be fixed because it prevents running the setup on CI platforms with low memory like Github Action for instances.
 
@@ -54,8 +29,35 @@ kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath
 }
 
 
-** management of argoCD default values (jqpath expression): https://github.com/stackabletech/hdfs-operator/issues/626
-** TODO: open issue: be able to run only one dataNode on CI
+** TODO management of argoCD default values (jqpath expression): monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
+** TODO open issue: be able to run only one dataNode on CI
 
-* Add helm option on HDFS cpu.min (also for operators!)
-* Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
+** TODO Add helm option on HDFS cpu.min (also for operators!)
+** TODO Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
+
+#+TITLE: previous
+* TODO DELAYED BECAUSE IT NOT BLOCKS BUT WARN create topic in distribute before sending alerts in order to avoid error below: https://fink-broker.slack.com/archives/D03KJ390F17/p1692008729660549
+Du coup ça fonctionne avec un compte utilisateur, par contre j'ai pas activé les autorisations dans kafka car le fink-alert-simulator aurait pu plus écrire dans le topic sans authentification.
+12 h 28
+J'ai maintenant ce message d'erreur:
+23/08/14 10:26:52 WARN NetworkClient: [Producer clientId=producer-1] Error while fetching metadata with correlation id 29 : {fink_simbad_grav_candidates_ztf=LEADER_NOT_AVAILABLE}
+12 h 32
+En fait c'est du au fait que le topic existe pas, ça fonctionne si on relance lae job distribute...
+12 h 33
+Tu crois qu'on pourrais pré-créer les topic pour éviter ce problème
+@JulienPeloton
+?
+* TODO Enable authZ in kafka (require authN setup in fink-alert-simulator)
+* TODO move nodeport to internal for svc kafka-cluster-kafka-external-bootstrap
+* TODO run code-check.sh in CI
+* TODO manage dependencies
+What to do with:
+1. hbase-spark-hbase2.4_spark3_scala2.12_hadoop3.2.jar
+hbase-spark-protocol-shaded-hbase2.4_spark3_scala2.12_hadoop3.2.jar
+which are both in k8s-spark-py/custom and fink-broker/libs (cf. FINK_JARS)
+cf. Julien are they required?
+2. custom/jars/commons-pool2-2.6.2.jar which was in k8s-spark-py/custom
+* TODO test removal of options below whith useing hdfs
++    --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" \
+     --conf spark.hadoop.fs.s3a.path.style.access=true \
++    --conf spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider \

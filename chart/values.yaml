@@ -3,7 +3,6 @@
 
 night: "20240101"
 
-hadoop_user_name: "185"
 image:
   pullPolicy: IfNotPresent
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
@@ -63,6 +62,9 @@ distribution:
     schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
     substream_prefix: "fink_"
 
+
+storage: hdfs
+
 #
 # Parameters used to access the S3 bucket
 #
@@ -73,6 +75,9 @@ s3:
   bucket: "fink-broker-online-{{.Values.night}}"
   access_key: "minio"
   secret_key: "minio123"
+
+hdfs:
+  hadoop_user_name: "185"
 
 serviceAccount:
   # Specifies whether a service account should be created

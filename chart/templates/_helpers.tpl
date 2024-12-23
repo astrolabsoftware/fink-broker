@@ -52,6 +52,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* Generate s3 configuration */}}
 {{- define "fink.s3config" -}}
+{{ if eq .Values.storage "s3" -}}
 spark.hadoop.fs.s3a.endpoint: {{ .Values.s3.endpoint }}
 spark.hadoop.fs.s3a.access.key: {{ .Values.s3.access_key }}
 spark.hadoop.fs.s3a.secret.key: {{ .Values.s3.secret_key }}
@@ -62,7 +63,15 @@ spark.hadoop.fs.s3a.path.style.access: "true"
 spark.hadoop.fs.s3a.aws.credentials.provider: "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
 spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 {{- end }}
+{{- end }}
 
+{{/* Generate hdfs configuration */}}
+{{- define "fink.hdfsconfig" -}}
+{{ if eq .Values.storage "hdfs" -}}
+- name: SPARK_USER
+  value: "{{ .Values.hdfs.hadoop_user_name }}"
+{{- end }}
+{{- end }}
 
 {{/* Generate common configuration */}}
 {{- define "fink.common" -}}

@@ -12,9 +12,7 @@ spec:
   driver:
     cores: {{ tpl .Values.raw2science.cores . }}
     coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
-    env:
-      - name: SPARK_USER
-        value: "{{ .Values.hadoop_user_name }}"
+    env: {{- include "fink.hdfsconfig" . | nindent 6 }}
     memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
@@ -23,9 +21,7 @@ spec:
   executor:
     cores: {{ tpl .Values.raw2science.cores . }}
     coreRequest: "{{ tpl .Values.raw2science.coreRequest . }}"
-    env:
-      - name: SPARK_USER
-        value: "{{ .Values.hadoop_user_name }}"
+    env: {{- include "fink.hdfsconfig" . | nindent 6 }}
     memory: "{{ tpl .Values.raw2science.memory . }}"
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     instances: {{ tpl .Values.raw2science.instances . }}
