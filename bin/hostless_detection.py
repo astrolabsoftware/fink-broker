@@ -103,6 +103,7 @@ def main():
             df["finkclass"],
             df["tnsclass"],
             df["candidate.jd"] - df["candidate.jdstarthist"],
+            df["roid"],
         ),
     )
 

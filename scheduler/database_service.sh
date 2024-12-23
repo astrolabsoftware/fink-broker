@@ -62,5 +62,6 @@ if [[ $? == 0 ]]; then
   # Remove checkpoints for fink-mm
   hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
   hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
+  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
 
 fi
