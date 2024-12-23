@@ -43,6 +43,7 @@ from fink_science.nalerthist.processor import nalerthist
 from fink_science.kilonova.processor import knscore
 from fink_science.ad_features.processor import extract_features_ad
 from fink_science.anomaly_detection.processor import anomaly_score
+from fink_science.anomaly_detection.processor import ANOMALY_MODELS
 
 from fink_science.random_forest_snia.processor import rfscore_rainbow_elasticc
 from fink_science.snn.processor import snn_ia_elasticc, snn_broad_elasticc
@@ -410,10 +411,14 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ]
 
     df = df.withColumn("lc_features", extract_features_ad(*ad_args))
-
     # Apply level one processor: anomaly_score
     _LOG.info("New processor: Anomaly score")
-    df = df.withColumn("anomaly_score", anomaly_score("lc_features"))
+    LIST_OF_MODELS = [""] + ANOMALY_MODELS  # '' - model for a public channel
+    for model in LIST_OF_MODELS:
+        _LOG.info(f"...Anomaly score{model}")
+        df = df.withColumn(
+            f"anomaly_score{model}", anomaly_score("lc_features", F.lit(model))
+        )
 
     # split features
     df = (
