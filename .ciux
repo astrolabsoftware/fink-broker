@@ -28,6 +28,9 @@ dependencies:
       dev: "true"
       itest: "true"
       release: "true"
+  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/stackable-hadoop:v24.11.0
+    labels:
+      itest: "true"
   - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/spark-py:k8s-3.4.1
     labels:
       build: "true"

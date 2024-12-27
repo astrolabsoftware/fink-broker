@@ -17,7 +17,7 @@ Url for the CI is: https://github.com/astrolabsoftware/fink-broker/actions
     ciux get deps ./fink-broker -l release
     ```
 
-    Clone all the necessary repositories and ensure you are using their `main` branch.
+    Clone all the necessary repositories and ensure you are using their `master/main` branch.
 
 ## Get Release Tag
 
