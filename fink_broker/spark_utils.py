@@ -340,7 +340,7 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     while True:
         try:
             userschema = spark.read.parquet(basepath).schema
-        except Exception as e:
+        except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
             time.sleep(wait_sec)
             wait_sec = increase_wait_time(wait_sec)

@@ -1,3 +1,4 @@
+{{ if eq .Values.storage "hdfs" -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -23,3 +24,4 @@ spec:
         - name: HADOOP_USER_NAME
           value: stackable
       restartPolicy: OnFailure
+{{- end }}

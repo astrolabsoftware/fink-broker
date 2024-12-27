@@ -6,28 +6,29 @@ on:
         required: true
         type: string
       ci_repo:
-        required: true
+        description: 'Intermediate registry to use'
+        required: false
         type: string
+        default: ""
       runner:
         required: true
         type: string
       kind_version:
-        required: true
+        description: 'Kind version to use'
+        required: false
         type: string
+        default: "v0.20.0"
     secrets:
       registry_username:
         required: true
       registry_token:
-        required: true
-      private_registry_username:
-        required: true
-      private_registry_token:
         required: true
 env:
   CIUX_VERSION: v0.0.4-rc10
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
+  STORAGE: ${{ inputs.storage }}
   # Override the self-hosted runner value
   POD_NAMESPACE: default
 jobs:
@@ -78,6 +79,9 @@ jobs:
           name: docker-artifact
           path: artifacts
   integration-tests:
+    strategy:
+      matrix:
+        storage: [hdfs, s3]
     name: Run integration tests
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
@@ -140,7 +144,7 @@ jobs:
       #     detached: true
       - name: Run argoCD
         run: |
-          ./e2e/argocd.sh
+          ./e2e/argocd.sh -S "${{ matrix.storage }}"
       - name: Check results
         run: |
           ./e2e/check-results.sh

@@ -12,11 +12,7 @@ jobs:
     uses: ./.github/workflows/e2e-common.yml
     with:
       suffix: "noscience"
-      ci_repo: ""
       runner: "['ubuntu-22.04']"
-      kind_version: "v0.20.0"
     secrets:
       registry_username: ${{ secrets.REGISTRY_USERNAME }}
       registry_token: ${{ secrets.REGISTRY_TOKEN }}
-      private_registry_username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
-      private_registry_token: ${{ secrets.PRIVATE_REGISTRY_TOKEN }}
