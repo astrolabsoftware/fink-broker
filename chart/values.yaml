@@ -26,6 +26,10 @@ producer: ztf
 
 log_level: INFO
 
+monitoring:
+  # Add JMX exporter to spark pods and create a PodMonitor
+  enabled: false
+
 #
 # Parameters used to run the stream2raw task
 #

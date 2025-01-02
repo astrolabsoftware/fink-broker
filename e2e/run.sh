@@ -21,7 +21,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.4-rc10
+ciux_version=v0.0.5-rc0
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 src_dir=$DIR/..
@@ -35,7 +35,7 @@ CIUX_IMAGE_URL="undefined"
 
 token="${TOKEN:-}"
 
-# Get options for suffix
+# Get options
 while getopts hcmsS: opt; do
   case ${opt} in
 
@@ -110,7 +110,7 @@ $src_dir/build.sh -s "$SUFFIX"
 build=true
 
 # e2e tests step
-ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+
 
 cluster=$(ciux get clustername "$src_dir")
 echo "Delete the cluster $cluster if it already exists"
@@ -124,14 +124,13 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
-
-. $CIUXCONFIG
+$(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
 fi
 
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-$DIR/argocd.sh -S "$storage"
+$DIR/argocd.sh -s "$SUFFIX" -S "$storage" $monitoring_opt
 
 echo "Check the results of the tests."
 $DIR/check-results.sh

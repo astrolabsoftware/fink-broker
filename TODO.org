@@ -1,7 +1,11 @@
 #+TITLE: current
+* 931
+** Problem in JMX exporter doc: https://github.com/kubeflow/spark-operator/issues/2380
+** TODO https://github.com/LucaCanali/sparkMeasure
+https://github.com/chrissng/spark-on-k8s-monitoring-dashboard?tab=readme-ov-file
 * TODO enable fink-test to run test on fink releases (currently it runs only on branch master tips)
+* TODO monitor issue (prometheus doc): https://github.com/kubeflow/spark-operator/issues/2380
 * TODO hdfs operator management
-
 ** TODO limit and request for memory: monitor issue https://github.com/stackabletech/hdfs-operator/issues/625
 ** TODO open issue: zkfc on datanode is not compliant with memory setting
 In the example below memory limit is 256Mi for nameNode in hdfscluster CR, but it become 768Mi in each related pod because the `zkfs` container is not impacted by the CR configuration.
@@ -28,13 +32,12 @@ kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath
     "memory": "512Mi"
   }
 }
-
-
-** TODO management of argoCD default values (jqpath expression): monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
+** TODO management of argoCD default values (jqpath expression): https://github.com/astrolabsoftware/fink-broker/issues/936
+monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
 ** TODO open issue: be able to run only one dataNode on CI
 
 ** TODO Add helm option on HDFS cpu.min (also for operators!)
-** TODO Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
+** DONE Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
 
 #+TITLE: previous
 * TODO DELAYED BECAUSE IT NOT BLOCKS BUT WARN create topic in distribute before sending alerts in order to avoid error below: https://fink-broker.slack.com/archives/D03KJ390F17/p1692008729660549

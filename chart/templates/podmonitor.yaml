@@ -1,0 +1,16 @@
+{{ if eq .Values.monitoring.enabled true -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: fink-broker
+  labels:
+    app.kubernetes.io/instance: fink-broker
+    monitored: "true"
+spec:
+  selector:
+    matchExpressions:
+      - key: "spark-role"
+        operator: "Exists"
+  podMetricsEndpoints:
+  - port: jmx-exporter
+{{- end }}

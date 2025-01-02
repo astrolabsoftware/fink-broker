@@ -27,3 +27,12 @@ spec:
     instances: {{ tpl .Values.raw2science.instances . }}
     labels:
       version: 3.4.1
+{{- if eq .Values.monitoring.enabled true }}
+  monitoring:
+    exposeDriverMetrics: true
+    exposeExecutorMetrics: true
+    prometheus:
+      # Added in Dockerfile
+      jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-1.1.0.jar"
+      port: 8090
+{{- end }}
