@@ -212,7 +212,6 @@ def main():
         disquery = push_to_kafka(
             df_tmp,
             topicname,
-            userfilter,
             cnames,
             checkpointpath_kafka,
             args.tinterval,
@@ -224,7 +223,6 @@ def main():
     disquery = push_to_kafka(
         df,
         topicname,
-        userfilter,
         ["objectId"],
         checkpointpath_kafka,
         args.tinterval,
