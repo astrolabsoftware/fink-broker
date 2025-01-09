@@ -44,7 +44,7 @@ spec:
   monitoring:
     exposeDriverMetrics: true
     exposeExecutorMetrics: true
-    prometheus:
-      jmxExporterJar: "/var/spark-data/spark-jars/jmx_prometheus_javaagent-0.11.0.jar"
-      port: 8090
+    # prometheus:
+    #   jmxExporterJar: "/var/spark-data/spark-jars/jmx_prometheus_javaagent-0.11.0.jar"
+    #   port: 8090
 
