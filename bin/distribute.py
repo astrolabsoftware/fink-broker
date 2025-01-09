@@ -59,7 +59,27 @@ userfilters = [
 
 
 def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
-    """Push data to a Kafka custer"""
+    """Push data to a Kafka custer
+
+    Parameters
+    ----------
+    df_in: Spark DataFrame
+        Alert DataFrame
+    topicname: str
+        Name of the Kafka topic to create
+    cnames: list of str
+        List of columns to transfer in the stream
+    checkpointpath_kafka: str
+        Path on HDFS/S3 for the checkpoints
+    tinterval: int
+        Interval in seconds between two micro-batches
+    kafka_cfg: dict
+        Dictionnary with Kafka parameters
+
+    Returns
+    -------
+    out: Streaming DataFrame
+    """
     df_in = df_in.selectExpr(cnames)
 
     # get schema from the streaming dataframe to
