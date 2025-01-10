@@ -41,7 +41,7 @@ spec:
     exposeDriverMetrics: true
     exposeExecutorMetrics: true
     prometheus:
-      # Downloaded in workdir from Dockerfile
-      jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-0.11.0.jar"
+      # Added in Dockerfile
+      jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-1.1.0.jar"
       port: 8090
 
