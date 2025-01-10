@@ -28,7 +28,8 @@ kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath
     "memory": "512Mi"
   }
 }
-** TODO management of argoCD default values (jqpath expression): monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
+** TODO management of argoCD default values (jqpath expression): https://github.com/astrolabsoftware/fink-broker/issues/936
+monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
 ** TODO open issue: be able to run only one dataNode on CI
 
 ** TODO Add helm option on HDFS cpu.min (also for operators!)
