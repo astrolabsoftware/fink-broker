@@ -2,7 +2,6 @@
 * TODO enable fink-test to run test on fink releases (currently it runs only on branch master tips)
 * TODO monitor issue (prometheus): https://github.com/kubeflow/spark-operator/issues/2380
 * TODO hdfs operator management
-
 ** TODO limit and request for memory: monitor issue https://github.com/stackabletech/hdfs-operator/issues/625
 ** TODO open issue: zkfc on datanode is not compliant with memory setting
 In the example below memory limit is 256Mi for nameNode in hdfscluster CR, but it become 768Mi in each related pod because the `zkfs` container is not impacted by the CR configuration.
@@ -29,8 +28,6 @@ kubectl get pods -n hdfs simple-hdfs-namenode-default-0 -o jsonpath  -o=jsonpath
     "memory": "512Mi"
   }
 }
-
-
 ** TODO management of argoCD default values (jqpath expression): monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
 ** TODO open issue: be able to run only one dataNode on CI
 
