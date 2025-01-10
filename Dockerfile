@@ -44,7 +44,7 @@ RUN mkdir $HOME && chown ${spark_uid} $HOME
 # 2. add the jar to the spark_py_image once dev is finished
 # Add the Prometheus JMX exporter Java agent jar for exposing metrics sent to the JmxSink to Prometheus.
 # 3. Update the version of the JMX exporter agent if needed to v1.0.1 (latest)
-ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
+ENV JMX_EXPORTER_AGENT_VERSION 1.1.0
 ADD https://github.com/prometheus/jmx_exporter/releases/download/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /opt/spark/jars
 RUN chmod 644 /opt/spark/jars/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
 
