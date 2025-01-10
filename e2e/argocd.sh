@@ -10,6 +10,7 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 SUFFIX="noscience"
 
+src_dir=$DIR/..
 storage="hdfs"
 
 usage() {
