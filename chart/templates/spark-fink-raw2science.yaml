@@ -27,7 +27,3 @@ spec:
     instances: {{ tpl .Values.raw2science.instances . }}
     labels:
       version: 3.4.1
-  # TODO use helm template here
-  deps:
-    jars:
-    - https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.11.0/jmx_prometheus_javaagent-0.11.0.jar

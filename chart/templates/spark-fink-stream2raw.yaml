@@ -37,15 +37,11 @@ spec:
     memory: "512m"
     labels:
       version: 3.4.1
-  # TODO use helm template here
-  deps:
-    jars:
-    - https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.11.0/jmx_prometheus_javaagent-0.11.0.jar
   monitoring:
     exposeDriverMetrics: true
     exposeExecutorMetrics: true
     prometheus:
       # Downloaded in workdir from Dockerfile
-      jmxExporterJar: "/home/fink/jmx_prometheus_javaagent-0.11.0.jar"
+      jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-0.11.0.jar"
       port: 8090
 

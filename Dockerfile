@@ -45,8 +45,8 @@ RUN mkdir $HOME && chown ${spark_uid} $HOME
 # Add the Prometheus JMX exporter Java agent jar for exposing metrics sent to the JmxSink to Prometheus.
 # 3. Update the version of the JMX exporter agent if needed to v1.0.1 (latest)
 ENV JMX_EXPORTER_AGENT_VERSION 0.11.0
-ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /prometheus/
-RUN chmod 644 /prometheus/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar /opt/spark/jars
+RUN chmod 644 /opt/spark/jars/jmx_prometheus_javaagent-${JMX_EXPORTER_AGENT_VERSION}.jar
 
 USER ${spark_uid}
 
