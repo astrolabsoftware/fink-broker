@@ -8,6 +8,7 @@
 set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
+SUFFIX="noscience"
 
 storage="hdfs"
 
@@ -21,16 +22,18 @@ EOD
 }
 
 # Get the options
-while getopts hS: c ; do
+while getopts hS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
         S) storage="$OPTARG" ;;
+        s) SUFFIX="$OPTARG" ;;
         \?) usage ; exit 2 ;;
     esac
 done
 shift "$((OPTIND-1))"
 
 CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
+ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 . $CIUXCONFIG
 
 function retry {

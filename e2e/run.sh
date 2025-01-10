@@ -110,7 +110,7 @@ $src_dir/build.sh -s "$SUFFIX"
 build=true
 
 # e2e tests step
-ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+
 
 cluster=$(ciux get clustername "$src_dir")
 echo "Delete the cluster $cluster if it already exists"
@@ -124,14 +124,13 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
-
-. $CIUXCONFIG
+$(ciux get image --check $DIR --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
 fi
 
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-$DIR/argocd.sh -S "$storage"
+$DIR/argocd.sh -s "$SUFFIX" -S "$storage"
 
 echo "Check the results of the tests."
 $DIR/check-results.sh
