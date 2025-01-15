@@ -133,10 +133,7 @@ if [[ "$WITH_DB" = true ]] ; then
 
   # Update science portal
   fink start science_archival -c $conf --night $NIGHT
-  fink start index_archival -c $conf --night $NIGHT --index_table jd_objectId
   fink start index_archival -c $conf --night $NIGHT --index_table pixel128_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT --index_table pixel4096_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT --index_table pixel131072_jd_objectId
   fink start index_archival -c $conf --night $NIGHT --index_table class_jd_objectId
   fink start index_archival -c $conf --night $NIGHT --index_table upper_objectId_jd
   fink start index_archival -c $conf --night $NIGHT --index_table uppervalid_objectId_jd
