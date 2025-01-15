@@ -58,6 +58,55 @@ userfilters = [
 ]
 
 
+def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
+    """Push data to a Kafka custer
+
+    Parameters
+    ----------
+    df_in: Spark DataFrame
+        Alert DataFrame
+    topicname: str
+        Name of the Kafka topic to create
+    cnames: list of str
+        List of columns to transfer in the stream
+    checkpointpath_kafka: str
+        Path on HDFS/S3 for the checkpoints
+    tinterval: int
+        Interval in seconds between two micro-batches
+    kafka_cfg: dict
+        Dictionnary with Kafka parameters
+
+    Returns
+    -------
+    out: Streaming DataFrame
+    """
+    df_in = df_in.selectExpr(cnames)
+
+    # get schema from the streaming dataframe to
+    # avoid non-nullable bug #852
+    schema = schema_converter.to_avro(df_in.schema)
+
+    df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
+
+    disquery = (
+        df_kafka.writeStream.format("kafka")
+        .option("kafka.bootstrap.servers", kafka_cfg["bootstrap.servers"])
+        .option("kafka.security.protocol", "SASL_PLAINTEXT")
+        .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
+        # .option("kafka.sasl.username", kafka_cfg["username"])
+        # .option("kafka.sasl.password", kafka_cfg["password"])
+        # .option("kafka.buffer.memory", kafka_cfg["kafka_buf_mem"])
+        # .option("kafka.delivery.timeout.ms", kafka_cfg["kafka_timeout_ms"])
+        .option("kafka.auto.create.topics.enable", True)
+        .option("topic", topicname)
+        .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
+        .trigger(processingTime="{} seconds".format(tinterval))
+        .start()
+    )
+
+    return disquery
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -139,15 +188,14 @@ def main():
 
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
-    broker_list = args.distribution_servers
-    # username = args.kafka_sasl_username
-    # password = args.kafka_sasl_password
-    # kafka_buf_mem = args.kafka_buffer_memory
-    # kafka_timeout_ms = args.kafka_delivery_timeout_ms
+    kafka_cfg = {
+        "bootstrap.servers": args.distribution_servers,
+        # "username": args.kafka_sasl_username,
+        # "password": args.kafka_sasl_password,
+        # "kafka_buf_mem": args.kafka_buffer_memory,
+        # "kafka_timeout_ms": args.kafka_delivery_timeout_ms,
+    }
     for userfilter in userfilters:
-        # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
-
         if args.noscience:
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
@@ -157,34 +205,29 @@ def main():
             logger.debug("Apply user-defined filter %s", userfilter)
             df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
-        logger.debug("Wrap alert data")
-        df_tmp = df_tmp.selectExpr(cnames)
+        # The topic name is the filter name
+        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
-        # get schema from the streaming dataframe to
-        # avoid non-nullable bug #852
-        schema = schema_converter.to_avro(df_tmp.schema)
-
-        logger.debug(
-            "Get the DataFrame for publishing to Kafka (avro serialized): %s", df_tmp
+        # FIXME: shouldn't we collect in a list the disquery?
+        disquery = push_to_kafka(
+            df_tmp,
+            topicname,
+            cnames,
+            checkpointpath_kafka,
+            args.tinterval,
+            kafka_cfg,
         )
-        df_kafka = get_kafka_df(df_tmp, key=schema, elasticc=False)
 
-        logger.debug("Ensure that the topic '%s' exist on the Kafka Server", topicname)
-        disquery = (
-            df_kafka.writeStream.format("kafka")
-            .option("kafka.bootstrap.servers", broker_list)
-            .option("kafka.security.protocol", "SASL_PLAINTEXT")
-            .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
-            # .option("kafka.sasl.username", username)
-            # .option("kafka.sasl.password", password)
-            # .option("kafka.buffer.memory", kafka_buf_mem)
-            # .option("kafka.delivery.timeout.ms", kafka_timeout_ms)
-            # .option("kafka.auto.create.topics.enable", True)
-            .option("topic", topicname)
-            .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
-            .trigger(processingTime="{} seconds".format(args.tinterval))
-            .start()
-        )
+    # Special filter to count alerts
+    topicname = "fink_ztf_{}".format(args.night)
+    disquery = push_to_kafka(
+        df,
+        topicname,
+        ["objectId"],
+        checkpointpath_kafka,
+        args.tinterval,
+        kafka_cfg,
+    )
 
     if args.noscience:
         logger.info("Do not perform multi-messenger operations")
