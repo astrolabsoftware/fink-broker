@@ -62,6 +62,11 @@ for file in $FILES; do
         MESSAGE+="SPARK FAILURE: $(basename $file) $newline"
     fi
 
+    isJsonProblem=$(grep -n JSONDecodeError "$file")
+    if [[ $isJsonProblem != "" ]]; then
+        MESSAGE+="JSON FAILURE: $(basename $file) $newline"
+    fi
+
     isHdfsProblem=$(grep -n "Name node is in safe mode" "$file")
     if [[ $isHdfsProblem != "" ]]; then
         MESSAGE+="HDFS FAILURE: $(basename $file) $newline"
