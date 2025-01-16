@@ -13,7 +13,7 @@ image:
 cores: 1
 coreRequest: 0
 instances: 1
-memory: 1500m 
+memory: "1000m"
 # instances: 1
 
 fink_trigger_update: "2"
@@ -21,7 +21,7 @@ fink_trigger_update: "2"
 # Can be overriden using --image option
 
 # Default to s3a://<s3.bucket>
-# online_data_prefix: s3a://fink-broker-online
+online_data_prefix: hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185
 producer: sims
 
 log_level: INFO
@@ -62,6 +62,9 @@ distribution:
     schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
     substream_prefix: "fink_"
 
+
+storage: hdfs
+
 #
 # Parameters used to access the S3 bucket
 #
@@ -72,6 +75,9 @@ s3:
   bucket: "fink-broker-online-{{.Values.night}}"
   access_key: "minio"
   secret_key: "minio123"
+
+hdfs:
+  hadoop_user_name: "185"
 
 serviceAccount:
   # Specifies whether a service account should be created

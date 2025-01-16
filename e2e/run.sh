@@ -21,7 +21,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.4-rc8
+ciux_version=v0.0.4-rc10
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 src_dir=$DIR/..
@@ -30,25 +30,29 @@ build=false
 e2e=false
 monitoring=false
 push=false
+storage="hdfs"
+CIUX_IMAGE_URL="undefined"
 
 token="${TOKEN:-}"
 
 # Get options for suffix
-while getopts hcms opt; do
+while getopts hcmsS: opt; do
   case ${opt} in
-    s )
-      SUFFIX=""
-      ;;
+
     c )
       cleanup=true
-      ;;
-    m )
-      monitoring=true
       ;;
     h )
       usage
       exit 0
       ;;
+    m )
+      monitoring=true
+      ;;
+    s )
+      SUFFIX=""
+      ;;
+    S) storage="$OPTARG" ;;
     \? )
       usage
       exit 1
@@ -120,13 +124,14 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
+
 . $CIUXCONFIG
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
 fi
 
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-$DIR/argocd.sh
+$DIR/argocd.sh -S "$storage"
 
 echo "Check the results of the tests."
 $DIR/check-results.sh
