@@ -102,6 +102,11 @@ def main():
     oids = [int(i) for i in pdf["candid"].to_numpy()]
     df_hbase = df.filter(df["candid"].isin(list(oids)))
 
+    # Drop images
+    df_hbase = (
+        df_hbase.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+    )
+
     # Row key
     row_key_name = "jd_objectId"
 
