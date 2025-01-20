@@ -124,7 +124,7 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
-$(ciux get image --check $DIR --suffix "$SUFFIX" --env)
+$(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
 fi

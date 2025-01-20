@@ -1,6 +1,9 @@
 #+TITLE: current
+* 931
+** TODO https://github.com/LucaCanali/sparkMeasure
+https://github.com/chrissng/spark-on-k8s-monitoring-dashboard?tab=readme-ov-file
 * TODO enable fink-test to run test on fink releases (currently it runs only on branch master tips)
-* TODO monitor issue (prometheus): https://github.com/kubeflow/spark-operator/issues/2380
+* TODO monitor issue (prometheus doc): https://github.com/kubeflow/spark-operator/issues/2380
 * TODO hdfs operator management
 ** TODO limit and request for memory: monitor issue https://github.com/stackabletech/hdfs-operator/issues/625
 ** TODO open issue: zkfc on datanode is not compliant with memory setting
@@ -33,7 +36,7 @@ monitor issue https://github.com/stackabletech/hdfs-operator/issues/626
 ** TODO open issue: be able to run only one dataNode on CI
 
 ** TODO Add helm option on HDFS cpu.min (also for operators!)
-** TODO Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
+** DONE Move fink image to docker.stackable.tech/stackable/hadoop:3.3.6-stackable24.11.
 
 #+TITLE: previous
 * TODO DELAYED BECAUSE IT NOT BLOCKS BUT WARN create topic in distribute before sending alerts in order to avoid error below: https://fink-broker.slack.com/archives/D03KJ390F17/p1692008729660549
