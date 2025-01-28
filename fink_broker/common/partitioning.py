@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 from astropy.time import Time
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 
 @pandas_udf(TimestampType(), PandasUDFType.SCALAR)

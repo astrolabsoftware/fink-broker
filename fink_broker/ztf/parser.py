@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from fink_broker.tester import regular_unit_tests
+from fink_broker.common.tester import regular_unit_tests
 import argparse
 
 

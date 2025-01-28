@@ -21,7 +21,7 @@ import io
 import os
 import fastavro
 
-from fink_broker.tester import regular_unit_tests
+from fink_broker.common.tester import regular_unit_tests
 
 __all__ = ["writeavrodata", "readschemadata", "readschemafromavrofile"]
 

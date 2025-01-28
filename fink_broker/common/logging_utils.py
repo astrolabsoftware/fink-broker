@@ -17,7 +17,7 @@ from pyspark.sql import SparkSession
 import logging
 from logging import Logger
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 
 # Used for reverse compatibility
