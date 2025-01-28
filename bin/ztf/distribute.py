@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,13 +27,13 @@ import logging
 import time
 
 from fink_utils.spark import schema_converter
-from fink_broker.parser import getargs
-from fink_broker.spark_utils import (
+from fink_broker.ztf.parser import getargs
+from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
 )
-from fink_broker.distribution_utils import get_kafka_df
-from fink_broker.logging_utils import init_logger
+from fink_broker.common.distribution_utils import get_kafka_df
+from fink_broker.common.logging_utils import init_logger
 from fink_utils.spark.utils import concat_col
 from fink_utils.spark.utils import apply_user_defined_filter
 
@@ -234,7 +234,7 @@ def main():
         time_spent_in_wait, stream_distrib_list = 0, None
     else:
         logger.debug("Perform multi-messenger operations")
-        from fink_broker.mm_utils import distribute_launch_fink_mm
+        from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
 
         time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 

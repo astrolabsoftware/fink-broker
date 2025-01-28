@@ -30,11 +30,11 @@ import time
 import os
 
 from fink_broker import __version__ as fbvsn
-from fink_broker.logging_utils import init_logger
-from fink_broker.parser import getargs
-from fink_broker.spark_utils import init_sparksession
-from fink_broker.spark_utils import connect_to_raw_database
-from fink_broker.partitioning import convert_to_datetime, convert_to_millitime
+from fink_broker.common.logging_utils import init_logger
+from fink_broker.ztf.parser import getargs
+from fink_broker.common.spark_utils import init_sparksession
+from fink_broker.common.spark_utils import connect_to_raw_database
+from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
 
 
 def main():
@@ -107,7 +107,7 @@ def main():
             logger.info("Do not apply science modules")
         else:
             logger.info("Import science modules")
-            from fink_broker.science import apply_science_modules
+            from fink_broker.ztf.science import apply_science_modules
 
             logger.info("Apply science modules")
             df = apply_science_modules(df, args.tns_raw_output)
@@ -133,7 +133,7 @@ def main():
             time_spent_in_wait, countquery_mm = 0, None
         else:
             logger.info("Perform multi-messenger operations")
-            from fink_broker.mm_utils import raw2science_launch_fink_mm
+            from fink_broker.ztf.mm_utils import raw2science_launch_fink_mm
 
             time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
                 args, scitmpdatapath

@@ -21,10 +21,10 @@ import subprocess
 import glob
 import json
 
-from fink_broker.parser import getargs
-from fink_broker.spark_utils import init_sparksession, load_parquet_files
-from fink_broker.avro_utils import readschemafromavrofile
-from fink_broker.logging_utils import get_fink_logger, inspect_application
+from fink_broker.ztf.parser import getargs
+from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.common.avro_utils import readschemafromavrofile
+from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
 
 def main():
