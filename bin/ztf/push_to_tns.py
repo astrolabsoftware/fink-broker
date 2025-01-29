@@ -54,7 +54,6 @@ def main():
     with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
         tns_marker = f.read().replace("\n", "")
 
-
     url_tns_api = "https://www.wis-tns.org/api"
     with open("{}/tns_api.key".format(args.tns_folder)) as f:
         # remove line break...
