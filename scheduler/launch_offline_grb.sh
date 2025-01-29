@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2022 Fink Software
+# Copyright 2022-2025 Astrolab Software
 # Author: Roman Le Montagner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,11 @@
 
 source ~/.bash_profile
 
+# TODO: CLI argument
+SURVEY=ztf
+
 # Config 
-CONFIG=$FINK_HOME/conf/fink_grb.conf
+CONFIG=$FINK_HOME/conf/$SURVEY/fink_mm.conf
 
 NIGHT=`date +"%Y%m%d" -d "now"`
 
