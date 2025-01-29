@@ -93,9 +93,8 @@ def main():
         alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    if args.producer == "sims":
-        # using custom from_avro (not available for Spark 2.4.x)
-        # it will be available from Spark 3.0 though
+    if args.servers.startswith("localhost"):
+        # Only for test suite
         df_decoded = df.select([
             from_avro(df["value"], alert_schema_json).alias("decoded")
         ])
