@@ -47,9 +47,9 @@ while [ "$#" -gt 0 ]; do
         shift 1
         ;;
     -s)
-	SURVEY=$2
-	shift 2
-	;;
+        SURVEY=$2
+        shift 2
+        ;;
     -c)
         if [[ $2 == "" || $2 == "-s" ]]; then
           echo "$1 requires an argument. ${message_conf}" >&2
@@ -97,10 +97,6 @@ while [ "$#" -gt 0 ]; do
     --tns_raw_output)
       TNS_RAW_OUTPUT="$2"
       shift 2
-      ;;
-    --tns_sandbox)
-      TNS_SANDBOX=true
-      shift 1
       ;;
     --noscience)
       NOSCIENCE=true
@@ -158,6 +154,13 @@ if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
   exit 1
 fi
 
+# Check service exists
+if [[ ! -f ${FINK_HOME}/bin/${SURVEY}/${service}.py ]]; then
+  # In case you give an unknown service
+  echo "unknown service: $service" >&2
+  echo $message_service
+  exit 1
+fi
 
 # Check if the conf file exists
 if [[ -f $conf ]]; then
@@ -198,13 +201,6 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-# Options
-if [[ $NOSCIENCE == true ]]; then
-  NOSCIENCE="--noscience"
-else
-  NOSCIENCE=""
-fi
-
 DISTRIBUTE_OPTIONS=""
 if [[ $service == "distribute" ]]; then
   if [[ -f $conf_distribution ]]; then
@@ -218,40 +214,18 @@ if [[ $service == "distribute" ]]; then
   DISTRIBUTE_OPTIONS="--files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf --driver-java-options -Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK} --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK} --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL} --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES} --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF} --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN}"
 fi
 
-# TODO: put in conf file
-if [[ $TNS_FOLDER == "" ]]; then
-  TNS_FOLDER="/tmp"
-fi
-
-if [[ $TNS_SANDBOX = true ]] ; then
-  TNS_SANDBOX="--tns_sandbox"
+# Options
+if [[ $NOSCIENCE == true ]]; then
+  NOSCIENCE="--noscience"
 else
-  TNS_SANDBOX=""
-fi
-
-TNS_OPTION=""
-if [[ $TNS_RAW_OUTPUT ]]; then
-  TNS_OPTION="-tns_raw_output ${TNS_RAW_OUTPUT}"
-fi
-
-
-if [[ $INDEXTABLE == "" ]]; then
-  INDEXTABLE="tmp"
-fi
-
-# Check service exists
-if [[ ! -f ${FINK_HOME}/bin/${SURVEY}/${service}.py ]]; then
-  # In case you give an unknown service
-  echo "unknown service: $service" >&2
-  echo $message_service
-  exit 1
+  NOSCIENCE=""
 fi
 
 spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
   ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
   ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
-  -producer ${PRODUCER} \
+  -producer ${SURVEY} \
   -servers ${KAFKA_IPPORT} \
   -topic ${KAFKA_TOPIC} \
   -night ${NIGHT} \
@@ -270,11 +244,12 @@ spark-submit --master ${SPARK_MASTER} \
   -tinterval ${FINK_TRIGGER_UPDATE} \
   -mmconfigpath ${FINK_MM_CONFIG} \
   -fink_fat_output ${FINK_FAT_OUTPUT} \
-  -hostless_folder "${FINK_HOME}/hostless_ids" \
+  -hostless_folder $HOSTLESS_FOLDER \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
   -index_table ${INDEXTABLE} \
   -tns_folder ${TNS_FOLDER} \
-  ${DISTRIBUTE_OPTIONS} ${NOSCIENCE} ${TNS_OPTION} ${TNS_SANDBOX} \
+  -tns_raw_output ${TNS_RAW_OUTPUT} \
+  ${DISTRIBUTE_OPTIONS} ${NOSCIENCE} ${TNS_SANDBOX} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 
