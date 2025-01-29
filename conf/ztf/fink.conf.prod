@@ -1,4 +1,4 @@
-# Copyright 2018-2024 AstroLab Software
+# Copyright 2018-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,12 @@
 ######################################
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
-KAFKA_PORT_SIM=9092
+KAFKA_PORT_SIM=29092
 KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 
 # Cluster mode - you need a Kafka cluster installed with write mode.
 # Must match the one used for the Producer
-KAFKA_IPPORT=""
+KAFKA_IPPORT="public.alerts.ztf.uw.edu:9092"
 
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
@@ -28,24 +28,22 @@ KAFKA_IPPORT=""
 KAFKA_STARTING_OFFSET="earliest"
 
 # Apache Spark mode
-SPARK_MASTER="local[*]"
+SPARK_MASTER="mesos://vm-75063.lal.in2p3.fr:5050"
 
 # Should be Spark options actually (cluster resources, ...)
-EXTRA_SPARK_CONFIG=""
+EXTRA_SPARK_CONFIG='--conf spark.mesos.principal=lsst --conf spark.mesos.secret=secret --conf spark.mesos.role=lsst '
+EXTRA_SPARK_CONFIG+='--conf spark.executorEnv.HOME=/home/julien.peloton '
+EXTRA_SPARK_CONFIG+='--repositories https://packages.confluent.io/maven/ '
+echo $EXTRA_SPARK_CONFIG
 
 # Should be Kafka secured options actually (to allow connection to Kafka)
 SECURED_KAFKA_CONFIG=''
 
-# These are the Maven Coordinates of dependencies for Fink
-# Change the version according to your Spark version.
-# NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
 org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.4.1,\
 org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,\
 org.apache.spark:spark-avro_2.12:3.4.1,\
-org.apache.hbase:hbase-shaded-mapreduce:2.2.7,\
-org.slf4j:slf4j-log4j12:1.7.36,\
-org.slf4j:slf4j-simple:1.7.36
+org.apache.hbase:hbase-shaded-mapreduce:2.2.7
 
 # Other dependencies (incl. Scala part of Fink)
 FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-1.2.jar,\
@@ -58,23 +56,22 @@ ${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_
 # where micro-batches will be generated as soon as the previous
 # micro-batch has completed processing.
 # Note that this timing is also used for updating the dashboard.
-FINK_TRIGGER_UPDATE=2
+FINK_TRIGGER_UPDATE=10
 MAX_OFFSETS_PER_TRIGGER=5000
 
 # Alert schema
 # Full path to schema to decode the alerts
-FINK_ALERT_SCHEMA=${FINK_HOME}/datasim/basic_alerts/all_distribute_topics/part-00098-1a2981b9-a1a6-4164-83c0-841b7bd4d87b-c000.avro
+FINK_ALERT_SCHEMA=${FINK_HOME}/fink-alert-schemas/ztf/template_schema_ZTF_3p3.avro
 
 # Prefix path on disk to save live data.
 # They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
-FS_KIND=local
-ONLINE_DATA_PREFIX=${FINK_HOME}/online_integration
-AGG_DATA_PREFIX=${FINK_HOME}/archive
+ONLINE_DATA_PREFIX="hdfs://134.158.75.222:8020///user/julien.peloton/online"
+AGG_DATA_PREFIX="hdfs://134.158.75.222:8020///user/julien.peloton/archive"
 
 # The name of the HBase table
-SCIENCE_DB_NAME="test_portal"
+SCIENCE_DB_NAME="ztf"
 SCIENCE_DB_CATALOGS=${FINK_HOME}/catalogs_hbase
 
 # HBase configuration file - must be under ${SPARK_HOME}/conf
@@ -87,10 +84,10 @@ LOG_LEVEL=INFO
 
 # If set to false, it will assume the fink_broker is in your PYTHONPATH
 # otherwise it will package it, and send it to the executors.
-DEPLOY_FINK_PYTHON=false
+DEPLOY_FINK_PYTHON=true
 
 # Path to fink-fat output
-FINK_FAT_OUTPUT=${FINK_HOME}/datasim/fink_fat_example
+FINK_FAT_OUTPUT=${FINK_HOME}/../fink_fat_out/candidates/
 
 # Path to fink-mm configuration file
 # use no-config to disable fink-mm
