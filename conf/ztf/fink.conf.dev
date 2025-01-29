@@ -20,7 +20,7 @@ KAFKA_IPPORT_SIM="localhost:${KAFKA_PORT_SIM}"
 
 # Cluster mode - you need a Kafka cluster installed with write mode.
 # Must match the one used for the Producer
-KAFKA_IPPORT=""
+KAFKA_IPPORT="${KAFKA_IPPORT_SIM}"
 
 # From which offset you want to start pulling data. Options are:
 # latest (only new data), earliest (connect from the oldest
@@ -45,8 +45,7 @@ org.slf4j:slf4j-log4j12:1.7.36,\
 org.slf4j:slf4j-simple:1.7.36
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/fink-broker_2.11-1.2.jar,\
-${FINK_HOME}/libs/hbase-spark-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar,\
+FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar,\
 ${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar
 
 # Time interval between 2 trigger updates (second)
@@ -94,8 +93,7 @@ FINK_MM_CONFIG=${FINK_HOME}/conf/ztf/fink_mm.conf
 
 # TNS configuration
 TNS_FOLDER=${FINK_HOME}/tns_logs
-TNS_RAW_OUTPUT=/spark_mongo_tmp/julien.peloton
-TNS_SANDBOX=false
+TNS_RAW_OUTPUT=""
 
 # Hostless folder
 HOSTLESS_FOLDER=${FINK_HOME}/hostless_ids

@@ -144,10 +144,10 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
                 # difference between now and max end (8pm CEST)
                 LEASETIME=$(( `date +'%s' -d ${STOP_AT}` - `date +'%s' -d 'now'` ))
 
-                nohup ${FINK_HOME}/bin/fink start distribution \
+                nohup ${FINK_HOME}/bin/fink start distribute \
                     -s ztf \
                     -c ${FINK_HOME}/conf/fink.conf.prod \
-                    -conf_distribution ${FINK_HOME}/conf/ztf/fink.conf.distribution_cluster \
+                    -conf_distribution ${FINK_HOME}/conf/ztf/fink.conf.distribution \
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
                     -spark-cores-max 4 -spark-executor-cores 1 \

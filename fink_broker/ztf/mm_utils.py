@@ -27,8 +27,8 @@ from fink_mm.distribution.distribution import grb_distribution_stream
 from astropy.time import Time
 from datetime import timedelta
 
-from fink_broker.spark_utils import connect_to_raw_database, path_exist
-from fink_broker.logging_utils import init_logger
+from fink_broker.common.spark_utils import connect_to_raw_database, path_exist
+from fink_broker.common.logging_utils import init_logger
 
 from pyspark.sql.streaming import StreamingQuery
 
@@ -56,7 +56,7 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
     """
     if args.mmconfigpath != "no-config":
         from fink_mm.init import get_config
-        from fink_broker.mm_utils import mm2distribute
+        from fink_broker.ztf.mm_utils import mm2distribute
 
         _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
@@ -71,14 +71,14 @@ def distribute_launch_fink_mm(spark, args: dict) -> Tuple[int, List]:
             # if there is gcn and ztf data
             if path_exist(mmtmpdatapath):
                 t_before = time.time()
-                _LOG.info("starting mm2distribute in 300 seconds...")
-                time.sleep(300)
+                _LOG.info("starting mm2distribute in 30 seconds...")
+                time.sleep(30)
                 stream_distrib_list = mm2distribute(spark, config, args)
                 time_spent_in_wait += time.time() - t_before
                 break
 
-            time_spent_in_wait += 300
-            time.sleep(300)
+            time_spent_in_wait += 30
+            time.sleep(30)
         if stream_distrib_list == []:
             _LOG.warning(
                 f"{mmtmpdatapath} does not exist. mm2distribute could not start before the end of the job."
@@ -114,7 +114,7 @@ def raw2science_launch_fink_mm(
     """
     if args.mmconfigpath != "no-config":
         from fink_mm.init import get_config
-        from fink_broker.mm_utils import science2mm
+        from fink_broker.ztf.mm_utils import science2mm
 
         _LOG.info(f"Fink-MM configuration file: {args.mmconfigpath}")
         config = get_config({"--config": args.mmconfigpath})
@@ -131,15 +131,15 @@ def raw2science_launch_fink_mm(
             if path_exist(gcn_path) and path_exist(scitmpdatapath):
                 # Start the GCN x ZTF cross-match stream
                 t_before = time.time()
-                _LOG.info("starting science2mm in 300 seconds...")
-                time.sleep(300)
+                _LOG.info("starting science2mm in 30 seconds...")
+                time.sleep(30)
                 countquery_mm = science2mm(args, config, gcn_path, scitmpdatapath)
                 time_spent_in_wait += time.time() - t_before
                 break
             else:
                 # wait for comming GCN
-                time_spent_in_wait += 300
-                time.sleep(300)
+                time_spent_in_wait += 30
+                time.sleep(30)
 
         if countquery_mm is None:
             _LOG.warning("science2mm could not start before the end of the job.")

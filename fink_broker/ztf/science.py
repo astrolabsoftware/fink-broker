@@ -27,7 +27,7 @@ from itertools import chain
 
 from fink_utils.spark.utils import concat_col
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
 from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
@@ -89,7 +89,7 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Examples
     --------
-    >>> from fink_broker.spark_utils import load_parquet_files
+    >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
     >>> df_index = df.withColumn(
@@ -128,7 +128,7 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Examples
     --------
-    >>> from fink_broker.spark_utils import load_parquet_files
+    >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
     >>> nsides = F.array([F.lit(256), F.lit(4096), F.lit(131072)])
@@ -202,8 +202,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     Examples
     --------
-    >>> from fink_broker.spark_utils import load_parquet_files
-    >>> from fink_broker.logging_utils import get_fink_logger
+    >>> from fink_broker.common.spark_utils import load_parquet_files
+    >>> from fink_broker.common.logging_utils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_test', 'INFO')
     >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(ztf_alert_sample)
@@ -478,8 +478,8 @@ def apply_science_modules_elasticc(df: DataFrame) -> DataFrame:
 
     Examples
     --------
-    >>> from fink_broker.spark_utils import load_parquet_files
-    >>> from fink_broker.logging_utils import get_fink_logger
+    >>> from fink_broker.common.spark_utils import load_parquet_files
+    >>> from fink_broker.common.logging_utils import get_fink_logger
     >>> logger = get_fink_logger('raw2cience_elasticc_test', 'INFO')
     >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(elasticc_alert_sample)

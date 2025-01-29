@@ -25,7 +25,7 @@ import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 
 def apply_tracklet_cuts(df: DataFrame) -> DataFrame:

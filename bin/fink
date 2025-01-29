@@ -201,6 +201,20 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
+# Only if the operator pass an index table
+if [[ ${INDEXTABLE} ]]; then
+  INDEXTABLE="-index_table ${INDEXTABLE}"
+else
+  INDEXTABLE=""
+fi
+
+# Only if the operator pass the location of the TNS catalog
+if [[ ${TNS_RAW_OUTPUT} ]]; then
+  TNS_RAW_OUTPUT="-tns_raw_output ${TNS_RAW_OUTPUT}"
+else
+  TNS_RAW_OUTPUT=""
+fi
+
 DISTRIBUTE_OPTIONS=""
 if [[ $service == "distribute" ]]; then
   if [[ -f $conf_distribution ]]; then
@@ -211,14 +225,16 @@ if [[ $service == "distribute" ]]; then
     source ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
   fi
 
-  DISTRIBUTE_OPTIONS="--files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf --driver-java-options -Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK} --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK} --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL} --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES} --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF} --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN}"
+  DISTRIBUTE_OPTIONS_SPARK="--files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf --driver-java-options -Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK} --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK} --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL} --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES} --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF} --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN}"
+  DISTRIBUTE_OPTIONS="-distribution_servers ${DISTRIBUTION_SERVERS} -substream_prefix ${SUBSTREAM_PREFIX} -kafka_sasl_username ${KAFKA_SASL_USERNAME} -kafka_sasl_password ${KAFKA_SASL_PASSWORD} -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS}"
 fi
 
 spark-submit --master ${SPARK_MASTER} \
-  --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
+  --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
   ${EXTRA_SPARK_CONFIG} \
   --driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} \
   --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES} \
+  ${DISTRIBUTE_OPTIONS_SPARK} \
   ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
   -producer ${SURVEY} \
   -servers ${KAFKA_IPPORT} \
@@ -229,22 +245,13 @@ spark-submit --master ${SPARK_MASTER} \
   -max_offsets_per_trigger ${MAX_OFFSETS_PER_TRIGGER} \
   -online_data_prefix ${ONLINE_DATA_PREFIX} \
   -agg_data_prefix ${AGG_DATA_PREFIX} \
-  -distribution_servers ${DISTRIBUTION_SERVERS} \
-  -distribution_schema ${DISTRIBUTION_SCHEMA} \
-  -kafka_sasl_username ${KAFKA_SASL_USERNAME} \
-  -kafka_sasl_password ${KAFKA_SASL_PASSWORD} \
-  -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} \
-  -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS} \
-  -substream_prefix ${SUBSTREAM_PREFIX} \
   -tinterval ${FINK_TRIGGER_UPDATE} \
   -mmconfigpath ${FINK_MM_CONFIG} \
   -fink_fat_output ${FINK_FAT_OUTPUT} \
-  -hostless_folder $HOSTLESS_FOLDER \
+  -hostless_folder ${HOSTLESS_FOLDER} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
-  -index_table ${INDEXTABLE} \
   -tns_folder ${TNS_FOLDER} \
-  -tns_raw_output ${TNS_RAW_OUTPUT} \
-  ${DISTRIBUTE_OPTIONS} ${NOSCIENCE} ${TNS_SANDBOX} \
+  ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 

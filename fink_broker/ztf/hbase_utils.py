@@ -28,7 +28,7 @@ from fink_science import __version__ as fsvsn
 from fink_science.t2.utilities import T2_COLS
 from fink_science.xmatch.utils import MANGROVE_COLS
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
 

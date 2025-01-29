@@ -110,17 +110,18 @@ fi
 
 # Stream integration tests
 if [[ "$WITH_STREAM" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 2 -spark-executor-cores 1"
   # Fire another stream
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw -s ${SURVEY} --simulator -exit_after 60 -c $conf -topic $KAFKA_TOPIC -night $NIGHT
+  fink start stream2raw -s ${SURVEY} --simulator -exit_after 60 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science -s ${SURVEY} -exit_after 120 -c $conf -night $NIGHT
+  fink start raw2science -s ${SURVEY} -exit_after 120 -c $conf -night $NIGHT ${RESOURCES}
 
   # Start the distribution service
-  fink start distribution -s ${SURVEY} -exit_after 60 -c $conf -night $NIGHT
+  fink start distribute -s ${SURVEY} -exit_after 60 -c $conf -night $NIGHT ${RESOURCES}
 
   # check we have all topics
   echo "TOPICS FOUND:"
@@ -129,22 +130,23 @@ fi
 
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 2 -spark-executor-cores 1"
   # merge data
-  fink start merge -s ${SURVEY} -c $conf -night $NIGHT
+  fink start merge -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
   # Update science portal
-  fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId
+  fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId ${RESOURCES}
 
   # SSO candidates
-  fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT
+  fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
-  fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT
+  fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
 fi
 
@@ -157,7 +159,7 @@ fi
 if [[ "$WITH_UNITS" = true ]] ; then
   # Run the test suite on the modules assuming the integration
   # tests have been run (to build the databases)
-  for i in ${FINK_HOME}/fink_broker/*.py
+  for i in ${FINK_HOME}/fink_broker/${SURVEY}/*.py
   do
     if [[ ${i##*/} = 'monitoring' ]] ; then
         echo "skip {i}"
@@ -166,6 +168,13 @@ if [[ "$WITH_UNITS" = true ]] ; then
           --source=${FINK_HOME} \
           --rcfile ${FINK_HOME}/.coveragerc $i
     fi
+  done
+
+  for i in ${FINK_HOME}/fink_broker/common/*.py
+  do
+    coverage run \
+        --source=${FINK_HOME} \
+        --rcfile ${FINK_HOME}/.coveragerc $i
   done
 fi
 

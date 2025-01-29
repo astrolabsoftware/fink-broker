@@ -19,7 +19,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
 from pyspark.sql.avro.functions import to_avro as to_avro_native
 
-from fink_broker.tester import spark_unit_tests
+from fink_broker.common.tester import spark_unit_tests
 
 
 def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
