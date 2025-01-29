@@ -19,9 +19,12 @@ while true; do
             LEASETIME=$(( `date +'%s' -d '20:00 today'` - `date +'%s' -d 'now'` ))
 
             ${FINK_HOME}/bin/fink start raw2science \
-                -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_raw2science \
-                --night ${NIGHT} \
-                --exit_after ${LEASETIME}
+		-s ztf \
+                -c ${FINK_HOME}/conf/ztf/fink.conf.prod \
+		-driver-memory 4g -executor-memory 2g \
+    		-spark-cores-max 8 -spark-executor-cores 1 \
+                -night ${NIGHT} \
+                -exit_after ${LEASETIME}
             exit
         fi
     fi

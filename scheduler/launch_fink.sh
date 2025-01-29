@@ -16,10 +16,13 @@ LEASETIME=72000
 
 # stream2raw
 nohup fink start stream2raw \
-    -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw \
-    --topic "ztf_${NIGHT}.*" \
-    --night $NIGHT \
-    --exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
+    -s ztf \
+    -c ${FINK_HOME}/conf/ztf/fink.conf.prod \
+    -topic "ztf_${NIGHT}.*" \
+    -night $NIGHT \
+    -driver-memory 4g -executor-memory 2g \
+    -spark-cores-max 4 -spark-executor-cores 1 \
+    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 
 # raw2science
 nohup ${FINK_HOME}/scheduler/science_service.sh > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
