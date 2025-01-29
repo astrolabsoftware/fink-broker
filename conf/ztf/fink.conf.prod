@@ -36,9 +36,6 @@ EXTRA_SPARK_CONFIG+='--conf spark.executorEnv.HOME=/home/julien.peloton '
 EXTRA_SPARK_CONFIG+='--repositories https://packages.confluent.io/maven/ '
 echo $EXTRA_SPARK_CONFIG
 
-# Should be Kafka secured options actually (to allow connection to Kafka)
-SECURED_KAFKA_CONFIG=''
-
 FINK_PACKAGES=\
 org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.4.1,\
 org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,\
@@ -91,7 +88,7 @@ FINK_FAT_OUTPUT=${FINK_HOME}/../fink_fat_out/candidates/
 
 # Path to fink-mm configuration file
 # use no-config to disable fink-mm
-FINK_MM_CONFIG=${FINK_HOME}/conf/fink_mm.conf
+FINK_MM_CONFIG=${FINK_HOME}/conf/ztf/fink_mm.conf
 
 # TNS configuration
 TNS_FOLDER=${FINK_HOME}/tns_logs

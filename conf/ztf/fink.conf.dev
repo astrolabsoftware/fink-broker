@@ -33,9 +33,6 @@ SPARK_MASTER="local[*]"
 # Should be Spark options actually (cluster resources, ...)
 EXTRA_SPARK_CONFIG=""
 
-# Should be Kafka secured options actually (to allow connection to Kafka)
-SECURED_KAFKA_CONFIG=''
-
 # These are the Maven Coordinates of dependencies for Fink
 # Change the version according to your Spark version.
 # NOTE: HBase packages are not required for Parquet archiving
@@ -93,7 +90,7 @@ FINK_FAT_OUTPUT=${FINK_HOME}/datasim/fink_fat_example
 
 # Path to fink-mm configuration file
 # use no-config to disable fink-mm
-FINK_MM_CONFIG=${FINK_HOME}/conf/fink_mm.conf
+FINK_MM_CONFIG=${FINK_HOME}/conf/ztf/fink_mm.conf
 
 # TNS configuration
 TNS_FOLDER=${FINK_HOME}/tns_logs

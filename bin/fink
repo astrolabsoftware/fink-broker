@@ -25,95 +25,95 @@ fi
 while [ "$#" -gt 0 ]; do
   case "$1" in
     "start"|"stop")
-        MODE="$1"
-        if [[ $2 == "" || $2 == "-c" ]]; then
-          echo "$1 requires an argument. ${message_service}" >&2
-          exit 1
-        fi
-        service="$2"
-        shift 2
-        ;;
-    "show")
-        nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
-        echo -e "$nservice Fink service(s) running: "
-        ps aux | head -1
-        ps aux | grep -i 'fink start' | grep -v grep
-        ps aux | grep -i 'gcn_stream start' | grep -v grep
-        echo "Use <fink stop service_name> to stop a service."
-        exit
-        ;;
-    -h)
-        HELP_ON_SERVICE="-h"
-        shift 1
-        ;;
-    -s)
-        SURVEY=$2
-        shift 2
-        ;;
-    -c)
-        if [[ $2 == "" || $2 == "-s" ]]; then
-          echo "$1 requires an argument. ${message_conf}" >&2
-          exit 1
-        fi
-        conf="$2"
-        shift 2
-        ;;
-    --conf=*)
-        conf="${1#*=}"
-        shift 1
-        ;;
-    --conf)
-        echo "$1 requires an argument" >&2
+      MODE="$1"
+      if [[ $2 == "" || $2 == "-c" ]]; then
+        echo "$1 requires an argument. ${message_service}" >&2
         exit 1
-        ;;
-    -conf_distribution)
-        conf_distribution="$2"
-        shift 2
-        ;;
-    --simulator)
-        SIM_ONLY=true
-        shift 1
-        ;;
-    --version)
-        python3 -c "import fink_broker; print(fink_broker.__version__)"
-        exit
-        ;;
-    --night)
+      fi
+      service="$2"
+      shift 2
+      ;;
+    "show")
+      nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
+      echo -e "$nservice Fink service(s) running: "
+      ps aux | head -1
+      ps aux | grep -i 'fink start' | grep -v grep
+      ps aux | grep -i 'gcn_stream start' | grep -v grep
+      echo "Use <fink stop service_name> to stop a service."
+      exit
+      ;;
+    -h)
+      HELP_ON_SERVICE="-h"
+      shift 1
+      ;;
+    -s)
+      SURVEY=$2
+      shift 2
+      ;;
+    -c)
+      if [[ $2 == "" || $2 == "-s" ]]; then
+        echo "$1 requires an argument. ${message_conf}" >&2
+        exit 1
+      fi
+      conf="$2"
+      shift 2
+      ;;
+    -night)
       NIGHT="$2"
       shift 2
       ;;
-    --topic)
+    -topic)
       KAFKA_TOPIC="$2"
       shift 2
       ;;
-    --index_table)
+    -index_table)
       INDEXTABLE="$2"
       shift 2
       ;;
-    --tns_folder)
-      TNS_FOLDER="$2"
+    -driver-memory)
+      DRIVER_MEMORY="$2"
       shift 2
       ;;
-    --tns_raw_output)
-      TNS_RAW_OUTPUT="$2"
+    -executor-memory)
+      EXECUTOR_MEMORY="$2"
       shift 2
       ;;
-    --noscience)
-      NOSCIENCE=true
+    -spark-cores-max)
+      SPARK_CORE_MAX="$2"
+      shift 2
+      ;;
+    -spark-executor-cores)
+      SPARK_EXECUTOR_CORES="$2"
+      shift 2
+      ;;
+    -conf_distribution)
+      conf_distribution="$2"
+      shift 2
+      ;;
+    -exit_after)
+      EXIT_AFTER="-exit_after $2"
+      shift 2
+      ;;
+    --simulator)
+      SIM_ONLY=true
       shift 1
       ;;
-    --exit_after)
-        EXIT_AFTER="-exit_after $2"
-        shift 2
-        ;;
+    --version)
+      python3 -c "import fink_broker; print(fink_broker.__version__)"
+      exit
+      ;;
+    --noscience)
+      NOSCIENCE="--noscience"
+      shift 1
+      ;;
     -*)
-        echo "unknown option: $1" >&2
-        exit 1
-        ;;
+      echo "unknown option: $1" >&2
+      exit 1
+      ;;
     *)
-        echo "unknown argument: $1" >&2
-        exit 1
-        ;;
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
   esac
 done
 
@@ -167,8 +167,8 @@ if [[ -f $conf ]]; then
   echo "Reading custom Fink configuration file from " $conf
   source $conf
 else
-  echo "Reading default Fink conf from " ${FINK_HOME}/conf/fink.conf
-  source ${FINK_HOME}/conf/fink.conf
+  echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  source ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
 if [[ "$SIM_ONLY" = true ]] ; then
@@ -207,23 +207,18 @@ if [[ $service == "distribute" ]]; then
     echo "Reading custom Fink distribution configuration file from " $conf_distribution
     source $conf_distribution
   else
-    echo "Reading default Fink distribution conf from " ${FINK_HOME}/conf/fink.conf.distribution
-    source ${FINK_HOME}/conf/fink.conf.distribution
+    echo "Reading default Fink distribution conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
+    source ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
   fi
 
   DISTRIBUTE_OPTIONS="--files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf --driver-java-options -Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK} --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK} --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL} --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES} --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF} --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN}"
 fi
 
-# Options
-if [[ $NOSCIENCE == true ]]; then
-  NOSCIENCE="--noscience"
-else
-  NOSCIENCE=""
-fi
-
 spark-submit --master ${SPARK_MASTER} \
   --packages ${FINK_PACKAGES} ${PYTHON_EXTRA_FILE} \
-  ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
+  ${EXTRA_SPARK_CONFIG} \
+  --driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} \
+  --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES} \
   ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
   -producer ${SURVEY} \
   -servers ${KAFKA_IPPORT} \

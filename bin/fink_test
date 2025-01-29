@@ -25,7 +25,7 @@ By default, nothing is run.\n
 You can enable the database integration tests by specifying --db-integration.\n
 You can enable the unit tests by specifying --unit-test.\n
 You can enable the stream integration tests by specifying --stream-integration.\n
-You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/fink.conf.prod) will be used.\n
+You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/<SURVEY>/fink.conf.prod) will be used.\n
 Use -h to display this help.
 """
 
@@ -40,45 +40,37 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     --stream-integration)
-        WITH_STREAM=true
-        shift 1
-        ;;
+      WITH_STREAM=true
+      shift 1
+      ;;
     --db-integration)
-        WITH_DB=true
-        shift 1
-        ;;
+      WITH_DB=true
+      shift 1
+      ;;
     --unit-tests)
-        WITH_UNITS=true
-        shift 1
-        ;;
+      WITH_UNITS=true
+      shift 1
+      ;;
     --mm-offline)
-        WITH_MM_OFFLINE=true
-        shift 1
-        ;;
+      WITH_MM_OFFLINE=true
+      shift 1
+      ;;
     -h)
-        echo -e $message_help
-        exit
-        ;;
+      echo -e $message_help
+      exit
+      ;;
     -c)
-        if [[ $2 == "" ]]; then
-          echo "$1 requires an argument" >&2
-          exit 1
-        fi
-        conf="$2"
-        shift 2
-        ;;
-    --conf=*)
-        conf="${1#*=}"
-        shift 1
-        ;;
-    --conf)
+      if [[ $2 == "" ]]; then
         echo "$1 requires an argument" >&2
         exit 1
-        ;;
+      fi
+      conf="$2"
+      shift 2
+      ;;
     -single_file)
-	SINGLE_FILE=$2
-	shift 2
-	;;
+      SINGLE_FILE=$2
+      shift 2
+      ;;
   esac
 done
 
@@ -91,7 +83,7 @@ fi
 if [[ -f $conf ]]; then
   echo "Reading custom test configuration file from " $conf
 else
-  conf=${FINK_HOME}/conf/fink.conf.prod
+  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.dev
   echo "Reading the default test configuration file from " $conf
 fi
 
@@ -119,16 +111,16 @@ fi
 # Stream integration tests
 if [[ "$WITH_STREAM" = true ]] ; then
   # Fire another stream
-  fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
+  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw -s $SURVEY --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC --night $NIGHT
+  fink start stream2raw -s ${SURVEY} --simulator -exit_after 60 -c $conf -topic $KAFKA_TOPIC -night $NIGHT
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --s $SURVEY -exit_after 120 -c $conf --night $NIGHT
+  fink start raw2science -s ${SURVEY} -exit_after 120 -c $conf -night $NIGHT
 
   # Start the distribution service
-  fink start distribution --s $SURVEY -exit_after 60 -c $conf --night $NIGHT
+  fink start distribution -s ${SURVEY} -exit_after 60 -c $conf -night $NIGHT
 
   # check we have all topics
   echo "TOPICS FOUND:"
@@ -138,28 +130,28 @@ fi
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
   # merge data
-  fink start merge -s $SURVEY -c $conf --night $NIGHT
+  fink start merge -s ${SURVEY} -c $conf -night $NIGHT
 
   # Update science portal
-  fink start archive_science -s $SURVEY -c $conf --night $NIGHT
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table pixel128_jd_objectId
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table class_jd_objectId
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table upper_objectId_jd
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table uppervalid_objectId_jd
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table ssnamenr_jd
-  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table tracklet_objectId
+  fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId
 
   # SSO candidates
-  fink start archive_sso_cand -s $SURVEY -c $conf --night $NIGHT
+  fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT
 
-  fink start archive_statistics -s $SURVEY -c $conf --night $NIGHT
+  fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT
 
 fi
 
 # MM offline test (need "fink start merge" before)
 if [[ "$WITH_MM_OFFLINE" = true ]] ; then
   # fink-mm offline mode
-  fink_mm join_stream offline --night $NIGHT --config ${FINK_HOME}/conf/fink_mm.conf
+  fink_mm join_stream offline -night $NIGHT --config ${FINK_HOME}/conf/${SURVEY}/fink_mm.conf
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
