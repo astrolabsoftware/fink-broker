@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
-# Alert producer: ztf, elasticc or sims
-PRODUCER=ztf
-
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
 KAFKA_PORT_SIM=29092
@@ -79,7 +76,6 @@ FINK_ALERT_SCHEMA="${FINK_HOME}/schemas/template_schema_ZTF_3p3.avro"
 # They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
-FS_KIND=hdfs
 ONLINE_DATA_PREFIX="hdfs://134.158.75.222:8020///user/fink/online"
 AGG_DATA_PREFIX="hdfs://134.158.75.222:8020///user/fink/archive"
 
@@ -102,7 +98,10 @@ DEPLOY_FINK_PYTHON=true
 # Path to fink-fat output
 FINK_FAT_OUTPUT=
 
-######################################
-# Slack
-# OAuth Access Token for Slack Workspace
-SLACK_API_TOKEN=""
+# TNS configuration
+TNS_FOLDER=${FINK_HOME}/tns_logs
+TNS_RAW_OUTPUT=/spark_mongo_tmp/julien.peloton
+TNS_SANDBOX=false
+
+# Hostless folder
+HOSTLESS_FOLDER=${FINK_HOME}/hostless_ids
