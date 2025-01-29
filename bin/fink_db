@@ -15,6 +15,7 @@
 # limitations under the License.
 source ~/.bash_profile
 
+# TODO: add help
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
   HELP_ON_SERVICE="-h"
@@ -90,6 +91,16 @@ done
 if [[ ! $NIGHT ]]; then
   # Current night
   NIGHT=`date +"%Y%m%d"`
+fi
+echo "Processing night ${NIGHT} for survey ${SURVEY}"
+
+# Check if the conf file exists
+if [[ -f $conf ]]; then
+  echo "Reading custom Fink configuration file from " $conf
+  source $conf
+else
+  echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  source ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
 # Merge streaming data
