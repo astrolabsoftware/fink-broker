@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ set -e
 message_help="""
 Run units and integration test suites of Fink\n\n
 Usage:\n
-    \tfink_test [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
+    \tfink_test -s <survey> [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
 
 By default, nothing is run.\n
 You can enable the database integration tests by specifying --db-integration.\n
@@ -35,7 +35,11 @@ WITH_UNITS=false
 WITH_STREAM=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
-  --stream-integration)
+    -s)
+      SURVEY="$2"
+      shift 2
+      ;;
+    --stream-integration)
         WITH_STREAM=true
         shift 1
         ;;
@@ -78,6 +82,11 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+if [[ $SURVEY == "" ]]; then
+  echo -e "You need to specify a survey, e.g. fink_test -s ztf [options]"
+  exit 1
+fi
+
 # Source configuration file for tests
 if [[ -f $conf ]]; then
   echo "Reading custom test configuration file from " $conf
@@ -113,13 +122,13 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC --night $NIGHT
+  fink start stream2raw -s $SURVEY --simulator --exit_after 60 -c $conf --topic $KAFKA_TOPIC --night $NIGHT
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science --exit_after 120 -c $conf --night $NIGHT
+  fink start raw2science --s $SURVEY -exit_after 120 -c $conf --night $NIGHT
 
   # Start the distribution service
-  fink start distribution --exit_after 60 -c $conf --night $NIGHT
+  fink start distribution --s $SURVEY -exit_after 60 -c $conf --night $NIGHT
 
   # check we have all topics
   echo "TOPICS FOUND:"
@@ -129,23 +138,22 @@ fi
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
   # merge data
-  fink start merge -c $conf --night $NIGHT
+  fink start merge -s $SURVEY -c $conf --night $NIGHT
 
   # Update science portal
-  fink start science_archival -c $conf --night $NIGHT
-  fink start index_archival -c $conf --night $NIGHT --index_table pixel128_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT --index_table class_jd_objectId
-  fink start index_archival -c $conf --night $NIGHT --index_table upper_objectId_jd
-  fink start index_archival -c $conf --night $NIGHT --index_table uppervalid_objectId_jd
-  fink start index_archival -c $conf --night $NIGHT --index_table ssnamenr_jd
-  fink start index_archival -c $conf --night $NIGHT --index_table tracklet_objectId
+  fink start archive_science -s $SURVEY -c $conf --night $NIGHT
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table pixel128_jd_objectId
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table class_jd_objectId
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table upper_objectId_jd
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table uppervalid_objectId_jd
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table ssnamenr_jd
+  fink start archive_index -s $SURVEY -c $conf --night $NIGHT --index_table tracklet_objectId
 
   # SSO candidates
-  fink start index_sso_cand_archival -c $conf --night $NIGHT
+  fink start archive_sso_cand -s $SURVEY -c $conf --night $NIGHT
 
-  fink start stats -c $conf --night $NIGHT
+  fink start archive_statistics -s $SURVEY -c $conf --night $NIGHT
 
-  fink start check_science_portal -c $conf
 fi
 
 # MM offline test (need "fink start merge" before)
