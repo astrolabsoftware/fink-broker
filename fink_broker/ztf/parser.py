@@ -1,4 +1,4 @@
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -136,30 +136,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
-        "-finkwebpath",
-        type=str,
-        default="",
-        help="""
-        Folder to store UI data for display.
-        [FINK_UI_PATH]
-        """,
-    )
-    parser.add_argument(
         "-tinterval",
         type=int,
         default=0,
         help="""
         Time interval between two monitoring. In seconds.
         [FINK_TRIGGER_UPDATE]
-        """,
-    )
-    parser.add_argument(
-        "-tinterval_kafka",
-        type=float,
-        default=0.0,
-        help="""
-        Time interval between two messages are published. In seconds.
-        [TIME_INTERVAL]
         """,
     )
     parser.add_argument(
@@ -170,26 +152,6 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Stop the service after `exit_after` seconds.
         This primarily for use on CI, to stop service after some time.
         Use that with `fink start service --exit_after <time>`. Default is 24h.
-        """,
-    )
-    parser.add_argument(
-        "-datasimpath",
-        type=str,
-        default="",
-        help="""
-        Folder containing simulated alerts to be published by Kafka.
-        [FINK_DATA_SIM]
-        """,
-    )
-    parser.add_argument(
-        "-poolsize",
-        type=int,
-        default=5,
-        help="""
-        Maximum number of alerts to send. If the poolsize is
-        bigger than the number of alerts in `datapath`, then we replicate
-        the alerts. Default is 5.
-        [POOLSIZE]
         """,
     )
     parser.add_argument(
@@ -277,26 +239,6 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
-        "-distribution_rules_xml",
-        type=str,
-        default="",
-        help="""
-        The path to distribution-rules.xml which stores user defined rules to
-        filter the distribution stream
-        [DISTRIBUTION_RULES_XML]
-        """,
-    )
-    parser.add_argument(
-        "-slack_channels",
-        type=str,
-        default="",
-        help="""
-        Text file with list of slack channels to which automatic alerts
-        must be sent for e.g. based on cross-match type
-        [SLACK_CHANNELS]
-        """,
-    )
-    parser.add_argument(
         "-night",
         type=str,
         default="",
@@ -306,36 +248,9 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
-        "-fs",
-        type=str,
-        default="",
-        help="""
-        Filesystem: local or hdfs.
-        [FS_KIND]
-        """,
-    )
-    parser.add_argument(
-        "-datapath",
-        type=str,
-        default="",
-        help="""
-        Directory on disk for saving temporary alert data.
-        [DATA_PREFIX]
-        """,
-    )
-    parser.add_argument(
-        "--save_science_db_catalog_only",
-        action="store_true",
-        help="""
-        If True, save only the catalog on disk and do not push
-        data on HBase. Default is False.
-        [SAVE_SCIENCE_DB_CATALOG_ONLY]
-        """,
-    )
-    parser.add_argument(
         "-index_table",
         type=str,
-        default="",
+        default="index",
         help="""
         Name of the rowkey for index table
         [INDEXTABLE]
@@ -357,14 +272,6 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         Folder to store ids for hostless detection
         [HOSTLESS_FOLDER]
-        """,
-    )
-    parser.add_argument(
-        "--tns_sandbox",
-        action="store_true",
-        help="""
-        If True, push to TNS sandbox. Default is False.
-        [TNS_SANDBOX]
         """,
     )
     parser.add_argument(

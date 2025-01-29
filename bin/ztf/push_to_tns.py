@@ -54,19 +54,11 @@ def main():
     with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
         tns_marker = f.read().replace("\n", "")
 
-    if not args.tns_sandbox:
-        print("WARNING: submitting to real (not sandbox) TNS website")
 
-    if args.tns_sandbox:
-        url_tns_api = "https://sandbox.wis-tns.org/api"
-        with open("{}/sandbox-tns_api.key".format(args.tns_folder)) as f:
-            # remove line break...
-            key = f.read().replace("\n", "")
-    else:
-        url_tns_api = "https://www.wis-tns.org/api"
-        with open("{}/tns_api.key".format(args.tns_folder)) as f:
-            # remove line break...
-            key = f.read().replace("\n", "")
+    url_tns_api = "https://www.wis-tns.org/api"
+    with open("{}/tns_api.key".format(args.tns_folder)) as f:
+        # remove line break...
+        key = f.read().replace("\n", "")
 
     cols = [
         "cdsxmatch",

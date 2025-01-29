@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ######################################
-# Alert producer: ztf, elasticc or sims
-PRODUCER=sims
-
 # Local mode (Kafka cluster is spun up on-the-fly in docker).
 # Must match the ones used for the Producer
 KAFKA_PORT_SIM=9092
@@ -99,7 +96,10 @@ FINK_FAT_OUTPUT=${FINK_HOME}/datasim/fink_fat_example
 # use no-config to disable fink-mm
 FINK_MM_CONFIG=${FINK_HOME}/conf/fink_mm.conf
 
-######################################
-# Slack
-# OAuth Access Token for Slack Workspace
-SLACK_API_TOKEN=""
+# TNS configuration
+TNS_FOLDER=${FINK_HOME}/tns_logs
+TNS_RAW_OUTPUT=/spark_mongo_tmp/julien.peloton
+TNS_SANDBOX=false
+
+# Hostless folder
+HOSTLESS_FOLDER=${FINK_HOME}/hostless_ids
