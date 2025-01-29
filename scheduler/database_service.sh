@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,52 +15,189 @@
 # limitations under the License.
 source ~/.bash_profile
 
-NIGHT=`date +"%Y%m%d"`
+# Show help if no arguments is given
+if [[ $1 == "" ]]; then
+  HELP_ON_SERVICE="-h"
+  SURVEY="ztf"
+fi
+
+# Grab the command line arguments
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h)
+      HELP_ON_SERVICE="-h"
+      shift 1
+      ;;
+    -s)
+      SURVEY=$2
+      shift 2
+      ;;
+    -c)
+      if [[ $2 == "" || $2 == "-s" ]]; then
+        echo "$1 requires an argument. ${message_conf}" >&2
+        exit 1
+      fi
+      conf="$2"
+      shift 2
+      ;;
+    --merge)
+      MERGE=true
+      shift 2
+      ;;
+    --main_table)
+      MAIN_TABLE=true
+      shift 2
+      ;;
+    --index_tables)
+      INDEX_TABLES=true
+      shift 2
+      ;;
+    --clean_night)
+      CLEAN_NIGHT=true
+      shift 2
+      ;;
+    -night)
+      NIGHT="$2"
+      shift 2
+      ;;
+    -driver-memory)
+      DRIVER_MEMORY="$2"
+      shift 2
+      ;;
+    -executor-memory)
+      EXECUTOR_MEMORY="$2"
+      shift 2
+      ;;
+    -spark-cores-max)
+      SPARK_CORE_MAX="$2"
+      shift 2
+      ;;
+    -spark-executor-cores)
+      SPARK_EXECUTOR_CORES="$2"
+      shift 2
+      ;;
+    -*)
+      echo "unknown option: $1" >&2
+      exit 1
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ ! $NIGHT ]]; then
+  # Current night
+  NIGHT=`date +"%Y%m%d"`
+fi
+
+# Merge streaming data
+if [[ ${MERGE} == true ]]; then
+  $(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
+  if [[ $? == 0 ]]; then
+    echo "merge_and_clean"
+    # if nothing specified, get default
+    if [[ ! ${DRIVER_MEMORY} ]]; then
+      RESOURCES="-driver-memory 4g -executor-memory 16g -spark-cores-max 80 -spark-executor-cores 8"
+    else
+      RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
+    fi
+    fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
+  else
+    echo "No data at /user/julien.peloton/online/science/${NIGHT}"
+    echo "Merging aborted..."
+  fi
+fi
+
+if [[ ! ${DRIVER_MEMORY} ]]; then
+  RESOURCES="-driver-memory 4g -executor-memory 4g -spark-cores-max 9 -spark-executor-cores 1"
+else
+  RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
+fi
 YEAR=${NIGHT:0:4}
 MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
-$(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
-if [[ $? == 0 ]]; then
-    echo "Download latest TNS data"
-    fink start tns_resolver -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --tns_folder ${FINK_HOME}/tns_logs --tns_raw_output /spark_mongo_tmp/julien.peloton > ${FINK_HOME}/broker_logs/tns_resolver_${NIGHT}.log 2>&1
-
-    echo "merge_and_clean"
-    fink start merge -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_high --night ${NIGHT} > ${FINK_HOME}/broker_logs/merge_and_clean_${NIGHT}.log 2>&1
-
-    echo "science_archival"
-    fink start science_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/science_archival_${NIGHT}.log 2>&1
-
-    echo "images_archival"
-    fink start images_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} > ${FINK_HOME}/broker_logs/images_archival_${NIGHT}.log 2>&1
-
-    echo "Update index tables"
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${NIGHT}.log 2>&1
-    fink start index_archival -c ${FINK_HOME}/conf_cluster/fink.conf.ztf_nomonitoring_hbase --night ${NIGHT} --index_table tns_jd_objectId --tns_folder ${FINK_HOME}/tns_logs > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${NIGHT}.log 2>&1
-
-fi
-
-# Check if data is on the archive
-# If yes, delete temp ones
+# Aggregated data is available
 $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
 if [[ $? == 0 ]]; then
-  # Remove data path
-  hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
-  hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
+  if [[ ${MAIN_TABLE} == true ]]; then
+    echo "science_archival"
+    fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
+  fi
 
-  # Remove checkpoints
-  hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
-  hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
-  hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
+  if [[ ${INDEX_TABLES} == true ]]; then
+    echo "Download latest TNS data"
+    fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-  # Remove checkpoints for fink-mm
-  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
-  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
-  hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
+    echo "images_archival"
+    fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
+    echo "Update index tables"
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Push TNS candidates"
+    fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Push Anomaly candidates"
+    fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Push Active Learning loop candidates"
+    fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Push Hostless candidates"
+    fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Send Dwarf AGN candidates"
+    fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Send Known TDE candidates"
+    fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Update statistics"
+    fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo "Call to Fink-Fat"
+    fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
+    fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
+
+    echo "Push SSO candidates to HBase"
+    fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
+  fi
+else
+    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "Did you run --merge before?"
+    echo "Pushing data to tables aborted..."
+fi
+
+if [[ ${CLEAN_NIGHT} == true ]]; then
+  # Check if data is on the archive
+  # If yes, delete temp ones
+  $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+  if [[ $? == 0 ]]; then
+    # Remove data path
+    hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
+    hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
+
+    # Remove checkpoints
+    hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
+    hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
+    hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
+
+    # Remove checkpoints for fink-mm
+    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
+    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
+    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
+
+  else
+    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "Cleaning aborted..."
+  fi
 fi
