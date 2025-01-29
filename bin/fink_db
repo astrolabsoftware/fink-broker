@@ -34,10 +34,6 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -c)
-      if [[ $2 == "" || $2 == "-s" ]]; then
-        echo "$1 requires an argument. ${message_conf}" >&2
-        exit 1
-      fi
       conf="$2"
       shift 2
       ;;
@@ -55,6 +51,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --clean_night)
       CLEAN_NIGHT=true
+      shift 2
+      ;;
+    --clean_merge)
+      CLEAN_MERGE=true
       shift 2
       ;;
     -night)
@@ -97,10 +97,9 @@ echo "Processing night ${NIGHT} for survey ${SURVEY}"
 # Check if the conf file exists
 if [[ -f $conf ]]; then
   echo "Reading custom Fink configuration file from " $conf
-  source $conf
 else
   echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
-  source ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
 # Merge streaming data
@@ -188,11 +187,18 @@ else
     echo "Pushing data to tables aborted..."
 fi
 
+if [[ $CLEAN_MERGE == true ]]; then
+  echo "Cleaning merged files..."
+  # If merge went wrong -- clean
+  hdfs dfs -rm -r /user/julien.peloton/archive/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+  hdfs dfs -rm -r /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+fi
+
 if [[ ${CLEAN_NIGHT} == true ]]; then
-  # Check if data is on the archive
-  # If yes, delete temp ones
+  # Delete temporary files after the night
   $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
   if [[ $? == 0 ]]; then
+    echo "Cleaning temporary files..."
     # Remove data path
     hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
     hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
