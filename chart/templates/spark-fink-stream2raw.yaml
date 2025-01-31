@@ -4,7 +4,7 @@ metadata:
   name: {{ include "fink.fullname" . }}-stream2raw
 spec:
 {{- include "fink.common" . | nindent 2 }}
-  mainApplicationFile: local:///home/fink/fink-broker/bin/stream2raw.py
+  mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/stream2raw.py
   arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-servers'
     - '{{ .Values.stream2raw.kafka.in_sockets }}'

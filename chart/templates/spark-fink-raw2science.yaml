@@ -4,7 +4,7 @@ metadata:
   name: {{ include "fink.fullname" . }}-raw2science
 spec:
 {{- include "fink.common" . | nindent 2 }}
-  mainApplicationFile: local:///home/fink/fink-broker/bin/raw2science.py
+  mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/raw2science.py
   arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-night'
     - '{{ .Values.night }}'
