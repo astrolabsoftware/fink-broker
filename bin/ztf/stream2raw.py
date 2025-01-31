@@ -93,7 +93,6 @@ def main():
         alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    logger.info("Kafka servers: {}".format(args.servers))
     if args.servers.startswith("localhost") or args.servers.startswith(
         "kafka-cluster-kafka-bootstrap.kafka"
     ):

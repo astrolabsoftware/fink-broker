@@ -91,9 +91,9 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
     disquery = (
         df_kafka.writeStream.format("kafka")
         .option("kafka.bootstrap.servers", kafka_cfg["bootstrap.servers"])
-        .option("kafka.security.protocol", "PLAINTEXT")
-        # .option("kafka.security.protocol", "SASL_PLAINTEXT")
-        # .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
+        #.option("kafka.security.protocol", "PLAINTEXT")
+         .option("kafka.security.protocol", "SASL_PLAINTEXT")
+         .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
         # .option("kafka.sasl.username", kafka_cfg["username"])
         # .option("kafka.sasl.password", kafka_cfg["password"])
         # .option("kafka.buffer.memory", kafka_cfg["kafka_buf_mem"])
