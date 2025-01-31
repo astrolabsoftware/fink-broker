@@ -93,8 +93,10 @@ def main():
         alert_schema, _, alert_schema_json = get_schemas_from_avro(args.schema)
 
     # Decode the Avro data, and keep only (timestamp, data)
-    if args.servers.startswith("localhost"):
-        # Only for test suite
+    if args.servers.startswith("localhost") or args.servers.startswith(
+        "kafka-cluster-kafka-bootstrap.kafka"
+    ):
+        # Only for test suite (sentinel or k8s)
         df_decoded = df.select([
             from_avro(df["value"], alert_schema_json).alias("decoded")
         ])
