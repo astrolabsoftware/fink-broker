@@ -182,7 +182,7 @@ def main():
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
     kafka_cfg = {
-        "bootstrap.servers": args.distribution_servers,
+        "kafka.bootstrap.servers": args.distribution_servers,
     }
 
     if args.kafka_security_protocol == "SASL_PLAINTEXT":
