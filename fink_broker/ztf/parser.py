@@ -182,6 +182,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-kafka_security_protocol",
+        type=str,
+        default="",
+        help="""
+        the security protocol for kafka producer
+        [KAFKA_SECURITY_PROTOCOL]
+        """,
+    )
+    parser.add_argument(
         "-kafka_sasl_username",
         type=str,
         default="",

@@ -12,6 +12,8 @@ spec:
     - '{{ .Values.distribution.kafka.schema }}'
     - '-substream_prefix'
     - '{{ .Values.distribution.kafka.substream_prefix }}'
+    - '-kafka_security_protocol'
+    - '{{ .Values.distribution.kafka.kafka_security_protocol }}'
     - '-night'
     - '{{ .Values.night }}'
   sparkVersion: "3.4.1"

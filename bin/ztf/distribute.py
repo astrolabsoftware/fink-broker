@@ -90,15 +90,7 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
 
     disquery = (
         df_kafka.writeStream.format("kafka")
-        .option("kafka.bootstrap.servers", kafka_cfg["bootstrap.servers"])
-        #.option("kafka.security.protocol", "PLAINTEXT")
-         .option("kafka.security.protocol", "SASL_PLAINTEXT")
-         .option("kafka.sasl.mechanism", "SCRAM-SHA-512")
-        # .option("kafka.sasl.username", kafka_cfg["username"])
-        # .option("kafka.sasl.password", kafka_cfg["password"])
-        # .option("kafka.buffer.memory", kafka_cfg["kafka_buf_mem"])
-        # .option("kafka.delivery.timeout.ms", kafka_cfg["kafka_timeout_ms"])
-        .option("kafka.auto.create.topics.enable", True)
+        .options(**kafka_cfg)
         .option("topic", topicname)
         .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
         .trigger(processingTime="{} seconds".format(tinterval))
@@ -191,11 +183,30 @@ def main():
 
     kafka_cfg = {
         "bootstrap.servers": args.distribution_servers,
-        # "username": args.kafka_sasl_username,
-        # "password": args.kafka_sasl_password,
-        # "kafka_buf_mem": args.kafka_buffer_memory,
-        # "kafka_timeout_ms": args.kafka_delivery_timeout_ms,
     }
+
+    if args.kafka_security_protocol == "SASL_PLAINTEXT":
+        # CI - k8s
+        kafka_cfg.setdefault("kafka.security.protocol", "SASL_PLAINTEXT")
+        kafka_cfg.setdefault("kafka.sasl.mechanism", "SCRAM-SHA-512")
+    elif args.kafka_security_protocol == "PLAINTEXT":
+        # CI - sentinel
+        kafka_cfg.setdefault("kafka.security.protocol", "PLAINTEXT")
+    elif args.kafka_security_protocol == "VD":
+        # VD
+        kafka_cfg.setdefault("kafka.sasl.username", args.kafka_sasl_username)
+        kafka_cfg.setdefault("kafka.sasl.password", args.kafka_sasl_password)
+        kafka_cfg.setdefault("kafka.buffer.memory", args.kafka_buffer_memory)
+        kafka_cfg.setdefault(
+            "kafka.delivery.timeout.ms", args.kafka_delivery_timeout_ms
+        )
+    else:
+        msg = " Kafka producer security protocol {} is not known".format(
+            args.kafka_security_protocol
+        )
+        logger.warn(msg)
+        spark.stop()
+
     for userfilter in userfilters:
         if args.noscience:
             logger.debug(
