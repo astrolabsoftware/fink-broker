@@ -226,7 +226,7 @@ if [[ $service == "distribute" ]]; then
   fi
 
   DISTRIBUTE_OPTIONS_SPARK="--files ${FINK_HOME}/conf/fink_kafka_producer_jaas.conf --driver-java-options -Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.driver.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=${FINK_PRODUCER_JAAS} --conf spark.executorEnv.KNWEBHOOK=${KNWEBHOOK} --conf spark.executorEnv.KNWEBHOOK_FINK=${KNWEBHOOK_FINK} --conf spark.executorEnv.KNWEBHOOK_AMA_CL=${KNWEBHOOK_AMA_CL} --conf spark.executorEnv.KNWEBHOOK_AMA_GALAXIES=${KNWEBHOOK_AMA_GALAXIES} --conf spark.executorEnv.KNWEBHOOK_DWF=${KNWEBHOOK_DWF} --conf spark.executorEnv.FINK_TG_TOKEN=${FINK_TG_TOKEN}"
-  DISTRIBUTE_OPTIONS="-distribution_servers ${DISTRIBUTION_SERVERS} -substream_prefix ${SUBSTREAM_PREFIX} -kafka_sasl_username ${KAFKA_SASL_USERNAME} -kafka_sasl_password ${KAFKA_SASL_PASSWORD} -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS}"
+  DISTRIBUTE_OPTIONS="-distribution_servers ${DISTRIBUTION_SERVERS} -substream_prefix ${SUBSTREAM_PREFIX} -kafka_security_protocol ${KAFKA_SECURITY_PROTOCOL} -kafka_sasl_username ${KAFKA_SASL_USERNAME} -kafka_sasl_password ${KAFKA_SASL_PASSWORD} -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS}"
 fi
 
 spark-submit --master ${SPARK_MASTER} \
