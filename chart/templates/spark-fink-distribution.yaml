@@ -4,7 +4,7 @@ metadata:
   name: {{ include "fink.fullname" . }}-distribution
 spec:
 {{- include "fink.common" . | nindent 2 }}
-  mainApplicationFile: local:///home/fink/fink-broker/bin/distribute.py
+  mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/distribute.py
   arguments: {{- include "fink.commonargs" . | nindent 4 }}
     - '-distribution_servers'
     - '{{ .Values.distribution.kafka.out_sockets }}'
@@ -12,6 +12,8 @@ spec:
     - '{{ .Values.distribution.kafka.schema }}'
     - '-substream_prefix'
     - '{{ .Values.distribution.kafka.substream_prefix }}'
+    - '-kafka_security_protocol'
+    - '{{ .Values.distribution.kafka.kafka_security_protocol }}'
     - '-night'
     - '{{ .Values.night }}'
   sparkVersion: "3.4.1"

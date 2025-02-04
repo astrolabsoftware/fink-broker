@@ -1,5 +1,6 @@
-# Copyright 2019 AstroLab Software
-# Author: Julien Peloton
+#!/bin/bash
+# Copyright 2022-2025 Astrolab Software
+# Author: Roman Le Montagner
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,5 +12,16 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
-__version__ = "4.0"
+# limitations under the License
+
+source ~/.bash_profile
+
+# TODO: CLI argument
+SURVEY=ztf
+
+# Config 
+CONFIG=$FINK_HOME/conf/$SURVEY/fink_mm.conf
+
+NIGHT=`date +"%Y%m%d" -d "now"`
+
+nohup fink_grb join_stream offline --night=${NIGHT} --config ${CONFIG} > $FINK_HOME/broker_logs/offline_grb_${NIGHT}.log &

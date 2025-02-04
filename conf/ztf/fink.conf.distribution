@@ -1,0 +1,84 @@
+# Copyright 2019 AstroLab Software
+# Author: Abhishek Chauhan
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+######################################
+# Configurations for Alert Redistribution
+
+# Zookeeper
+ZK_IPPORT="localhost:2181"
+
+# Kafka Brokers / Servers
+# Array with Broker addresses (IP and Port)
+declare -a KAFKA_BROKER_IPPORT
+
+KAFKA_BROKER_IPPORT[0]="localhost:9092"
+# KAFKA_BROKER_IPPORT[1]="localhost:9093"
+# KAFKA_BROKER_IPPORT[2]="localhost:9094"
+
+# Array with Properties files for Kafka Brokers
+declare -a KAFKA_BROKER_PROPERTIES
+
+KAFKA_BROKER_PROPERTIES[0]="${FINK_HOME}/conf/fink_kafka.server0.properties"
+# KAFKA_BROKER_PROPERTIES[1]="${FINK_HOME}/conf/fink_kafka.server1.properties"
+# KAFKA_BROKER_PROPERTIES[2]="${FINK_HOME}/conf/fink_kafka.server2.properties"
+
+declare kafka_servers
+for i in ${KAFKA_BROKER_IPPORT[@]}; do
+  kafka_servers=$kafka_servers",$i"
+done
+
+DISTRIBUTION_SERVERS=${kafka_servers#,}
+
+# Store logs for zk and brokers:
+cd ${FINK_HOME}
+[[ -d fink_kafka_logs ]] || mkdir -p fink_kafka_logs
+
+# log file for zk
+zk_logs="${FINK_HOME}/fink_kafka_logs/zklogs"
+
+# log files for kafka brokers
+declare -a kafka_broker_logs
+kafka_broker_logs[0]="${FINK_HOME}/fink_kafka_logs/broker0"
+kafka_broker_logs[1]="${FINK_HOME}/fink_kafka_logs/broker1"
+kafka_broker_logs[2]="${FINK_HOME}/fink_kafka_logs/broker2"
+
+# Kafka topic to publish on
+DISTRIBUTION_TOPIC="rrlyr,snialike"
+
+# Kafka topic prefix
+SUBSTREAM_PREFIX="fink_"
+
+# The path where to store the avro distribution schema
+DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema_0p2.avsc
+
+# Offset for reading the science database
+DISTRIBUTION_OFFSET="latest"
+DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset
+
+# Authentication
+# path of jaas files for Authentication
+# Brokers
+KAFKA_BROKER_JAAS="${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
+
+# Fink Producer
+FINK_PRODUCER_JAAS="${FINK_HOME}/conf/fink_kafka_producer_jaas.conf"
+
+# Fink test Consumer
+FINK_TEST_CONSUMER_JAAS="${FINK_HOME}/conf/fink_kafka_consumer_jaas.conf"
+
+KAFKA_SECURITY_PROTOCOL=PLAINTEXT
+KAFKA_SASL_USERNAME=toto
+KAFKA_SASL_PASSWORD=tata
+KAFKA_BUFFER_MEMORY=134217728
+KAFKA_DELIVERY_TIMEOUT_MS=240000
