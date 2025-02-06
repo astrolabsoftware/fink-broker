@@ -79,7 +79,7 @@ fi
 if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
     echo "Launching stream2raw"
 
-    LEASETIME=$(( `date +'%s' -d ${STOP_AT}` - `date +'%s' -d 'now'` ))
+    LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
 
     nohup ${FINK_HOME}/bin/fink start stream2raw \
         -s ztf \
@@ -108,7 +108,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
 
                 # LEASETIME must be computed by taking the
                 # difference between now and max end (8pm CE(S)T)
-                LEASETIME=$(( `date +'%s' -d ${STOP_AT}` - `date +'%s' -d 'now'` ))
+                LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
 
                 nohup ${FINK_HOME}/bin/fink start raw2science \
                     -s ztf \
@@ -121,8 +121,8 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
             fi
         fi
         DDATE=`date`
-        echo "${DDATE}: no data yet. Sleeping 300 seconds..."
-        sleep 300
+        echo "${DDATE}: no data yet. Sleeping 60 seconds..."
+        sleep 60
     done
 fi
 
@@ -142,7 +142,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
                 echo "Launching service..."
                 # LEASETIME must be computed by taking the
                 # difference between now and max end (8pm CEST)
-                LEASETIME=$(( `date +'%s' -d ${STOP_AT}` - `date +'%s' -d 'now'` ))
+                LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
 
                 nohup ${FINK_HOME}/bin/fink start distribute \
                     -s ztf \
@@ -156,8 +156,8 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
             fi
         fi
         DDATE=`date`
-        echo "${DDATE}: no data yet. Sleeping 300 seconds..."
-        sleep 300
+        echo "${DDATE}: no data yet. Sleeping 60 seconds..."
+        sleep 60
     done
 fi
 
