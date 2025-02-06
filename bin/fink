@@ -201,6 +201,13 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
+# Topic required only for stream2raw
+if [[ ${KAFKA_TOPIC} ]]; then
+  KAFKA_TOPIC="-topic ${KAFKA_TOPIC}"
+else
+  KAFKA_TOPIC=""
+fi
+
 # Only if the operator pass an index table
 if [[ ${INDEXTABLE} ]]; then
   INDEXTABLE="-index_table ${INDEXTABLE}"
@@ -238,7 +245,6 @@ spark-submit --master ${SPARK_MASTER} \
   ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
   -producer ${SURVEY} \
   -servers ${KAFKA_IPPORT} \
-  -topic ${KAFKA_TOPIC} \
   -night ${NIGHT} \
   -schema ${FINK_ALERT_SCHEMA} \
   -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
@@ -252,6 +258,6 @@ spark-submit --master ${SPARK_MASTER} \
   -science_db_name ${SCIENCE_DB_NAME} \
   -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
   -tns_folder ${TNS_FOLDER} \
-  ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
+  ${KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 
