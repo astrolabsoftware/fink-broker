@@ -118,31 +118,67 @@ while [ "$#" -gt 0 ]; do
 done
 
 services=`/usr/bin/ls ${FINK_HOME}/bin/${SURVEY}`
-message_service="Available services are: ${services}"
 message_conf="Typical configuration would be $PWD/conf/fink.conf.dev"
-message_help="""
-Handle Kafka streams received by Apache Spark\n\n
-Usage:\n
-    \tto start a service: fink start <service> [-h] [-s <survey>] [-c <conf>] [--simulator]\n
-    \tto stop a service : fink stop  <service> [-h] [-c <conf>]\n
-    \tto show services  : fink show \n\n
+__usage="
+fink controls the Fink broker real-time and database operations.
 
-To get this help: \n
-\tfink -h \n\n
+  Find more information on Fink at https://fink-broker.org
 
-To get help for a service: \n
-\tfink start <service> -h\n\n
+Usage: $(basename $0) [OPTIONS]
 
-$message_service\n\n
+Options:
+  -s		Survey name (ztf, rubin). Default is ztf.
+  start 	Start a service. The list of available services is given at ${FINK_HOME}/bin/${SURVEY}
+  stop 		Stop a running service.
+  show 		Show running services.
+  -h 		Show this help.
+  --version 	If specified, show the version of the code.
 
-$message_conf\n\n
+Service options:
+  -h 			Show help for the service.
+  -c 			Path to configuration file.
+  -conf_distribution 	Path to the extra configuration file for the distribute service.
+  -night 		Night to process with format YYYYMMDD
+  -topic 		Kafka topic name to poll data from.
+  -index_table		Name of the index table to populate.
+  -driver_memory	Memory to use for the driver (see Spark options)
+  -executor_memory 	Memory to use for each executor (see Spark options)
+  -spark-cores-max 	Total number of cores to use for all executors (see Spark options)
+  -spark-executor-cores Number of cores per executor (see Spark options)
+  -exit_after 		Number of seconds after which the service should stop.
+  --simulator 		If specified, run in simulation mode.
+  --noscience 		If specified, do not enrich data with science modules.
 
-To see the running processes: \n
-\tfink show \n\n
+Examples:
+  Start polling for an hour: 
+  fink start stream2raw -s ztf -night 20190101 \t
+	-topic ztf_20190101 -driver_memory 4g -executor_memory 2g \t
+	-spark-cores-max 4 -spark-executor-cores 1 -exit_after 3600
 
-To stop a service or all running processes: \n
-\tfink stop <service or all> \n
-"""
+  Archive data in HBase:
+  fink start archive_science -s ztf -night 20190101 \t
+  	-driver-memory 4g -executor-memory 4g \t
+	-spark-cores-max 9 -spark-executor-cores 1
+
+Notes: useful wrappers can be found at ${FINK_HOME}/scheduler/${SURVEY}
+
+Scheduler: Typical scheduler at VirtualData is
+# Fink real-time
+01 00 * * * /home/julien.peloton/fink-broker/scheduler/ztf/launch_stream.sh
+
+# Database service
+05 20 * * * /home/julien.peloton/fink-broker/scheduler/ztf/launch_db.sh
+
+# SSOFT - once a month
+0 0 1 * * /home/julien.peloton/fink-broker/scheduler/ztf/launch_ssoft.sh
+0 12 1 * * /home/julien.peloton/fink-broker/scheduler/ztf/launch_sso_resolver.sh
+
+# Operation reports four times a day
+0 07 * * * /home/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 12 * * * /home/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 17 * * * /home/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 22 * * * /home/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+"
 
 if [[ $SURVEY == "" ]]; then
   echo -e "You need to specify a survey, e.g. fink -s ztf [options]"
@@ -150,7 +186,7 @@ if [[ $SURVEY == "" ]]; then
 fi
 
 if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
-  echo -e $message_help
+  echo -e "$__usage"
   exit 1
 fi
 
