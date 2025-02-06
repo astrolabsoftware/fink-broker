@@ -45,12 +45,7 @@ kafka_broker_logs[0]="${FINK_HOME}/fink_kafka_logs/broker0"
 # Kafka topic prefix
 SUBSTREAM_PREFIX="fink_"
 
-# Authentication
-# path of jaas files for Authentication
-# Brokers
-KAFKA_BROKER_JAAS="${FINK_HOME}/conf/fink_kafka_server_jaas.conf"
-
-# Fink Producer
+# Authentication for Fink Producer
 FINK_PRODUCER_JAAS="${FINK_HOME}/conf/fink_kafka_producer_jaas.conf"
 
 KAFKA_SECURITY_PROTOCOL=PLAINTEXT
