@@ -57,6 +57,43 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+__usage="
+Fink real-time operations: poll, enrich, distribute
+
+Usage: $(basename $0) [OPTIONS]
+
+Options:
+  -h			Display this help
+  -c			Path to configuration file. Default is at ${FINK_HOME}/conf/ztf/fink.conf.prod
+  -night		Night to process, in the format YYYYMMDD. Default is today.
+  -stop_at		Date to stop fink. Default is '20:00 today'  
+  --poll_only		If specified, only poll incoming stream.
+  --enrich_only		If specified, only enrich polled data.
+  --distribute_only	If specified, only distribute enriched data.
+
+Examples:
+  # Launch full Fink until 20:00 today Paris time
+  ./launch_stream.sh
+
+  # It is 14:00 Paris. Poll only for 1 hour
+  ./launch_stream.sh --poll_only -stop_at 15:00 today 
+
+  # Extract science until the end of the night 
+  ./launch_stream.sh --enrich_only
+
+  # Distribute until 5pm
+  ./launch_stream.sh --distribute_only -stop_at 17:00 today
+
+  # 8:00 AM. Reprocess entirely another night in a couple of hours
+  ./launch_stream.sh -night 20241231 -stop_at 10:00 today 
+"
+
+
+if [[ ${HELP_ON_SERVICE} == "-h" ]]; then
+  echo -e "$__usage"
+  exit 1
+fi
+
 if [[ ! $NIGHT ]]; then
   # Current night
   NIGHT=`date +"%Y%m%d"`
@@ -67,8 +104,8 @@ echo "Processing night ${NIGHT}"
 if [[ -f $conf ]]; then
   echo "Reading custom Fink configuration file from " $conf
 else
-  echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
-  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  echo "Reading default Fink conf from " ${FINK_HOME}/conf/ztf/fink.conf.prod
+  conf=${FINK_HOME}/conf/ztf/fink.conf.prod
 fi
 
 if [[ ! ${STOP_AT} ]]; then
@@ -83,7 +120,7 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
 
     nohup ${FINK_HOME}/bin/fink start stream2raw \
         -s ztf \
-        -c ${FINK_HOME}/conf/ztf/fink.conf.prod \
+        -c ${conf} \
         -topic "ztf_${NIGHT}.*" \
         -night $NIGHT \
         -driver-memory 4g -executor-memory 2g \
@@ -112,7 +149,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
 
                 nohup ${FINK_HOME}/bin/fink start raw2science \
                     -s ztf \
-                    -c ${FINK_HOME}/conf/ztf/fink.conf.prod \
+                    -c ${conf} \
                     -driver-memory 4g -executor-memory 2g \
                     -spark-cores-max 8 -spark-executor-cores 1 \
                     -night ${NIGHT} \
@@ -146,7 +183,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
 
                 nohup ${FINK_HOME}/bin/fink start distribute \
                     -s ztf \
-                    -c ${FINK_HOME}/conf/fink.conf.prod \
+                    -c ${conf} \
                     -conf_distribution ${FINK_HOME}/conf/ztf/fink.conf.distribution \
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
