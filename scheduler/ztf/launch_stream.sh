@@ -28,15 +28,15 @@ while [ "$#" -gt 0 ]; do
       ;;
     --poll_only)
       POLL_ONLY=true
-      shift 2
+      shift 1
       ;;
     --enrich_only)
       ENRICH_ONLY=true
-      shift 2
+      shift 1
       ;;
     --distribute_only)
       DISTRIBUTE_ONLY=true
-      shift 2
+      shift 1
       ;;
     -night)
       NIGHT="$2"
