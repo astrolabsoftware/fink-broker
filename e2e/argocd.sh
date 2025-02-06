@@ -109,7 +109,9 @@ argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=op
 
 # Synk storage dependency for fink
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+# Hack to fix kafka startup problem (non deterministic)
+argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
 # Sync fink-broker
 argocd app sync -l app.kubernetes.io/instance=fink
