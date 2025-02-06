@@ -23,15 +23,6 @@ ZK_IPPORT="localhost:2181"
 declare -a KAFKA_BROKER_IPPORT
 
 KAFKA_BROKER_IPPORT[0]="localhost:9092"
-# KAFKA_BROKER_IPPORT[1]="localhost:9093"
-# KAFKA_BROKER_IPPORT[2]="localhost:9094"
-
-# Array with Properties files for Kafka Brokers
-declare -a KAFKA_BROKER_PROPERTIES
-
-KAFKA_BROKER_PROPERTIES[0]="${FINK_HOME}/conf/fink_kafka.server0.properties"
-# KAFKA_BROKER_PROPERTIES[1]="${FINK_HOME}/conf/fink_kafka.server1.properties"
-# KAFKA_BROKER_PROPERTIES[2]="${FINK_HOME}/conf/fink_kafka.server2.properties"
 
 declare kafka_servers
 for i in ${KAFKA_BROKER_IPPORT[@]}; do
@@ -50,21 +41,9 @@ zk_logs="${FINK_HOME}/fink_kafka_logs/zklogs"
 # log files for kafka brokers
 declare -a kafka_broker_logs
 kafka_broker_logs[0]="${FINK_HOME}/fink_kafka_logs/broker0"
-kafka_broker_logs[1]="${FINK_HOME}/fink_kafka_logs/broker1"
-kafka_broker_logs[2]="${FINK_HOME}/fink_kafka_logs/broker2"
-
-# Kafka topic to publish on
-DISTRIBUTION_TOPIC="rrlyr,snialike"
 
 # Kafka topic prefix
 SUBSTREAM_PREFIX="fink_"
-
-# The path where to store the avro distribution schema
-DISTRIBUTION_SCHEMA=${FINK_HOME}/schemas/distribution_schema_0p2.avsc
-
-# Offset for reading the science database
-DISTRIBUTION_OFFSET="latest"
-DISTRIBUTION_OFFSET_FILE=${FINK_HOME}/distribution.offset
 
 # Authentication
 # path of jaas files for Authentication
