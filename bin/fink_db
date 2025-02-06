@@ -39,23 +39,23 @@ while [ "$#" -gt 0 ]; do
       ;;
     --merge)
       MERGE=true
-      shift 2
+      shift 1
       ;;
     --main_table)
       MAIN_TABLE=true
-      shift 2
+      shift 1
       ;;
     --index_tables)
       INDEX_TABLES=true
-      shift 2
+      shift 1
       ;;
     --clean_night)
       CLEAN_NIGHT=true
-      shift 2
+      shift 1
       ;;
     --clean_merge)
       CLEAN_MERGE=true
-      shift 2
+      shift 1
       ;;
     -night)
       NIGHT="$2"
