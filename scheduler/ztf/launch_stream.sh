@@ -15,6 +15,12 @@
 # limitations under the License.
 source ~/.bash_profile
 
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
 # Grab the command line arguments
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -63,29 +69,29 @@ Fink real-time operations: poll, enrich, distribute
 Usage: $(basename $0) [OPTIONS]
 
 Options:
-  -h			Display this help
-  -c			Path to configuration file. Default is at ${FINK_HOME}/conf/ztf/fink.conf.prod
-  -night		Night to process, in the format YYYYMMDD. Default is today.
-  -stop_at		Date to stop fink. Default is '20:00 today'  
-  --poll_only		If specified, only poll incoming stream.
-  --enrich_only		If specified, only enrich polled data.
-  --distribute_only	If specified, only distribute enriched data.
+  -h                Display this help
+  -c                Path to configuration file. Default is at ${FINK_HOME}/conf/ztf/fink.conf.prod
+  -night            Night to process, in the format YYYYMMDD. Default is today.
+  -stop_at          Date to stop fink. Default is '20:00 today'
+  --poll_only       If specified, only poll incoming stream.
+  --enrich_only     If specified, only enrich polled data.
+  --distribute_only If specified, only distribute enriched data.
 
 Examples:
   # Launch full Fink until 20:00 today Paris time
   ./launch_stream.sh
 
   # It is 14:00 Paris. Poll only for 1 hour
-  ./launch_stream.sh --poll_only -stop_at 15:00 today 
+  ./launch_stream.sh --poll_only -stop_at 15:00 today
 
-  # Extract science until the end of the night 
+  # Extract science until the end of the night
   ./launch_stream.sh --enrich_only
 
   # Distribute until 5pm
   ./launch_stream.sh --distribute_only -stop_at 17:00 today
 
   # 8:00 AM. Reprocess entirely another night in a couple of hours
-  ./launch_stream.sh -night 20241231 -stop_at 10:00 today 
+  ./launch_stream.sh -night 20241231 -stop_at 10:00 today
 "
 
 
@@ -98,23 +104,24 @@ if [[ ! $NIGHT ]]; then
   # Current night
   NIGHT=`date +"%Y%m%d"`
 fi
-echo "Processing night ${NIGHT}"
+echo -e "${SINFO} Processing night ${NIGHT}"
 
 # Check if the conf file exists
 if [[ -f $conf ]]; then
-  echo "Reading custom Fink configuration file from " $conf
+  echo -e "${SINFO} Reading custom Fink configuration file from " $conf
 else
-  echo "Reading default Fink conf from " ${FINK_HOME}/conf/ztf/fink.conf.prod
+  echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/ztf/fink.conf.prod
   conf=${FINK_HOME}/conf/ztf/fink.conf.prod
 fi
 
 if [[ ! ${STOP_AT} ]]; then
+  echo -e "${SINFO} No ending time specified, stopping at 20:00 today Paris time."
   STOP_AT='20:00 today'
 fi
 
 # stream2raw
 if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
-    echo "Launching stream2raw"
+    echo -e "${SINFO} Launching stream2raw service"
 
     LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
 
@@ -130,7 +137,7 @@ fi
 
 # raw2science
 if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
-    echo "Launching raw2science"
+    echo -e "${SINFO} Launching raw2science"
     while : ; do
         # check folder exist
         $(hdfs dfs -test -d /user/julien.peloton/online/raw/${NIGHT})
@@ -138,10 +145,10 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
             # check folder is not empty
             isEmpty=$(hdfs dfs -count /user/julien.peloton/online/raw/${NIGHT} | awk '{print $2}')
             if [[ $isEmpty > 0 ]]; then
-                echo "Data detected."
-                echo "Waiting 60 seconds for one batch to complete before launching..."
+                echo -e "${SINFO} Data detected."
+                echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
                 sleep 60
-                echo "Launching service"
+                echo -e "${SINFO} Launching raw2science service"
 
                 # LEASETIME must be computed by taking the
                 # difference between now and max end (8pm CE(S)T)
@@ -158,14 +165,14 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
             fi
         fi
         DDATE=`date`
-        echo "${DDATE}: no data yet. Sleeping 60 seconds..."
+        echo -e "${SINFO} ${DDATE}: no data yet. Sleeping 60 seconds..."
         sleep 60
     done
 fi
 
 # distribution
 if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
-    echo "Launching distribution"
+    echo -e "${SINFO} Launching distribution"
     while true; do
         # check folder exist
         $(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
@@ -173,10 +180,10 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
             # check folder is not empty
             isEmpty=$(hdfs dfs -count /user/julien.peloton/online/science/${NIGHT} | awk '{print $2}')
             if [[ $isEmpty > 0 ]]; then
-                echo "Data detected."
-                echo "Waiting 60 seconds for one batch to complete before launching..."
+                echo -e "${SINFO} Data detected."
+                echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
                 sleep 60
-                echo "Launching service..."
+                echo -e "${SINFO} Launching distribution service..."
                 # LEASETIME must be computed by taking the
                 # difference between now and max end (8pm CEST)
                 LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
@@ -193,7 +200,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
             fi
         fi
         DDATE=`date`
-        echo "${DDATE}: no data yet. Sleeping 60 seconds..."
+        echo -e "${SINFO} ${DDATE}: no data yet. Sleeping 60 seconds..."
         sleep 60
     done
 fi

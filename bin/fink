@@ -45,7 +45,7 @@ while [ "$#" -gt 0 ]; do
       ps aux | head -1
       ps aux | grep -i 'fink start' | grep -v grep
       ps aux | grep -i 'gcn_stream start' | grep -v grep
-      echo -e "${SINFO} Use <fink stop service_name> to stop a service."
+      echo -e "${SINFO} Use <fink stop service_name> -s <survey> to stop a service."
       exit
       ;;
     -h)
@@ -191,7 +191,7 @@ if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
 fi
 
 # Check service exists
-if [[ ! -f ${FINK_HOME}/bin/${SURVEY}/${service}.py ]]; then
+if [[ ! -f ${FINK_HOME}/bin/${SURVEY}/${service}.py ]] && [[ ${service} != "all" ]]; then
   # In case you give an unknown service
   echo -e "${SERROR} unknown service: $service" >&2
   exit 1
@@ -214,6 +214,8 @@ fi
 if [[ $MODE == "stop" ]]; then
   echo -e "${SSTEP} Stopping services..."
   if [[ $service == "all" ]]; then
+    pkill -f launch_db.sh
+    pkill -f launch_stream.sh
     pkill -f stream2raw
     pkill -f raw2science
     pkill -f distribute

@@ -128,7 +128,7 @@ if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
   exit 0
 fi
 
-hdfs -v foo >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
+hdfs version >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
 
 if [[ $SURVEY == "" ]]; then
   echo -e "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
@@ -181,7 +181,8 @@ MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
 # Aggregated data is available
-HAS_DATA=$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+HAS_DATA=$?
 
 if [[ ${MAIN_TABLE} == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
@@ -265,8 +266,7 @@ fi
 
 if [[ ${CLEAN_NIGHT} == true ]]; then
   # Delete temporary files after the night
-  $(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
-  if [[ $? == 0 ]]; then
+  if [[ $HAS_DATA == 0 ]]; then
     echo -e "${SINFO} Cleaning temporary files on HDFS..."
     # Remove data path
     hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
