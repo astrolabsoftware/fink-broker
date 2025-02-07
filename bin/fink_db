@@ -241,10 +241,14 @@ if [[ ${INDEX_TABLES} == true ]]; then
 fi
 
 if [[ $DELETE_MERGE == true ]]; then
-  echo "Deleting merged files on HDFS..."
-  # If merge went wrong -- clean
-  hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
-  hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo "Deleting merged files on HDFS..."
+    # If merge went wrong -- clean
+    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+  else
+    echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "Nothing to delete"
 fi
 
 if [[ ${CLEAN_NIGHT} == true ]]; then
