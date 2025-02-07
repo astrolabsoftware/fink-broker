@@ -34,7 +34,6 @@ SPARK_MASTER="mesos://vm-75063.lal.in2p3.fr:5050"
 EXTRA_SPARK_CONFIG='--conf spark.mesos.principal=lsst --conf spark.mesos.secret=secret --conf spark.mesos.role=lsst '
 EXTRA_SPARK_CONFIG+='--conf spark.executorEnv.HOME=/home/julien.peloton '
 EXTRA_SPARK_CONFIG+='--repositories https://packages.confluent.io/maven/ '
-echo $EXTRA_SPARK_CONFIG
 
 FINK_PACKAGES=\
 org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.4.1,\

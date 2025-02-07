@@ -15,6 +15,12 @@
 # limitations under the License.
 set -e
 
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
   HELP_ON_SERVICE="-h"
@@ -27,7 +33,7 @@ while [ "$#" -gt 0 ]; do
     "start"|"stop")
       MODE="$1"
       if [[ $2 == "" ]]; then
-        echo "$1 requires an argument. ${message_service}" >&2
+        echo -e "${SERROR} $1 requires an argument." >&2
         exit 1
       fi
       service="$2"
@@ -35,11 +41,11 @@ while [ "$#" -gt 0 ]; do
       ;;
     "show")
       nservice=$(ps ax | grep -i 'fink start' | grep -v grep | wc -l)
-      echo -e "$nservice Fink service(s) running: "
+      echo -e "${SINFO} $nservice Fink service(s) running: "
       ps aux | head -1
       ps aux | grep -i 'fink start' | grep -v grep
       ps aux | grep -i 'gcn_stream start' | grep -v grep
-      echo "Use <fink stop service_name> to stop a service."
+      echo -e "${SINFO} Use <fink stop service_name> to stop a service."
       exit
       ;;
     -h)
@@ -96,7 +102,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --version)
       python3 -c "import fink_broker; print(fink_broker.__version__)"
-      exit
+      exit 0
       ;;
     --noscience)
       NOSCIENCE="--noscience"
@@ -175,7 +181,7 @@ Scheduler: Typical scheduler at VirtualData is
 "
 
 if [[ $SURVEY == "" ]]; then
-  echo -e "You need to specify a survey, e.g. fink -s ztf [options]"
+  echo -e "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
   exit 1
 fi
 
@@ -187,17 +193,16 @@ fi
 # Check service exists
 if [[ ! -f ${FINK_HOME}/bin/${SURVEY}/${service}.py ]]; then
   # In case you give an unknown service
-  echo "unknown service: $service" >&2
-  echo $message_service
+  echo -e "${SERROR} unknown service: $service" >&2
   exit 1
 fi
 
 # Check if the conf file exists
 if [[ -f $conf ]]; then
-  echo "Reading custom Fink configuration file from " $conf
+  echo -e "${SINFO} Reading custom Fink configuration file from " $conf
   source $conf
 else
-  echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
   source ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
@@ -207,6 +212,7 @@ fi
 
 # Stop a service
 if [[ $MODE == "stop" ]]; then
+  echo -e "${SSTEP} Stopping services..."
   if [[ $service == "all" ]]; then
     pkill -f stream2raw
     pkill -f raw2science
@@ -214,7 +220,8 @@ if [[ $MODE == "stop" ]]; then
   else
     pkill -f $service
   fi
-  exit 1
+  echo -e "${SDONE} $service stopped"
+  exit 0
 fi
 
 # Grab Fink and Python version numbers
@@ -227,7 +234,7 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd $FINK_HOME
   python3 setup.py bdist_egg
   PYTHON_EXTRA_FILE="--py-files ${FINK_HOME}/dist/fink_broker-${FINK_VERSION}-py${PYTHON_VERSION}.egg"
-  echo "Distributing ${PYTHON_EXTRA_FILE}"
+  echo -e "${SINFO} Distributing ${PYTHON_EXTRA_FILE}"
   cd -
 fi
 
@@ -255,10 +262,10 @@ fi
 DISTRIBUTE_OPTIONS=""
 if [[ $service == "distribute" ]]; then
   if [[ -f $conf_distribution ]]; then
-    echo "Reading custom Fink distribution configuration file from " $conf_distribution
+    echo -e "${SINFO} Reading custom Fink distribution configuration file from " $conf_distribution
     source $conf_distribution
   else
-    echo "Reading default Fink distribution conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
+    echo -e "${SINFO} Reading default Fink distribution conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
     source ${FINK_HOME}/conf/${SURVEY}/fink.conf.distribution
   fi
 
@@ -291,3 +298,4 @@ spark-submit --master ${SPARK_MASTER} \
   ${KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
   -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 
+echo -e "${SDONE} $service exiting"
