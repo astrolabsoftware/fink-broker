@@ -141,6 +141,8 @@ else
   conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
+source $conf
+
 # Merge streaming data
 if [[ ${MERGE} == true ]]; then
   $(hdfs dfs -test -d ${ONLINE_DATA_PREFIX}/science/${NIGHT})
@@ -149,10 +151,10 @@ if [[ ${MERGE} == true ]]; then
     # if nothing specified, get default
     if [[ ! ${DRIVER_MEMORY} ]]; then
       RESOURCES="-driver-memory 4g -executor-memory 16g -spark-cores-max 80 -spark-executor-cores 8"
-        echo "Using default resources: ${RESOURCES}"
     else
       RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
     fi
+    echo "Using Spark resources: ${RESOURCES}"
     fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
   else
     echo "No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
@@ -163,7 +165,6 @@ fi
 
 if [[ ! ${DRIVER_MEMORY} ]]; then
   RESOURCES="-driver-memory 4g -executor-memory 4g -spark-cores-max 9 -spark-executor-cores 1"
-  echo "Using default resources: ${RESOURCES}"
 else
   RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
 fi
@@ -172,21 +173,31 @@ MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
 # Aggregated data is available
-$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
-if [[ $? == 0 ]]; then
-  if [[ ${MAIN_TABLE} == true ]]; then
+HAS_DATA=$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+
+if [[ ${MAIN_TABLE} == true ]]; then
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo "Using Spark resources: ${RESOURCES}"
     echo "science_archival"
     fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
+  else
+    echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "Did you run --merge before?"
+    echo "Pushing data to tables aborted..."
   fi
+fi
 
-  if [[ ${INDEX_TABLES} == true ]]; then
-    echo "Download latest TNS data"
+if [[ ${INDEX_TABLES} == true ]]; then
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo "Using Spark resources: ${RESOURCES}"
+
+    echo "1/12: Download latest TNS data"
     fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "images_archival"
+    echo "2/12: images_archival"
     fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Update index tables"
+    echo "3/12: Update index tables"
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
@@ -195,38 +206,38 @@ if [[ $? == 0 ]]; then
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push TNS candidates"
+    echo "4/12: Push TNS candidates"
     fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Anomaly candidates"
+    echo "5/12: Push Anomaly candidates"
     fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Active Learning loop candidates"
+    echo "6/12: Push Active Learning loop candidates"
     fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Hostless candidates"
+    echo "7/12: Push Hostless candidates"
     fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Send Dwarf AGN candidates"
+    echo "8/12: Send Dwarf AGN candidates"
     fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Send Known TDE candidates"
+    echo "9/12: Send Known TDE candidates"
     fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Update statistics"
+    echo "10/12: Update statistics"
     fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Call to Fink-Fat"
+    echo "11/12: Call to Fink-Fat"
     fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
     fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
 
-    echo "Push SSO candidates to HBase"
+    echo "12/12: Push SSO candidates to HBase"
     fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
-  fi
-else
+  else
     echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo "Did you run --merge before?"
     echo "Pushing data to tables aborted..."
+  fi
 fi
 
 if [[ $DELETE_MERGE == true ]]; then
