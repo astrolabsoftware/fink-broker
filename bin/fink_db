@@ -249,6 +249,7 @@ if [[ $DELETE_MERGE == true ]]; then
   else
     echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo "Nothing to delete"
+  fi
 fi
 
 if [[ ${CLEAN_NIGHT} == true ]]; then
