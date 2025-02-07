@@ -2,5 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Release.Namespace }}
+{{- if eq .Values.monitoring.enabled true }}
   labels:
     monitored: "true"
+{{- end }}
