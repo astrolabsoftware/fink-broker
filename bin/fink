@@ -26,7 +26,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     "start"|"stop")
       MODE="$1"
-      if [[ $2 == "" || $2 == "-c" ]]; then
+      if [[ $2 == "" ]]; then
         echo "$1 requires an argument. ${message_service}" >&2
         exit 1
       fi
@@ -51,10 +51,6 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -c)
-      if [[ $2 == "" || $2 == "-s" ]]; then
-        echo "$1 requires an argument. ${message_conf}" >&2
-        exit 1
-      fi
       conf="$2"
       shift 2
       ;;
@@ -117,8 +113,6 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-services=`/usr/bin/ls ${FINK_HOME}/bin/${SURVEY}`
-message_conf="Typical configuration would be $PWD/conf/fink.conf.dev"
 __usage="
 fink controls the Fink broker real-time and database operations.
 
@@ -127,30 +121,30 @@ fink controls the Fink broker real-time and database operations.
 Usage: $(basename $0) [OPTIONS]
 
 Options:
-  -s		Survey name (ztf, rubin). Default is ztf.
-  start 	Start a service. The list of available services is given at ${FINK_HOME}/bin/${SURVEY}
-  stop 		Stop a running service.
-  show 		Show running services.
-  -h 		Show this help.
-  --version 	If specified, show the version of the code.
+  -s          Survey name (ztf, rubin). Default is ztf.
+  start       Start a service. The list of available services is given at ${FINK_HOME}/bin/${SURVEY}
+  stop        Stop a running service.
+  show        Show running services.
+  -h          Show this help.
+  --version   If specified, show the version of the code.
 
 Service options:
-  -h 			Show help for the service.
-  -c 			Path to configuration file.
-  -conf_distribution 	Path to the extra configuration file for the distribute service.
-  -night 		Night to process with format YYYYMMDD
-  -topic 		Kafka topic name to poll data from.
-  -index_table		Name of the index table to populate.
-  -driver_memory	Memory to use for the driver (see Spark options)
-  -executor_memory 	Memory to use for each executor (see Spark options)
-  -spark-cores-max 	Total number of cores to use for all executors (see Spark options)
+  -h                    Show help for the service.
+  -c                    Path to configuration file.
+  -conf_distribution    Path to the extra configuration file for the distribute service.
+  -night                Night to process with format YYYYMMDD
+  -topic                Kafka topic name to poll data from.
+  -index_table          Name of the index table to populate.
+  -driver_memory        Memory to use for the driver (see Spark options)
+  -executor_memory      Memory to use for each executor (see Spark options)
+  -spark-cores-max      Total number of cores to use for all executors (see Spark options)
   -spark-executor-cores Number of cores per executor (see Spark options)
-  -exit_after 		Number of seconds after which the service should stop.
-  --simulator 		If specified, run in simulation mode.
-  --noscience 		If specified, do not enrich data with science modules.
+  -exit_after           Number of seconds after which the service should stop.
+  --simulator           If specified, run in simulation mode.
+  --noscience           If specified, do not enrich data with science modules.
 
 Examples:
-  Start polling for an hour: 
+  Start polling for an hour:
   fink start stream2raw -s ztf -night 20190101 \t
 	-topic ztf_20190101 -driver_memory 4g -executor_memory 2g \t
 	-spark-cores-max 4 -spark-executor-cores 1 -exit_after 3600

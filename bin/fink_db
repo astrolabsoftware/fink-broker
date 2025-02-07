@@ -37,26 +37,6 @@ while [ "$#" -gt 0 ]; do
       conf="$2"
       shift 2
       ;;
-    --merge)
-      MERGE=true
-      shift 1
-      ;;
-    --main_table)
-      MAIN_TABLE=true
-      shift 1
-      ;;
-    --index_tables)
-      INDEX_TABLES=true
-      shift 1
-      ;;
-    --clean_night)
-      CLEAN_NIGHT=true
-      shift 1
-      ;;
-    --clean_merge)
-      CLEAN_MERGE=true
-      shift 1
-      ;;
     -night)
       NIGHT="$2"
       shift 2
@@ -77,6 +57,26 @@ while [ "$#" -gt 0 ]; do
       SPARK_EXECUTOR_CORES="$2"
       shift 2
       ;;
+    --merge)
+      MERGE=true
+      shift 1
+      ;;
+    --main_table)
+      MAIN_TABLE=true
+      shift 1
+      ;;
+    --index_tables)
+      INDEX_TABLES=true
+      shift 1
+      ;;
+    --clean_night)
+      CLEAN_NIGHT=true
+      shift 1
+      ;;
+    --delete_merge)
+      DELETE_MERGE=true
+      shift 1
+      ;;
     -*)
       echo "unknown option: $1" >&2
       exit 1
@@ -87,6 +87,45 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
+
+__usage="
+fink_db is a wrapper around fink to control the database operations.
+
+Usage: $(basename $0) [OPTIONS]
+
+Options:
+  -h                    Show this help.
+  -s                    Survey name (ztf, rubin). Default is ztf.
+  -c                    Path to configuration file.
+  -night                Night to process with format YYYYMMDD
+  -driver_memory        Memory to use for the driver (see Spark options)
+  -executor_memory      Memory to use for each executor (see Spark options)
+  -spark-cores-max      Total number of cores to use for all executors (see Spark options)
+  -spark-executor-cores Number of cores per executor (see Spark options)
+  --merge               Merge small files from streaming operations from ONLINE_DATA_PREFIX into AGG_DATA_PREFIX (see configuration file)
+  --main_table          Push night data to HBase main table
+  --index_tables        Push night data to HBase index tables
+  --clean_night         Clean temporary files from the night. Should be run once data is merged.
+  --delete_merge        Delete merged files in case of error (then restart using --merge).
+
+Notes: another useful wrapper can be found at ${FINK_HOME}/scheduler/${SURVEY}/launch_db.sh
+
+Examples:
+fink_db -s ztf --merge                # merge files
+fink_db -s ztf --main_table           # Push data to HBase
+fink_db -s ztf --index_tables         # Push data to HBase index tables
+fink_db -s ztf --clean_night          # Clean temp files for the next night
+"
+
+if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
+  echo -e "$__usage"
+  exit 1
+fi
+
+if [[ $SURVEY == "" ]]; then
+  echo -e "You need to specify a survey, e.g. fink -s ztf [options]"
+  exit 1
+fi
 
 if [[ ! $NIGHT ]]; then
   # Current night
@@ -104,24 +143,27 @@ fi
 
 # Merge streaming data
 if [[ ${MERGE} == true ]]; then
-  $(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
+  $(hdfs dfs -test -d ${ONLINE_DATA_PREFIX}/science/${NIGHT})
   if [[ $? == 0 ]]; then
     echo "merge_and_clean"
     # if nothing specified, get default
     if [[ ! ${DRIVER_MEMORY} ]]; then
       RESOURCES="-driver-memory 4g -executor-memory 16g -spark-cores-max 80 -spark-executor-cores 8"
+        echo "Using default resources: ${RESOURCES}"
     else
       RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
     fi
     fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
   else
-    echo "No data at /user/julien.peloton/online/science/${NIGHT}"
+    echo "No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
     echo "Merging aborted..."
+    exit 1
   fi
 fi
 
 if [[ ! ${DRIVER_MEMORY} ]]; then
   RESOURCES="-driver-memory 4g -executor-memory 4g -spark-cores-max 9 -spark-executor-cores 1"
+  echo "Using default resources: ${RESOURCES}"
 else
   RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
 fi
@@ -130,7 +172,7 @@ MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
 # Aggregated data is available
-$(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
 if [[ $? == 0 ]]; then
   if [[ ${MAIN_TABLE} == true ]]; then
     echo "science_archival"
@@ -182,31 +224,31 @@ if [[ $? == 0 ]]; then
     fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
   fi
 else
-    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo "Did you run --merge before?"
     echo "Pushing data to tables aborted..."
 fi
 
-if [[ $CLEAN_MERGE == true ]]; then
-  echo "Cleaning merged files..."
+if [[ $DELETE_MERGE == true ]]; then
+  echo "Deleting merged files on HDFS..."
   # If merge went wrong -- clean
-  hdfs dfs -rm -r /user/julien.peloton/archive/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
-  hdfs dfs -rm -r /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+  hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+  hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
 fi
 
 if [[ ${CLEAN_NIGHT} == true ]]; then
   # Delete temporary files after the night
-  $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+  $(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
   if [[ $? == 0 ]]; then
-    echo "Cleaning temporary files..."
+    echo "Cleaning temporary files on HDFS..."
     # Remove data path
-    hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science/${NIGHT}
 
     # Remove checkpoints
-    hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
 
     # Remove checkpoints for fink-mm
     hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
@@ -214,7 +256,8 @@ if [[ ${CLEAN_NIGHT} == true ]]; then
     hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
 
   else
-    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo "No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo "Cleaning aborted..."
+    exit 1
   fi
 fi
