@@ -1,4 +1,4 @@
-# Copyright 2020-2024 AstroLab Software
+# Copyright 2020-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,6 +51,10 @@ from fink_science.cats.processor import predict_nn
 from fink_science.slsn.processor import slsn_elasticc_with_md
 from fink_science.fast_transient_rate.processor import magnitude_rate
 from fink_science.fast_transient_rate import rate_module_output_schema
+
+from fink_science.blazar_low_state.processor import quiescent_state
+from fink_science.standardized_flux.processor import standardized_flux
+
 # from fink_science.t2.processor import t2
 
 # ---------------------------------
@@ -449,6 +453,28 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         cols_before
         + [df["ft_module"][k].alias(k) for k in rate_module_output_schema.keys()]
     )
+
+    _LOG.info("New processor: flux standardisation for blazars")
+    standardisation_args = [
+        'candid',
+        'objectId',
+        'cdistnr',
+        'cmagpsf',
+        'csigmapsf',
+        'cmagnr',
+        'csigmagnr',
+        'cisdiffpos',
+        'cfid',
+        'cjd'
+    ]
+    df = df.withColumn("container", standardized_flux(*standardisation_args))
+
+    _LOG.info("New processor: blazars low state detection")
+    blazar_args = ['candid', 'objectId', F.col("container").getItem("flux"), 'cjd']
+    df = df.withColumn('blazar_stats', quiescent_state(*blazar_args))
+
+    # Clean temporary container
+    df = df.drop("container")
 
     # Drop temp columns
     df = df.drop(*expanded)

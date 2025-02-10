@@ -1,4 +1,4 @@
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@ from fink_science import __version__ as fsvsn
 
 from fink_science.t2.utilities import T2_COLS
 from fink_science.xmatch.utils import MANGROVE_COLS
+from fink_science.blazar_low_state.utils import BLAZAR_COLS
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -45,10 +46,10 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    30
+    33
 
     >>> print(len(fink_nested_cols))
-    18
+    21
     """
     fink_cols = {
         "DR3Name": {"type": "string", "default": "Unknown"},
@@ -92,6 +93,10 @@ def load_fink_cols():
         name = "t2.{}".format(col_)
         fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
 
+    for col_ in BLAZAR_COLS:
+        name = "blazar_stats.{}".format(col_)
+        fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
+
     return fink_cols, fink_nested_cols
 
 
@@ -108,7 +113,7 @@ def load_all_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    156
+    159
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
