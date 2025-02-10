@@ -15,6 +15,12 @@
 # limitations under the License.
 source ~/.bash_profile
 
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
 # TODO: add help
 # Show help if no arguments is given
 if [[ $1 == "" ]]; then
@@ -37,26 +43,6 @@ while [ "$#" -gt 0 ]; do
       conf="$2"
       shift 2
       ;;
-    --merge)
-      MERGE=true
-      shift 2
-      ;;
-    --main_table)
-      MAIN_TABLE=true
-      shift 2
-      ;;
-    --index_tables)
-      INDEX_TABLES=true
-      shift 2
-      ;;
-    --clean_night)
-      CLEAN_NIGHT=true
-      shift 2
-      ;;
-    --clean_merge)
-      CLEAN_MERGE=true
-      shift 2
-      ;;
     -night)
       NIGHT="$2"
       shift 2
@@ -77,6 +63,26 @@ while [ "$#" -gt 0 ]; do
       SPARK_EXECUTOR_CORES="$2"
       shift 2
       ;;
+    --merge)
+      MERGE=true
+      shift 1
+      ;;
+    --main_table)
+      MAIN_TABLE=true
+      shift 1
+      ;;
+    --index_tables)
+      INDEX_TABLES=true
+      shift 1
+      ;;
+    --clean_night)
+      CLEAN_NIGHT=true
+      shift 1
+      ;;
+    --delete_merge)
+      DELETE_MERGE=true
+      shift 1
+      ;;
     -*)
       echo "unknown option: $1" >&2
       exit 1
@@ -88,35 +94,80 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+__usage="
+fink_db is a wrapper around fink to control the database operations.
+
+Usage: $(basename $0) [OPTIONS]
+
+Options:
+  -h                    Show this help.
+  -s                    Survey name (ztf, rubin). Default is ztf.
+  -c                    Path to configuration file.
+  -night                Night to process with format YYYYMMDD
+  -driver_memory        Memory to use for the driver (see Spark options)
+  -executor_memory      Memory to use for each executor (see Spark options)
+  -spark-cores-max      Total number of cores to use for all executors (see Spark options)
+  -spark-executor-cores Number of cores per executor (see Spark options)
+  --merge               Merge small files from streaming operations from ONLINE_DATA_PREFIX into AGG_DATA_PREFIX (see configuration file)
+  --main_table          Push night data to HBase main table
+  --index_tables        Push night data to HBase index tables
+  --clean_night         Clean temporary files from the night. Should be run once data is merged.
+  --delete_merge        Delete merged files in case of error (then restart using --merge).
+
+Notes: another useful wrapper can be found at ${FINK_HOME}/scheduler/${SURVEY}/launch_db.sh
+
+Examples:
+fink_db -s ztf --merge                # merge files
+fink_db -s ztf --main_table           # Push data to HBase
+fink_db -s ztf --index_tables         # Push data to HBase index tables
+fink_db -s ztf --clean_night          # Clean temp files for the next night
+"
+
+if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
+  echo -e "$__usage"
+  exit 0
+fi
+
+hdfs version >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
+
+if [[ $SURVEY == "" ]]; then
+  echo -e "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
+  exit 1
+fi
+
 if [[ ! $NIGHT ]]; then
   # Current night
   NIGHT=`date +"%Y%m%d"`
 fi
-echo "Processing night ${NIGHT} for survey ${SURVEY}"
+echo -e "${SINFO} Processing night ${NIGHT} for survey ${SURVEY}"
 
 # Check if the conf file exists
 if [[ -f $conf ]]; then
-  echo "Reading custom Fink configuration file from " $conf
+  echo -e "${SINFO} Reading custom Fink configuration file from " $conf
 else
-  echo "Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
   conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
 fi
 
+source $conf
+
 # Merge streaming data
 if [[ ${MERGE} == true ]]; then
-  $(hdfs dfs -test -d /user/julien.peloton/online/science/${NIGHT})
+  $(hdfs dfs -test -d ${ONLINE_DATA_PREFIX}/science/${NIGHT})
   if [[ $? == 0 ]]; then
-    echo "merge_and_clean"
+    echo -e "${SSTEP} Merge"
     # if nothing specified, get default
     if [[ ! ${DRIVER_MEMORY} ]]; then
       RESOURCES="-driver-memory 4g -executor-memory 16g -spark-cores-max 80 -spark-executor-cores 8"
     else
       RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
     fi
+    echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
     fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
   else
-    echo "No data at /user/julien.peloton/online/science/${NIGHT}"
-    echo "Merging aborted..."
+    echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
+    echo -e "${SSTOP} Merging aborted..."
+    exit 1
   fi
 fi
 
@@ -130,21 +181,33 @@ MONTH=${NIGHT:4:2}
 DAY=${NIGHT:6:2}
 
 # Aggregated data is available
-$(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
-if [[ $? == 0 ]]; then
-  if [[ ${MAIN_TABLE} == true ]]; then
-    echo "science_archival"
-    fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
-  fi
+$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+HAS_DATA=$?
 
-  if [[ ${INDEX_TABLES} == true ]]; then
-    echo "Download latest TNS data"
+if [[ ${MAIN_TABLE} == true ]]; then
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+    echo -e "${SSTEP} Science archival"
+    fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
+  else
+    echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo -e "${SERROR} Did you run --merge before?"
+    echo -e "${SSTOP} Pushing data to tables aborted..."
+    exit 1
+  fi
+fi
+
+if [[ ${INDEX_TABLES} == true ]]; then
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+
+    echo -e "${SSTEP} 1/12: Download latest TNS data"
     fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "images_archival"
+    echo -e "${SSTEP} 2/12: images_archival"
     fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Update index tables"
+    echo -e "${SSTEP} 3/12: Update index tables"
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
@@ -153,60 +216,66 @@ if [[ $? == 0 ]]; then
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push TNS candidates"
+    echo -e "${SSTEP} 4/12: Push TNS candidates"
     fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Anomaly candidates"
+    echo -e "${SSTEP} 5/12: Push Anomaly candidates"
     fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Active Learning loop candidates"
+    echo -e "${SSTEP} 6/12: Push Active Learning loop candidates"
     fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Push Hostless candidates"
+    echo -e "${SSTEP} 7/12: Push Hostless candidates"
     fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Send Dwarf AGN candidates"
+    echo -e "${SSTEP} 8/12: Send Dwarf AGN candidates"
     fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Send Known TDE candidates"
+    echo -e "${SSTEP} 9/12: Send Known TDE candidates"
     fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Update statistics"
+    echo -e " ${SSTEP}10/12: Update statistics"
     fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo "Call to Fink-Fat"
+    echo -e "${SSTEP} 11/12: Call to Fink-Fat"
     fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
     fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
 
-    echo "Push SSO candidates to HBase"
+    echo -e "${SSTEP} 12/12: Push SSO candidates to HBase"
     fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
+  else
+    echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo -e "${SERROR} Did you run --merge before?"
+    echo -e "${SSTOP} Pushing data to tables aborted..."
+    exit 1
   fi
-else
-    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
-    echo "Did you run --merge before?"
-    echo "Pushing data to tables aborted..."
 fi
 
-if [[ $CLEAN_MERGE == true ]]; then
-  echo "Cleaning merged files..."
-  # If merge went wrong -- clean
-  hdfs dfs -rm -r /user/julien.peloton/archive/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
-  hdfs dfs -rm -r /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+if [[ $DELETE_MERGE == true ]]; then
+  if [[ ${HAS_DATA} == 0 ]]; then
+    echo -e "${SINFO} Deleting merged files on HDFS..."
+    # If merge went wrong -- clean
+    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+  else
+    echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo -e "${SSTOP} Nothing to delete"
+    exit 1
+  fi
 fi
 
 if [[ ${CLEAN_NIGHT} == true ]]; then
   # Delete temporary files after the night
-  $(hdfs dfs -test -d /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY})
-  if [[ $? == 0 ]]; then
-    echo "Cleaning temporary files..."
+  if [[ $HAS_DATA == 0 ]]; then
+    echo -e "${SINFO} Cleaning temporary files on HDFS..."
     # Remove data path
-    hdfs dfs -rm -r /user/julien.peloton/online/raw/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/science/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science/${NIGHT}
 
     # Remove checkpoints
-    hdfs dfs -rm -r /user/julien.peloton/online/raw_checkpoint/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/science_checkpoint/${NIGHT}
-    hdfs dfs -rm -r /user/julien.peloton/online/kafka_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
+    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
 
     # Remove checkpoints for fink-mm
     hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
@@ -214,7 +283,10 @@ if [[ ${CLEAN_NIGHT} == true ]]; then
     hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
 
   else
-    echo "No data at /user/julien.peloton/archive/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
-    echo "Cleaning aborted..."
+    echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
+    echo -e "${SSTOP} Cleaning aborted..."
+    exit 1
   fi
 fi
+
+echo -e "${SDONE} done!"

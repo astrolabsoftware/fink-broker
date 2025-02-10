@@ -24,7 +24,7 @@ from fink_filters.filter_anomaly_notification.filter import anomaly_notification
 from fink_science.anomaly_detection.processor import ANOMALY_MODELS
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
-from fink_broker.common.hbase_utils import push_full_df_to_hbase
+from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
 
 def main():

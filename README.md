@@ -39,7 +39,7 @@ All are open source, and we thank all contributors!
 - Science Portal: https://fink-portal.org
 - Publications: https://fink-broker.org/papers
 - Release notes: https://fink-broker.readthedocs.io/en/latest/release-notes
-
+- Developer notes (need authorisation): https://gitlab.in2p3.fr/fink
 
 ## Outside academia
 

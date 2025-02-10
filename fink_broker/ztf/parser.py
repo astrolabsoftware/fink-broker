@@ -173,15 +173,6 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
-        "-distribution_schema",
-        type=str,
-        default="",
-        help="""
-        The path where the avro schema for alert distribution is stored
-        [DISTRIBUTION_SCHEMA]
-        """,
-    )
-    parser.add_argument(
         "-kafka_security_protocol",
         type=str,
         default="",
@@ -224,16 +215,6 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         help="""
         the delivery kafka message timeout in ms
         [KAFKA_DELIVERY_TIMEOUT_MS]
-        """,
-    )
-    parser.add_argument(
-        "-startingOffset_dist",
-        type=str,
-        default="",
-        help="""From which offset(timestamp) you want to start the
-        distribution service.
-        Options are: latest, earliest or a custom timestamp
-        [DISTRIBUTION_OFFSET]
         """,
     )
     parser.add_argument(

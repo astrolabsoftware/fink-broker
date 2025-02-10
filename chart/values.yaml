@@ -59,7 +59,6 @@ distribution:
   instances: "{{.Values.instances}}"
   kafka:
     out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
-    schema: "/home/fink/fink-alert-schemas/ztf/distribution_schema_0p2.avsc"
     substream_prefix: "fink_"
     kafka_security_protocol: "SASL_PLAINTEXT"
 
