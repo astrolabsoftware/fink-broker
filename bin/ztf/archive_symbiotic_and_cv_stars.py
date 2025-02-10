@@ -26,7 +26,7 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 from fink_filters.filter_symbiotic_stars.filter import crossmatch_symbiotic
 
 from fink_utils.tg_bot.utils import get_curve
-from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
+from fink_utils.tg_bot.utils import msg_handler_tg
 
 
 def send_to_telegram(pdf, channel):
@@ -63,11 +63,11 @@ def send_to_telegram(pdf, channel):
                 alert["delta_time"],
             )
 
-            payloads.append((text, curve_png, None))
+            payloads.append((text, None, curve_png))
 
         if len(payloads) > 0:
             # Send to tg
-            msg_handler_tg_cutouts(payloads, channel_id=channel, init_msg="")
+            msg_handler_tg(payloads, channel_id=channel, init_msg="")
     else:
         print("Telegram token FINK_TG_TOKEN is not set")
 
