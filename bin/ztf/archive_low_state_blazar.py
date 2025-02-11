@@ -185,16 +185,17 @@ def main():
     n_low_state = df_low_state.count()
     _LOG.info("{} new entries".format(n_low_state))
 
-    # Row key
-    row_key_name = "jd_objectId"
+    if n_low_state > 0:
+        # Row key
+        row_key_name = "jd_objectId"
 
-    # push data to HBase
-    push_full_df_to_hbase(
-        df_low_state,
-        row_key_name=row_key_name,
-        table_name=args.science_db_name + ".low_state_blazars",
-        catalog_name=args.science_db_catalogs,
-    )
+        # push data to HBase
+        push_full_df_to_hbase(
+            df_low_state,
+            row_key_name=row_key_name,
+            table_name=args.science_db_name + ".low_state_blazars",
+            catalog_name=args.science_db_catalogs,
+        )
 
 
 if __name__ == "__main__":
