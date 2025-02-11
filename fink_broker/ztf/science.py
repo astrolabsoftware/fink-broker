@@ -456,22 +456,22 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     _LOG.info("New processor: flux standardisation for blazars")
     standardisation_args = [
-        'candid',
-        'objectId',
-        'cdistnr',
-        'cmagpsf',
-        'csigmapsf',
-        'cmagnr',
-        'csigmagnr',
-        'cisdiffpos',
-        'cfid',
-        'cjd'
+        "candid",
+        "objectId",
+        "cdistnr",
+        "cmagpsf",
+        "csigmapsf",
+        "cmagnr",
+        "csigmagnr",
+        "cisdiffpos",
+        "cfid",
+        "cjd",
     ]
     df = df.withColumn("container", standardized_flux(*standardisation_args))
 
     _LOG.info("New processor: blazars low state detection")
-    blazar_args = ['candid', 'objectId', F.col("container").getItem("flux"), 'cjd']
-    df = df.withColumn('blazar_stats', quiescent_state(*blazar_args))
+    blazar_args = ["candid", "objectId", F.col("container").getItem("flux"), "cjd"]
+    df = df.withColumn("blazar_stats", quiescent_state(*blazar_args))
 
     # Clean temporary container
     df = df.drop("container")
