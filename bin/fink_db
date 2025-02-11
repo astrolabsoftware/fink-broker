@@ -208,13 +208,13 @@ if [[ ${INDEX_TABLES} == true ]]; then
     fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
     echo -e "${SSTEP} 3/14: Update index tables"
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start index_archival -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
 
     echo -e "${SSTEP} 4/14: Push TNS candidates"
     fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
