@@ -12,6 +12,7 @@ usage () {
   echo "Usage: $0 [-c] [-h] [-m] [-s]"
   echo "  -s: Use the science algorithms during the tests"
   echo "  -c: Cleanup the cluster after the tests"
+  echo "  -i: Specify input survey. Default: ztf"
   echo "  -m: Install monitoring stack"
   echo "  -h: Display this help"
   echo ""
@@ -32,11 +33,12 @@ monitoring=false
 push=false
 storage="hdfs"
 CIUX_IMAGE_URL="undefined"
+input_survey="ztf"
 
 token="${TOKEN:-}"
 
 # Get options for suffix
-while getopts hcmsS: opt; do
+while getopts hcmsiS: opt; do
   case ${opt} in
 
     c )
@@ -51,6 +53,9 @@ while getopts hcmsS: opt; do
       ;;
     s )
       SUFFIX=""
+      ;;
+    i )
+      input_survey="$OPTARG"
       ;;
     S) storage="$OPTARG" ;;
     \? )
@@ -106,7 +111,7 @@ echo "Ignite the project using ciux"
 mkdir -p ~/.ciux
 
 # Build step
-$src_dir/build.sh -s "$SUFFIX"
+$src_dir/build.sh -s "$SUFFIX" -i $input_survey
 build=true
 
 # e2e tests step

@@ -19,6 +19,7 @@ FROM ${spark_py_image} as noscience
 
 ARG spark_uid=185
 ENV spark_uid ${spark_uid}
+ENV input_survey ${input_survey}
 
 # Install system-dependencies and prepare spark_uid user home directory
 USER root
@@ -28,7 +29,7 @@ RUN apt-get update && \
     rm -rf /var/cache/apt/*
 
 # Download and install Spark dependencies listed in jars-urls.txt
-ADD deps/jars-urls.txt $FINK_HOME/
+ADD deps/${input_survey}/jars-urls.txt $FINK_HOME/
 RUN xargs -n 1 curl --fail --output-dir /opt/spark/jars -O < $FINK_HOME/jars-urls.txt
 
 # Main process will run as spark_uid
@@ -55,7 +56,7 @@ RUN mkdir -p $FINK_HOME/deps
 # Avoid re-installing Python dependencies
 # when fink-broker code changes
 ENV PIP_NO_CACHE_DIR 1
-ADD deps/requirements.txt $FINK_HOME/deps
+ADD deps/${input_survey}/requirements.txt $FINK_HOME/deps
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && pip install -r $FINK_HOME/deps/requirements.txt
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "v0.0.1" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
@@ -67,7 +68,7 @@ RUN pip install py4j
 ENV FINK_JARS ""
 ENV FINK_PACKAGES ""
 # pytest requirements
-ADD deps/requirements-test.txt $FINK_HOME/deps
+ADD deps/${input_survey}/requirements-test.txt $FINK_HOME/deps
 # Listing all requirements helps pip in computing a correct dependencies tree
 # See additional explanation in https://github.com/astrolabsoftware/fink-broker/issues/865
 RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt
@@ -76,8 +77,8 @@ ADD --chown=${spark_uid} . $FINK_HOME/
 
 FROM noscience AS full
 
-ADD deps/requirements-science.txt $FINK_HOME/
+ADD deps/${input_survey}/requirements-science.txt $FINK_HOME/deps
 # Listing all requirements helps pip in computing a correct dependencies tree
-RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/requirements-science.txt
-ADD deps/requirements-science-no-deps.txt $FINK_HOME/
-RUN pip install -r $FINK_HOME/requirements-science-no-deps.txt --no-deps
+RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/deps/requirements-science.txt
+ADD deps/${input_survey}/requirements-science-no-deps.txt $FINK_HOME/deps
+RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps

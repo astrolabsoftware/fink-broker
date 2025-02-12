@@ -35,6 +35,7 @@ Usage: `basename $0` [options]
   Available options:
     -h          this message
     -s          image suffix, default to none, only 'noscience' is supported
+    -i 		Specify the survey. Default: ztf
 
 Build image containing fink-broker for k8s
 EOD
@@ -42,13 +43,15 @@ EOD
 
 suffix=""
 tmp_registry=""
+input_survey="ztf"
 
 # get the options
-while getopts hr:s: c ; do
+while getopts hr:i:s: c ; do
     case $c in
 	    h) usage ; exit 0 ;;
             r) tmp_registry=$OPTARG ;;
 	    s) suffix=$OPTARG ;;
+	    i) input_survey=$OPTARGS ;;
 	    \?) usage ; exit 2 ;;
     esac
 done
@@ -77,7 +80,7 @@ else
 fi
 
 # Build image
-docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" "$DIR" --target $target
+docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" --build-arg input_survey="$input_survey" "$DIR" --target $target
 
 
 echo "Build successful"
