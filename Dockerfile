@@ -19,6 +19,8 @@ FROM ${spark_py_image} as noscience
 
 ARG spark_uid=185
 ENV spark_uid ${spark_uid}
+
+ARG input_survey
 ENV input_survey ${input_survey}
 
 # Install system-dependencies and prepare spark_uid user home directory
