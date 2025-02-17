@@ -8,7 +8,10 @@
 set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
+SUFFIX="noscience"
 
+monitoring="false"
+src_dir=$DIR/..
 storage="hdfs"
 
 usage() {
@@ -21,16 +24,19 @@ EOD
 }
 
 # Get the options
-while getopts hS: c ; do
+while getopts hmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
+        m) monitoring="true" ;;
         S) storage="$OPTARG" ;;
+        s) SUFFIX="$OPTARG" ;;
         \?) usage ; exit 2 ;;
     esac
 done
 shift "$((OPTIND-1))"
 
 CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
+ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 . $CIUXCONFIG
 
 function retry {
@@ -69,7 +75,6 @@ then
   online_data_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
 fi
 
-
 # Create fink app
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
@@ -95,6 +100,7 @@ fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
     -p e2e.enabled="$e2e_enabled" \
+    -p monitoring.enabled="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
     -p night="20200101" \
@@ -109,8 +115,11 @@ argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=op
 
 # Synk storage dependency for fink
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+
 # Hack to fix kafka startup problem (non deterministic)
+# TODO investigate to remove this hack
 argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+sleep 10
 argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
 # Sync fink-broker
