@@ -21,7 +21,7 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
-
+import pyspark.sql.functions as F
 import argparse
 import logging
 import time
@@ -73,6 +73,9 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
     schema = schema_converter.to_avro(df_in.schema)
 
     df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
+
+    df_kafka = df_kafka.withColumn(
+        'partition', (F.rand(seed=0) * 10).astype('int'))
 
     disquery = (
         df_kafka.writeStream.format("kafka")
