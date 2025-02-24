@@ -78,10 +78,6 @@ fi
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version())"`
 echo -e "${SINFO} Using Python ${PYTHON_VERSION}"
 
-function copy_files {
-    cp ${FINK_HOME}/deps/${SURVEY}/requirements*txt /tmp
-}
-
 function install_python_deps {
   # uninstall GitHub installation
     pip uninstall -y fink-science kndetect supernnova LIA actsnclass actsnfink
@@ -94,7 +90,7 @@ function install_python_deps {
 if [[ ! ${SINGLE_PACKAGE} ]]; then
     echo -e "${SINFO} Installing on all machines from ${FINK_HOME}/conf/${SURVEY}/spark_ips"
     pscp.pssh -p 12 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips ${FINK_HOME}/deps/${SURVEY}/requirements*txt /tmp
-    pssh -p 12 -t 100000000 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips install_python_deps()
+    pssh -p 12 -t 100000000 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips install_python_deps
 else
     pssh -p 12 -t 100000000 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips pip install ${SINGLE_PACKAGE}
 fi
