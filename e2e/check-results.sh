@@ -23,6 +23,34 @@
 set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
+monitoring=false
+SUFFIX="${SUFFIX:-noscience}"
+
+usage () {
+  echo "Usage: $0 [-h] [-m]"
+  echo "  -m: Check monitoring is enabled"
+  echo "  -h: Display this help"
+  echo ""
+  echo " Check that the expected topics are created"
+  exit 1
+}
+
+# Get options for suffix
+while getopts hm opt; do
+  case ${opt} in
+    h )
+      usage
+      exit 0
+      ;;
+    m )
+      monitoring=true
+      ;;
+    \? )
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 # TODO improve management of expected topics
 # for example in finkctl.yaml
@@ -34,7 +62,7 @@ else
 fi
 
 count=0
-while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1
+while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
 do
     echo "Waiting for expected topics: $expected_topics"
     sleep 5
@@ -61,3 +89,27 @@ do
     fi
 done
 finkctl get topics
+
+if $monitoring;
+then
+    if kubectl exec -it -n spark fink-broker-stream2raw-driver -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
+    then
+        echo "Prometheus exporter is enabled"
+    else
+        echo "ERROR: Prometheus exporter is not enabled" 1>&2
+        exit 1
+    fi
+
+    echo "Checking spark metrics are available in prometheus"
+    for task in "stream2raw-driver" "stream2raw-sims" "raw2science-driver" "raw2science-sims" "distribution-driver" "distribute-sims"
+    do
+         if kubectl exec -t -n monitoring prometheus-prometheus-stack-kube-prom-prometheus-0 -- promtool query range --start 1690724700 http://localhost:9090 jvm_threads_state | grep "$task" > /dev/null
+          then
+              echo "  Metrics for $task are available"
+          else
+              echo "  ERROR: Metrics for $task are not available" 1>&2
+              exit 1
+          fi
+    done
+
+fi

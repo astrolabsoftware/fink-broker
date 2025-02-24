@@ -24,11 +24,12 @@ on:
       registry_token:
         required: true
 env:
-  CIUX_VERSION: v0.0.4-rc10
+  CIUX_VERSION: v0.0.5-rc0
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
   STORAGE: ${{ inputs.storage }}
+  MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
 jobs:
@@ -121,7 +122,7 @@ jobs:
           # Configure private registry if needed
           ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           # v0.20.0 does not work on self-hosted runners
-          ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}"
+          ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
       - name: Download image
         uses: actions/download-artifact@v4
         with:
@@ -144,7 +145,7 @@ jobs:
       #     detached: true
       - name: Run argoCD
         run: |
-          ./e2e/argocd.sh -S "${{ matrix.storage }}"
+          ./e2e/argocd.sh -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         run: |
           ./e2e/check-results.sh
