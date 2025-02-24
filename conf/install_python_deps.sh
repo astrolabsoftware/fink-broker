@@ -80,7 +80,7 @@ echo -e "${SINFO} Using Python ${PYTHON_VERSION}"
 
 function install_python_deps {
   # uninstall GitHub installation
-    pip uninstall -y fink-science kndetect supernnova LIA actsnclass actsnfink
+    pip uninstall -y fink-science supernnova actsnclass actsnfink
 
     # Science installation
     pip install -r /tmp/requirements.txt -r /tmp/requirements-science.txt
