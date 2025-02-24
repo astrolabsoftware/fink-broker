@@ -88,9 +88,11 @@ function install_python_deps {
 }
 
 if [[ ! ${SINGLE_PACKAGE} ]]; then
-    echo -e "${SINFO} Installing on all machines from ${FINK_HOME}/conf/${SURVEY}/spark_ips"
+    echo -e "${SINFO} Copying requirements on all machines"
     pscp.pssh -p 12 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips ${FINK_HOME}/deps/${SURVEY}/requirements*txt /tmp
-    pssh -p 12 -t 100000000 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips install_python_deps
+
+    echo -e "${SINFO} Installing packages on all machines from ${FINK_HOME}/conf/${SURVEY}/spark_ips"
+    pssh -p 12 -t 100000000 -o /tmp/python_deps_out/ -e /tmp/python_deps_err/ -h ${FINK_HOME}/conf/${SURVEY}/spark_ips "$(typeset -f install_python_deps); install_python_deps"
 else
-    pssh -p 12 -t 100000000 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips pip install ${SINGLE_PACKAGE}
+    pssh -p 12 -t 100000000 -o /tmp/python_deps_out/ -e /tmp/python_deps_err/ -h ${FINK_HOME}/conf/${SURVEY}/spark_ips pip install ${SINGLE_PACKAGE}
 fi
