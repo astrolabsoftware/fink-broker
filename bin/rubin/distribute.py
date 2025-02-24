@@ -121,16 +121,6 @@ def main():
     cnames[cnames.index("diaObject")] = "struct(diaObject.*) as diaObject"
     cnames[cnames.index("ssObject")] = "struct(ssObject.*) as ssObject"
 
-    cnames[cnames.index("prvDiaSources")] = (
-        "explode(array(prvDiaSources)) as prvDiaSources"
-    )
-    cnames[cnames.index("prvDiaForcedSources")] = (
-        "explode(array(prvDiaForcedSources)) as prvDiaForcedSources"
-    )
-    cnames[cnames.index("prvDiaNondetectionLimits")] = (
-        "explode(array(prvDiaNondetectionLimits)) as prvDiaNondetectionLimits"
-    )
-
     kafka_cfg = {
         "kafka.bootstrap.servers": args.distribution_servers,
     }
