@@ -541,6 +541,7 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Examples
     --------
+    >>> import pyspark.sql.functions as F
     >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
@@ -580,6 +581,7 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Examples
     --------
+    >>> import pyspark.sql.functions as F
     >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(ztf_alert_sample)
 
