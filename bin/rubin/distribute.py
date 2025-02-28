@@ -16,7 +16,7 @@
 
 """Distribute the alerts to users
 
-1. Use the Alert data that is stored in the Science TMP database (Parquet)
+1. Use the Alert data that is stored in the Science TMP data lake (Parquet)
 2. Apply user defined filters
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
@@ -26,14 +26,15 @@ import argparse
 import logging
 import time
 
-from fink_utils.spark import schema_converter
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.distribution_utils import get_kafka_df
+from fink_broker.common.logging_utils import init_logger
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
 )
-from fink_broker.common.distribution_utils import get_kafka_df
-from fink_broker.common.logging_utils import init_logger
+
+from fink_utils.spark import schema_converter
 from fink_utils.spark.utils import concat_col
 from fink_utils.spark.utils import apply_user_defined_filter
 
@@ -41,7 +42,7 @@ from fink_utils.spark.utils import apply_user_defined_filter
 _LOG = logging.getLogger(__name__)
 
 # User-defined topics
-userfilters = ["no-filter.test"]
+userfilters = ["no-filter.or5"]
 
 
 def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
@@ -98,7 +99,7 @@ def main():
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night),
-        shuffle_partitions=2,
+        shuffle_partitions=10,
         log_level=args.spark_log_level,
     )
 

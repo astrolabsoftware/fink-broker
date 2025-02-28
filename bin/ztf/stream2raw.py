@@ -36,7 +36,7 @@ import time
 import io
 import os
 
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 
 from fink_broker.common.spark_utils import from_avro
 from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka

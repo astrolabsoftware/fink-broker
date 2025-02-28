@@ -34,7 +34,7 @@ from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import connect_to_raw_database
 from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 
 
 def main():

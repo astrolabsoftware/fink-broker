@@ -27,7 +27,7 @@ import logging
 import time
 
 from fink_utils.spark import schema_converter
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
@@ -110,7 +110,7 @@ def main():
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night),
-        shuffle_partitions=2,
+        shuffle_partitions=10,
         log_level=args.spark_log_level,
     )
 
