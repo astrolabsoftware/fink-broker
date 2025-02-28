@@ -33,7 +33,7 @@ from fink_broker import __version__ as fbvsn
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import connect_to_raw_database
-from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
+from fink_broker.common.partitioning import convert_to_millitime
 from fink_broker.common.parser import getargs
 
 
@@ -113,9 +113,7 @@ def main():
     )
 
     if args.exit_after is not None:
-        logger.debug(
-            "Keep the Streaming running until something or someone ends it!"
-        )
+        logger.debug("Keep the Streaming running until something or someone ends it!")
         time.sleep(args.exit_after)
         countquery.stop()
     else:

@@ -21,6 +21,7 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
+
 import pyspark.sql.functions as F
 import argparse
 import logging
@@ -35,7 +36,6 @@ from fink_broker.common.spark_utils import (
 )
 
 from fink_utils.spark import schema_converter
-from fink_utils.spark.utils import concat_col
 from fink_utils.spark.utils import apply_user_defined_filter
 
 
@@ -75,8 +75,7 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
 
     df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
 
-    df_kafka = df_kafka.withColumn(
-        'partition', (F.rand(seed=0) * 10).astype('int'))
+    df_kafka = df_kafka.withColumn("partition", (F.rand(seed=0) * 10).astype("int"))
 
     disquery = (
         df_kafka.writeStream.format("kafka")
