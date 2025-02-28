@@ -48,7 +48,7 @@ def apply_all_xmatch(df, tns_raw_output, survey=""):
 
     >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(rubin_alert_sample)
-    >>> df = apply_all_xmatch(df, survey="rubin")
+    >>> df = apply_all_xmatch(df, tns_raw_output="", survey="rubin")
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
