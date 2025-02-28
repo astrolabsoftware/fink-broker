@@ -15,10 +15,6 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-import numpy as np
-import pandas as pd
-import healpy as hp
-
 import os
 import logging
 from itertools import chain
@@ -30,7 +26,9 @@ from fink_broker.common.tester import spark_unit_tests
 # Import of science modules
 from fink_broker.common.science import apply_all_xmatch
 
-from fink_science.rubin.random_forest_snia.processor import rfscore_rainbow_elasticc_nometa
+from fink_science.rubin.random_forest_snia.processor import (
+    rfscore_rainbow_elasticc_nometa,
+)
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
 from fink_science.rubin.slsn.processor import slsn_rubin
@@ -78,7 +76,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
     """
     # Required alert columns
-    to_expand = ['midpointMjdTai', 'band', 'psfFlux', 'psfFluxErr']
+    to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
 
     # Use for creating temp name
     prefix = "c"
@@ -99,13 +97,14 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     _LOG.info("New processor: asteroids (random positions)")
     df = df.withColumn("roid", F.lit(0))
 
-
     _LOG.info("New processor: EarlySN Ia")
     early_ia_args = [F.col(i) for i in expanded]
-    df = df.withColumn("rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args))
+    df = df.withColumn(
+        "rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    )
 
     _LOG.info("New processor: supernnova - Ia")
-    snn_args = [F.col('diaSource.diaSourceId')]
+    snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
 
     # Binary Ia
@@ -176,7 +175,10 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ])
 
     df = df.withColumn(
-        "cats_argmax", F.expr("array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1")
+        "cats_argmax",
+        F.expr(
+            "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
+        ),
     )
     df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
 
