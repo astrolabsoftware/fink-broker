@@ -19,10 +19,10 @@ jobs:
 
     strategy:
       matrix:
-        container: ["julienpeloton/fink-ci-ztf:latest"]
+        survey: ["ztf", "rubin"]
 
     container:
-      image: ${{ matrix.container }}
+      image: "julienpeloton/fink-ci-${{ matrix.survey }}:latest"
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -66,7 +66,11 @@ jobs:
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
-        fink_test -s ztf -c conf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
+        if [ "${{ matrix.survey }}" == "ztf" ]; then
+          fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
+        elif [ "${{ matrix.survey }}" == "rubin" ]; then
+          fink_test_rubin -c conf/rubin/fink.conf.dev
+        fi
         curl -s https://codecov.io/bash | bash
     - uses: act10ns/slack@v1
       with:
