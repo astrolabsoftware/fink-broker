@@ -27,11 +27,9 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
+from fink_broker.common.science import apply_all_xmatch
+
 from fink_science.ztf.random_forest_snia.processor import rfscore_sigmoid_full
-from fink_science.ztf.xmatch.processor import xmatch_cds
-from fink_science.ztf.xmatch.processor import xmatch_tns
-from fink_science.ztf.xmatch.processor import crossmatch_other_catalog
-from fink_science.ztf.xmatch.processor import crossmatch_mangrove
 
 from fink_science.ztf.snn.processor import snn_ia
 from fink_science.ztf.microlensing.processor import mulens
@@ -90,7 +88,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ----------
     df: DataFrame
         Spark (Streaming or SQL) DataFrame containing raw alert data
-    tns_catalog: str, optional
+    tns_raw_output: str, optional
         Folder that contains raw TNS catalog. Inside, it is expected
         to find the file `tns_raw.parquet` downloaded using
         `fink-broker/bin/download_tns.py`. Default is "", in
@@ -135,101 +133,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         df = concat_col(df, colname, prefix=prefix)
     expanded = [prefix + i for i in to_expand]
 
-    _LOG.info("New processor: cdsxmatch")
-    df = xmatch_cds(df)
-
-    _LOG.info("New processor: TNS")
-    df = xmatch_tns(df, tns_raw_output=tns_raw_output)
-
-    _LOG.info("New processor: Gaia xmatch (1.0 arcsec)")
-    df = xmatch_cds(
-        df,
-        distmaxarcsec=1,
-        catalogname="vizier:I/355/gaiadr3",
-        cols_out=["DR3Name", "Plx", "e_Plx"],
-        types=["string", "float", "float"],
-    )
-
-    _LOG.info("New processor: VSX (1.5 arcsec)")
-    df = xmatch_cds(
-        df,
-        catalogname="vizier:B/vsx/vsx",
-        distmaxarcsec=1.5,
-        cols_out=["Type"],
-        types=["string"],
-    )
-    # legacy -- rename `Type` into `vsx`
-    # see https://github.com/astrolabsoftware/fink-broker/issues/787
-    df = df.withColumnRenamed("Type", "vsx")
-
-    _LOG.info("New processor: SPICY (1.2 arcsec)")
-    df = xmatch_cds(
-        df,
-        catalogname="vizier:J/ApJS/254/33/table1",
-        distmaxarcsec=1.2,
-        cols_out=["SPICY", "class"],
-        types=["int", "string"],
-    )
-    # rename `SPICY` into `spicy_id`. Values are number or null
-    df = df.withColumnRenamed("SPICY", "spicy_id")
-    # Cast null into -1
-    df = df.withColumn(
-        "spicy_id", F.when(df["spicy_id"].isNull(), F.lit(-1)).otherwise(df["spicy_id"])
-    )
-
-    # rename `class` into `spicy_class`. Values are:
-    # Unknown, FS, ClassI, ClassII, ClassIII, or 'nan'
-    df = df.withColumnRenamed("class", "spicy_class")
-    # Make 'nan' 'Unknown'
-    df = df.withColumn(
-        "spicy_class",
-        F.when(df["spicy_class"] == "nan", F.lit("Unknown")).otherwise(
-            df["spicy_class"]
-        ),
-    )
-
-    _LOG.info("New processor: GCVS (1.5 arcsec)")
-    df = df.withColumn(
-        "gcvs",
-        crossmatch_other_catalog(
-            df["candidate.candid"],
-            df["candidate.ra"],
-            df["candidate.dec"],
-            F.lit("gcvs"),
-        ),
-    )
-
-    _LOG.info("New processor: 3HSP (1 arcmin)")
-    df = df.withColumn(
-        "x3hsp",
-        crossmatch_other_catalog(
-            df["candidate.candid"],
-            df["candidate.ra"],
-            df["candidate.dec"],
-            F.lit("3hsp"),
-            F.lit(60.0),
-        ),
-    )
-
-    _LOG.info("New processor: 4LAC (1 arcmin)")
-    df = df.withColumn(
-        "x4lac",
-        crossmatch_other_catalog(
-            df["candidate.candid"],
-            df["candidate.ra"],
-            df["candidate.dec"],
-            F.lit("4lac"),
-            F.lit(60.0),
-        ),
-    )
-
-    _LOG.info("New processor: Mangrove (1 acrmin)")
-    df = df.withColumn(
-        "mangrove",
-        crossmatch_mangrove(
-            df["candidate.candid"], df["candidate.ra"], df["candidate.dec"], F.lit(60.0)
-        ),
-    )
+    df = apply_all_xmatch(df, tns_raw_output, survey="ztf")
 
     # Apply level one processor: asteroids
     _LOG.info("New processor: asteroids")
@@ -388,8 +292,6 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ["FINK_HOME"]
     globs["ztf_alert_sample"] = os.path.join(root, "online/raw/20200101")
-
-    globs["elasticc_alert_sample"] = os.path.join(root, "datasim/elasticc_alerts")
 
     # Run the Spark test suite
     spark_unit_tests(globs)
