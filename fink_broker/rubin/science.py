@@ -74,6 +74,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
+    >>> df.write.format("noop").mode("overwrite").save()
     """
     # Required alert columns
     to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
@@ -107,13 +108,13 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
 
-    # Binary Ia
-    snn_ia_args = snn_args + [F.lit("elasticc_ia")]
-    df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*snn_ia_args))
+    # # Binary Ia
+    # snn_ia_args = snn_args + [F.lit("elasticc_ia")]
+    # df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*snn_ia_args))
 
-    # # Binary SN
-    # full_args = args + [F.lit("elasticc_binary_broad/SN_vs_other")]
-    # df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*full_args))
+    # Binary SN
+    snn_ia_args = args + [F.lit("elasticc_binary_broad/SN_vs_other")]
+    df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*snn_ia_args))
 
     # # Binary Periodic
     # full_args = args + [F.lit("elasticc_binary_broad/Periodic_vs_other")]
