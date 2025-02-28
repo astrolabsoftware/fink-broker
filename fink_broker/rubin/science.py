@@ -113,7 +113,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*snn_ia_args))
 
     # Binary SN
-    snn_ia_args = args + [F.lit("elasticc_binary_broad/SN_vs_other")]
+    snn_ia_args = snn_args + [F.lit("elasticc_binary_broad/SN_vs_other")]
     df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*snn_ia_args))
 
     # # Binary Periodic
