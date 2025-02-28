@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,10 +31,10 @@ import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.common.logging_utils import init_logger
-from fink_broker.ztf.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import connect_to_raw_database
 from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
+from fink_broker.ztf.parser import getargs
 
 
 def main():
@@ -70,7 +70,7 @@ def main():
     # Add ingestion timestamp
     df = df.withColumn(
         "brokerStartProcessTimestamp",
-        convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
+        convert_to_millitime(df["diaSource.midpointMjdTai"], F.lit("mjd"), F.lit(True)),
     )
 
     # Add library versions
@@ -84,33 +84,26 @@ def main():
     df = df.withColumn("fink_broker_version", F.lit(fbvsn))
     df = df.withColumn("fink_science_version", F.lit(fsvsn))
 
-    logger.debug("Switch publisher")
+    logger.debug("Publisher")
     df = df.withColumn("publisher", F.lit("Fink"))
 
     logger.debug("Prepare and analyse the data")
-    logger.info("Apply quality cuts")
-    df = df.filter(df["candidate.nbad"] == 0).filter(df["candidate.rb"] >= 0.55)
-
-    logger.debug("Discard an alert if it is in i band")
-    df = df.filter(df["candidate.fid"] != 3)
-
     if args.noscience:
         logger.info("Do not apply science modules")
     else:
-        logger.info("Import science modules")
-        from fink_broker.ztf.science import apply_science_modules
+        from fink_broker.rubin.science import apply_science_modules
 
-        logger.info("Apply science modules")
-        df = apply_science_modules(df, args.tns_raw_output)
+        logger.info("Apply Rubin science modules")
+        df = apply_science_modules(df)
 
     logger.debug("Add ingestion timestamp")
     df = df.withColumn(
         "brokerEndProcessTimestamp",
-        convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
+        convert_to_millitime(df["diaSource.midpointMjdTai"], F.lit("mjd"), F.lit(True)),
     )
 
-    logger.debug("Append new rows in the tmp science database")
-    countquery_science = (
+    logger.debug("Append new rows in the tmp science data lake")
+    countquery = (
         df.writeStream.outputMode("append")
         .format("parquet")
         .option("checkpointLocation", checkpointpath_sci_tmp)
@@ -119,28 +112,12 @@ def main():
         .start()
     )
 
-    if args.noscience:
-        logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, countquery_mm = 0, None
-    else:
-        logger.info("Perform multi-messenger operations")
-        from fink_broker.ztf.mm_utils import raw2science_launch_fink_mm
-
-        time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
-            args, scitmpdatapath
-        )
-
     if args.exit_after is not None:
         logger.debug(
             "Keep the Streaming running until something or someone ends it!"
         )
-        # If GCN arrived, wait for the remaining time since the launch of raw2science
-        remaining_time = args.exit_after - time_spent_in_wait
-        remaining_time = remaining_time if remaining_time > 0 else 0
-        time.sleep(remaining_time)
-        countquery_science.stop()
-        if countquery_mm is not None:
-            countquery_mm.stop()
+        time.sleep(args.exit_after)
+        countquery.stop()
     else:
         logger.debug("Wait for the end of queries")
         spark.streams.awaitAnyTermination()
