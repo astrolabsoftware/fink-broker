@@ -69,7 +69,7 @@ jobs:
         if [ "${{ matrix.survey }}" == "ztf" ]; then
           fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
         elif [ "${{ matrix.survey }}" == "rubin" ]; then
-          fink_test_rubin -c conf/rubin/fink.conf.dev
+          fink_test_rubin -c conf/rubin/fink.conf.dev --unit-tests
         fi
         curl -s https://codecov.io/bash | bash
     - uses: act10ns/slack@v1
