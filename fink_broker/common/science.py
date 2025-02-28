@@ -14,8 +14,11 @@
 # limitations under the License.
 from pyspark.sql import functions as F
 
+import os
 import sys
 import logging
+
+from fink_broker.common.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
 
@@ -163,9 +166,7 @@ def apply_all_xmatch(df, tns_raw_output, survey=""):
     _LOG.info("New processor: Mangrove (1 acrmin)")
     df = df.withColumn(
         "mangrove",
-        crossmatch_mangrove(
-            df[alert_id], df[ra], df[dec], F.lit(60.0)
-        ),
+        crossmatch_mangrove(df[alert_id], df[ra], df[dec], F.lit(60.0)),
     )
 
     return df
