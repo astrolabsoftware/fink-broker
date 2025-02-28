@@ -27,7 +27,7 @@ import argparse
 import pyspark.sql.functions as F
 
 from fink_broker.ztf.parser import getargs
-from fink_broker.ztf.science import ang2pix
+from fink_broker.common.spark_utils import ang2pix
 from fink_broker.ztf.hbase_utils import push_to_hbase, add_row_key
 from fink_broker.ztf.hbase_utils import assign_column_family_names
 from fink_broker.ztf.hbase_utils import load_ztf_index_cols
