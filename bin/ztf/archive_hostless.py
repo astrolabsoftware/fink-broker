@@ -17,6 +17,7 @@
 
 import argparse
 import os
+import numpy as np
 import pandas as pd
 
 from pyspark.sql import functions as F
@@ -122,28 +123,26 @@ def main():
     cond_science_high = df["kstest_static"][0] <= 0.5
     cond_template_low = df["kstest_static"][1] >= 0.0
     cond_template_high = df["kstest_static"][1] <= 0.85
+    cond_max_detections = df["cmagpsf"].apply(
+        lambda x: np.sum(np.array(x) == np.array(x))) <= 20
 
     pdf = (
         df.filter(cond_science_low & cond_science_high)
         .filter(cond_template_low & cond_template_high)
+        .filter(cond_max_detections)
         .select(cols_)
         .toPandas()
     )
 
+
     # load hostless IDs
-    past_ids = read_past_ids(args.hostless_folder)
+    # past_ids = read_past_ids(args.hostless_folder)
 
     new_ids = []
     # Loop over matches & send to Telegram
     if ("FINK_TG_TOKEN" in os.environ) and os.environ["FINK_TG_TOKEN"] != "":
         payloads = []
         for _, alert in pdf.iterrows():
-            # Do not send request if the object
-            # has been already reported by the bot
-            if alert["objectId"] in past_ids.to_numpy():
-                print("{} already sent!".format(alert["objectId"]))
-                continue
-
             curve_png = get_curve(
                 objectId=alert["objectId"],
                 origin="API",
