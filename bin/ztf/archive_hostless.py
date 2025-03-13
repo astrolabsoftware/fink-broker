@@ -123,8 +123,7 @@ def main():
     cond_science_high = df["kstest_static"][0] <= 0.5
     cond_template_low = df["kstest_static"][1] >= 0.0
     cond_template_high = df["kstest_static"][1] <= 0.85
-    cond_max_detections = df["cmagpsf"].apply(
-        lambda x: np.sum(np.array(x) == np.array(x))) <= 20
+    cond_max_detections = F.size(F.remove("cmagpsf", np.nan)) <= 20
 
     pdf = (
         df.filter(cond_science_low & cond_science_high)
