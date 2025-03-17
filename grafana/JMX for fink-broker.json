@@ -65,7 +65,7 @@
   ],
   "panels": [
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -73,317 +73,318 @@
         "y": 0
       },
       "id": 36,
-      "panels": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "B"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash"
+                    }
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "C"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash"
+                    }
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 1
+          },
+          "id": 39,
+          "interval": "1m",
+          "options": {
+            "legend": {
+              "asTable": true,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "sortBy": "Name",
+              "sortDesc": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.5.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "sum(process_open_fds{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+              "legendFormat": "__auto",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Number of open file descriptors",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "B"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash"
+                    }
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "red",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "C"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash"
+                    }
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "orange",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 7
+          },
+          "id": 38,
+          "interval": "1m",
+          "options": {
+            "legend": {
+              "asTable": true,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "sortBy": "Name",
+              "sortDesc": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.5.1",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "sum(process_max_fds{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+              "legendFormat": "__auto",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Maximum number of open file descriptors",
+          "type": "timeseries"
+        }
+      ],
       "title": "I/O",
       "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 1
-      },
-      "id": 39,
-      "interval": "1m",
-      "options": {
-        "legend": {
-          "asTable": true,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "sortBy": "Name",
-          "sortDesc": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.5.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(process_open_fds{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Number of open file descriptors",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "datasource",
-        "uid": "-- Mixed --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "B"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 7
-      },
-      "id": 38,
-      "interval": "1m",
-      "options": {
-        "legend": {
-          "asTable": true,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "sortBy": "Name",
-          "sortDesc": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.5.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(process_max_fds{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Maximum number of open file descriptors",
-      "type": "timeseries"
     },
     {
       "collapsed": false,
@@ -391,7 +392,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 1
       },
       "id": 34,
       "panels": [],
@@ -513,9 +514,9 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 2
       },
-      "id": 27,
+      "id": 40,
       "interval": "1m",
       "options": {
         "legend": {
@@ -543,13 +544,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(process_cpu_seconds_total{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum by (pod) (rate(process_cpu_seconds_total{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}[5m]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "TODO user rat() Total user and system CPU time spent in seconds",
+      "title": "Rate on 5m for total user and system CPU time spent in seconds",
       "type": "timeseries"
     },
     {
@@ -558,7 +559,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 8
       },
       "id": 26,
       "panels": [],
@@ -680,7 +681,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 9
       },
       "id": 35,
       "interval": "1m",
@@ -710,13 +711,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(jvm_memory_committed_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum(jvm_memory_committed_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod) / 1000 / 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Committed (bytes) of a given JVM memory area",
+      "title": "Committed (MB) of a given JVM memory area",
       "type": "timeseries"
     },
     {
@@ -834,7 +835,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 15
       },
       "id": 37,
       "interval": "1m",
@@ -864,13 +865,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(process_virtual_memory_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum(process_virtual_memory_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod) / 1000 / 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Virtual memory size in bytes",
+      "title": "Virtual memory size (MB)",
       "type": "timeseries"
     },
     {
@@ -988,7 +989,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 21
       },
       "id": 28,
       "interval": "1m",
@@ -1142,7 +1143,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 21
       },
       "id": 29,
       "interval": "1m",
@@ -1172,13 +1173,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(jvm_memory_pool_allocated_bytes_total{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum(jvm_memory_pool_allocated_bytes_total{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod) / 1000 / 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Total bytes allocated in a given JVM memory pool. Only updated after GC, not continuously.",
+      "title": "Total memory allocated in a given JVM memory pool. Only updated after GC, not continuously (MB)",
       "type": "timeseries"
     },
     {
@@ -1296,7 +1297,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 29
       },
       "id": 31,
       "interval": "1m",
@@ -1326,13 +1327,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(jvm_memory_pool_committed_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum(jvm_memory_pool_committed_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod) / 1000 / 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Committed bytes of a given JVM memory pool",
+      "title": "Committed memory of a given JVM memory pool (MB)",
       "type": "timeseries"
     },
     {
@@ -1450,7 +1451,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 29
       },
       "id": 30,
       "interval": "1m",
@@ -1480,13 +1481,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(jvm_memory_pool_max_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod)",
+          "expr": "sum(jvm_memory_pool_max_bytes{namespace=\"$namespace\", job=\"spark/fink-broker\", container!=\"\"}) by (pod) / 1000 / 1000",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Max bytes of a given JVM memory pool",
+      "title": "Max memory of a given JVM memory pool (MB)",
       "type": "timeseries"
     },
     {
@@ -1604,7 +1605,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 37
       },
       "id": 32,
       "interval": "1m",
@@ -1758,7 +1759,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 37
       },
       "id": 33,
       "interval": "1m",
@@ -1803,7 +1804,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 45
       },
       "id": 24,
       "panels": [],
@@ -1925,7 +1926,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 46
       },
       "id": 25,
       "interval": "1m",
@@ -1970,7 +1971,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 51
       },
       "id": 20,
       "panels": [],
@@ -2025,8 +2026,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2092,7 +2092,7 @@
         "h": 10,
         "w": 15,
         "x": 0,
-        "y": 64
+        "y": 52
       },
       "id": 1,
       "interval": "1m",
@@ -2177,8 +2177,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2244,7 +2243,7 @@
         "h": 10,
         "w": 9,
         "x": 15,
-        "y": 64
+        "y": 52
       },
       "id": 17,
       "interval": "1m",
@@ -2329,8 +2328,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2396,7 +2394,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 74
+        "y": 62
       },
       "id": 22,
       "interval": "1m",
@@ -2481,8 +2479,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2548,7 +2545,7 @@
         "h": 10,
         "w": 9,
         "x": 15,
-        "y": 74
+        "y": 62
       },
       "id": 19,
       "interval": "1m",
@@ -2591,7 +2588,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 72
       },
       "id": 21,
       "panels": [],
@@ -2646,8 +2643,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2713,7 +2709,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 85
+        "y": 73
       },
       "id": 18,
       "interval": "1m",
@@ -2800,8 +2796,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2867,7 +2862,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 85
+        "y": 73
       },
       "id": 23,
       "interval": "1m",
@@ -2988,6 +2983,6 @@
   "timezone": "utc",
   "title": "JMX for fink-broker",
   "uid": "6581e46e4e5c7ba40a07646395ef7b23xxxx",
-  "version": 12,
+  "version": 19,
   "weekStart": ""
 }
