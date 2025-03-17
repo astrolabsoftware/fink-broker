@@ -17,14 +17,14 @@
 
 import argparse
 
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.logging_utils import get_fink_logger, inspect_application
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
 from fink_filters.filter_anomaly_notification.filter import anomaly_notification_
-from fink_science.anomaly_detection.processor import ANOMALY_MODELS
-from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
-from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
+from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
 
 
 def main():

@@ -19,7 +19,7 @@ from pyspark.sql import functions as F
 
 import argparse
 
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.partitioning import convert_to_datetime, compute_num_part
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application

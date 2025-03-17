@@ -1,0 +1,184 @@
+#!/bin/bash
+# Copyright 2019-2025 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+## Script to launch the python test suite and measure the coverage.
+## Must be launched as fink_test
+set -e
+message_help="""
+Run units and integration test suites of Fink\n\n
+Usage:\n
+    \tfink_test_ztf [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
+
+By default, nothing is run.\n
+You can enable the database integration tests by specifying --db-integration.\n
+You can enable the unit tests by specifying --unit-test.\n
+You can enable the stream integration tests by specifying --stream-integration.\n
+You can specify the configuration file followed by -c or else the default (${FINK_HOME}/conf/<SURVEY>/fink.conf.prod) will be used.\n
+Use -h to display this help.
+"""
+
+# Grab the command line arguments
+WITH_DB=false
+WITH_UNITS=false
+WITH_STREAM=false
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --stream-integration)
+      WITH_STREAM=true
+      shift 1
+      ;;
+    --db-integration)
+      WITH_DB=true
+      shift 1
+      ;;
+    --unit-tests)
+      WITH_UNITS=true
+      shift 1
+      ;;
+    --mm-offline)
+      WITH_MM_OFFLINE=true
+      shift 1
+      ;;
+    -h)
+      echo -e $message_help
+      exit
+      ;;
+    -c)
+      if [[ $2 == "" ]]; then
+        echo "$1 requires an argument" >&2
+        exit 1
+      fi
+      conf="$2"
+      shift 2
+      ;;
+    -single_file)
+      SINGLE_FILE=$2
+      shift 2
+      ;;
+  esac
+done
+
+SURVEY=ztf
+
+# Source configuration file for tests
+if [[ -f $conf ]]; then
+  echo "Reading custom test configuration file from " $conf
+else
+  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.dev
+  echo "Reading the default test configuration file from " $conf
+fi
+
+source $conf
+
+# Export variables for tester.py
+export FINK_PACKAGES=$FINK_PACKAGES
+export FINK_JARS=$FINK_JARS
+export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
+export KAFKA_TOPIC="ztf_public_20200101"
+export NIGHT=20200101
+
+# Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
+export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
+
+if [ -n "${SINGLE_FILE}" ]; then
+    echo "single file testing..."
+    coverage run \
+        --source=${FINK_HOME} \
+        --rcfile ${FINK_HOME}/.coveragerc $SINGLE_FILE
+    exit
+fi
+
+# Stream integration tests
+if [[ "$WITH_STREAM" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
+  # Fire another stream
+  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
+
+  # Connect the service to build the raw database from the stream
+  fink start stream2raw -s ${SURVEY} --simulator -exit_after 120 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
+
+  # Connect the service to build the science database from the raw one
+  fink start raw2science -s ${SURVEY} -exit_after 180 -c $conf -night $NIGHT ${RESOURCES}
+
+  # Start the distribution service
+  fink start distribute -s ${SURVEY} -exit_after 60 -c $conf -night $NIGHT ${RESOURCES}
+
+  # check we have all topics
+  echo "TOPICS FOUND:"
+  /home/libs/kafka_2.12-2.8.1/bin/kafka-topics.sh --list --zookeeper localhost:2181
+fi
+
+# DB Integration tests
+if [[ "$WITH_DB" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 2 -spark-executor-cores 1"
+  # merge data
+  fink start merge -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+
+  # Update science portal
+  fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd ${RESOURCES}
+  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId ${RESOURCES}
+
+  # SSO candidates
+  fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+
+  fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+
+fi
+
+# MM offline test (need "fink start merge" before)
+if [[ "$WITH_MM_OFFLINE" = true ]] ; then
+  # fink-mm offline mode
+  fink_mm join_stream offline -night $NIGHT --config ${FINK_HOME}/conf/${SURVEY}/fink_mm.conf
+fi
+
+if [[ "$WITH_UNITS" = true ]] ; then
+  # Run the test suite on the modules assuming the integration
+  # tests have been run (to build the databases)
+  for i in ${FINK_HOME}/fink_broker/${SURVEY}/*.py
+  do
+    if [[ ${i##*/} = 'monitoring' ]] ; then
+        echo "skip {i}"
+    else
+      coverage run \
+          --source=${FINK_HOME} \
+          --rcfile ${FINK_HOME}/.coveragerc $i
+    fi
+  done
+
+  for i in ${FINK_HOME}/fink_broker/common/*.py
+  do
+    coverage run \
+        --source=${FINK_HOME} \
+        --rcfile ${FINK_HOME}/.coveragerc $i
+  done
+fi
+
+# Combine individual reports in one
+coverage combine
+
+unset KAFKA_IPPORT_SIM
+unset KAFKA_TOPIC
+unset COVERAGE_PROCESS_START
+unset FINK_PACKAGES
+unset FINK_JARS
+
+coverage report
+coverage html
