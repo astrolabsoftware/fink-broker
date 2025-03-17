@@ -34,7 +34,6 @@ from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import get_cutout
 from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
 
-from fink_tns.utils import read_past_ids
 
 from fink_science.hostless_detection.processor import run_potential_hostless
 
@@ -132,7 +131,6 @@ def main():
         .select(cols_)
         .toPandas()
     )
-
 
     # load hostless IDs
     # past_ids = read_past_ids(args.hostless_folder)
