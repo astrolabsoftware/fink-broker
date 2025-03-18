@@ -129,6 +129,8 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
+ docker exec -it "$cluster" crictl pull quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
+
 $(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
