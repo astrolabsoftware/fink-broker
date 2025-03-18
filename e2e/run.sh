@@ -129,7 +129,9 @@ then
 fi
 $DIR/prereq-install.sh $monitoring_opt
 
- docker exec -it "$cluster" crictl pull quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
+# See https://github.com/strimzi/strimzi-kafka-operator/issues/3692
+# Fix error: Failed to connect to Zookeeper kafka-cluster-zookeeper-0.kafka-cluster-zookeeper-nodes.kafka.svc:2181. Connection was not ready in 300000 ms.
+docker exec -it "$cluster" crictl pull quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
 
 $(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
