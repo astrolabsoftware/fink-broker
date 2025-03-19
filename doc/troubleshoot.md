@@ -1,5 +1,11 @@
 # Troubleshooting guide
 
+## List kafka topics
+
+```shell
+kubectl exec -it kafka-cluster-dual-role-0 -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list
+```
+
 ## Run s5cmd (s3 client)
 
 From inside the k8s cluster:
@@ -41,6 +47,14 @@ kubectl port-forward -n argocd $(kubectl get  pods --selector=app.kubernetes.io/
 # Login is "admin, Password is set to "password", fix this in production
 kubectl -n argocd patch secret argocd-secret  -p '{"stringData": {"admin.password": "$2a$10$rRyBsGSHK6.uc8fntPwVIuLVHgsAhAX7TcdrqW/RADU0uh7CaChLa", "admin.passwordMtime": "'$(date +%FT%T%Z)'"  }}'
 ```
+
+### Re install fink stack
+
+```bash
+./e2e/argocd.sh
+```
+
+
 
 ### Fine-tune "ignoreDifferences" field of an ArgoCD Application
 
