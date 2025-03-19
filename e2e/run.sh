@@ -115,8 +115,6 @@ $src_dir/build.sh -s "$SUFFIX" -i $input_survey
 build=true
 
 # e2e tests step
-
-
 cluster=$(ciux get clustername "$src_dir")
 echo "Delete the cluster $cluster if it already exists"
 ktbx delete --name "$cluster" || true
@@ -128,13 +126,6 @@ then
   monitoring_opt="-m"
 fi
 $DIR/prereq-install.sh $monitoring_opt
-
-# See https://github.com/strimzi/strimzi-kafka-operator/issues/3692
-# Fix error: Failed to connect to Zookeeper kafka-cluster-zookeeper-0.kafka-cluster-zookeeper-nodes.kafka.svc:2181. Connection was not ready in 300000 ms.
-
-master_node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane= --output=jsonpath='{.items[0].metadata.name}')
-
-docker exec -it "$master_node" crictl pull quay.io/strimzi/kafka:0.45.0-kafka-3.9.0
 
 $(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
