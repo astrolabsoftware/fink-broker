@@ -25,9 +25,8 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
-from fink_science.t2.utilities import T2_COLS
-from fink_science.xmatch.utils import MANGROVE_COLS
-from fink_science.blazar_low_state.utils import BLAZAR_COLS
+from fink_science.ztf.xmatch.utils import MANGROVE_COLS
+from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -88,10 +87,6 @@ def load_fink_cols():
     for col_ in MANGROVE_COLS:
         name = "mangrove.{}".format(col_)
         fink_nested_cols.update({name: {"type": "string", "default": "None"}})
-
-    for col_ in T2_COLS:
-        name = "t2.{}".format(col_)
-        fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
 
     for col_ in BLAZAR_COLS:
         name = "blazar_stats.{}".format(col_)
