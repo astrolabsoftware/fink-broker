@@ -19,7 +19,7 @@ import argparse
 import os
 
 
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 

@@ -22,20 +22,19 @@ import pandas as pd
 
 from pyspark.sql import functions as F
 
-from fink_utils.spark.utils import concat_col
-
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
 from fink_filters.classification import extract_fink_classification
 
+from fink_utils.spark.utils import concat_col
 from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import get_cutout
 from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
 
 
-from fink_science.hostless_detection.processor import run_potential_hostless
+from fink_science.ztf.hostless_detection.processor import run_potential_hostless
 
 
 def main():

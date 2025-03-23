@@ -21,12 +21,12 @@ import os
 import numpy as np
 
 from pyspark.sql import functions as F
-from fink_utils.spark.utils import extend_lc_with_upper_limits
 
+from fink_utils.spark.utils import extend_lc_with_upper_limits
 from fink_utils.spark.utils import concat_col
 from fink_utils.xmatch.simbad import return_list_of_eg_host
 
-from fink_broker.ztf.parser import getargs
+from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
@@ -37,7 +37,7 @@ from fink_filters.filter_anomaly_notification.filter_utils import (
 )
 
 from fink_science import __file__
-from fink_science.random_forest_snia.processor import rfscore_sigmoid_full
+from fink_science.ztf.random_forest_snia.processor import rfscore_sigmoid_full
 
 
 def append_slack_messages(slack_data: list, row: dict) -> None:

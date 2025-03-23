@@ -228,7 +228,7 @@ fi
 
 # Grab Fink and Python version numbers
 FINK_VERSION=`fink --version`
-PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
+PYTHON_VERSION=`python -c "import platform; print('.'.join(platform.python_version_tuple()[0:2]))"`
 
 # Package fink_broker & userfilters modules
 PYTHON_EXTRA_FILE=""

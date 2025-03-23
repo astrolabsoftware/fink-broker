@@ -25,9 +25,8 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
-from fink_science.t2.utilities import T2_COLS
-from fink_science.xmatch.utils import MANGROVE_COLS
-from fink_science.blazar_low_state.utils import BLAZAR_COLS
+from fink_science.ztf.xmatch.utils import MANGROVE_COLS
+from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -49,7 +48,7 @@ def load_fink_cols():
     30
 
     >>> print(len(fink_nested_cols))
-    21
+    7
     """
     fink_cols = {
         "DR3Name": {"type": "string", "default": "Unknown"},
@@ -89,10 +88,6 @@ def load_fink_cols():
         name = "mangrove.{}".format(col_)
         fink_nested_cols.update({name: {"type": "string", "default": "None"}})
 
-    for col_ in T2_COLS:
-        name = "t2.{}".format(col_)
-        fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
-
     for col_ in BLAZAR_COLS:
         name = "blazar_stats.{}".format(col_)
         fink_nested_cols.update({name: {"type": "float", "default": 0.0}})
@@ -113,7 +108,7 @@ def load_all_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    159
+    145
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -324,7 +319,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    87
+    73
     """
     # From `root` or `candidates.`
     common = [
