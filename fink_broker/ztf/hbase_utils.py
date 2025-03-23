@@ -48,7 +48,7 @@ def load_fink_cols():
     30
 
     >>> print(len(fink_nested_cols))
-    21
+    7
     """
     fink_cols = {
         "DR3Name": {"type": "string", "default": "Unknown"},
@@ -108,7 +108,7 @@ def load_all_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    159
+    145
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -319,7 +319,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    87
+    73
     """
     # From `root` or `candidates.`
     common = [

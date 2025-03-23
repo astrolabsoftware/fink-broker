@@ -52,33 +52,6 @@ from fink_science.ztf.standardized_flux.processor import standardized_flux
 _LOG = logging.getLogger(__name__)
 
 
-@pandas_udf(MapType(StringType(), FloatType()), PandasUDFType.SCALAR)
-def fake_t2(incol):
-    """Return all t2 probabilities as zero
-
-    Only for test purposes.
-    """
-    keys = [
-        "M-dwarf",
-        "KN",
-        "AGN",
-        "SLSN-I",
-        "RRL",
-        "Mira",
-        "SNIax",
-        "TDE",
-        "SNIa",
-        "SNIbc",
-        "SNIa-91bg",
-        "mu-Lens-Single",
-        "EB",
-        "SNII",
-    ]
-    values = [0.0] * len(keys)
-    out = {k: v for k, v in zip(keys, values)}  # noqa: C416
-    return pd.Series([out] * len(incol))
-
-
 def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     """Load and apply Fink science modules to enrich alert content
 
@@ -197,12 +170,6 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         F.col("candidate.ndethist"),
     ]
     df = df.withColumn("rf_kn_vs_nonkn", knscore(*knscore_args))
-
-    _LOG.info("New processor: T2")
-    # t2_args = ['candid', 'cjd', 'cfid', 'cmagpsf', 'csigmapsf']
-    # t2_args += [F.col('roid'), F.col('cdsxmatch'), F.col('candidate.jdstarthist')]
-    # df = df.withColumn('t2', t2(*t2_args))
-    df = df.withColumn("t2", fake_t2("objectId"))
 
     # Apply level one processor: snad (light curve features)
     _LOG.info("New processor: ad_features")
