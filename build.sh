@@ -50,7 +50,7 @@ while getopts hr:i:s: c ; do
     case $c in
 	    h) usage ; exit 0 ;;
             r) tmp_registry=$OPTARG ;;
-	    s) suffix=$OPTARG ;;
+	    s) suffix=$OPTARGS ;;
 	    i) input_survey=$OPTARGS ;;
 	    \?) usage ; exit 2 ;;
     esac
