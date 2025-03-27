@@ -64,8 +64,9 @@ fi
 count=0
 while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
 do
-    echo "Waiting for expected topics: $expected_topics"
+    echo "INFO: Waiting for expected topics: $expected_topics"
     sleep 5
+    echo "INFO: List pods in spark namespace:"
     kubectl get pods -n spark
     if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
@@ -82,8 +83,8 @@ do
         kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
         echo "PODS"
         kubectl get pods -A
-        echo "KAFKA TOPICS"
-        kubectl get kafkatopics -A
+        echo "FINK KAFKA TOPICS"
+        finkctl get topics
         sleep 7200
         exit 1
     fi

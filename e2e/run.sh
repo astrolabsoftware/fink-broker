@@ -115,8 +115,6 @@ $src_dir/build.sh -s "$SUFFIX" -i $input_survey
 build=true
 
 # e2e tests step
-
-
 cluster=$(ciux get clustername "$src_dir")
 echo "Delete the cluster $cluster if it already exists"
 ktbx delete --name "$cluster" || true
