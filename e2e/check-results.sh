@@ -66,7 +66,7 @@ while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /d
 do
     echo "INFO: Waiting for expected topics: $expected_topics"
     sleep 5
-    echo "INFO: List pods in spark namespace"
+    echo "INFO: List pods in spark namespace:"
     kubectl get pods -n spark
     if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
