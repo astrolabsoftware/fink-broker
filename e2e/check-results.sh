@@ -71,7 +71,7 @@ check_topics() {
   else
       echo "INFO: Expected topics are not created yet" 1>&2
       kubectl exec kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink
-      exit 1
+      return 1
   fi
   echo "Number of topics: $topics_count"
 }
