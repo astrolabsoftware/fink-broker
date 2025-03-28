@@ -20,7 +20,7 @@
 
 # @author  Fabrice Jammes
 
-set -euo pipefail
+set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 monitoring=false
@@ -61,8 +61,25 @@ else
   expected_topics="9"
 fi
 
+# Write a shell function which wait for topics
+# to be created in kafka
+check_topics() {
+  topics_count=$(kubectl exec -it kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink | wc -l)
+  if [ $topics_count -eq $expected_topics ];
+  then
+      echo "All expected topics are created"
+  else
+      echo "ERROR: Expected topics are not created" 1>&2
+      kubectl exec -it kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink
+      exit 1
+  fi
+  echo "Number of topics: $topics_count"
+}
+
+
+
 count=0
-while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
+while ! check_topics > /dev/null
 do
     echo "Waiting for expected topics: $expected_topics"
     sleep 5
@@ -83,12 +100,11 @@ do
         echo "PODS"
         kubectl get pods -A
         echo "KAFKA TOPICS"
-        kubectl get kafkatopics -A
+        check_topics
         sleep 7200
         exit 1
     fi
 done
-finkctl get topics
 
 if $monitoring;
 then
