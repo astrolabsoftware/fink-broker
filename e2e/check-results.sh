@@ -64,13 +64,13 @@ fi
 # Write a shell function which wait for topics
 # to be created in kafka
 check_topics() {
-  topics_count=$(kubectl exec -it kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink | wc -l)
+  topics_count=$(kubectl exec kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink | wc -l)
   if [ $topics_count -eq $expected_topics ];
   then
       echo "All expected topics are created"
   else
-      echo "ERROR: Expected topics are not created" 1>&2
-      kubectl exec -it kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink
+      echo "INFO: Expected topics are not created yet" 1>&2
+      kubectl exec kafka-cluster-dual-role-0 -c kafka -n kafka -- bin/kafka-topics.sh --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list | grep fink
       exit 1
   fi
   echo "Number of topics: $topics_count"
