@@ -117,6 +117,8 @@ jobs:
         run: |
           mkdir -p $HOME/.ciux
           ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
+          ink "Ciux configuration file"
+          cat /home/runner/.ciux/ciux.sh
       - name: Boostrap k8s (kind) cluster
         run: |
           # Configure private registry if needed
