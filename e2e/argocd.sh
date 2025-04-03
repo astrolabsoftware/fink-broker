@@ -22,6 +22,7 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
+  -s <suffix>   Suffix to use for the image (default: noscience)
   -S <storage>  Storage to use (hdfs or minio)
 EOD
 }

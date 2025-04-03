@@ -24,11 +24,12 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 monitoring=false
-SUFFIX="${SUFFIX:-noscience}"
+SUFFIX="noscience"
 
 usage () {
   echo "Usage: $0 [-h] [-m]"
   echo "  -m: Check monitoring is enabled"
+  echo "  -s: If not equal to 'noscience' use the science algorithms during the tests (default: noscience)"
   echo "  -h: Display this help"
   echo ""
   echo " Check that the expected topics are created"
@@ -36,7 +37,7 @@ usage () {
 }
 
 # Get options for suffix
-while getopts hm opt; do
+while getopts hms: opt; do
   case ${opt} in
     h )
       usage
@@ -45,6 +46,7 @@ while getopts hm opt; do
     m )
       monitoring=true
       ;;
+    s) SUFFIX="$OPTARG" ;;
     \? )
       usage
       exit 1
@@ -114,3 +116,5 @@ then
     done
 
 fi
+
+echo "INFO: Fink-broker is running and all topics are created"

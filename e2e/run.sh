@@ -136,7 +136,7 @@ echo "Run ArgoCD to install the whole fink e2e tests stack"
 $DIR/argocd.sh -s "$SUFFIX" -S "$storage" $monitoring_opt
 
 echo "Check the results of the tests."
-$DIR/check-results.sh
+$DIR/check-results.sh -s "$SUFFIX" $monitoring_opt
 e2e=true
 
 echo "Push the image to Container Registry"

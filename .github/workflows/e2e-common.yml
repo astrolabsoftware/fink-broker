@@ -23,6 +23,8 @@ on:
         required: true
       registry_token:
         required: true
+      slack_webhook_url:
+        required: true
 env:
   CIUX_VERSION: v0.0.5-rc0
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -32,7 +34,6 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 jobs:
   build:
     name: Build image
@@ -250,6 +251,7 @@ jobs:
           fi
       - uses: act10ns/slack@v1
         with:
+          webhook-url: ${{ secrets.slack_webhook_url }}
           status: ${{ job.status }}
         if: always()
 

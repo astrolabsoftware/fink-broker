@@ -4,9 +4,6 @@ on:
   repository_dispatch:
     types: [e2e-noscience]
 
-env:
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
 jobs:
   e2e-science:
     runs-on: ubuntu-latest
@@ -41,5 +38,6 @@ jobs:
         fi
     - uses: act10ns/slack@v1
       with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
         status: ${{ job.status }}
       if: always()
