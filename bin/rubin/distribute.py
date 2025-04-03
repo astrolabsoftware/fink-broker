@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2019-2025 AstroLab Software
-# Author: Abhishek Chauhan, Julien Peloton
+# Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,47 +16,33 @@
 
 """Distribute the alerts to users
 
-1. Use the Alert data that is stored in the Science TMP database (Parquet)
+1. Use the Alert data that is stored in the Science TMP data lake (Parquet)
 2. Apply user defined filters
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
 
+import pyspark.sql.functions as F
 import argparse
 import logging
 import time
 
-from fink_utils.spark import schema_converter
+from fink_broker.common.distribution_utils import get_kafka_df
+from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
 )
-from fink_broker.common.distribution_utils import get_kafka_df
-from fink_broker.common.logging_utils import init_logger
-from fink_utils.spark.utils import concat_col
+
+from fink_utils.spark import schema_converter
 from fink_utils.spark.utils import apply_user_defined_filter
 
 
 _LOG = logging.getLogger(__name__)
 
 # User-defined topics
-userfilters = [
-    "fink_filters.filter_early_sn_candidates.filter.early_sn_candidates",
-    "fink_filters.filter_sn_candidates.filter.sn_candidates",
-    "fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
-    "fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates",
-    "fink_filters.filter_kn_candidates.filter.kn_candidates",
-    "fink_filters.filter_early_kn_candidates.filter.early_kn_candidates",
-    "fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
-    "fink_filters.filter_microlensing_candidates.filter.microlensing_candidates",
-    "fink_filters.filter_yso_candidates.filter.yso_candidates",
-    "fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
-    "fink_filters.filter_blazar.filter.blazar",
-    "fink_filters.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
-    "fink_filters.filter_tns_match.filter.tns_match",
-    "fink_filters.filter_magnetic_cvs.filter.magnetic_cvs",
-]
+userfilters = ["no-filter.or5"]
 
 
 def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
@@ -88,6 +74,8 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
     schema = schema_converter.to_avro(df_in.schema)
 
     df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
+
+    df_kafka = df_kafka.withColumn("partition", (F.rand(seed=0) * 10).astype("int"))
 
     disquery = (
         df_kafka.writeStream.format("kafka")
@@ -123,64 +111,15 @@ def main():
     logger.debug("Connect to the TMP science database")
     df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
 
+    # drop science fields for the moment
+    df = df.drop("brokerIngestMjd", "cdsxmatch", "brokerEndProcessMjd")
+
     logger.debug("Cast fields to ease the distribution")
     cnames = df.columns
 
-    if "brokerEndProcessTimestamp" in cnames:
-        cnames[cnames.index("brokerEndProcessTimestamp")] = (
-            "cast(brokerEndProcessTimestamp as string) as brokerEndProcessTimestamp"
-        )
-        cnames[cnames.index("brokerStartProcessTimestamp")] = (
-            "cast(brokerStartProcessTimestamp as string) as brokerStartProcessTimestamp"
-        )
-        cnames[cnames.index("brokerIngestTimestamp")] = (
-            "cast(brokerIngestTimestamp as string) as brokerIngestTimestamp"
-        )
-
-    cnames[cnames.index("cutoutScience")] = "struct(cutoutScience.*) as cutoutScience"
-    cnames[cnames.index("cutoutTemplate")] = (
-        "struct(cutoutTemplate.*) as cutoutTemplate"
-    )
-    cnames[cnames.index("cutoutDifference")] = (
-        "struct(cutoutDifference.*) as cutoutDifference"
-    )
-    cnames[cnames.index("prv_candidates")] = (
-        "explode(array(prv_candidates)) as prv_candidates"
-    )
-    cnames[cnames.index("candidate")] = "struct(candidate.*) as candidate"
-
-    if not args.noscience:
-        # This column is added by the science pipeline
-        cnames[cnames.index("lc_features_g")] = (
-            "struct(lc_features_g.*) as lc_features_g"
-        )
-        cnames[cnames.index("lc_features_r")] = (
-            "struct(lc_features_r.*) as lc_features_r"
-        )
-
-    logger.debug("Retrieve time-series information")
-    to_expand = [
-        "jd",
-        "fid",
-        "magpsf",
-        "sigmapsf",
-        "magnr",
-        "sigmagnr",
-        "magzpsci",
-        "isdiffpos",
-        "diffmaglim",
-    ]
-
-    logger.debug("Append temp columns with historical + current measurements")
-    prefix = "c"
-    for colname in to_expand:
-        df = concat_col(df, colname, prefix=prefix)
-
-    # quick fix for https://github.com/astrolabsoftware/fink-broker/issues/457
-    for colname in to_expand:
-        df = df.withColumnRenamed("c" + colname, "c" + colname + "c")
-
-    df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
+    cnames[cnames.index("diaSource")] = "struct(diaSource.*) as diaSource"
+    cnames[cnames.index("diaObject")] = "struct(diaObject.*) as diaObject"
+    cnames[cnames.index("ssObject")] = "struct(ssObject.*) as ssObject"
 
     kafka_cfg = {
         "kafka.bootstrap.servers": args.distribution_servers,
@@ -219,7 +158,7 @@ def main():
             df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
         # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
+        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_rubin"
 
         # FIXME: shouldn't we collect in a list the disquery?
         disquery = push_to_kafka(
@@ -231,23 +170,12 @@ def main():
             kafka_cfg,
         )
 
-    # Special filter to count alerts
-    topicname = "fink_ztf_{}".format(args.night)
-    disquery = push_to_kafka(
-        df,
-        topicname,
-        ["objectId"],
-        checkpointpath_kafka,
-        args.tinterval,
-        kafka_cfg,
-    )
-
     if args.noscience:
         logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, stream_distrib_list = 0, None
+        time_spent_in_wait, stream_distrib_list = 0, []
     else:
         logger.debug("Perform multi-messenger operations")
-        from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
+        from fink_broker.rubin.mm_utils import distribute_launch_fink_mm
 
         time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 

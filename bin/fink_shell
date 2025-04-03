@@ -89,15 +89,6 @@ fi
 # Default is to use fink jars distributed with the code
 FINK_EXTRA_JARS=${FINK_JARS},${FINK_HOME}/libs/fink-broker_2.11-${FINK_VERSION}.jar
 
-# Otherwise compile Scala source and ship it.
-if [[ $DEPLOY_FINK_SCALA != "false" ]]; then
-  cd $FINK_HOME
-  sbt ++2.11.8 package
-  FINK_EXTRA_JARS=${FINK_JARS},${FINK_HOME}/target/scala-2.11/fink-broker_2.11-${FINK_VERSION}.jar
-  echo "Distributing ${FINK_EXTRA_JARS}"
-  cd -
-fi
-
 PYSPARK_DRIVER_PYTHON=${PYSPARK_DRIVER_PYTHON} pyspark \
   --master ${SPARK_MASTER} ${SECURED_KAFKA_CONFIG} ${EXTRA_SPARK_CONFIG} \
   --files ${HBASE_XML_CONF} ${PYTHON_EXTRA_FILE} \
