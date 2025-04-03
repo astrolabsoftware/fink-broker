@@ -4,6 +4,9 @@ on:
   repository_dispatch:
     types: [e2e-science]
 
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 jobs:
   e2e-science:
     runs-on: ubuntu-latest
@@ -36,3 +39,7 @@ jobs:
           echo "Failed to push image $image"
           exit 1
         fi
+    - uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+      if: always()

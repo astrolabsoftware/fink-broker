@@ -32,6 +32,7 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 jobs:
   build:
     name: Build image
@@ -247,5 +248,8 @@ jobs:
             echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
             skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
           fi
-
+      - uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+        if: always()
 
