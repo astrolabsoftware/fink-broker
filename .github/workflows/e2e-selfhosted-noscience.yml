@@ -36,3 +36,8 @@ jobs:
           echo "Failed to push image $image"
           exit 1
         fi
+    - uses: act10ns/slack@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        status: ${{ job.status }}
+      if: always()

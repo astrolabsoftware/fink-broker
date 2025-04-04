@@ -23,6 +23,8 @@ on:
         required: true
       registry_token:
         required: true
+      slack_webhook_url:
+        required: true
 env:
   CIUX_VERSION: v0.0.5-rc0
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -117,6 +119,8 @@ jobs:
         run: |
           mkdir -p $HOME/.ciux
           ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
+          ink "Ciux configuration file"
+          cat /home/runner/.ciux/ciux.sh
       - name: Boostrap k8s (kind) cluster
         run: |
           # Configure private registry if needed
@@ -245,5 +249,9 @@ jobs:
             echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
             skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
           fi
-
+      - uses: act10ns/slack@v1
+        with:
+          webhook-url: ${{ secrets.slack_webhook_url }}
+          status: ${{ job.status }}
+        if: always()
 

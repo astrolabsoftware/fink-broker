@@ -14,11 +14,15 @@ monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
 
+# Check if running in github actions
+GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
+
 usage() {
     cat << EOD
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
+  -s <suffix>   Suffix to use for the image (default: noscience)
   -S <storage>  Storage to use (hdfs or minio)
 EOD
 }
@@ -36,7 +40,13 @@ done
 shift "$((OPTIND-1))"
 
 CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
-ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+
+# Refresh ciux config if not in github actions
+# Used for interactive development
+if [ $GITHUB_ACTIONS == false ]; then
+  ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+fi
+
 . $CIUXCONFIG
 
 function retry {

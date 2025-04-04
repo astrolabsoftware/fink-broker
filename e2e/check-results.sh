@@ -24,11 +24,12 @@ set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 monitoring=false
-SUFFIX="${SUFFIX:-noscience}"
+SUFFIX="noscience"
 
 usage () {
   echo "Usage: $0 [-h] [-m]"
   echo "  -m: Check monitoring is enabled"
+  echo "  -s: If not equal to 'noscience' use the science algorithms during the tests (default: noscience)"
   echo "  -h: Display this help"
   echo ""
   echo " Check that the expected topics are created"
@@ -36,7 +37,7 @@ usage () {
 }
 
 # Get options for suffix
-while getopts hm opt; do
+while getopts hms: opt; do
   case ${opt} in
     h )
       usage
@@ -45,6 +46,7 @@ while getopts hm opt; do
     m )
       monitoring=true
       ;;
+    s) SUFFIX="$OPTARG" ;;
     \? )
       usage
       exit 1
@@ -64,8 +66,9 @@ fi
 count=0
 while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
 do
-    echo "Waiting for expected topics: $expected_topics"
+    echo "INFO: Waiting for expected topics: $expected_topics"
     sleep 5
+    echo "INFO: List pods in spark namespace:"
     kubectl get pods -n spark
     if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
     then
@@ -82,8 +85,8 @@ do
         kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
         echo "PODS"
         kubectl get pods -A
-        echo "KAFKA TOPICS"
-        kubectl get kafkatopics -A
+        echo "FINK KAFKA TOPICS"
+        finkctl get topics
         sleep 7200
         exit 1
     fi
@@ -113,3 +116,5 @@ then
     done
 
 fi
+
+echo "INFO: Fink-broker is running and all topics are created"
