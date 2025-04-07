@@ -37,7 +37,7 @@ spark-submit \
     --conf spark.mesos.principal=$MESOS_PRINCIPAL \
     --conf spark.mesos.secret=$MESOS_SECRET \
     --conf spark.mesos.role=$MESOS_ROLE \
-    --conf spark.executorEnv.HOME='/home/julien.peloton'\
+    --conf spark.executorEnv.HOME="${HOME}"\
     --driver-memory 8G --executor-memory 4G \
     --conf spark.cores.max=$NCORES --conf spark.executor.cores=2 \
     --conf spark.sql.execution.arrow.pyspark.enabled=true\

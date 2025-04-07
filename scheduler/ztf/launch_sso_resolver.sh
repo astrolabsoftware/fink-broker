@@ -3,7 +3,7 @@ set -e
 
 source ~/.bash_profile
 
-source ${FINK_HOME}/conf_cluster/fink.conf.ztf_stream2raw
+source ${FINK_HOME}/conf/fink.conf.prod
 
 NCORES=8
 
@@ -22,5 +22,5 @@ spark-submit \
     --conf spark.sql.execution.arrow.pyspark.enabled=true\
     --conf spark.kryoserializer.buffer.max=512m\
     --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
-    ${FINK_HOME}/bin/index_sso_resolver.py > ${FINK_HOME}/broker_logs/sso_resolver.log 2>&1
+    ${FINK_HOME}/bin/ztf/index_sso_resolver.py > ${FINK_HOME}/broker_logs/sso_resolver.log 2>&1
 ~                                             
