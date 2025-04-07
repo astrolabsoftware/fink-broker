@@ -16,10 +16,10 @@ Operations for the night N start at 00:01 Paris on the night N. There are 2 cron
 0 12 1 * * /localhome/julien.peloton/fink-broker/scheduler/ztf/launch_sso_resolver.sh
 
 # Operation reports four times a day
-0 07 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
-0 12 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
-0 17 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
-0 22 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
+0 07 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 12 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 17 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
+0 22 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --telegram
 ```
 
 ```bash
