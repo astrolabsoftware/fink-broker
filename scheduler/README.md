@@ -5,27 +5,28 @@ Operations for the night N start at 00:01 Paris on the night N. There are 2 cron
 ```bash
 # Paris time @ VD
 
-# Fink real-time, finishes at 20:00
-01 00 * * * /home/julien.peloton/fink-broker/scheduler/launch_fink.sh
+# Fink real-time
+01 00 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/launch_stream.sh
 
 # Database service
-05 20 * * * /home/julien.peloton/fink-broker/scheduler/ztf/launch_db.sh
+05 20 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/launch_db.sh
 
 # SSOFT - once a month
-0 0 1 * * /home/julien.peloton/fink-broker/scheduler/launch_ssoft.sh
-0 12 1 * * /home/julien.peloton/fink-broker/scheduler/launch_sso_resolver.sh
+0 0 1 * * /localhome/julien.peloton/fink-broker/scheduler/ztf/launch_ssoft.sh
+0 12 1 * * /localhome/julien.peloton/fink-broker/scheduler/ztf/launch_sso_resolver.sh
 
 # Operation reports four times a day
-0 07 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
-0 12 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
-0 17 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
-0 22 * * * /home/julien.peloton/fink-broker/scheduler/check_status.sh --telegram
+0 07 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
+0 12 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
+0 17 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
+0 22 * * * /localhome/julien.peloton/fink-broker/scheduler/ztf/check_status.sh --     telegram
 ```
 
 ```bash
 # root user
-30 21 * * * /home/julien.peloton/fink-broker/scripts/broadcast.sh
-30 21 * * * /home/julien.peloton/fink-broker/scripts/sso/sso_broadcast.sh
+30 21 * * * /localhome/julien.peloton/fink-broker/scripts/broadcast.sh
+30 21 * * * /localhome/julien.peloton/fink-broker/scripts/sso/sso_broadcast.sh
+30 21 * * * /localhome/julien.peloton/fink-broker/scripts/sso/cluster_mkdir_tmp.sh
 ```
 
 The first script is for live operations:
