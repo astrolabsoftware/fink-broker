@@ -67,6 +67,7 @@ def main():
         channel_id="@ZTF_anomaly_bot",
         send_to_slack=True,
         channel_name="bot_anomaly",
+        timeout=50,
     )
 
     # Area-restricted anomalies
@@ -79,6 +80,7 @@ def main():
         send_to_slack=True,
         channel_name="bot_anomaly_area",
         cut_coords=True,
+        timeout=50,
     )
 
     for model in ANOMALY_MODELS:
@@ -96,6 +98,7 @@ def main():
             send_to_slack=False,
             send_to_anomaly_base=True,
             model=model,
+            timeout=50,
         )
 
     # Keep only candidates of interest for all sky anomalies

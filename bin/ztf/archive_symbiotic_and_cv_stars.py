@@ -27,9 +27,10 @@ from fink_filters.filter_symbiotic_stars.filter import crossmatch_symbiotic
 
 from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import msg_handler_tg
+from fink_utils.tg_bot.utils import send_simple_text_tg
 
 
-def send_to_telegram(pdf, channel):
+def send_to_telegram(pdf, channel, night):
     """Send candidates to TG channel
 
     Parameters
@@ -41,6 +42,11 @@ def send_to_telegram(pdf, channel):
     """
     # Loop over matches & send to Telegram
     if ("FINK_TG_TOKEN" in os.environ) and os.environ["FINK_TG_TOKEN"] != "":
+        if pdf.empty:
+            send_simple_text_tg(
+                "No matches for {}".format(night),
+                channel_id=channel,
+            )
         payloads = []
         for _, alert in pdf.iterrows():
             curve_png = get_curve(
@@ -94,8 +100,8 @@ def main():
     )
     df = load_parquet_files(path)
 
-    args = ["candidate.ra", "candidate.dec"]
-    df = df.withColumn("symbiotic", crossmatch_symbiotic(*args))
+    args_mod = ["candidate.ra", "candidate.dec"]
+    df = df.withColumn("symbiotic", crossmatch_symbiotic(*args_mod))
 
     df = df.filter(df["symbiotic"] != "Unknown")
 
@@ -120,12 +126,22 @@ def main():
         pdf["cat"] = pdf["symbiotic"].apply(lambda x: x.split(",")[1])
 
         pdf_sym = pdf[pdf["cat"] == "symbiotic_stars"]
-        send_to_telegram(pdf_sym, channel="@fink_symbiotic_stars")
+        send_to_telegram(pdf_sym, channel="@fink_symbiotic_stars", night=args.night)
 
         pdf_cvs = pdf[pdf["cat"] == "cataclysmic_variables"]
         # CVs have stringent criterion
         pdf_cvs = pdf_cvs[pdf_cvs["dmag"] <= -3.0]
-        send_to_telegram(pdf_cvs, channel="@fink_cv_stars")
+        send_to_telegram(pdf_cvs, channel="@fink_cv_stars", night=args.night)
+    else:
+        send_simple_text_tg(
+            "No matches for {}".format(args.night),
+            channel_id="@fink_symbiotic_stars",
+        )
+
+        send_simple_text_tg(
+            "No matches for {}".format(args.night),
+            channel_id="@fink_cv_stars",
+        )
 
 
 if __name__ == "__main__":

@@ -507,6 +507,11 @@ def list_hdfs_files(hdfs_path="archive/science/year=2023/month=06/day=25"):
 
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(jsc.hadoopConfiguration())
     Path = jvm.org.apache.hadoop.fs.Path
+
+    # Not sure what is happening on the cluster, but
+    # the connector is expecting the domain name and
+    # not the IP.
+    hdfs_path = hdfs_path.replace("157.136.254.149", "vdmaster1")
     paths = [p.getPath().toString() for p in fs.listStatus(Path(hdfs_path))]
     return paths
 

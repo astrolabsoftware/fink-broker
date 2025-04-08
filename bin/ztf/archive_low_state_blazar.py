@@ -166,6 +166,11 @@ def main():
         "blazar_stats.m2",
     ]
     pdf = df_new_low_state.select(args_filter).toPandas()
+    pdf["flux"] = pdf["flux"].apply(lambda x: np.array(x))
+    pdf["sigma"] = pdf["sigma"].apply(lambda x: np.array(x))
+    pdf["cjd"] = pdf["cjd"].apply(lambda x: np.array(x))
+    pdf["cfid"] = pdf["cfid"].apply(lambda x: np.array(x))
+
     if not pdf.empty:
         _LOG.info("{} source(s) passing in low state")
         send_to_telegram(pdf, channel="@fink_blazar_new_low_states")
