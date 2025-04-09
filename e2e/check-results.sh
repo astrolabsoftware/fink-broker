@@ -104,7 +104,8 @@ then
     fi
 
     echo "Checking spark metrics are available in prometheus"
-    for task in "stream2raw-driver" "stream2raw-sims" "raw2science-driver" "raw2science-sims" "distribution-driver" "distribute-sims"
+    exp="ztf"
+    for task in "stream2raw-driver" "stream2raw-$exp" "raw2science-driver" "raw2science-$exp" "distribution-driver" "distribute-$exp"
     do
          if kubectl exec -t -n monitoring prometheus-prometheus-stack-kube-prom-prometheus-0 -- promtool query range --start 1690724700 http://localhost:9090 jvm_threads_state | grep "$task" > /dev/null
           then
