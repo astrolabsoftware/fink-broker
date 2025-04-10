@@ -29,8 +29,8 @@ from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
-from fink_filters.filter_blazar_low_state.filter import low_state_filter
-from fink_filters.filter_blazar_new_low_state.filter import new_low_state_filter
+from fink_filters.ztf.filter_blazar_low_state.filter import low_state_filter
+from fink_filters.ztf.filter_blazar_new_low_state.filter import new_low_state_filter
 
 from fink_science.ztf.standardized_flux.processor import standardized_flux
 
