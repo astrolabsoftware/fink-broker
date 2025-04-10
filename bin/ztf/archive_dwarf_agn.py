@@ -23,12 +23,12 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
-from fink_filters.filter_anomaly_notification.filter_utils import msg_handler_slack
-from fink_filters.filter_anomaly_notification.filter_utils import (
+from fink_filters.ztf.filter_anomaly_notification.filter_utils import msg_handler_slack
+from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
 
-from fink_filters.filter_dwarf_agn.filter import crossmatch_dwarf_agn
+from fink_filters.ztf.filter_dwarf_agn.filter import crossmatch_dwarf_agn
 
 
 def main():

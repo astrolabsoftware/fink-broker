@@ -23,7 +23,7 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
-from fink_filters.filter_symbiotic_stars.filter import crossmatch_symbiotic
+from fink_filters.ztf.filter_symbiotic_stars.filter import crossmatch_symbiotic
 
 from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import msg_handler_tg

@@ -22,7 +22,7 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
-from fink_filters.filter_anomaly_notification.filter import anomaly_notification_
+from fink_filters.ztf.filter_anomaly_notification.filter import anomaly_notification_
 
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
 
