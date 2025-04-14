@@ -38,7 +38,7 @@ from fink_broker.ztf.hbase_utils import load_ztf_crossmatch_cols
 from fink_broker.ztf.hbase_utils import select_relevant_columns
 from fink_broker.ztf.hbase_utils import bring_to_current_schema
 
-from fink_filters.classification import extract_fink_classification
+from fink_filters.ztf.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
 
 

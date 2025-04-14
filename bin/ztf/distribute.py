@@ -42,20 +42,20 @@ _LOG = logging.getLogger(__name__)
 
 # User-defined topics
 userfilters = [
-    "fink_filters.filter_early_sn_candidates.filter.early_sn_candidates",
-    "fink_filters.filter_sn_candidates.filter.sn_candidates",
-    "fink_filters.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
-    "fink_filters.filter_sso_fink_candidates.filter.sso_fink_candidates",
-    "fink_filters.filter_kn_candidates.filter.kn_candidates",
-    "fink_filters.filter_early_kn_candidates.filter.early_kn_candidates",
-    "fink_filters.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
-    "fink_filters.filter_microlensing_candidates.filter.microlensing_candidates",
-    "fink_filters.filter_yso_candidates.filter.yso_candidates",
-    "fink_filters.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
-    "fink_filters.filter_blazar.filter.blazar",
-    "fink_filters.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
-    "fink_filters.filter_tns_match.filter.tns_match",
-    "fink_filters.filter_magnetic_cvs.filter.magnetic_cvs",
+    "fink_filters.ztf.filter_early_sn_candidates.filter.early_sn_candidates",
+    "fink_filters.ztf.filter_sn_candidates.filter.sn_candidates",
+    "fink_filters.ztf.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
+    "fink_filters.ztf.filter_sso_fink_candidates.filter.sso_fink_candidates",
+    "fink_filters.ztf.filter_kn_candidates.filter.kn_candidates",
+    "fink_filters.ztf.filter_early_kn_candidates.filter.early_kn_candidates",
+    "fink_filters.ztf.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
+    "fink_filters.ztf.filter_microlensing_candidates.filter.microlensing_candidates",
+    "fink_filters.ztf.filter_yso_candidates.filter.yso_candidates",
+    "fink_filters.ztf.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
+    "fink_filters.ztf.filter_blazar.filter.blazar",
+    "fink_filters.ztf.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
+    "fink_filters.ztf.filter_tns_match.filter.tns_match",
+    "fink_filters.ztf.filter_magnetic_cvs.filter.magnetic_cvs",
 ]
 
 

@@ -27,8 +27,8 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.ztf.hbase_utils import push_to_hbase
 
-from fink_filters.classification import extract_fink_classification
-from fink_filters.filter_simbad_candidates.filter import simbad_candidates
+from fink_filters.ztf.classification import extract_fink_classification
+from fink_filters.ztf.filter_simbad_candidates.filter import simbad_candidates
 
 from fink_utils.xmatch.simbad import return_list_of_eg_host
 
