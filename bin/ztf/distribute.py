@@ -252,12 +252,12 @@ def main():
         time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 
     if args.exit_after is not None:
-        logger.debug("Keep the Streaming running until something or someone ends it!")
         remaining_time = args.exit_after - time_spent_in_wait
         remaining_time = remaining_time if remaining_time > 0 else 0
+        logger.debug("Keep the Streaming for %s seconds", remaining_time)
         time.sleep(remaining_time)
         disquery.stop()
-        if stream_distrib_list != []:
+        if stream_distrib_list:
             for stream in stream_distrib_list:
                 stream.stop()
         logger.info("Exiting the distribute service normally...")
