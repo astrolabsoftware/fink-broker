@@ -185,6 +185,7 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     echo -e "Reconstructing the aggregated data and ephemerides..."
     # Run the script
   fi
+  echo -e "${SDONE} done!"
   exit 0
 fi
 
@@ -202,6 +203,7 @@ if [[ ${UPDATE_DATA} == true ]]; then
     echo -e "Updating the aggregated data and ephemerides file..."
     # Run the script
   fi
+  echo -e "${SDONE} done!"
   exit 0
 fi
 
@@ -229,7 +231,6 @@ if [[ ${RUN_SSOFT} == true ]]; then
   fi
 
   # check last aggregation exist
-  CURRENT_YYYYMM=`date +"%Y%m"`
   $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet)
   if [[ $? == 0 ]]; then
     echo -e "Computing the SSOFT for the model ${MODEL}..."
@@ -239,6 +240,7 @@ if [[ ${RUN_SSOFT} == true ]]; then
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
   fi
+  echo -e "${SDONE} done!"
   exit 0
 fi
 
@@ -258,6 +260,6 @@ if [[ ${LINK_SSOFT} == true ]]; then
   fi
   echo -e "${SINFO} Linking version ${YEAR}.${MONTH} to the latest one..."
   hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet sso_ztf_lc_aggregated.parquet
+  echo -e "${SDONE} done!"
+  exit 0
 fi
-
-echo -e "${SDONE} done!"
