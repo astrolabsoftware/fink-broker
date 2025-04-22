@@ -208,7 +208,7 @@ fi
 
 if [[ ${RECONSTRUCT_DATA} == true ]]; then
   # check files do not exist
-  is_present=$(hdfs dfs -ls | grep sso_ztf_lc_aggregated_*.parquet)
+  is_present=$(hdfs dfs -ls | grep sso_ztf_lc_aggregated_)
   if [[ $? == 0 ]]; then
     echo -e >&2 "${SERROR} Files sso_ztf_lc_aggregated_ exist. Move them before reconstructing."
     echo -e >&2 "${SSTOP} Merging aborted..."
