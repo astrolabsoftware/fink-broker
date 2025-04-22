@@ -277,7 +277,7 @@ if [[ ${RUN_SSOFT} == true ]]; then
   exit 0
 fi
 
-if [[ ${LINK_SSOFT} == true ]]; then
+if [[ ${LINK_DATA} == true ]]; then
   # Check the file we want to link exists
   $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet)
   if [[ $? != 0 ]]; then
