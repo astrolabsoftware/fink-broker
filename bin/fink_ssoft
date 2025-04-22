@@ -82,16 +82,16 @@ while [ "$#" -gt 0 ]; do
       UPDATE_DATA=true
       shift 1
       ;;
+    --link-data)
+      LINK_SSOFT=true
+      shift 1
+      ;;
     --list-data)
       LIST_DATA=true
       shift 1
       ;;
     --run-ssoft)
       RUN_SSOFT=true
-      shift 1
-      ;;
-    --link-ssoft)
-      LINK_SSOFT=true
       shift 1
       ;;
     --list-ssoft)
