@@ -144,11 +144,11 @@ fink_ssoft -s ztf --run-ssoft -model SHG1G2 -min 100          # Compute SHG1G2 S
 
 Notes: Typically the schedule is to invoke once a month the two commands:
 fink_ssoft -s ztf --update-data
+fink_ssoft -s ztf --link-data
 fink_ssoft -s ztf --run-ssoft -model HG
 fink_ssoft -s ztf --run-ssoft -model HG1G2
 fink_ssoft -s ztf --run-ssoft -model SHG1G2
 fink_ssoft -s ztf --run-ssoft -model SSHG1G2
-fink_ssoft -s ztf --link-ssoft
 
 Notes: If you lose all your ephemerides data, just reconstruct everything with
 fink_ssoft -s ztf --reconstruct-data
