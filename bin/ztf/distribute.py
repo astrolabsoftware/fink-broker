@@ -56,6 +56,9 @@ userfilters = [
     "fink_filters.ztf.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
     "fink_filters.ztf.filter_tns_match.filter.tns_match",
     "fink_filters.ztf.filter_magnetic_cvs.filter.magnetic_cvs",
+    "fink_filters.ztf.filter_new_hostless.filter.new_hostless",
+    "fink_filters.ztf.filter_new_hostless.filter.intra_night_hostless",
+    "fink_filters.ztf.filter_new_hostless.filter.inter_night_hostless",
 ]
 
 
