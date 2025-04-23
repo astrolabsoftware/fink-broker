@@ -156,3 +156,7 @@ def main():
             df_join.write.mode("overwrite").parquet(
                 SSO_FILE.format(ym_next.strftime("%Y"), ym_next.strftime("%m"))
             )
+
+
+if __name__ == "__main__":
+    main()
