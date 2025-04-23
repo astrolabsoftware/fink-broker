@@ -177,9 +177,9 @@ fi
 
 # if nothing specified, get default
 if [[ ! ${DRIVER_MEMORY} ]]; then
-  RESOURCES="-driver-memory 8g -executor-memory 4g -spark-cores-max 100 -spark-executor-cores 2"
+  RESOURCES="--driver-memory 8g --executor-memory 4g --conf spark.cores.max=100 --conf spark.executor.cores=2"
 else
-  RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
+  RESOURCES="--driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES}"
 fi
 echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
 
