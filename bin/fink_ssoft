@@ -170,6 +170,11 @@ if [[ $SURVEY == "" ]]; then
   exit 1
 fi
 
+if [[ $LIMIT != "" ]]; then
+  echo -e "${SINFO} Limiting number of objects to $LIMIT"
+  LIMIT_ARGS="-limit ${LIMIT}"
+fi
+
 # if nothing specified, get default
 if [[ ! ${DRIVER_MEMORY} ]]; then
   RESOURCES="-driver-memory 8g -executor-memory 4g -spark-cores-max 100 -spark-executor-cores 2"
@@ -215,7 +220,12 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     exit 1
   else
     echo -e "Reconstructing the aggregated data and ephemerides..."
-    # Run the script
+    spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+      ${EXTRA_SPARK_CONFIG} \
+      ${RESOURCES} \
+      ${FINK_HOME}/bin/${SURVEY}/reconstruct_ssoft.py ${HELP_ON_SERVICE} \
+      ${LIMIT_ARGS}
   fi
   echo -e "${SDONE} done!"
   exit 0
