@@ -177,7 +177,7 @@ fi
 
 # if nothing specified, get default
 if [[ ! ${DRIVER_MEMORY} ]]; then
-  RESOURCES="--driver-memory 8g --executor-memory 4g --conf spark.cores.max=100 --conf spark.executor.cores=2"
+  RESOURCES="--driver-memory 8g --executor-memory 8g --conf spark.cores.max=100 --conf spark.executor.cores=4"
 else
   RESOURCES="--driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES}"
 fi
@@ -212,21 +212,13 @@ fi
 # Data aggregation
 
 if [[ ${RECONSTRUCT_DATA} == true ]]; then
-  # check files do not exist
-  is_present=$(hdfs dfs -ls | grep sso_ztf_lc_aggregated_)
-  if [[ $? == 0 ]]; then
-    echo -e >&2 "${SERROR} Files sso_ztf_lc_aggregated_ exist. Move them before reconstructing."
-    echo -e >&2 "${SSTOP} Merging aborted..."
-    exit 1
-  else
-    echo -e "Reconstructing the aggregated data and ephemerides..."
-    spark-submit --master ${SPARK_MASTER} \
-      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
-      ${EXTRA_SPARK_CONFIG} \
-      ${RESOURCES} \
-      ${FINK_HOME}/bin/${SURVEY}/reconstruct_ssoft.py ${HELP_ON_SERVICE} \
-      ${LIMIT_ARGS}
-  fi
+  echo -e "${SINFO} Reconstructing the aggregated data and ephemerides..."
+  spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+    ${EXTRA_SPARK_CONFIG} \
+    ${RESOURCES} \
+    ${FINK_HOME}/bin/${SURVEY}/reconstruct_ssoft.py ${HELP_ON_SERVICE} \
+    ${LIMIT_ARGS}
   echo -e "${SDONE} done!"
   exit 0
 fi
