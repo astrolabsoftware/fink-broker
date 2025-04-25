@@ -219,6 +219,13 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     ${RESOURCES} \
     ${FINK_HOME}/bin/${SURVEY}/reconstruct_ssoft.py ${HELP_ON_SERVICE} \
     ${LIMIT_ARGS}
+
+  # At this point yearly data has been computed
+  # Copy the last file to monthly version it
+  CURRENT_YYYYMM=`date +"%Y%m"`
+  YEAR=${CURRENT_YYYYMM:0:4}
+  MONTH=${CURRENT_YYYYMM:4:2}
+  hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}.parquet sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet
   echo -e "${SDONE} done!"
   exit 0
 fi
