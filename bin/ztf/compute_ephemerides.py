@@ -209,7 +209,7 @@ def main():
 
             # Skip computation if necessary
             is_ephem, is_data = make_checks(
-                args.prefix_path, yearly=True, logger=logger
+                args.prefix_path, year=year, logger=logger
             )
             if is_ephem:
                 is_starting = False
