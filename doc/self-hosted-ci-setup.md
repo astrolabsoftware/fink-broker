@@ -54,3 +54,28 @@ To ensure the CI script runs nightly, set up a cron job.
 
 
 By following this procedure, the `fink-ci` user will be set up to automatically run fink e2e tests every night and report it to Github Actions.
+
+## Test a branch
+
+Log into the LPC server. Go root, and then `fink-ci`. Test your branch using:
+
+```bash
+BRANCH=<git-branch-name-on-fink-broker>
+nohup /home/fink-ci/fink-ci.sh -s -b ${BRANCH} > ${BRANCH}.txt &
+```
+
+then you can follow the log:
+
+```bash
+tail -f ci_distribute_ram.txt 
+```
+
+and in case you want to inspect pods, go back to your username:
+
+```
+# as peloton
+kind get clusters
+kind get kubeconfig --name fink-ci-ci-distribute-ram-bf5747 > ~/.kube/config
+
+kubectl get pods -A
+```
