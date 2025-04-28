@@ -217,8 +217,8 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
     ${EXTRA_SPARK_CONFIG} \
     ${RESOURCES} \
-    ${FINK_HOME}/bin/${SURVEY}/reconstruct_ssoft.py ${HELP_ON_SERVICE} \
-    ${LIMIT_ARGS}
+    ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
+    ${LIMIT_ARGS} -mode all
 
   # At this point yearly data has been computed
   # Copy the last file to monthly version it

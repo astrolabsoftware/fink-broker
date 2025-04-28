@@ -26,7 +26,7 @@ from fink_utils.sso.ssoft import join_aggregated_sso_data
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
-SSO_FILE = "sso_ztf_lc_aggregated_{}.parquet"
+SSO_FILE = "sso_ztf_lc_aggregated_{}{}.parquet"
 
 
 def aggregate_and_add_ephem(year, npart, prefix_path, limit, logger):
@@ -88,10 +88,19 @@ def main():
         Default is "archive/science".
         """,
     )
+    parser.add_argument(
+        "-mode",
+        type=str,
+        default="last_month",
+        help="""
+        Compute last month ephemerides `last_month`, or recompute
+        all ephemerides `all`.
+        """,
+    )
     args = parser.parse_args(None)
 
     # Initialise Spark session
-    spark = init_sparksession(name="full_ephemerides", shuffle_partitions=100)
+    spark = init_sparksession(name="{}_ephemerides".format(args.mode), shuffle_partitions=100)
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
     
     # 4 times more partitions than cores
@@ -103,56 +112,57 @@ def main():
     # debug statements
     inspect_application(logger)
 
-    years = range(2019, datetime.datetime.now().year + 1)
-    is_starting = True
-    for year in years:
-        logger.info("Processing data from {}".format(year))
+    if args.mode == "all":
+        years = range(2019, datetime.datetime.now().year + 1)
+        is_starting = True
+        for year in years:
+            logger.info("Processing data from {}".format(year))
 
-        if path_exist(SSO_FILE.format(year)):
-            logger.warning(
-                "{} found on HDFS. Skipping the computation".format(
-                    SSO_FILE.format(year)
+            if path_exist(SSO_FILE.format(year, "")):
+                logger.warning(
+                    "{} found on HDFS. Skipping the computation".format(
+                        SSO_FILE.format(year, "")
+                    )
                 )
-            )
-            is_starting = False
-            continue
+                is_starting = False
+                continue
 
-        is_data = path_exist("{}/year={}".format(args.prefix_path, year))
-        if not is_data:
-            # Check if there is data for the month
-            logger.warn(
-                "No data found for {}/year={}. Skipping...".format(
-                    args.prefix_path, year
+            is_data = path_exist("{}/year={}".format(args.prefix_path, year))
+            if not is_data:
+                # Check if there is data for the month
+                logger.warn(
+                    "No data found for {}/year={}. Skipping...".format(
+                        args.prefix_path, year
+                    )
                 )
-            )
-            continue
+                continue
 
-        if is_starting:
-            logger.info("Initialising data from {}".format(year))
-            # initialisation
-            df = aggregate_and_add_ephem(
+            if is_starting:
+                logger.info("Initialising data from {}".format(year))
+                # initialisation
+                df = aggregate_and_add_ephem(
+                    year, nparts, args.prefix_path, args.limit, logger
+                )
+
+                df.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
+                is_starting = False
+                continue
+
+            df_new = aggregate_and_add_ephem(
                 year, nparts, args.prefix_path, args.limit, logger
             )
 
-            df.write.mode("overwrite").parquet(SSO_FILE.format(year))
-            is_starting = False
-            continue
+            logger.info("Loading previous data...")
+            df_prev = spark.read.format("parquet").load(SSO_FILE.format(year - 1, ""))
 
-        df_new = aggregate_and_add_ephem(
-            year, nparts, args.prefix_path, args.limit, logger
-        )
+            logger.info("Joining previous and new data...")
+            assert sorted(df_prev.columns) == sorted(df_new.columns), (
+                df_prev.columns,
+                df_new.columns,
+            )
+            df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
 
-        logger.info("Loading previous data...")
-        df_prev = spark.read.format("parquet").load(SSO_FILE.format(year - 1))
-
-        logger.info("Joining previous and new data...")
-        assert sorted(df_prev.columns) == sorted(df_new.columns), (
-            df_prev.columns,
-            df_new.columns,
-        )
-        df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
-
-        df_join.write.mode("overwrite").parquet(SSO_FILE.format(year))
+            df_join.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
 
 
 if __name__ == "__main__":
