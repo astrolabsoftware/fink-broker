@@ -23,29 +23,48 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_utils.hdfs.utils import path_exist
 from fink_utils.sso.ssoft import aggregate_ztf_sso_data
 from fink_utils.sso.ssoft import join_aggregated_sso_data
+from fink_utils.sso.ssoft import retrieve_last_date_of_previous_month
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
 SSO_FILE = "sso_ztf_lc_aggregated_{}{}.parquet"
 
 
-def aggregate_and_add_ephem(year, npart, prefix_path, limit, logger):
+def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     """Wrapper to get new ZTF data and ephemerides
 
     Parameters
     ----------
     year: str
         Year in format YYYY
+    month: str
+        Month in format MM. Leading zero must be there.
+        For yearly aggregation, set month to None.
+    npart: int
+        Number of Spark partitions. Rule of thumb: 4 times
+        the number of cores.
+    prefix_path: str
+        Prefix path to Fink/ZTF data
+    limit: int
+        If set, limit the number of object to process.
+        Otherwise, put to None.
+
 
     Returns
     -------
     out: Spark DataFrame
     """
-    logger.info("Aggregating data from {}".format(year))
-    current_year = datetime.datetime.today().year
-    df_new = aggregate_ztf_sso_data(
-        year=year, stop_previous_month=(year == current_year), prefix_path=prefix_path
-    )
+    if month is None:
+        logger.info("Aggregating data from {}".format(year))
+        current_year = datetime.datetime.now().year
+        df_new = aggregate_ztf_sso_data(
+            year=year,
+            stop_previous_month=(year == current_year),
+            prefix_path=prefix_path,
+        )
+    else:
+        logger.info("Aggregating data from {}{}".format(year, month))
+        df_new = aggregate_ztf_sso_data(year=year, month=month, prefix_path=prefix_path)
 
     if limit is not None:
         assert isinstance(limit, int), (limit, type(limit))
@@ -55,7 +74,10 @@ def aggregate_and_add_ephem(year, npart, prefix_path, limit, logger):
     df_new = df_new.repartition(npart).cache()
     logger.info("{} objects".format(df_new.count()))
 
-    logger.info("Aggregating ephemerides from {}".format(year))
+    if month is None:
+        logger.info("Aggregating ephemerides from {}".format(year))
+    else:
+        logger.info("Aggregating ephemerides from {}{}".format(year, month))
     col_ = "ephem"
     df_new = df_new.withColumn(
         col_,
@@ -65,6 +87,64 @@ def aggregate_and_add_ephem(year, npart, prefix_path, limit, logger):
     )
     df_expanded = expand_columns(df_new, col_to_expand=col_)
     return df_expanded
+
+
+def make_checks(prefix_path, yearly=None, monthly=None, logger=None):
+    """Check if the ephemerides file and Fink data exist
+
+    Notes
+    -----
+    If the ephemerides file exist, the recomputation will be skipped.
+    If no Fink data is found, the aggregation will be skipped.
+
+    Parameters
+    ----------
+    prefix_path: str
+        Prefix path to Fink/ZTF data
+    year: int
+        Year in format YYYY
+    month: int or str
+        Month in format MM. Leading zero must appear.
+        Set to None if year computation.
+
+    Returns
+    -------
+    is_ephem: bool
+        True if the ephemerides file exist.
+    is_data: bool
+        False if no Fink data for YYYY[MM].
+    """
+    if logger is None:
+        import logging
+        logger = logging.Logger(__name__)
+
+    curr = datetime.datetime.now()
+    if monthly:
+        # ephemerides take current month
+        filename = SSO_FILE.format(curr.year, "{:02d}".format(curr.month))
+        is_ephem = path_exist(filename)
+
+        # ZTF data takes N-1 month
+        lm = retrieve_last_date_of_previous_month(curr)
+        path = "{}/year={}/month={}".format(
+            prefix_path, lm.year, "{:02d}".format(lm.month)
+        )
+        is_data = path_exist(path)
+    if yearly:
+        # ephemerides take current year
+        filename = SSO_FILE.format(curr.year, "")
+        is_ephem = path_exist(filename)
+
+        # ZTF data takes current year
+        path = "{}/year={}".format(prefix_path, curr.year)
+        is_data = path_exist(path)
+
+    if is_ephem:
+        logger.warning("{} found on HDFS. Skipping the computation".format(filename))
+
+    if not is_data:
+        logger.warn("No data found for {}. Skipping...".format(path))
+    return is_ephem, is_data
 
 
 def main():
@@ -100,9 +180,11 @@ def main():
     args = parser.parse_args(None)
 
     # Initialise Spark session
-    spark = init_sparksession(name="{}_ephemerides".format(args.mode), shuffle_partitions=100)
+    spark = init_sparksession(
+        name="{}_ephemerides".format(args.mode), shuffle_partitions=100
+    )
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
-    
+
     # 4 times more partitions than cores
     nparts = 4 * ncores
 
@@ -118,30 +200,19 @@ def main():
         for year in years:
             logger.info("Processing data from {}".format(year))
 
-            if path_exist(SSO_FILE.format(year, "")):
-                logger.warning(
-                    "{} found on HDFS. Skipping the computation".format(
-                        SSO_FILE.format(year, "")
-                    )
-                )
+            # Skip computation if necessary
+            is_ephem, is_data = make_checks(args.prefix_path, yearly=True, logger=logger)
+            if is_ephem:
                 is_starting = False
                 continue
-
-            is_data = path_exist("{}/year={}".format(args.prefix_path, year))
             if not is_data:
-                # Check if there is data for the month
-                logger.warn(
-                    "No data found for {}/year={}. Skipping...".format(
-                        args.prefix_path, year
-                    )
-                )
                 continue
 
             if is_starting:
                 logger.info("Initialising data from {}".format(year))
                 # initialisation
                 df = aggregate_and_add_ephem(
-                    year, nparts, args.prefix_path, args.limit, logger
+                    year, None, nparts, args.prefix_path, args.limit, logger
                 )
 
                 df.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
@@ -149,7 +220,7 @@ def main():
                 continue
 
             df_new = aggregate_and_add_ephem(
-                year, nparts, args.prefix_path, args.limit, logger
+                year, None, nparts, args.prefix_path, args.limit, logger
             )
 
             logger.info("Loading previous data...")
@@ -163,6 +234,41 @@ def main():
             df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
 
             df_join.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
+    elif args.mode == "last_month":
+        # get last month coordinates
+        lm = retrieve_last_date_of_previous_month(datetime.datetime.now())
+
+        # make checks
+        is_ephem, is_data = make_checks(
+            args.prefix_path, monthly=True, logger=logger
+        )
+        if not is_ephem and is_data:
+            # make computation
+            df_new = aggregate_and_add_ephem(
+                lm.year,
+                "{:02d}".format(lm.month),
+                nparts,
+                args.prefix_path,
+                args.limit,
+                logger,
+            )
+
+            logger.info("Loading previous ephemerides data...")
+            df_prev = spark.read.format("parquet").load(
+                SSO_FILE.format(lm.year, "{:02d}".format(lm.month))
+            )
+
+            logger.info("Joining previous and new data...")
+            assert sorted(df_prev.columns) == sorted(df_new.columns), (
+                df_prev.columns,
+                df_new.columns,
+            )
+            df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
+
+            current_month = "{:02d}".format(datetime.datetime.now().month)
+            df_join.write.mode("overwrite").parquet(
+                SSO_FILE.format(year, current_month)
+            )
 
 
 if __name__ == "__main__":

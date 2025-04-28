@@ -242,7 +242,12 @@ if [[ ${UPDATE_DATA} == true ]]; then
     exit 1
   else
     echo -e "Updating the aggregated data and ephemerides file..."
-    # Run the script
+    spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+      ${EXTRA_SPARK_CONFIG} \
+      ${RESOURCES} \
+      ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
+      ${LIMIT_ARGS} -mode last_month
   fi
   echo -e "${SDONE} done!"
   exit 0
