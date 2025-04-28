@@ -208,9 +208,7 @@ def main():
             logger.info("Processing data from {}".format(year))
 
             # Skip computation if necessary
-            is_ephem, is_data = make_checks(
-                args.prefix_path, year=year, logger=logger
-            )
+            is_ephem, is_data = make_checks(args.prefix_path, year=year, logger=logger)
             if is_ephem:
                 is_starting = False
                 continue
@@ -279,9 +277,10 @@ def main():
             )
             df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
 
-            current_month = "{:02d}".format(datetime.datetime.now().month)
+            curr = datetime.datetime.now()
+            current_month = "{:02d}".format(curr.month)
             df_join.write.mode("overwrite").parquet(
-                SSO_FILE.format(year, current_month)
+                SSO_FILE.format(curr.year, current_month)
             )
         else:
             return 1
