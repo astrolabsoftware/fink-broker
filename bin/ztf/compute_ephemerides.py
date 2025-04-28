@@ -111,7 +111,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
     Notes
     -----
     `year` is only when recomputing all ephemerides, while
-    `monthly` is used in prod when computing last month ephemerides. 
+    `monthly` is used in prod when computing last month ephemerides.
 
     Returns
     -------
@@ -122,6 +122,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
     """
     if logger is None:
         import logging
+
         logger = logging.Logger(__name__)
 
     if monthly:
@@ -149,7 +150,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
         logger.warning("{} found on HDFS. Skipping the computation".format(filename))
 
     if not is_data:
-        logger.warn("No data found for {}. Skipping...".format(path))
+        logger.warning("No data found for {}. Skipping...".format(path))
     return is_ephem, is_data
 
 
@@ -207,7 +208,9 @@ def main():
             logger.info("Processing data from {}".format(year))
 
             # Skip computation if necessary
-            is_ephem, is_data = make_checks(args.prefix_path, yearly=True, logger=logger)
+            is_ephem, is_data = make_checks(
+                args.prefix_path, yearly=True, logger=logger
+            )
             if is_ephem:
                 is_starting = False
                 continue
@@ -245,9 +248,7 @@ def main():
         lm = retrieve_last_date_of_previous_month(datetime.datetime.now())
 
         # make checks
-        is_ephem, is_data = make_checks(
-            args.prefix_path, monthly=True, logger=logger
-        )
+        is_ephem, is_data = make_checks(args.prefix_path, monthly=True, logger=logger)
         if not is_ephem and is_data:
             # make computation
             df_new = aggregate_and_add_ephem(
@@ -275,6 +276,8 @@ def main():
             df_join.write.mode("overwrite").parquet(
                 SSO_FILE.format(year, current_month)
             )
+        else:
+            return 1
 
 
 if __name__ == "__main__":
