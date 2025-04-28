@@ -93,6 +93,9 @@ def main():
     # Initialise Spark session
     spark = init_sparksession(name="full_ephemerides", shuffle_partitions=100)
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
+    
+    # 4 times more partitions than cores
+    nparts = 4 * ncores
 
     # The level here should be controlled by an argument.
     logger = get_fink_logger(spark.sparkContext.appName, "INFO")
@@ -128,7 +131,7 @@ def main():
             logger.info("Initialising data from {}".format(year))
             # initialisation
             df = aggregate_and_add_ephem(
-                year, ncores, args.prefix_path, args.limit, logger
+                year, nparts, args.prefix_path, args.limit, logger
             )
 
             df.write.mode("overwrite").parquet(SSO_FILE.format(year))
@@ -136,7 +139,7 @@ def main():
             continue
 
         df_new = aggregate_and_add_ephem(
-            year, ncores, args.prefix_path, args.limit, logger
+            year, nparts, args.prefix_path, args.limit, logger
         )
 
         logger.info("Loading previous data...")
