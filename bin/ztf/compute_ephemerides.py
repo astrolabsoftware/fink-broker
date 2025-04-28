@@ -147,7 +147,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
         is_data = path_exist(path)
 
     if is_ephem:
-        logger.warning("{} found on HDFS. Skipping the computation".format(filename))
+        logger.warnCing("{} found on HDFS. Skipping the computation".format(filename))
 
     if not is_data:
         logger.warning("No data found for {}. Skipping...".format(path))
@@ -261,6 +261,11 @@ def main():
             )
 
             logger.info("Loading previous ephemerides data...")
+            prev_ephem_folder = SSO_FILE.format(lm.year, "{:02d}".format(lm.month))
+            if not path_exist(prev_ephem_folder):
+                logger.warning("{} does not exist. Exiting...".format(prev_ephem_folder))
+                return 1
+
             df_prev = spark.read.format("parquet").load(
                 SSO_FILE.format(lm.year, "{:02d}".format(lm.month))
             )
