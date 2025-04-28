@@ -89,7 +89,7 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     return df_expanded
 
 
-def make_checks(prefix_path, yearly=None, monthly=None, logger=None):
+def make_checks(prefix_path, year=None, monthly=None, logger=None):
     """Check if the ephemerides file and Fink data exist
 
     Notes
@@ -101,11 +101,17 @@ def make_checks(prefix_path, yearly=None, monthly=None, logger=None):
     ----------
     prefix_path: str
         Prefix path to Fink/ZTF data
-    year: int
-        Year in format YYYY
-    month: int or str
-        Month in format MM. Leading zero must appear.
-        Set to None if year computation.
+    year: int, optional
+        Year in format YYYY. If None, assume
+        `monthly` is set. Default is None.
+    monthly: bool
+        If True, check ephemerides and data required for
+        the current month computation. Default is None.
+
+    Notes
+    -----
+    `year` is only when recomputing all ephemerides, while
+    `monthly` is used in prod when computing last month ephemerides. 
 
     Returns
     -------
@@ -118,8 +124,9 @@ def make_checks(prefix_path, yearly=None, monthly=None, logger=None):
         import logging
         logger = logging.Logger(__name__)
 
-    curr = datetime.datetime.now()
     if monthly:
+        curr = datetime.datetime.now()
+
         # ephemerides take current month
         filename = SSO_FILE.format(curr.year, "{:02d}".format(curr.month))
         is_ephem = path_exist(filename)
@@ -130,13 +137,12 @@ def make_checks(prefix_path, yearly=None, monthly=None, logger=None):
             prefix_path, lm.year, "{:02d}".format(lm.month)
         )
         is_data = path_exist(path)
-    if yearly:
-        # ephemerides take current year
-        filename = SSO_FILE.format(curr.year, "")
+    elif year is not None:
+        filename = SSO_FILE.format(year, "")
         is_ephem = path_exist(filename)
 
         # ZTF data takes current year
-        path = "{}/year={}".format(prefix_path, curr.year)
+        path = "{}/year={}".format(prefix_path, year)
         is_data = path_exist(path)
 
     if is_ephem:
