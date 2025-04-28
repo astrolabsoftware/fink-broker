@@ -23,7 +23,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_utils.hdfs.utils import path_exist
 from fink_utils.sso.ssoft import aggregate_ztf_sso_data
 from fink_utils.sso.ssoft import join_aggregated_sso_data
-from fink_utils.sso.ssoft import retrieve_last_date_of_previous_month
+from fink_utils.sso.utils import retrieve_last_date_of_previous_month
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
