@@ -263,7 +263,9 @@ def main():
             logger.info("Loading previous ephemerides data...")
             prev_ephem_folder = SSO_FILE.format(lm.year, "{:02d}".format(lm.month))
             if not path_exist(prev_ephem_folder):
-                logger.warning("{} does not exist. Exiting...".format(prev_ephem_folder))
+                logger.warning(
+                    "{} does not exist. Exiting...".format(prev_ephem_folder)
+                )
                 return 1
 
             df_prev = spark.read.format("parquet").load(
