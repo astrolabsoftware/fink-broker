@@ -24,9 +24,9 @@ CURRDATE=`date +"%Y%m"`
 
 fink_ssoft -s ztf --update-data > ${FINK_HOME}/broker_logs/ssoft_update_ephems_$CURRDATE.log 2>&1
 fink_ssoft -s ztf --link-data > ${FINK_HOME}/broker_logs/ssoft_link_ephems_$CURRDATE.log 2>&1
-fink_ssoft -s ztf --run-ssoft -model HG > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
-fink_ssoft -s ztf --run-ssoft -model HG1G2 > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
-fink_ssoft -s ztf --run-ssoft -model SHG1G2 > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s ztf --run-ssoft -model HG -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
+fink_ssoft -s ztf --run-ssoft -model HG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
 #fink_ssoft -s ztf --run-ssoft -model SSHG1G2
 
 #sudo su livy <<'EOF'
