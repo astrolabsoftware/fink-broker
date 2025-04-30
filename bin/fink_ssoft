@@ -209,7 +209,7 @@ source $conf
 
 if [[ ${LIST_DATA} == true ]]; then
   echo -e "${SINFO} Listing aggregated files"
-  hdfs dfs -du -h | grep sso_ztf_lc_aggregated_*
+  hdfs dfs -du -h | grep sso_ztf_lc_aggregated*
   exit 0
 fi
 
