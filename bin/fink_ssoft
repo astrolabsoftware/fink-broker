@@ -264,11 +264,11 @@ if [[ ! $VERSION ]]; then
   CURRENT_YYYYMM=`date +"%Y%m"`
   YEAR=${CURRENT_YYYYMM:0:4}
   MONTH=${CURRENT_YYYYMM:4:2}
-  echo -e "${SINFO} Computing last version ${YEAR}.${MONTH}"
+  echo -e "${SINFO} Computing last version ${YEAR}${MONTH}"
 else
   YEAR=${VERSION:0:4}
   MONTH=${VERSION:5:2}  # careful about the "." between year and month
-  echo -e "${SINFO} Computing custom version ${YEAR}.${MONTH}"
+  echo -e "${SINFO} Computing custom version ${YEAR}${MONTH}"
 fi
 
 if [[ ${RUN_SSOFT} == true ]]; then
@@ -281,12 +281,12 @@ if [[ ${RUN_SSOFT} == true ]]; then
   fi
 
   # check last aggregation exist
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet)
+  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? == 0 ]]; then
     echo -e "Computing the SSOFT for the model ${MODEL}..."
     # Run the script
   else
-    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Create it, or specify another existing version."
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
@@ -297,9 +297,9 @@ fi
 
 if [[ ${LINK_DATA} == true ]]; then
   # Check the file we want to link exists
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet)
+  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? != 0 ]]; then
-    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Aborting..."
     exit 1
   fi
@@ -309,8 +309,8 @@ if [[ ${LINK_DATA} == true ]]; then
     echo -e "${SINFO} Removing old file..."
     hdfs dfs -rm -r sso_ztf_lc_aggregated.parquet
   fi
-  echo -e "${SINFO} Linking version ${YEAR}.${MONTH} to the latest one..."
-  hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}.${MONTH}.parquet sso_ztf_lc_aggregated.parquet
+  echo -e "${SINFO} Linking version ${YEAR}${MONTH} to the latest one..."
+  hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet sso_ztf_lc_aggregated.parquet
   echo -e "${SDONE} done!"
   exit 0
 fi
