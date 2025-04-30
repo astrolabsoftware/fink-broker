@@ -92,13 +92,13 @@ def main():
     nparts = 4 * ncores
 
     if not path_exist(SSO_FILE):
-        _LOG.warn("{} does not exist".format(SSO_FILE))
+        logger.warn("{} does not exist".format(SSO_FILE))
 
     # TODO: define limit instead of frac in build_the_ssoft
     frac = args.limit / 1e5
 
     pdf = build_the_ssoft(
-        aggregated_filename=path,
+        aggregated_filename=SSO_FILE,
         nparts=nparts,
         nmin=args.nmin,
         frac=frac,
