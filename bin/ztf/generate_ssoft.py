@@ -51,12 +51,12 @@ def main():
         """,
     )
     parser.add_argument(
-        "-frac",
-        type=float,
+        "-limit",
+        type=int,
         default=None,
         help="""
-        Use only fraction (between 0 and 1) of the input dataset to build the SSOFT
-        Default is None, meaning all available data is considered.
+        If set, limit the number of object to process.
+        Otherwise, put to None.
         """,
     )
     parser.add_argument(
@@ -72,7 +72,7 @@ def main():
 
     if args.version is None:
         now = datetime.datetime.now()
-        version = "{}.{:02d}".format(now.year, now.month)
+        version = "{}{:02d}".format(now.year, now.month)
     else:
         version = args.version
 
@@ -94,11 +94,14 @@ def main():
     if not path_exist(SSO_FILE):
         _LOG.warn("{} does not exist".format(SSO_FILE))
 
+    # TODO: define limit instead of frac in build_the_ssoft
+    frac = args.limit / 1e5
+
     pdf = build_the_ssoft(
         aggregated_filename=path,
         nparts=nparts,
         nmin=args.nmin,
-        frac=args.frac,
+        frac=frac,
         model=args.model,
         version=version,
         sb_method="fastnifty",

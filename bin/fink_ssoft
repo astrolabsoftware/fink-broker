@@ -123,7 +123,7 @@ Options:
   -s                    Survey name (ztf, rubin). Default is ztf.
   -c                    Path to configuration file.
   -model                Model to use to compute the SSOFT: HG, HG1G2, SHG1G2, SSHG1G2
-  -version              Version of the data to use to compute the SSOFT in the form YYYY.MM. Default is today.
+  -version              Version of the data to use to compute the SSOFT in the form YYYYMM. Default is today.
   -nmin                 Minimum number of observations to enter to SSOFT. Default is 50.
   -limit                Limit the number of objects to process for operations. Use only for testing purposes.
   -driver_memory        Memory to use for the driver (Default is 8G)
@@ -142,7 +142,7 @@ fink_ssoft -s ztf --reconstruct-data                          # Reconstruct all 
 fink_ssoft -s ztf --update-data                               # Add last month data
 fink_ssoft -s ztf --list-data                                 # List all aggregated files
 fink_ssoft -s ztf --run-ssoft -model SHG1G2                   # Compute SHG1G2 SSOFT
-fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version 2025.04  # Compute SHG1G2 SSOFT until 2025.04
+fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version 202504  # Compute SHG1G2 SSOFT until 2025/04
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -limit 10         # Compute SHG1G2 SSOFT with 100 objects only
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -min 100          # Compute SHG1G2 SSOFT for objects with at least 100 observations
 
@@ -177,6 +177,13 @@ fi
 if [[ $LIMIT != "" ]]; then
   echo -e "${SINFO} Limiting number of objects to $LIMIT"
   LIMIT_ARGS="-limit ${LIMIT}"
+fi
+
+if [[ $NMIN != "" ]]; then
+  echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
+else
+  NMIN=50 # default value
+  echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 fi
 
 # if nothing specified, get default
@@ -267,7 +274,7 @@ if [[ ! $VERSION ]]; then
   echo -e "${SINFO} Computing last version ${YEAR}${MONTH}"
 else
   YEAR=${VERSION:0:4}
-  MONTH=${VERSION:5:2}  # careful about the "." between year and month
+  MONTH=${VERSION:4:2}  # careful about the "." between year and month
   echo -e "${SINFO} Computing custom version ${YEAR}${MONTH}"
 fi
 
@@ -285,6 +292,15 @@ if [[ ${RUN_SSOFT} == true ]]; then
   if [[ $? == 0 ]]; then
     echo -e "Computing the SSOFT for the model ${MODEL}..."
     # Run the script
+    spark-submit \
+      --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} \
+      ${EXTRA_SPARK_CONFIG} ${RESOURCES} \
+      --conf spark.sql.execution.arrow.pyspark.enabled=true\
+      --conf spark.kryoserializer.buffer.max=512m\
+      ${PYTHON_EXTRA_FILE}\
+      ${FINK_HOME}/bin/${SURVEY}/generate_ssoft.py \
+      -model ${MODEL} -version ${VERSION} -nmin ${NMIN} ${LIMIT_ARGS}
   else
     echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Create it, or specify another existing version."
