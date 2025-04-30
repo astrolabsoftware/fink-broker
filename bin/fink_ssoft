@@ -246,8 +246,8 @@ if [[ ${UPDATE_DATA} == true ]]; then
   CURRENT_YYYYMM=`date +"%Y%m"`
   YEAR=${CURRENT_YYYYMM:0:4}
   MONTH=${CURRENT_YYYYMM:4:2}
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
-  if [[ $? == 0 ]]; then
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ ${is_data} == 0 ]]; then
     echo -e >&2 "${SERROR} File sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet exist. Move it before aggregation."
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
@@ -288,8 +288,8 @@ if [[ ${RUN_SSOFT} == true ]]; then
   fi
 
   # check last aggregation exist
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
-  if [[ $? == 0 ]]; then
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ ${is_data} == 0 ]]; then
     echo -e "Computing the SSOFT for the model ${MODEL}..."
     # Run the script
     spark-submit \
@@ -313,15 +313,15 @@ fi
 
 if [[ ${LINK_DATA} == true ]]; then
   # Check the file we want to link exists
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
-  if [[ $? != 0 ]]; then
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ ${is_data} != 0 ]]; then
     echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Aborting..."
     exit 1
   fi
 
-  $(hdfs dfs -test -d sso_ztf_lc_aggregated.parquet)
-  if [[ $? == 0 ]]; then
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated.parquet)
+  if [[ ${is_data} == 0 ]]; then
     echo -e "${SINFO} Removing old file..."
     hdfs dfs -rm -r sso_ztf_lc_aggregated.parquet
   fi
