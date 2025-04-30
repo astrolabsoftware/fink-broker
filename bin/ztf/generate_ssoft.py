@@ -95,7 +95,8 @@ def main():
         logger.warn("{} does not exist".format(SSO_FILE))
 
     # TODO: define limit instead of frac in build_the_ssoft
-    frac = args.limit / 1e5
+    if args.limit is not None:
+        frac = args.limit / 1e5
 
     pdf = build_the_ssoft(
         aggregated_filename=SSO_FILE,
