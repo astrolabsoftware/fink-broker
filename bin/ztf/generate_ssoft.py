@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the Solar System Object Fink Table (SSOFT). Aggregated data is read from sso_ztf_lc_aggregated.parquet"""
+"""Construct the Solar System Object Fink Table (SSOFT)."""
 
 import argparse
 import datetime
@@ -38,7 +38,7 @@ def main():
         type=str,
         default="SHG1G2",
         help="""
-        Lightcurve model: SHG1G2, HG1G2, HG
+        Phase curve model: SHG1G2, HG1G2, HG
         """,
     )
     parser.add_argument(
