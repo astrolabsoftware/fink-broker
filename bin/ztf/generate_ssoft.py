@@ -97,6 +97,8 @@ def main():
     # TODO: define limit instead of frac in build_the_ssoft
     if args.limit is not None:
         frac = args.limit / 1e5
+    else:
+        frac = None
 
     pdf = build_the_ssoft(
         aggregated_filename=SSO_FILE,
