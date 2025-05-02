@@ -144,7 +144,7 @@ Options:
   --run-ssoft           Run the computation of the SSOFT. By defaut is uses the latest aggregated file.
   --link-ssoft          Create a version agnostic SSOFT folder, with the latest version data
   --list-ssoft          List all available SSOFT on HDFS
-  --transfer_ssoft      Transfer SSOFT to HDFS, and backup it. Read from -ssoft_outfolder 
+  --transfer-ssoft      Transfer SSOFT to HDFS, and backup it. Read from -ssoft_outfolder 
 
 Examples:
 fink_ssoft -s ztf --reconstruct-data                          # Reconstruct all database
@@ -349,7 +349,7 @@ fi
 
 if [[ ${TRANSFER_SSOFT} == true ]]; then
   # Check the file we want to transfer exists
-  if [[ -f ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet ]]; then
+  if [[ ! -f ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet ]]; then
     echo -e >&2 "${SERROR} ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Aborting..."
     exit 1
