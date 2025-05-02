@@ -61,6 +61,10 @@ while [ "$#" -gt 0 ]; do
       LIMIT="$2"
       shift 2
       ;;
+    -ssoft_outfolder)
+      SSOFT_OUTFOLDER="$2"
+      shift 2
+      ;;
     -driver-memory)
       DRIVER_MEMORY="$2"
       shift 2
@@ -101,6 +105,10 @@ while [ "$#" -gt 0 ]; do
       LIST_SSOFT=true
       shift 1
       ;;
+    --transfer-ssoft)
+      TRANSFER_SSOFT=true
+      shift 1
+      ;;
     -*)
       echo "unknown option: $1" >&2
       exit 1
@@ -125,6 +133,7 @@ Options:
   -version              Version of the data to use to compute the SSOFT in the form YYYYMM. Default is today.
   -nmin                 Minimum number of observations to enter to SSOFT. Default is 50.
   -limit                Limit the number of objects to process for operations. Use only for testing purposes.
+  -ssoft_outfolder      Output folder to save the SSOFT. Must be on a regular filesystem (not HDFS). Default is /spark_mongo_tmp/julien.peloton/ssoft
   -driver_memory        Memory to use for the driver (Default is 8G)
   -executor_memory      Memory to use for each executor (Default is 4G)
   -spark-cores-max      Total number of cores to use for all executors (Default is 100)
@@ -135,6 +144,7 @@ Options:
   --run-ssoft           Run the computation of the SSOFT. By defaut is uses the latest aggregated file.
   --link-ssoft          Create a version agnostic SSOFT folder, with the latest version data
   --list-ssoft          List all available SSOFT on HDFS
+  --transfer_ssoft      Transfer SSOFT to HDFS, and backup it. Read from -ssoft_outfolder 
 
 Examples:
 fink_ssoft -s ztf --reconstruct-data                          # Reconstruct all database
@@ -145,13 +155,14 @@ fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version 202504  # Compute SHG1G2 SS
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -limit 10         # Compute SHG1G2 SSOFT with 100 objects only
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -min 100          # Compute SHG1G2 SSOFT for objects with at least 100 observations
 
-Notes: Typically the schedule is to invoke once a month the two commands:
+Notes: Typically the schedule is to invoke once a month the commands:
 fink_ssoft -s ztf --update-data
 fink_ssoft -s ztf --link-data
 fink_ssoft -s ztf --run-ssoft -model HG
 fink_ssoft -s ztf --run-ssoft -model HG1G2
 fink_ssoft -s ztf --run-ssoft -model SHG1G2
 fink_ssoft -s ztf --run-ssoft -model SSHG1G2
+fink_ssoft -s ztf --transfer_ssoft
 
 Notes: If you lose all your ephemerides data, just reconstruct everything with
 fink_ssoft -s ztf --reconstruct-data
@@ -184,6 +195,11 @@ else
   NMIN=50 # default value
   echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 fi
+
+if [[ $SSOFT_OUTFOLDER == "" ]]; then
+  SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+fi
+echo -e "${SINFO} Saving the SSOFT at ${SSOFT_OUTFOLDER}"
 
 # if nothing specified, get default
 if [[ ! ${DRIVER_MEMORY} ]]; then
@@ -299,7 +315,8 @@ if [[ ${RUN_SSOFT} == true ]]; then
       --conf spark.kryoserializer.buffer.max=512m\
       ${PYTHON_EXTRA_FILE}\
       ${FINK_HOME}/bin/${SURVEY}/generate_ssoft.py \
-      -model ${MODEL} -version ${VERSION} -nmin ${NMIN} ${LIMIT_ARGS}
+      -model ${MODEL} -version ${VERSION} \
+      -nmin ${NMIN} -outfolder ${SSOFT_OUTFOLDER} ${LIMIT_ARGS}
   else
     echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Create it, or specify another existing version."
@@ -329,3 +346,20 @@ if [[ ${LINK_DATA} == true ]]; then
   echo -e "${SDONE} done!"
   exit 0
 fi
+
+if [[ ${TRANSFER_SSOFT} == true ]]; then
+  # Check the file we want to transfer exists
+  if [[ -f ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet ]]; then
+    echo -e >&2 "${SERROR} ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} Aborting..."
+    exit 1
+  fi
+
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_HG_${YEAR}${MONTH}.parquet SSOFT/
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_HG1G2_${YEAR}${MONTH}.parquet SSOFT/
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet SSOFT/
+  echo -e "${SDONE} done!"
+  exit 0
+
+fi
+

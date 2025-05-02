@@ -15,6 +15,7 @@
 # limitations under the License.
 """Construct the Solar System Object Fink Table (SSOFT)."""
 
+import os
 import argparse
 import datetime
 
@@ -68,6 +69,15 @@ def main():
         object to be considered for the SSOFT. Default is 50
         """,
     )
+    parser.add_argument(
+        "-outfolder",
+        type=str,
+        default="/spark_mongo_tmp/julien.peloton/ssoft",
+        help="""
+        Output folder to store the SSOFT. It must be
+        on a regular filesystem (not HDFS).
+        """,
+    )
     args = parser.parse_args(None)
 
     if args.version is None:
@@ -109,8 +119,10 @@ def main():
         version=version,
         sb_method="fastnifty",
     )
-
-    pdf.to_parquet("ssoft_{}_{}.parquet".format(args.model, version))
+    outpath = os.path.join(
+        args.outfolder, "ssoft_{}_{}.parquet".format(args.model, version)
+    )
+    pdf.to_parquet(outpath)
 
 
 if __name__ == "__main__":
