@@ -95,7 +95,7 @@ def main():
         )
         anomaly_notification_(
             df_proc,
-            threshold=NOTIFICATIONS_COUNT.get(model, 10)
+            threshold=NOTIFICATIONS_COUNT.get(model, 10),
             send_to_tg=False,
             send_to_slack=False,
             send_to_anomaly_base=True,
