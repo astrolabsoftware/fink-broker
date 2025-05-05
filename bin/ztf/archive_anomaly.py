@@ -25,6 +25,7 @@ from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 from fink_filters.ztf.filter_anomaly_notification.filter import anomaly_notification_
 
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
+from fink_science.ztf.anomaly_detection.processor import NOTIFICATIONS_COUNT
 
 
 def main():
@@ -94,6 +95,7 @@ def main():
         )
         anomaly_notification_(
             df_proc,
+            threshold=NOTIFICATIONS_COUNT.get(model, 10),
             send_to_tg=False,
             send_to_slack=False,
             send_to_anomaly_base=True,
