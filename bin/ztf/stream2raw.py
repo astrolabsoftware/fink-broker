@@ -36,6 +36,8 @@ import time
 import io
 import os
 
+from sparkmeasure import StageMetrics
+
 from fink_broker.common.parser import getargs
 
 from fink_broker.common.spark_utils import from_avro
@@ -43,7 +45,6 @@ from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.common.spark_utils import get_schemas_from_avro
 from fink_broker.common.logging_utils import init_logger, inspect_application
 from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -65,6 +66,10 @@ def main():
         tz=tz,
         log_level=args.spark_log_level,
     )
+
+    stagemetrics = StageMetrics(spark)
+
+    stagemetrics.begin()
 
     # debug statements
     inspect_application(logger)
@@ -181,6 +186,14 @@ def main():
     else:
         countquery.awaitTermination()
 
+    stagemetrics.end()
+
+    # print report to standard output
+    stagemetrics.print_report()
+
+    # get metrics data as a dictionary
+    metrics = stagemetrics.aggregate_stagemetrics()
+    print(f"metrics elapsedTime = {metrics.get('elapsedTime')}")
 
 if __name__ == "__main__":
     main()
