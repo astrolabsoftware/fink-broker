@@ -94,6 +94,6 @@ FROM noscience AS full
 
 ADD deps/${input_survey}/requirements-science.txt $FINK_HOME/deps
 # Listing all requirements helps pip in computing a correct dependencies tree
-RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/deps/requirements-science.txt
+RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/deps/requirements-science.txt --use-pep517
 ADD deps/${input_survey}/requirements-science-no-deps.txt $FINK_HOME/deps
 RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps
