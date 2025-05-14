@@ -20,6 +20,6 @@ source ~/.bash_profile
 # re-download latest information
 export ROCKS_CACHE_DIR="no-cache"
 
-for OBSCODE in "T05 T08 W68 M22"; do
+for OBSCODE in T05 T08 W68 M22; do
 	fink_ssoft -s atlas -c ${FINK_HOME}/conf/ztf/fink.conf.prod -observer ${OBSCODE} --reconstruct-data > ${FINK_HOME}/broker_logs/atlas_ephemerides_${OBSCODE}.log 2>&1
 done
