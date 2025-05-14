@@ -56,7 +56,7 @@ def read_and_add_ephem(df, npart, limit, logger):
     df = df.withColumn(
         col_,
         extract_ztf_ephemerides_from_miriade(
-            "ssnamenr", "cjd", "ciauobs", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
+            "name", "cjd", "ciauobs", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
         ),
     )
     df_expanded = expand_columns(df, col_to_expand=col_)
