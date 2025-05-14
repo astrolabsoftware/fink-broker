@@ -20,4 +20,4 @@ source ~/.bash_profile
 # re-download latest information
 export ROCKS_CACHE_DIR="no-cache"
 
-fink_ssoft -s atlas --reconstruct-data > ${FINK_HOME}/broker_logs/atlas_ephemerides.log 2>&1
+fink_ssoft -s atlas -c ${FINK_HOME}/conf/ztf/fink.conf.prod --reconstruct-data > ${FINK_HOME}/broker_logs/atlas_ephemerides.log 2>&1
