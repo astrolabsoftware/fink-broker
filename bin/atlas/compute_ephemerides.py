@@ -22,7 +22,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
-SSO_FILE = "sso_atlas_lc_aggregated_v2.parquet"
+SSO_FILE = "sso_atlas_lc_aggregated_v2_{}.parquet"
 
 
 def read_and_add_ephem(df, npart, limit, logger):
@@ -56,7 +56,7 @@ def read_and_add_ephem(df, npart, limit, logger):
     df = df.withColumn(
         col_,
         extract_ztf_ephemerides_from_miriade(
-            "name", "cjd", "ciauobs", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
+            "name", "cjd", "obscode", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
         ),
     )
     df_expanded = expand_columns(df, col_to_expand=col_)
@@ -78,15 +78,25 @@ def main():
     parser.add_argument(
         "-path",
         type=str,
-        default="sso_aggregated_ATLAS_only_ztf_objects",
+        default="sso_aggregated_ATLAS_only_ztf_objects_T05",
         help="""
         Path to ATLAS or ATLAS x ZTF data on HDFS.
+        """,
+    )
+    parser.add_argument(
+        "-observer",
+        type=str,
+        default="T05",
+        help="""
+        IAU code for ATLAS stations: 'M22', 'T05', 'T08', 'W68'
         """,
     )
     args = parser.parse_args(None)
 
     # Initialise Spark session
-    spark = init_sparksession(name="atlas_ephemerides", shuffle_partitions=100)
+    spark = init_sparksession(
+        name="atlas_ephemerides_{}".format(args.observer), shuffle_partitions=100
+    )
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
 
     # 4 times more partitions than cores
@@ -101,11 +111,14 @@ def main():
     logger.info("Aggregating ephemerides from {}".format(args.path))
     df = spark.read.format("parquet").load(args.path)
 
+    # get station as str
+    df = df.withColumn("obscode", F.element_at(df["ciauobs"], 1))
+
     # Compute ephemerides
     df = read_and_add_ephem(df, nparts, args.limit, logger)
 
     # Write data on HDFS
-    df.write.mode("overwrite").parquet(SSO_FILE)
+    df.write.mode("overwrite").parquet(SSO_FILE.format(args.observer))
 
 
 if __name__ == "__main__":

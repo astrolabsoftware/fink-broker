@@ -45,6 +45,10 @@ while [ "$#" -gt 0 ]; do
       conf="$2"
       shift 2
       ;;
+    -obscode)
+      OBSCODE="$2"
+      shift 2
+      ;;
     -model)
       MODEL="$2"
       shift 2
@@ -129,6 +133,7 @@ Options:
   -h                    Show this help.
   -s                    Survey name (ztf, rubin). Default is ztf.
   -c                    Path to configuration file.
+  -obscode              IAU code for the observer.
   -model                Model to use to compute the SSOFT: HG, HG1G2, SHG1G2, SSHG1G2
   -version              Version of the data to use to compute the SSOFT in the form YYYYMM. Default is today.
   -nmin                 Minimum number of observations to enter to SSOFT. Default is 50.
@@ -241,7 +246,7 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
   if [[ ${SURVEY} == "ztf" ]]; then
     EXTRA_ARGS="-mode all"
   elif [[ ${SURVEY} == "atlas" ]]; then
-    EXTRA_ARGS="-path sso_aggregated_ATLAS_only_ztf_objects"
+    EXTRA_ARGS="-path sso_aggregated_ATLAS_only_ztf_objects_${OBSCODE} -observer ${OBSCODE}"
   fi
   echo -e "${SINFO} Reconstructing the aggregated data and ephemerides..."
   spark-submit --master ${SPARK_MASTER} \
