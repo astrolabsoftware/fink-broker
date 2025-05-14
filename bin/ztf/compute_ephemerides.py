@@ -82,7 +82,12 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     df_new = df_new.withColumn(
         col_,
         extract_ztf_ephemerides_from_miriade(
-            "ssnamenr", "cjd", F.expr("uuid()"), F.lit("ephemcc")
+            "ssnamenr",
+            "cjd",
+            F.lit("I41"),
+            F.lit(15.0),
+            F.expr("uuid()"),
+            F.lit("ephemcc"),
         ),
     )
     df_expanded = expand_columns(df_new, col_to_expand=col_)
