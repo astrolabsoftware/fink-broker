@@ -1,0 +1,377 @@
+#!/bin/bash
+# Copyright 2019-2025 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+source ~/.bash_profile
+
+# re-download latest information if need be
+# export ROCKS_CACHE_DIR="no-cache"
+
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
+# Show help if no arguments is given
+if [[ $1 == "" ]]; then
+  HELP_ON_SERVICE="-h"
+  SURVEY="ztf"
+fi
+
+# Grab the command line arguments
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h)
+      HELP_ON_SERVICE="-h"
+      shift 1
+      ;;
+    -s)
+      SURVEY=$2
+      shift 2
+      ;;
+    -c)
+      conf="$2"
+      shift 2
+      ;;
+    -observer)
+      OBSCODE="$2"
+      shift 2
+      ;;
+    -model)
+      MODEL="$2"
+      shift 2
+      ;;
+    -version)
+      VERSION="$2"
+      shift 2
+      ;;
+    -nmin)
+      NMIN="$2"
+      shift 2
+      ;;
+    -limit)
+      LIMIT="$2"
+      shift 2
+      ;;
+    -ssoft_outfolder)
+      SSOFT_OUTFOLDER="$2"
+      shift 2
+      ;;
+    -driver-memory)
+      DRIVER_MEMORY="$2"
+      shift 2
+      ;;
+    -executor-memory)
+      EXECUTOR_MEMORY="$2"
+      shift 2
+      ;;
+    -spark-cores-max)
+      SPARK_CORE_MAX="$2"
+      shift 2
+      ;;
+    -spark-executor-cores)
+      SPARK_EXECUTOR_CORES="$2"
+      shift 2
+      ;;
+    --reconstruct-data)
+      RECONSTRUCT_DATA=true
+      shift 1
+      ;;
+    --update-data)
+      UPDATE_DATA=true
+      shift 1
+      ;;
+    --link-data)
+      LINK_DATA=true
+      shift 1
+      ;;
+    --list-data)
+      LIST_DATA=true
+      shift 1
+      ;;
+    --run-ssoft)
+      RUN_SSOFT=true
+      shift 1
+      ;;
+    --list-ssoft)
+      LIST_SSOFT=true
+      shift 1
+      ;;
+    --transfer-ssoft)
+      TRANSFER_SSOFT=true
+      shift 1
+      ;;
+    -*)
+      echo "unknown option: $1" >&2
+      exit 1
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+__usage="
+fink_ssoft is a wrapper around fink to control the SSOFT operations.
+
+Usage: $(basename $0) [OPTIONS]
+
+Options:
+  -h                    Show this help.
+  -s                    Survey name (ztf, rubin). Default is ztf.
+  -c                    Path to configuration file.
+  -obscode              IAU code for the observer.
+  -model                Model to use to compute the SSOFT: HG, HG1G2, SHG1G2, SSHG1G2
+  -version              Version of the data to use to compute the SSOFT in the form YYYYMM. Default is today.
+  -nmin                 Minimum number of observations to enter to SSOFT. Default is 50.
+  -limit                Limit the number of objects to process for operations. Use only for testing purposes.
+  -ssoft_outfolder      Output folder to save the SSOFT. Must be on a regular filesystem (not HDFS). Default is /spark_mongo_tmp/julien.peloton/ssoft
+  -driver_memory        Memory to use for the driver (Default is 8G)
+  -executor_memory      Memory to use for each executor (Default is 4G)
+  -spark-cores-max      Total number of cores to use for all executors (Default is 100)
+  -spark-executor-cores Number of cores per executor (Default is 2)
+  --reconstruct-data    Reconstruct all aggregated data and ephemerides from 2019 until now.
+  --update-data         Add latest month data and ephemerides to the latest file.
+  --list-data           List all aggregated files available, with their version
+  --run-ssoft           Run the computation of the SSOFT. By defaut is uses the latest aggregated file.
+  --link-ssoft          Create a version agnostic SSOFT folder, with the latest version data
+  --list-ssoft          List all available SSOFT on HDFS
+  --transfer-ssoft      Transfer SSOFT to HDFS, and backup it. Read from -ssoft_outfolder 
+
+Examples:
+fink_ssoft -s ztf --reconstruct-data                          # Reconstruct all database
+fink_ssoft -s ztf --update-data                               # Add last month data
+fink_ssoft -s ztf --list-data                                 # List all aggregated files
+fink_ssoft -s ztf --run-ssoft -model SHG1G2                   # Compute SHG1G2 SSOFT
+fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version 202504  # Compute SHG1G2 SSOFT until 2025/04
+fink_ssoft -s ztf --run-ssoft -model SHG1G2 -limit 10         # Compute SHG1G2 SSOFT with 100 objects only
+fink_ssoft -s ztf --run-ssoft -model SHG1G2 -min 100          # Compute SHG1G2 SSOFT for objects with at least 100 observations
+
+Notes: Typically the schedule is to invoke once a month the commands:
+fink_ssoft -s ztf --update-data
+fink_ssoft -s ztf --link-data
+fink_ssoft -s ztf --run-ssoft -model HG
+fink_ssoft -s ztf --run-ssoft -model HG1G2
+fink_ssoft -s ztf --run-ssoft -model SHG1G2
+fink_ssoft -s ztf --run-ssoft -model SSHG1G2
+fink_ssoft -s ztf --transfer_ssoft
+
+Notes: If you lose all your ephemerides data, just reconstruct everything with
+fink_ssoft -s ztf --reconstruct-data
+Beware, this is very long!
+"
+
+#################################
+# Configuration
+
+if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
+  echo -e "$__usage"
+  exit 0
+fi
+
+hdfs version >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
+
+if [[ $SURVEY == "" ]]; then
+  echo -e >&2 "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
+  exit 1
+fi
+
+if [[ $LIMIT != "" ]]; then
+  echo -e "${SINFO} Limiting number of objects to $LIMIT"
+  LIMIT_ARGS="-limit ${LIMIT}"
+fi
+
+if [[ $NMIN != "" ]]; then
+  echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
+else
+  NMIN=50 # default value
+  echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
+fi
+
+if [[ $SSOFT_OUTFOLDER == "" ]]; then
+  SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+fi
+echo -e "${SINFO} Saving the SSOFT at ${SSOFT_OUTFOLDER}"
+
+# if nothing specified, get default
+if [[ ! ${DRIVER_MEMORY} ]]; then
+  RESOURCES="--driver-memory 8g --executor-memory 8g --conf spark.cores.max=100 --conf spark.executor.cores=4"
+else
+  RESOURCES="--driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES}"
+fi
+echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+
+# Check if the conf file exists
+if [[ -f $conf ]]; then
+  echo -e "${SINFO} Reading custom Fink configuration file from " $conf
+else
+  echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.prod
+fi
+
+source $conf
+
+#################################
+# Listings
+
+if [[ ${LIST_DATA} == true ]]; then
+  echo -e "${SINFO} Listing aggregated files"
+  hdfs dfs -du -h | grep sso_ztf_lc_aggregated*
+  exit 0
+fi
+
+if [[ ${LIST_SSOFT} == true ]]; then
+  echo -e "${SINFO} Listing SSOFT (TBD)"
+  exit 0
+fi
+
+
+#################################
+# Data aggregation
+
+if [[ ${RECONSTRUCT_DATA} == true ]]; then
+  if [[ ${SURVEY} == "ztf" ]]; then
+    EXTRA_ARGS="-mode all"
+  elif [[ ${SURVEY} == "atlas" ]]; then
+    EXTRA_ARGS="-path sso_aggregated_ATLAS_only_ztf_objects_${OBSCODE} -observer ${OBSCODE}"
+  fi
+  echo -e "${SINFO} Reconstructing the aggregated data and ephemerides..."
+  spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+    ${EXTRA_SPARK_CONFIG} \
+    ${RESOURCES} \
+    ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
+    ${LIMIT_ARGS} ${EXTRA_ARGS}
+
+  if [[ ${SURVEY} == "ztf" ]]; then
+    # At this point yearly data has been computed
+    # Copy the last file to monthly version it
+    CURRENT_YYYYMM=`date +"%Y%m"`
+    YEAR=${CURRENT_YYYYMM:0:4}
+    MONTH=${CURRENT_YYYYMM:4:2}
+    hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}.parquet sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet
+  fi
+  echo -e "${SDONE} done!"
+  exit 0
+fi
+
+if [[ ${UPDATE_DATA} == true ]]; then
+  # check last aggregation does not exist
+  CURRENT_YYYYMM=`date +"%Y%m"`
+  YEAR=${CURRENT_YYYYMM:0:4}
+  MONTH=${CURRENT_YYYYMM:4:2}
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ $? == 0 ]]; then
+    echo -e >&2 "${SERROR} File sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet exist. Move it before aggregation."
+    echo -e >&2 "${SSTOP} Merging aborted..."
+    exit 1
+  else
+    echo -e "Updating the aggregated data and ephemerides file..."
+    spark-submit --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+      ${EXTRA_SPARK_CONFIG} \
+      ${RESOURCES} \
+      ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
+      ${LIMIT_ARGS} -mode last_month
+  fi
+  echo -e "${SDONE} done!"
+  exit 0
+fi
+
+#################################
+# SSOFT
+
+if [[ ! $VERSION ]]; then
+  CURRENT_YYYYMM=`date +"%Y%m"`
+  YEAR=${CURRENT_YYYYMM:0:4}
+  MONTH=${CURRENT_YYYYMM:4:2}
+  echo -e "${SINFO} Computing last version ${YEAR}${MONTH}"
+else
+  YEAR=${VERSION:0:4}
+  MONTH=${VERSION:4:2}  # careful about the "." between year and month
+  echo -e "${SINFO} Computing custom version ${YEAR}${MONTH}"
+fi
+
+if [[ ${RUN_SSOFT} == true ]]; then
+  # Check a model is provided
+  if [[ ! $MODEL ]]; then
+    echo -e >&2 "${SERROR} You need to pass -model"
+    echo -e >&2 "${SERROR} Choose among HG, HG1G2, SHG1G2, SSHG1G2"
+    echo -e >&2 "${SERROR} Aborting..."
+    exit 1
+  fi
+
+  # check last aggregation exist
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ $? == 0 ]]; then
+    echo -e "Computing the SSOFT for the model ${MODEL}..."
+    # Run the script
+    spark-submit \
+      --master ${SPARK_MASTER} \
+      --packages ${FINK_PACKAGES} --jars ${FINK_JARS} \
+      ${EXTRA_SPARK_CONFIG} ${RESOURCES} \
+      --conf spark.sql.execution.arrow.pyspark.enabled=true\
+      --conf spark.kryoserializer.buffer.max=512m\
+      ${PYTHON_EXTRA_FILE}\
+      ${FINK_HOME}/bin/${SURVEY}/generate_ssoft.py \
+      -model ${MODEL} -version ${VERSION} \
+      -nmin ${NMIN} -outfolder ${SSOFT_OUTFOLDER} ${LIMIT_ARGS}
+  else
+    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} Create it, or specify another existing version."
+    echo -e >&2 "${SSTOP} Merging aborted..."
+    exit 1
+  fi
+  echo -e "${SDONE} done!"
+  exit 0
+fi
+
+if [[ ${LINK_DATA} == true ]]; then
+  # Check the file we want to link exists
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  if [[ $? != 0 ]]; then
+    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} Aborting..."
+    exit 1
+  fi
+
+  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated.parquet)
+  if [[ $? == 0 ]]; then
+    echo -e "${SINFO} Removing old file..."
+    hdfs dfs -rm -r sso_ztf_lc_aggregated.parquet
+  fi
+  echo -e "${SINFO} Linking version ${YEAR}${MONTH} to the latest one..."
+  hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet sso_ztf_lc_aggregated.parquet
+  echo -e "${SDONE} done!"
+  exit 0
+fi
+
+if [[ ${TRANSFER_SSOFT} == true ]]; then
+  # Check the file we want to transfer exists
+  if [[ ! -f ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet ]]; then
+    echo -e >&2 "${SERROR} ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} Aborting..."
+    exit 1
+  fi
+
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_HG_${YEAR}${MONTH}.parquet SSOFT/
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_HG1G2_${YEAR}${MONTH}.parquet SSOFT/
+  hdfs dfs -put ${SSOFT_OUTFOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet SSOFT/
+  echo -e "${SDONE} done!"
+  exit 0
+
+fi
+
