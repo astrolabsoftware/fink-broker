@@ -182,7 +182,7 @@ jobs:
             echo "Using existing image ${{ needs.build.outputs.image }}"
           fi
       - name: Scan fink-broker image
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v6
         id: scan
         with:
           image: "${{ needs.build.outputs.image }}"
