@@ -81,14 +81,28 @@ def apply_all_xmatch(df, tns_raw_output, survey=""):
     _LOG.info("New processor: TNS")
     df = xmatch_tns(df, tns_raw_output=tns_raw_output)
 
-    _LOG.info("New processor: Gaia xmatch (1.0 arcsec)")
+    _LOG.info("New processor: Gaia main xmatch (1.0 arcsec)")
     df = xmatch_cds(
         df,
         distmaxarcsec=1,
         catalogname="vizier:I/355/gaiadr3",
-        cols_out=["DR3Name", "Plx", "e_Plx"],
-        types=["string", "float", "float"],
+        cols_out=["DR3Name", "Plx", "e_Plx", "VarFlag"],
+        types=["string", "float", "float", "string"],
     )
+
+    df = df.withColumnRenamed("VarFlag", "gaiaVarFlag")
+
+    _LOG.info("New processor: Gaia var xmatch (1.0 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname="vizier:I/358/vclassre",
+        cols_out=["Class", "ClassSc"],
+        types=["string", "float"],
+    )
+
+    df = df.withColumnRenamed("Class", "gaiaClass")
+    df = df.withColumnRenamed("ClassSc", "gaiaClassSc")
 
     _LOG.info("New processor: VSX (1.5 arcsec)")
     df = xmatch_cds(

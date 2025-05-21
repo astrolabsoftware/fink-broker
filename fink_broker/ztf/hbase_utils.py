@@ -45,7 +45,7 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    30
+    33
 
     >>> print(len(fink_nested_cols))
     7
@@ -81,6 +81,9 @@ def load_fink_cols():
         "spicy_id": {"type": "int", "default": -1},
         "spicy_class": {"type": "string", "default": "Unknown"},
         "tns": {"type": "string", "default": ""},
+        "gaiaVarFlag": {"type": "string", "default": "Unknown"},
+        "gaiaClass": {"type": "string", "default": "Unknown"},
+        "gaiaClassSc": {"type": "float", "default": 0.0},
     }
 
     fink_nested_cols = {}
@@ -108,7 +111,7 @@ def load_all_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    145
+    148
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -319,7 +322,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    73
+    76
     """
     # From `root` or `candidates.`
     common = [
