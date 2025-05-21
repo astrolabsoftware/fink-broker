@@ -18,7 +18,7 @@ set -e
 source ~/.bash_profile
 
 # re-download latest information
-export ROCKS_CACHE_DIR="no-cache"
+# export ROCKS_CACHE_DIR="no-cache"
 
 CURRDATE=`date +"%Y%m"`
 
@@ -28,15 +28,3 @@ fink_ssoft -s ztf --run-ssoft -model HG -version ${CURRDATE} > ${FINK_HOME}/brok
 fink_ssoft -s ztf --run-ssoft -model HG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
 #fink_ssoft -s ztf --run-ssoft -model SSHG1G2
-
-#sudo su livy <<'EOF'
-#source ~/.bashrc
-#YEAR=`date +"%Y"`
-#MONTH=`date +"%m"`
-#/opt/hadoop-2/bin/hdfs dfs -put ssoft_SSHG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-#/opt/hadoop-2/bin/hdfs dfs -put ssoft_SHG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-#/opt/hadoop-2/bin/hdfs dfs -put ssoft_HG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-#/opt/hadoop-2/bin/hdfs dfs -put ssoft_HG_${YEAR}.${MONTH}.parquet SSOFT/
-#EOF
-#
-#mv ssoft_*.parquet /spark_mongo_tmp/julien.peloton/ssoft/
