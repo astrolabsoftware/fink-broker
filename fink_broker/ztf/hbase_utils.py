@@ -81,7 +81,7 @@ def load_fink_cols():
         "spicy_id": {"type": "int", "default": -1},
         "spicy_class": {"type": "string", "default": "Unknown"},
         "tns": {"type": "string", "default": ""},
-        "gaiaVarFlag": {"type": "string", "default": "Unknown"},
+        "gaiaVarFlag": {"type": "int", "default": 0},
         "gaiaClass": {"type": "string", "default": "Unknown"},
         "gaiaClassSc": {"type": "float", "default": 0.0},
     }

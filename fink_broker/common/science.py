@@ -90,7 +90,13 @@ def apply_all_xmatch(df, tns_raw_output, survey=""):
         types=["string", "float", "float", "string"],
     )
 
-    df = df.withColumnRenamed("VarFlag", "gaiaVarFlag")
+    # VarFlag is a string. Make it integer
+    # 0=NOT_AVAILABLE
+    # 1=VARIABLE
+    df = df.withColumn(
+        "gaiaVarFlag", F.when(df["VarFlag"] == "VARIABLE", 1).otherwise(0)
+    )
+    df = df.drop("VarFlag")
 
     _LOG.info("New processor: Gaia var xmatch (1.0 arcsec)")
     df = xmatch_cds(
