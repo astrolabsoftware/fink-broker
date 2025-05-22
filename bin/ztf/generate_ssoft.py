@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023-2024 AstroLab Software
+# Copyright 2023-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the Solar System Object Fink Table (SSOFT)"""
+"""Construct the Solar System Object Fink Table (SSOFT)."""
 
+import os
 import argparse
 import datetime
 
@@ -22,6 +23,11 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 from fink_broker.common.spark_utils import init_sparksession
 
 from fink_science.ztf.ssoft.processor import build_the_ssoft
+from fink_utils.hdfs.utils import path_exist
+
+
+# Defined in `fink_ssoft -s ztf --link-data`
+SSO_FILE = "sso_ztf_lc_aggregated.parquet"
 
 
 def main():
@@ -33,7 +39,7 @@ def main():
         type=str,
         default="SHG1G2",
         help="""
-        Lightcurve model: SHG1G2, HG1G2, HG
+        Phase curve model: SHG1G2, HG1G2, HG
         """,
     )
     parser.add_argument(
@@ -41,17 +47,17 @@ def main():
         type=str,
         default=None,
         help="""
-        Version to use in the format YYYY.MM
-        Default is None, meaning current Year.Month
+        Version to use in the final filename.
+        Default is None, meaning current Year.Month is used.
         """,
     )
     parser.add_argument(
-        "-frac",
-        type=float,
+        "-limit",
+        type=int,
         default=None,
         help="""
-        Use only fraction (between 0 and 1) of the input dataset to build the SSOFT
-        Default is None, meaning all available data is considered.
+        If set, limit the number of object to process.
+        Otherwise, put to None.
         """,
     )
     parser.add_argument(
@@ -64,18 +70,19 @@ def main():
         """,
     )
     parser.add_argument(
-        "--pre_aggregate_data",
-        action="store_true",
+        "-outfolder",
+        type=str,
+        default="/spark_mongo_tmp/julien.peloton/ssoft",
         help="""
-        If specified, aggregate and save data on HDFS before computing the SSOFT (slower).
-        Otherwise, read pre-aggregated data on HDFS to compute the SSOFT (faster).
+        Output folder to store the SSOFT. It must be
+        on a regular filesystem (not HDFS).
         """,
     )
     args = parser.parse_args(None)
 
     if args.version is None:
         now = datetime.datetime.now()
-        version = "{}.{:02d}".format(now.year, now.month)
+        version = "{}{:02d}".format(now.year, now.month)
     else:
         version = args.version
 
@@ -92,24 +99,30 @@ def main():
 
     # We map processing 1:1 with the cores
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
-    print("NCORES: {}".format(ncores))
+    nparts = 4 * ncores
 
-    if args.pre_aggregate_data:
-        filename = None
+    if not path_exist(SSO_FILE):
+        logger.warn("{} does not exist".format(SSO_FILE))
+
+    # TODO: define limit instead of frac in build_the_ssoft
+    if args.limit is not None:
+        frac = args.limit / 1e5
     else:
-        filename = "sso_aggregated_{}".format(version)
+        frac = None
 
     pdf = build_the_ssoft(
-        aggregated_filename=filename,
-        nproc=ncores,
+        aggregated_filename=SSO_FILE,
+        nparts=nparts,
         nmin=args.nmin,
-        frac=args.frac,
+        frac=frac,
         model=args.model,
         version=version,
         sb_method="fastnifty",
     )
-
-    pdf.to_parquet("ssoft_{}_{}.parquet".format(args.model, version))
+    outpath = os.path.join(
+        args.outfolder, "ssoft_{}_{}.parquet".format(args.model, version)
+    )
+    pdf.to_parquet(outpath)
 
 
 if __name__ == "__main__":
