@@ -59,6 +59,7 @@ userfilters = [
     "fink_filters.ztf.filter_new_hostless.filter.new_hostless",
     "fink_filters.ztf.filter_new_hostless.filter.intra_night_hostless",
     "fink_filters.ztf.filter_new_hostless.filter.inter_night_hostless",
+    "fink_filters.ztf.filter_vra.filter.vra",
 ]
 
 
