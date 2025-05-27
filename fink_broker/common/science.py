@@ -103,12 +103,11 @@ def apply_all_xmatch(df, tns_raw_output, survey=""):
         df,
         distmaxarcsec=1,
         catalogname="vizier:I/358/vclassre",
-        cols_out=["Class", "ClassSc"],
-        types=["string", "float"],
+        cols_out=["Class"],
+        types=["string"],
     )
 
     df = df.withColumnRenamed("Class", "gaiaClass")
-    df = df.withColumnRenamed("ClassSc", "gaiaClassSc")
 
     _LOG.info("New processor: VSX (1.5 arcsec)")
     df = xmatch_cds(
