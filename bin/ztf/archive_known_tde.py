@@ -81,10 +81,6 @@ def main():
             slack_data.append(f"""{t1}\n{cutout_perml}{curve_perml}""")
 
         msg_handler_slack(slack_data, "bot_known_tde_follow_up", init_msg)
-    else:
-        msg_handler_slack(
-            [], "bot_known_tde_follow_up", "{}: no associations".format(args.night)
-        )
 
 
 if __name__ == "__main__":
