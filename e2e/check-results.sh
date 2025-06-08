@@ -58,9 +58,9 @@ done
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="18"
+  expected_topics="19"
 else
-  expected_topics="10"
+  expected_topics="11"
 fi
 
 count=0
