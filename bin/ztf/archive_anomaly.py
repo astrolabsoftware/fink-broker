@@ -102,7 +102,7 @@ def main():
             send_to_anomaly_base=True,
             model=model,
             timeout=50,
-            curve_last_days=CURVE_LAST_DAYS.get(model, None)
+            curve_last_days=CURVE_LAST_DAYS.get(model, None),
         )
 
     # Keep only candidates of interest for all sky anomalies
