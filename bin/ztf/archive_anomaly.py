@@ -26,6 +26,7 @@ from fink_filters.ztf.filter_anomaly_notification.filter import anomaly_notifica
 
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
 from fink_science.ztf.anomaly_detection.processor import NOTIFICATIONS_COUNT
+from fink_science.ztf.anomaly_detection.processor import CURVE_LAST_DAYS
 
 
 def main():
@@ -101,6 +102,7 @@ def main():
             send_to_anomaly_base=True,
             model=model,
             timeout=50,
+            curve_last_days=CURVE_LAST_DAYS.get(model, None)
         )
 
     # Keep only candidates of interest for all sky anomalies
