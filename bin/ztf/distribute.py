@@ -21,6 +21,7 @@
 3. Serialize into Avro
 3. Publish to Kafka Topic(s)
 """
+
 import pkgutil
 import argparse
 import logging
@@ -42,7 +43,10 @@ import fink_filters.ztf.livestream as ffzl
 _LOG = logging.getLogger(__name__)
 
 # User-defined topics
-userfilters = ["{}.{}.filter.{}".format(ffzl.__package__, mod, mod.split("filter_")[1]) for _, mod, _ in pkgutil.iter_modules(ffzl.__path__)]
+userfilters = [
+    "{}.{}.filter.{}".format(ffzl.__package__, mod, mod.split("filter_")[1])
+    for _, mod, _ in pkgutil.iter_modules(ffzl.__path__)
+]
 
 
 def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
