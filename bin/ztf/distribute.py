@@ -22,6 +22,7 @@
 3. Publish to Kafka Topic(s)
 """
 
+import pkgutil
 import argparse
 import logging
 import time
@@ -36,30 +37,15 @@ from fink_broker.common.distribution_utils import get_kafka_df
 from fink_broker.common.logging_utils import init_logger
 from fink_utils.spark.utils import concat_col
 from fink_utils.spark.utils import apply_user_defined_filter
+import fink_filters.ztf.livestream as ffzl
 
 
 _LOG = logging.getLogger(__name__)
 
 # User-defined topics
 userfilters = [
-    "fink_filters.ztf.filter_early_sn_candidates.filter.early_sn_candidates",
-    "fink_filters.ztf.filter_sn_candidates.filter.sn_candidates",
-    "fink_filters.ztf.filter_sso_ztf_candidates.filter.sso_ztf_candidates",
-    "fink_filters.ztf.filter_sso_fink_candidates.filter.sso_fink_candidates",
-    "fink_filters.ztf.filter_kn_candidates.filter.kn_candidates",
-    "fink_filters.ztf.filter_early_kn_candidates.filter.early_kn_candidates",
-    "fink_filters.ztf.filter_rate_based_kn_candidates.filter.rate_based_kn_candidates",
-    "fink_filters.ztf.filter_microlensing_candidates.filter.microlensing_candidates",
-    "fink_filters.ztf.filter_yso_candidates.filter.yso_candidates",
-    "fink_filters.ztf.filter_simbad_grav_candidates.filter.simbad_grav_candidates",
-    "fink_filters.ztf.filter_blazar.filter.blazar",
-    "fink_filters.ztf.filter_yso_spicy_candidates.filter.yso_spicy_candidates",
-    "fink_filters.ztf.filter_tns_match.filter.tns_match",
-    "fink_filters.ztf.filter_magnetic_cvs.filter.magnetic_cvs",
-    "fink_filters.ztf.filter_new_hostless.filter.new_hostless",
-    "fink_filters.ztf.filter_new_hostless.filter.intra_night_hostless",
-    "fink_filters.ztf.filter_new_hostless.filter.inter_night_hostless",
-    "fink_filters.ztf.filter_vra.filter.vra",
+    "{}.{}.filter.{}".format(ffzl.__package__, mod, mod.split("filter_")[1])
+    for _, mod, _ in pkgutil.iter_modules(ffzl.__path__)
 ]
 
 
