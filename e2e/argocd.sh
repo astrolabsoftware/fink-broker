@@ -113,7 +113,8 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p monitoring.enabled="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
-    -p night="20200101" \
+    -p stream2raw.kafka.in_socket=public.alerts.ztf.uw.edu:9092 \
+    -p night="$(date +%Y%m%d)" \
     -p online_data_prefix="$online_data_prefix" \
     -p storage="$storage"
 
