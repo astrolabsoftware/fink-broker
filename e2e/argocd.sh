@@ -33,7 +33,7 @@ EOD
 }
 
 # Get the options
-while getopts hmS:s: c ; do
+while getopts hk:mS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
         k) kafka_in="$OPTARG" ;;
@@ -128,7 +128,7 @@ fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
     -p e2e.enabled="$e2e_enabled" \
-    -p monitoring.enabled="$monitoring" \
+    -p monitoring.enable  d="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
     $kafka_in_sockets_opt \
