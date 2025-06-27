@@ -13,6 +13,8 @@ SUFFIX="noscience"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
+kafka_in=""
+ztf_in_sockets="public.alerts.ztf.uw.edu:9092"
 
 # Check if running in github actions
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
@@ -22,6 +24,9 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
+  -k <kafka>    Kafka input sockets (value can be empty or ztf, default to local kafka)
+  -m            Enable monitoring (default: false)
+  -S <storage>  Storage to use (default: hdfs)
   -s <suffix>   Suffix to use for the image (default: noscience)
   -S <storage>  Storage to use (hdfs or minio)
 EOD
@@ -31,6 +36,7 @@ EOD
 while getopts hmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
+        k) kafka_in="$OPTARG" ;;
         m) monitoring="true" ;;
         S) storage="$OPTARG" ;;
         s) SUFFIX="$OPTARG" ;;
@@ -107,14 +113,26 @@ then
 else
   valueFile=values-ci-science.yaml
 fi
+
+if [ "$kafka_in"="ztf" ]; then
+  kafka_in_sockets_opt="-p stream2raw.kafka.in_sockets=$ztf_in_sockets"
+  night="$(date +%Y%m%d)"
+elif [ -z "$kafka_in" ]; then
+  # Integration test with local kafka
+  night="20200101"
+else
+  echo "ERROR: Incorrect kafka input sockets provided. Use -k option to set it."
+  exit 1
+fi
+
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
     -p e2e.enabled="$e2e_enabled" \
     -p monitoring.enabled="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
-    -p stream2raw.kafka.in_socket=public.alerts.ztf.uw.edu:9092 \
-    -p night="$(date +%Y%m%d)" \
+    $kafka_in_sockets_opt \
+    -p night="$night" \
     -p online_data_prefix="$online_data_prefix" \
     -p storage="$storage"
 
