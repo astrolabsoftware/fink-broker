@@ -128,7 +128,7 @@ fi
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
     -p e2e.enabled="$e2e_enabled" \
-    -p monitoring.enable  d="$monitoring" \
+    -p monitoring.enabled="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
     $kafka_in_sockets_opt \
