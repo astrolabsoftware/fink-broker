@@ -14,7 +14,6 @@ monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
 kafka_in=""
-ztf_in_sockets="public.alerts.ztf.uw.edu:9092"
 
 # Check if running in github actions
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
@@ -115,11 +114,10 @@ else
 fi
 
 if [ "$kafka_in"="ztf" ]; then
-  kafka_in_sockets_opt="-p stream2raw.kafka.in_sockets=$ztf_in_sockets"
-  night="$(date +%Y%m%d)"
+  valueFile=values-ztf.yaml
+  $night_opt="-p night=$(date +%Y%m%d)"
 elif [ -z "$kafka_in" ]; then
-  # Integration test with local kafka
-  night="20200101"
+  echo "Using local kafka input sockets"
 else
   echo "ERROR: Incorrect kafka input sockets provided. Use -k option to set it."
   exit 1
@@ -131,8 +129,7 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     -p monitoring.enabled="$monitoring" \
     -p image.tag="$CIUX_IMAGE_TAG" \
     -p log_level="DEBUG" \
-    $kafka_in_sockets_opt \
-    -p night="$night" \
+    $night_opt \
     -p online_data_prefix="$online_data_prefix" \
     -p storage="$storage"
 
