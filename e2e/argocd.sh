@@ -116,7 +116,7 @@ fi
 night_opt=""
 if [ "$kafka_in"="ztf" ]; then
   valueFile=values-ztf.yaml
-  $night_opt="-p night=$(date +%Y%m%d)"
+  night_opt="-p night=$(date +%Y%m%d)"
 elif [ -z "$kafka_in" ]; then
   echo "Using local kafka input sockets"
 else
