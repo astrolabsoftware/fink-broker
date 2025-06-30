@@ -13,7 +13,7 @@ spec:
     - '-startingoffsets_stream'
     - '{{ .Values.stream2raw.kafka.starting_offset }}'
     - '-topic'
-    - '{{ .Values.stream2raw.kafka.topic }}'
+    - '{{ tpl .Values.stream2raw.kafka.topic . }}'
     - '-night'
     - '{{ .Values.night }}'
   sparkVersion: "3.4.1"
