@@ -113,7 +113,7 @@ else
   valueFile=values-ci-science.yaml
 fi
 
-$night_opt=""
+night_opt=""
 if [ "$kafka_in"="ztf" ]; then
   valueFile=values-ztf.yaml
   $night_opt="-p night=$(date +%Y%m%d)"
