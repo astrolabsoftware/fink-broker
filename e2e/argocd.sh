@@ -113,6 +113,7 @@ else
   valueFile=values-ci-science.yaml
 fi
 
+$night_opt=""
 if [ "$kafka_in"="ztf" ]; then
   valueFile=values-ztf.yaml
   $night_opt="-p night=$(date +%Y%m%d)"
@@ -135,11 +136,11 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
 
 argocd app set fink-alert-simulator -p image.tag="$FINK_ALERT_SIMULATOR_VERSION"
 
-# Synk operators dependency for fink
+# Sync operators dependency for fink
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
 argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
 
-# Synk storage dependency for fink
+# Sync storage dependency for fink
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
 # Hack to fix kafka startup problem (non deterministic)
