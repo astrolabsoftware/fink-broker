@@ -10,7 +10,9 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 SUFFIX="noscience"
 
+date_alerts=""
 monitoring="false"
+night_opt=""
 src_dir=$DIR/..
 storage="hdfs"
 kafka_in=""
@@ -23,18 +25,19 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
+  -d <date>     Date of the alerts to use, not effective during e2e tests (i.e. if kafka_in is not set) (default: today, format: YYYYMMDD)
   -k <kafka>    Kafka input sockets (value can be empty or ztf, default to local kafka)
   -m            Enable monitoring (default: false)
-  -S <storage>  Storage to use (default: hdfs)
+  -S <storage>  Storage to use (value can be hdfs or s3, default to hdfs)
   -s <suffix>   Suffix to use for the image (default: noscience)
-  -S <storage>  Storage to use (hdfs or minio)
 EOD
 }
 
 # Get the options
-while getopts hk:mS:s: c ; do
+while getopts hd:k:mS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
+        d) date_alerts="$OPTARG" ;;
         k) kafka_in="$OPTARG" ;;
         m) monitoring="true" ;;
         S) storage="$OPTARG" ;;
@@ -106,19 +109,24 @@ argocd app sync fink
 
 # Set fink-broker parameters
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
-then
-  valueFile=values-ci-noscience.yaml
-else
-  valueFile=values-ci-science.yaml
-fi
 
-night_opt=""
+
 if [ "$kafka_in"="ztf" ]; then
   valueFile=values-ztf.yaml
-  night_opt="-p night=$(date +%Y%m%d)"
+  if [ -z "$date_alerts" ]; then
+    date_alerts=$(date +%Y%m%d)
+  fi
+  echo "Using ZTF kafka input sockets for e2e tests with date: $date_alerts"
+  night_opt="-p night=$date_alerts"
 elif [ -z "$kafka_in" ]; then
-  echo "Using local kafka input sockets"
+  echo "Using local kafka input sockets for e2e tests"
+  night_opt=""
+  if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
+  then
+    valueFile=values-ci-noscience.yaml
+  else
+    valueFile=values-ci-science.yaml
+  fi
 else
   echo "ERROR: Incorrect kafka input sockets provided. Use -k option to set it."
   exit 1
