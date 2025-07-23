@@ -39,14 +39,12 @@ EOD
 }
 
 suffix=""
-tmp_registry=""
 input_survey="ztf"
 
 # get the options
-while getopts hr:i:s: c ; do
+while getopts hi:s: c ; do
     case $c in
 	    h) usage ; exit 0 ;;
-            r) tmp_registry=$OPTARG ;;
 	    s) suffix=$OPTARG ;;
 	    i) input_survey=$OPTARG ;;
 	    \?) usage ; exit 2 ;;
@@ -58,7 +56,7 @@ ignite_msg="Run following command to prepare integration tests:"
 ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
 
 # This command avoid retrieving build dependencies if not needed
-$(ciux get image --check $DIR --suffix "$suffix" --tmp-registry "$tmp_registry" --env)
+$(ciux get image --check $DIR --suffix "$suffix" --env)
 
 if [ $CIUX_BUILD = false ];
 then
@@ -68,7 +66,7 @@ then
 fi
 
 SELECTOR="build"
-ciux ignite --selector "$SELECTOR" $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
+ciux ignite --selector "$SELECTOR" $DIR --suffix "$suffix"
 . $DIR/ciux.d/ciuxconfig.sh
 
 if [[ $suffix =~ ^noscience* ]]; then
