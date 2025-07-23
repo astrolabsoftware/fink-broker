@@ -7,11 +7,10 @@
 
 set -euxo pipefail
 
-DIR=$(cd "$(dirname "$0")"; pwd -P)
+project_dir=$(git rev-parse --show-toplevel)
 SUFFIX="noscience"
 
 monitoring="false"
-src_dir=$DIR/..
 storage="hdfs"
 
 # Check if running in github actions
@@ -44,10 +43,10 @@ shift "$((OPTIND-1))"
 # Used for interactive development
 SELECTOR="itest"
 if [ $GITHUB_ACTIONS == false ]; then
-  ciux ignite --selector "$SELECTOR" "$src_dir" --suffix "$SUFFIX"
+  ciux ignite --selector "$SELECTOR" "$project_dir" --suffix "$SUFFIX"
 fi
 
-. $DIR/ciux.d/ciuxconfig.sh
+. $project_dir/ciux.d/ciuxconfig.sh
 
 function retry {
   local n=1
