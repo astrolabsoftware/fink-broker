@@ -39,15 +39,15 @@ while getopts hmS:s: c ; do
 done
 shift "$((OPTIND-1))"
 
-CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
 
 # Refresh ciux config if not in github actions
 # Used for interactive development
+SELECTOR="itest"
 if [ $GITHUB_ACTIONS == false ]; then
-  ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+  ciux ignite --selector "$SELECTOR" "$src_dir" --suffix "$SUFFIX"
 fi
 
-. $CIUXCONFIG
+. $DIR/ciux.d/ciuxconfig.sh
 
 function retry {
   local n=1

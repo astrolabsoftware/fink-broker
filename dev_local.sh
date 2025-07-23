@@ -8,7 +8,9 @@
 set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-. "$CIUXCONFIG"
+
+SELECTOR="build"
+. $DIR/ciux.d/ciuxconfig.sh
 
 CONTAINER="fink-broker"
 
