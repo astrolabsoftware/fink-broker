@@ -46,7 +46,7 @@ if [ $GITHUB_ACTIONS == false ]; then
   ciux ignite --selector "$SELECTOR" "$project_dir" --suffix "$SUFFIX"
 fi
 
-. $project_dir/ciux.d/ciuxconfig.sh
+. $project_dir/.ciux.d/ciuxconfig.sh
 
 function retry {
   local n=1
