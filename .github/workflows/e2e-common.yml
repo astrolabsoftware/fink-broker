@@ -57,7 +57,6 @@ jobs:
       - name: Export fink-broker image
         id: export
         run: |
-          # Cannot use CIUXCONFIG because it may not have been created yet
           # TODO make it simpler!
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}" --env)
           mkdir -p artifacts
@@ -117,10 +116,9 @@ jobs:
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Ciux project ignition
         run: |
-          mkdir -p $HOME/.ciux
           ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
           ink "Ciux configuration file"
-          cat /home/runner/.ciux/ciux.sh
+          cat .ciux.d/ciux_itest.sh
       - name: Boostrap k8s (kind) cluster
         run: |
           # Configure private registry if needed
