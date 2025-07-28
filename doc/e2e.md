@@ -29,7 +29,7 @@ cd fink-broker
 Install the `ciux` tool based on the provided version.
 
 ```bash
-CIUX_VERSION=v0.0.4-rc6
+CIUX_VERSION=v0.0.6-rc2
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
@@ -42,7 +42,6 @@ Ignite the project using `ciux`.
 mkdir -p ~/.ciux
 # Define variables below for all the following commands
 export SUFFIX="noscience"
-export CIUXCONFIG=$HOME/.ciux/ciux.sh
 # Ignite the project
 ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 ```
