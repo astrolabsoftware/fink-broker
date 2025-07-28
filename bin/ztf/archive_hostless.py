@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 from pyspark.sql import functions as F
-
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
@@ -122,6 +121,7 @@ def main():
     cond_template_low = df["kstest_static"][1] >= 0.0
     cond_template_high = df["kstest_static"][1] <= 0.85
     cond_max_detections = F.size(F.array_remove("cmagpsf", np.nan)) <= 20
+    number_of_alerts_processed = int(df.select(F.sum(F.col("kstest_static")[2])).collect()[0][0])
 
     pdf = (
         df.filter(cond_science_low & cond_science_high)
