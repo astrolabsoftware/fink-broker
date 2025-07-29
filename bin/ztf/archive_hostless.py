@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 from pyspark.sql import functions as F
-
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
@@ -32,7 +31,7 @@ from fink_utils.spark.utils import concat_col
 from fink_utils.tg_bot.utils import get_curve
 from fink_utils.tg_bot.utils import get_cutout
 from fink_utils.tg_bot.utils import msg_handler_tg_cutouts
-
+from fink_utils.tg_bot.utils import send_simple_text_tg
 
 from fink_science.ztf.hostless_detection.processor import run_potential_hostless
 
@@ -122,6 +121,9 @@ def main():
     cond_template_low = df["kstest_static"][1] >= 0.0
     cond_template_high = df["kstest_static"][1] <= 0.85
     cond_max_detections = F.size(F.array_remove("cmagpsf", np.nan)) <= 20
+    number_of_alerts_processed = int(
+        df.select(F.sum(F.col("kstest_static")[2])).collect()[0][0]
+    )
 
     pdf = (
         df.filter(cond_science_low & cond_science_high)
@@ -164,12 +166,25 @@ def main():
 
         if len(payloads) > 0:
             # Send to tg
-            msg_handler_tg_cutouts(payloads, channel_id="@fink_hostless", init_msg="")
+            init_msg = "{} alerts processed and {} candidates found on {}".format(
+                number_of_alerts_processed, len(payloads), args.night
+            )
+            msg_handler_tg_cutouts(
+                payloads, channel_id="@fink_hostless", init_msg=init_msg
+            )
 
             # Save ids on disk
             pdf_ids = pd.DataFrame.from_dict({"id": new_ids})
             name = "{}{}{}".format(args.night[:4], args.night[4:6], args.night[6:8])
             pdf_ids.to_csv("{}/{}.csv".format(args.hostless_folder, name), index=False)
+        else:
+            logger.info("No hostless candidates found")
+            send_simple_text_tg(
+                "No candidates found on {}".format(args.night),
+                channel_id="@fink_hostless",
+            )
+    else:
+        logger.warning("FINK_TG_TOKEN is not set. Not sending to the telegram channel.")
 
 
 if __name__ == "__main__":
