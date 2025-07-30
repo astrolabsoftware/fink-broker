@@ -78,7 +78,7 @@ def main():
             minor_version=4,  # FIXME: should be programmatic from alert packet
             row_key_name=row_key_name,
             table_name=args.science_db_name + ".diaSource",
-            catalog_name=args.science_db_catalogs,
+            catfolder=args.science_db_catalogs,
         )
 
     logger.info("{} alerts pushed to HBase".format(n_alerts))
