@@ -77,7 +77,7 @@ def main():
             major_version=7,  # FIXME: should be programmatic from alert packet
             minor_version=4,  # FIXME: should be programmatic from alert packet
             row_key_name=row_key_name,
-            table_name=args.science_db_name,
+            table_name=args.science_db_name + ".diaSource",
             catalog_name=args.science_db_catalogs,
         )
 
