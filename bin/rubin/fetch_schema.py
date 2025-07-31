@@ -59,15 +59,10 @@ if __name__ == "__main__":
     # fs = HadoopFileSystem(args.hdfs_namenode, args.hdfs_port, user=args.hdfs_user, replication=2)
     filename = os.path.join(args.table_schema_path, "{}.parquet".format(version))
 
-    exists = True
-    try:
-        table_schema = pq.read_schema(filename)
+    if os.path.exists(filename):
         _LOG.warning("Schema version {} already exists at {}".format(version, filename))
-    except FileNotFoundError:
+    else:
         _LOG.info("New schema detected: {}".format(version))
-        exists = False
-
-    if not exists:
         _LOG.info("Saving schema at {}...".format(args.table_schema_path))
         # save it
         schema = response.text
