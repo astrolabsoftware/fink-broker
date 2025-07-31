@@ -141,6 +141,10 @@ if [[ ! $NIGHT ]]; then
 fi
 echo -e "${SINFO} Processing night ${NIGHT} for survey ${SURVEY}"
 
+YEAR=${NIGHT:0:4}
+MONTH=${NIGHT:4:2}
+DAY=${NIGHT:6:2}
+
 # Check if the conf file exists
 if [[ -f $conf ]]; then
   echo -e "${SINFO} Reading custom Fink configuration file from " $conf
@@ -162,8 +166,14 @@ if [[ ${MERGE} == true ]]; then
     else
       RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
     fi
-    echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
-    fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
+
+    if [[ ${SURVEY} == "ztf" ]]; then
+      # ZTF requires Spark to aggregate data
+      echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+      fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
+    elif [[ ${SURVEY} == "rubin" ]]; then
+      # Rubin is just a move to another place
+      hdfs dfs -mv ${ONLINE_DATA_PREFIX}/science/${NIGHT} ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
     echo -e "${SSTOP} Merging aborted..."
@@ -180,9 +190,6 @@ if [[ ! ${DRIVER_MEMORY} ]]; then
 else
   RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
 fi
-YEAR=${NIGHT:0:4}
-MONTH=${NIGHT:4:2}
-DAY=${NIGHT:6:2}
 
 # Aggregated data is available
 $(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
