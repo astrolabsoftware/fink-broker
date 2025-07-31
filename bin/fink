@@ -96,6 +96,10 @@ while [ "$#" -gt 0 ]; do
       EXIT_AFTER="-exit_after $2"
       shift 2
       ;;
+    -stop_at)
+      STOP_AT="$2"
+      shift 2
+      ;;
     --simulator)
       SIM_ONLY=true
       shift 1
@@ -146,6 +150,8 @@ Service options:
   -spark-cores-max      Total number of cores to use for all executors (see Spark options)
   -spark-executor-cores Number of cores per executor (see Spark options)
   -exit_after           Number of seconds after which the service should stop.
+  -stop_at              Date HH:MM at which the service should stop. Only available for rubin/stream2raw.
+                        See -exit_after otherwise.
   --simulator           If specified, run in simulation mode.
   --noscience           If specified, do not enrich data with science modules.
 
@@ -275,29 +281,47 @@ if [[ $service == "distribute" ]]; then
   DISTRIBUTE_OPTIONS="-distribution_servers ${DISTRIBUTION_SERVERS} -substream_prefix ${SUBSTREAM_PREFIX} -kafka_security_protocol ${KAFKA_SECURITY_PROTOCOL} -kafka_sasl_username ${KAFKA_SASL_USERNAME} -kafka_sasl_password ${KAFKA_SASL_PASSWORD} -kafka_buffer_memory ${KAFKA_BUFFER_MEMORY} -kafka_delivery_timeout_ms ${KAFKA_DELIVERY_TIMEOUT_MS}"
 fi
 
-spark-submit --master ${SPARK_MASTER} \
-  --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
-  ${EXTRA_SPARK_CONFIG} \
-  --driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} \
-  --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES} \
-  ${DISTRIBUTE_OPTIONS_SPARK} \
-  ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
-  -producer ${SURVEY} \
-  -servers ${KAFKA_IPPORT} \
-  -night ${NIGHT} \
-  -schema ${FINK_ALERT_SCHEMA} \
-  -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
-  -max_offsets_per_trigger ${MAX_OFFSETS_PER_TRIGGER} \
-  -online_data_prefix ${ONLINE_DATA_PREFIX} \
-  -agg_data_prefix ${AGG_DATA_PREFIX} \
-  -tinterval ${FINK_TRIGGER_UPDATE} \
-  -mmconfigpath ${FINK_MM_CONFIG} \
-  -fink_fat_output ${FINK_FAT_OUTPUT} \
-  -hostless_folder ${HOSTLESS_FOLDER} \
-  -science_db_name ${SCIENCE_DB_NAME} \
-  -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
-  -tns_folder ${TNS_FOLDER} \
-  ${KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
-  -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+if [[ ${SURVEY} == "rubin"]] & [[ $service == "stream2raw" ]]; then
+  # pure Python
+  python ${FINK_HOME}/bin/${SURVEY}/${service}.py \
+    --log ${LOG_LEVEL} \
+    -nconsumers 4 \
+    -max_alerts_per_consumer 10000000 \
+    -hdfs_batch_size 4000 \
+    -table_schema_path rubin_parquet_schema/lsst.v7_4.parquet \
+    -groupid fink \
+    -hdfs_folder ${ONLINE_DATA_PREFIX}/raw/${NIGHT} \
+    -stop_polling_at "${STOP_AT}" > ${FOLDER}/streaming/confluent/logs/stream_or5p3_${NIGHT}.log 2>&1 &
+elif [[ $service == "fetch_schema" ]]; then
+  spark-submit --master local[1] \
+    --packages ${FINK_PACKAGES} \
+    ${FINK_HOME}/bin/${SURVEY}/${service}.py
+else
+  # Apache Spark
+  spark-submit --master ${SPARK_MASTER} \
+    --packages ${FINK_PACKAGES} --jars ${FINK_JARS} ${PYTHON_EXTRA_FILE} \
+    ${EXTRA_SPARK_CONFIG} \
+    --driver-memory ${DRIVER_MEMORY} --executor-memory ${EXECUTOR_MEMORY} \
+    --conf spark.cores.max=${SPARK_CORE_MAX} --conf spark.executor.cores=${SPARK_EXECUTOR_CORES} \
+    ${DISTRIBUTE_OPTIONS_SPARK} \
+    ${FINK_HOME}/bin/${SURVEY}/${service}.py ${HELP_ON_SERVICE} \
+    -producer ${SURVEY} \
+    -servers ${KAFKA_IPPORT} \
+    -night ${NIGHT} \
+    -schema ${FINK_ALERT_SCHEMA} \
+    -startingoffsets_stream ${KAFKA_STARTING_OFFSET} \
+    -max_offsets_per_trigger ${MAX_OFFSETS_PER_TRIGGER} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
+    -agg_data_prefix ${AGG_DATA_PREFIX} \
+    -tinterval ${FINK_TRIGGER_UPDATE} \
+    -mmconfigpath ${FINK_MM_CONFIG} \
+    -fink_fat_output ${FINK_FAT_OUTPUT} \
+    -hostless_folder ${HOSTLESS_FOLDER} \
+    -science_db_name ${SCIENCE_DB_NAME} \
+    -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
+    -tns_folder ${TNS_FOLDER} \
+    ${KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+fi
 
 echo -e "${SDONE} $service exiting"
