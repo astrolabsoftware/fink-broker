@@ -172,7 +172,11 @@ if [[ ${MERGE} == true ]]; then
 fi
 
 if [[ ! ${DRIVER_MEMORY} ]]; then
-  RESOURCES="-driver-memory 4g -executor-memory 4g -spark-cores-max 9 -spark-executor-cores 1"
+  if [[ ${SURVEY} == "ztf" ]]; then
+    RESOURCES="-driver-memory 4g -executor-memory 2g -spark-cores-max 9 -spark-executor-cores 1"
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    RESOURCES="-driver-memory 4g -executor-memory 2g -spark-cores-max 20 -spark-executor-cores 1"
+  fi
 else
   RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
 fi
