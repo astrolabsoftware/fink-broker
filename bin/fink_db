@@ -173,6 +173,7 @@ if [[ ${MERGE} == true ]]; then
       fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
     elif [[ ${SURVEY} == "rubin" ]]; then
       # Rubin is just a move to another place
+      hdfs dfs -mkdir -p ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
       hdfs dfs -mv ${ONLINE_DATA_PREFIX}/science/${NIGHT} ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
