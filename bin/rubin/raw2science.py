@@ -55,9 +55,7 @@ def main():
     rawdatapath = os.path.join(args.online_data_prefix, "raw")
     scitmpdatapath = os.path.join(
         args.online_data_prefix,
-        "science/year={}/month={}/day={}".format(
-            args.night[0:4], args.night[4:6], args.night[6:8]
-        ),
+        "science/{}".format(args.night),
     )
     checkpointpath_sci_tmp = os.path.join(
         args.online_data_prefix, "science_checkpoint/{}".format(args.night)
