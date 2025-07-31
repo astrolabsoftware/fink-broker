@@ -224,6 +224,7 @@ def load_all_cols(major_version, minor_version):
         "fink_science_version": "string",
         # "lsst_schema_version": "string", # FIXME: to be added in stream2raw ? Or in raw2science ?
         "alertId": "long",  # FIXME: there should be diaObjectId
+        "salt": "string", # partitioning key
     }
 
     diasource_schema = extract_diasource_schema(major_version, minor_version)

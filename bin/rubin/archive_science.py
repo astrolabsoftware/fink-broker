@@ -21,6 +21,7 @@
 3. Construct HBase catalog
 4. Push data
 """
+import pyspark.sql.functions as F
 
 import argparse
 
@@ -55,13 +56,18 @@ def main():
     logger.info("{} parquet detected".format(len(paths)))
 
     # Row key
-    row_key_name = "diaObjectId_midpointMjdTai"
+    row_key_name = "salt_diaObjectId_midpointMjdTai"
 
     n_alerts = 0
-    step = 10  # 10 files at once
+    step = 100  # 100 files at once
     for index in range(0, len(paths), step):
         logger.info("Processing {} files".format(len(paths[index : index + step])))
         df = load_parquet_files(paths[index : index + step])
+
+        # Key prefix will be the last 3 digits
+        # This will match the 1,000 partitions in the table
+        df = df.withColumn("salt", F.lpad(F.substring('diaObject.diaObjectId', -3, 3), 3, "0"))
+
         n_alerts_parquet = df.count()
         n_alerts += n_alerts_parquet
 
