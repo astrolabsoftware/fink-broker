@@ -21,6 +21,7 @@
 3. Construct HBase catalog
 4. Push data
 """
+
 import pyspark.sql.functions as F
 
 import argparse
@@ -66,7 +67,9 @@ def main():
 
         # Key prefix will be the last 3 digits
         # This will match the 1,000 partitions in the table
-        df = df.withColumn("salt", F.lpad(F.substring('diaObject.diaObjectId', -3, 3), 3, "0"))
+        df = df.withColumn(
+            "salt", F.lpad(F.substring("diaObject.diaObjectId", -3, 3), 3, "0")
+        )
 
         n_alerts_parquet = df.count()
         n_alerts += n_alerts_parquet
