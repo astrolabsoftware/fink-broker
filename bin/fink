@@ -295,7 +295,7 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
 elif [[ $service == "fetch_schema" ]]; then
   spark-submit --master local[1] \
     --packages ${FINK_PACKAGES} \
-    ${FINK_HOME}/bin/${SURVEY}/${service}.py
+    ${FINK_HOME}/bin/${SURVEY}/${service}.py -table_schema_path ${FINK_HOME}/rubin_parquet_schema
 else
   # Apache Spark
   spark-submit --master ${SPARK_MASTER} \
