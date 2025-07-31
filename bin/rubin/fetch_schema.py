@@ -78,7 +78,7 @@ if __name__ == "__main__":
         # save an empty dataframe with that schema
         spark.read.format("avro").option(
             "avroSchema", schema
-        ).load().toPandas().to_parquet(
+        ).load().write.parquet(
             os.path.join(args.table_schema_path, "{}.parquet".format(version))
         )
 
