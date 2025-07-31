@@ -72,14 +72,18 @@ if __name__ == "__main__":
         # save it
         schema = response.text
 
-        spark = SparkSession.builder.getOrCreate()
+        spark = (
+            SparkSession.builder.master("local[1]")
+            .config("spark.hadoop.fs.defaultFS", "file:///")
+            .getOrCreate()
+        )
         spark.sparkContext.setLogLevel("WARN")
 
         # save an empty dataframe with that schema
-        spark.read.format("avro").option(
-            "avroSchema", schema
-        ).load().write.parquet(
-            os.path.join(args.table_schema_path, "{}.parquet".format(version))
+        spark.read.format("avro").option("avroSchema", schema).load().write.parquet(
+            os.path.join(
+                "file://", args.table_schema_path, "{}.parquet".format(version)
+            )
         )
 
         with open(os.path.join(args.table_schema_path, "latest_schema.log"), "w") as f:
