@@ -121,8 +121,15 @@ fi
 
 # stream2raw
 if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
-    echo "Not implemented yet"
-    exit 1
+  # Force fetch schema
+  ${FINK_HOME}/bin/fink start fetch_schema -s rubin
+
+  nohup fink start stream2raw \
+    -s rubin \
+    -c ${conf} \
+    -conf_stream2raw ${FINK_HOME}/conf/rubin/fink.conf.stream2raw \
+    -night ${NIGHT} \
+    -stop_at `date +"%Y-%m-%d %H:%M" -d ${STOP_AT}` > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 fi
 
 # raw2science

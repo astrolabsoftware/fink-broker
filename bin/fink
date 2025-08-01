@@ -65,7 +65,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -topic)
-      KAFKA_TOPIC="$2"
+      ZTF_KAFKA_TOPIC="$2"
       shift 2
       ;;
     -index_table)
@@ -90,6 +90,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     -conf_distribution)
       conf_distribution="$2"
+      shift 2
+      ;;
+    -conf_stream2raw)
+      conf_stream2raw="$2"
       shift 2
       ;;
     -exit_after)
@@ -150,12 +154,12 @@ Service options:
   -spark-cores-max      Total number of cores to use for all executors (see Spark options)
   -spark-executor-cores Number of cores per executor (see Spark options)
   -exit_after           Number of seconds after which the service should stop.
-  -stop_at              Date HH:MM at which the service should stop. Only available for rubin/stream2raw.
+  -stop_at              Date at which the service should stop. Only available for rubin/stream2raw.
                         See -exit_after otherwise.
   --simulator           If specified, run in simulation mode.
   --noscience           If specified, do not enrich data with science modules.
 
-Examples:
+Examples for ZTF:
   Start polling for an hour:
   fink start stream2raw -s ztf -night 20190101 \t
 	-topic ztf_20190101 -driver_memory 4g -executor_memory 2g \t
@@ -165,6 +169,17 @@ Examples:
   fink start archive_science -s ztf -night 20190101 \t
   	-driver-memory 4g -executor-memory 4g \t
 	-spark-cores-max 9 -spark-executor-cores 1
+
+Examples for Rubin:
+  Fetch Schema:
+  fink start fetch_schema -s rubin
+
+  Start polling until 16:00:
+  fink start stream2raw -s rubin -night 20250701 \t
+	-topic alerts-simulated -stop_at \"16:00 today\"
+
+  Archive data in HBase:
+  fink start archive_science -s rubin -night 20250701
 
 Notes: useful wrappers can be found at ${FINK_HOME}/scheduler/${SURVEY}
 
@@ -246,11 +261,12 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-# Topic required only for stream2raw
-if [[ ${KAFKA_TOPIC} ]]; then
-  KAFKA_TOPIC="-topic ${KAFKA_TOPIC}"
+# Topic required only for stream2raw ZTF
+# The topic for LSST is defined in conf/rubin/fink.conf.stream2raw
+if [[ ${ZTF_KAFKA_TOPIC} ]]; then
+  ZTF_KAFKA_TOPIC="-topic ${ZTF_KAFKA_TOPIC}"
 else
-  KAFKA_TOPIC=""
+  ZTF_KAFKA_TOPIC=""
 fi
 
 # Only if the operator pass an index table
@@ -283,19 +299,45 @@ fi
 
 if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
   # pure Python
+  if [[ -f $conf_stream2raw ]]; then
+    echo -e "${SINFO} Reading custom Fink stream2raw configuration file from " $conf_stream2raw
+    source $conf_stream2raw
+  else
+    echo -e "${SINFO} Reading default Fink stream2raw conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
+    source ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
+  fi
+
   python ${FINK_HOME}/bin/${SURVEY}/${service}.py \
-    --log ${LOG_LEVEL} \
-    -nconsumers 4 \
-    -max_alerts_per_consumer 10000000 \
-    -hdfs_batch_size 4000 \
-    -table_schema_path rubin_parquet_schema/lsst.v7_4.parquet \
-    -groupid fink \
-    -hdfs_folder ${ONLINE_DATA_PREFIX}/raw/${NIGHT} \
-    -stop_polling_at "${STOP_AT}" > ${FOLDER}/streaming/confluent/logs/stream_or5p3_${NIGHT}.log 2>&1 &
+    -lsst_kafka_server ${LSST_KAFKA_SERVER} \
+    -lsst_schema_server ${LSST_SCHEMA_SERVER} \
+    -lsst_kafka_username ${LSST_KAFKA_USERNAME} \
+    -lsst_kafka_password ${LSST_KAFKA_PASSWORD} \
+    -hdfs_namenode ${HDFS_NAMENODE} \
+    -hdfs_port ${HDFS_PORT} \
+    -hdfs_username ${HDFS_USERNAME} \
+    -nconsumers ${NCONSUMERS} \
+    -groupid ${GROUPID} \
+    -max_alerts_per_consumer ${MAX_ALERTS_PER_CONSUMER} \
+    -hdfs_batch_size ${HDFS_BATCH_SIZE} \
+    -table_schema_path ${TABLE_SCHEMA_PATH} \
+    -online_data_prefix ${ONLINE_DATA_PREFIX} \
+    -stop_polling_at "${STOP_AT}" \
+    -log ${LOG_LEVEL} \
+    -topic ${LSST_KAFKA_TOPIC} \
+
+
 elif [[ $service == "fetch_schema" ]]; then
+  if [[ -f $conf_stream2raw ]]; then
+    echo -e "${SINFO} Reading custom Fink stream2raw configuration file from " $conf_stream2raw
+    source $conf_stream2raw
+  else
+    echo -e "${SINFO} Reading default Fink stream2raw conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
+    source ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
+  fi
+
   spark-submit --master "local[1]" \
     --packages ${FINK_PACKAGES} \
-    ${FINK_HOME}/bin/${SURVEY}/${service}.py -table_schema_path ${FINK_HOME}/rubin_parquet_schema
+    ${FINK_HOME}/bin/${SURVEY}/${service}.py -table_schema_path ${TABLE_SCHEMA_PATH}
 else
   # Apache Spark
   spark-submit --master ${SPARK_MASTER} \
@@ -320,7 +362,7 @@ else
     -science_db_name ${SCIENCE_DB_NAME} \
     -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
     -tns_folder ${TNS_FOLDER} \
-    ${KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
+    ${ZTF_KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
     -log_level ${LOG_LEVEL} ${EXIT_AFTER}
 fi
 
