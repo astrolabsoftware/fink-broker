@@ -22,7 +22,7 @@ import logging
 import numpy as np
 from datetime import datetime
 
-from utils import write_alert, return_offsets
+from fink_broker.rubin.decoding_utils import write_alert, return_offsets
 
 from pyarrow.fs import HadoopFileSystem
 

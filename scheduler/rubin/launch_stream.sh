@@ -44,6 +44,10 @@ while [ "$#" -gt 0 ]; do
       DISTRIBUTE_ONLY=true
       shift 1
       ;;
+    --check_offsets)
+      CHECK_OFFSET=true
+      shift 1
+      ;;
     -night)
       NIGHT="$2"
       shift 2
@@ -76,6 +80,7 @@ Options:
   --poll_only       If specified, only poll incoming stream. [NOT AVAILABLE YET]
   --enrich_only     If specified, only enrich polled data.
   --distribute_only If specified, only distribute enriched data.
+  --check_offset    If specified, check offsets and exit (compatible only with --poll_only)
 
 Examples:
   # Launch full Fink until 20:00 today Paris time
@@ -83,6 +88,9 @@ Examples:
 
   # It is 14:00 Paris. Poll only for 1 hour
   ./launch_stream.sh --poll_only -stop_at 15:00 today
+
+  # Check Kafka offsets
+  ./launch_stream.sh --poll_only --check_offset
 
   # Extract science until the end of the night
   ./launch_stream.sh --enrich_only
@@ -124,12 +132,16 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
   # Force fetch schema
   ${FINK_HOME}/bin/fink start fetch_schema -s rubin
 
+  if [[ ${CHECK_OFFSET} == true ]]; then
+    CHECK_OFFSET="--check_offset"
+  fi
+
   nohup fink start stream2raw \
     -s rubin \
     -c ${conf} \
     -conf_stream2raw ${FINK_HOME}/conf/rubin/fink.conf.stream2raw \
     -night ${NIGHT} \
-    -stop_at "`date +'%Y-%m-%d %H:%M' -d "${STOP_AT}"`" > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
+    -stop_at "`date +'%Y-%m-%d %H:%M' -d "${STOP_AT}"`" ${CHECK_OFFSET} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 fi
 
 # raw2science
