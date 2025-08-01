@@ -81,7 +81,9 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
     with open(os.path.join(table_schema_path, "latest_schema.log"), "r") as f:
         schema_version = f.read()
 
-    schema_files = glob.glob(os.path.join(table_schema_path, schema_version, "*.parquet"))
+    schema_files = glob.glob(
+        os.path.join(table_schema_path, schema_version, "*.parquet")
+    )
     table_schema = pq.read_schema(schema_files[0])
 
     # remove metadata for compatibility

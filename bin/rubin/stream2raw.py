@@ -79,7 +79,7 @@ def run(q, kafka_config, config):
         started = False
         msgs = []
         while True:
-            message = c.poll(kafka_config["session.timeout.ms"] * 1000)
+            message = c.poll(kafka_config["session.timeout.ms"] * 3000)
             if message is None:
                 _LOG.debug("poll timeout")
 
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         "groupid": args.groupid,
         "stop_polling_at": args.stop_polling_at,
         "night": args.night,
-        "nconsumers": args.nconsumers
+        "nconsumers": args.nconsumers,
     }
 
     # Set logging level
