@@ -16,6 +16,7 @@
 import io
 import csv
 import os
+import glob
 import time
 import requests
 import numpy as np
@@ -50,16 +51,38 @@ def crossmatch_cds(table, table_schema):
         extcatalog="simbad",
         cols="main_type",
     )
-    table = table.append_column(pa.field("cdsxmatch", pa.string()), [results.values])
+    table = table.append_column(
+        pa.field("cdsxmatch", pa.string()), [results.to_numpy()]
+    )
     table_schema = table_schema.append(pa.field("cdsxmatch", pa.string()))
 
     return table, table_schema
 
 
 def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
-    """ """
+    """Write alerts on disk
+
+    Parameters
+    ----------
+    msgs: list
+        Batch of alerts
+    table_schema_path: str
+        Folder containing LSST schemas in parquet format
+    fs: optional
+        Type of filesystem. None means local.
+    uuid: int
+        ??
+    where: str
+        Folder to write alerts. Depends on filesystem chosen.
+    """
     pdf = pd.DataFrame.from_records(msgs)
-    table_schema = pq.read_schema(table_schema_path, filesystem=fs)
+
+    # Get latest schema
+    with open(os.path.join(table_schema_path, "latest_schema.log"), "r") as f:
+        schema_version = f.read()
+
+    schema_files = glob.glob(os.path.join(table_schema_path, schema_version))
+    table_schema = pq.read_schema(schema_files[0])
 
     # remove metadata for compatibility
     table_schema = table_schema.remove_metadata()
@@ -70,8 +93,8 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
         table, table_schema, "brokerIngestMjd", pa.float64()
     )
 
-    # Perform crossmatch
-    table, table_schema = crossmatch_cds(table, table_schema)
+    # # Perform crossmatch
+    # table, table_schema = crossmatch_cds(table, table_schema)
 
     # Add mjd in UTC
     table, table_schema = stamp_table(
@@ -160,7 +183,7 @@ def cdsxmatch(
                 cols = [i.strip() for i in cols]
                 pdf_out = pdf_out[cols]
                 pdf_out["concat_cols"] = pdf_out.apply(
-                    lambda x: ",".join(x.astype(str).values.tolist()), axis=1
+                    lambda x: ",".join(x.astype(str).to_numpy().tolist()), axis=1
                 )
                 return pdf_out["concat_cols"]
             elif len(cols) == 1:

@@ -322,9 +322,9 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     -table_schema_path ${TABLE_SCHEMA_PATH} \
     -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -stop_polling_at "${STOP_AT}" \
+    -night ${NIGHT} \
     -log ${LOG_LEVEL} \
-    -topic ${LSST_KAFKA_TOPIC} \
-
+    -topic ${LSST_KAFKA_TOPIC}
 
 elif [[ $service == "fetch_schema" ]]; then
   if [[ -f $conf_stream2raw ]]; then

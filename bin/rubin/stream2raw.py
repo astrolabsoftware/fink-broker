@@ -70,6 +70,8 @@ def run(q, kafka_config, config):
         # For local tests
         fs = None
 
+    output_folder = os.path.join(config["online_data_prefix"], "raw", args.night)
+
     stop_polling_at_ = datetime.fromisoformat(config["stop_polling_at"])
     try:
         t0 = time.time()
@@ -89,7 +91,7 @@ def run(q, kafka_config, config):
                         config["table_schema_path"],
                         fs,
                         rng.integers(0, 1e7),
-                        where=config["online_data_prefix"],
+                        where=output_folder,
                     )
 
                     msgs = []
@@ -117,7 +119,7 @@ def run(q, kafka_config, config):
                     config["table_schema_path"],
                     fs,
                     rng.integers(0, 1e7),
-                    where=config["online_data_prefix"],
+                    where=output_folder,
                 )
 
                 if count >= config["max_alerts_per_consumer"]:
@@ -241,6 +243,12 @@ if __name__ == "__main__":
         help="Kafka topic name",
     )
     parser.add_argument(
+        "-night",
+        type=str,
+        default="20250701",
+        help="Observing night, in format YYYYMMDD",
+    )
+    parser.add_argument(
         "--different_groupid",
         action="store_true",
         help="If specified, all consumers will belong to different group.id. Only for testing.",
@@ -297,6 +305,7 @@ if __name__ == "__main__":
         "table_schema_path": args.table_schema_path,
         "groupid": args.groupid,
         "stop_polling_at": args.stop_polling_at,
+        "night": args.night,
     }
 
     # Set logging level
