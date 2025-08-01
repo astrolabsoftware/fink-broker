@@ -167,7 +167,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
                     -s rubin \
                     -c ${conf} \
                     -driver-memory 4g -executor-memory 2g \
-                    -spark-cores-max 24 -spark-executor-cores 1 \
+                    -spark-cores-max 48 -spark-executor-cores 1 \
                     -night ${NIGHT} \
                     -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
                 break
