@@ -1,0 +1,45 @@
+# Copyright 2018-2025 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+######################################
+# Credentials -- mandatory for all
+LSST_KAFKA_USERNAME=
+LSST_KAFKA_PASSWORD=
+LSST_KAFKA_TOPIC=
+SECURITY_PROTOCOL=
+SASL_MECHANISMS=
+
+# Connection URL to USDF
+LSST_KAFKA_SERVER=usdf-alert-stream-dev.lsst.cloud:9094
+LSST_SCHEMA_SERVER=https://usdf-alert-schemas-dev.slac.stanford.edu
+
+# HDFS configuration -- mandatory for polling
+HDFS_NAMENODE=ccmaster1
+HDFS_PORT=8020
+HDFS_USERNAME=fink
+
+# Suffix to be added to the group.id
+GROUPID=fink
+
+# Number of consumer for Kafka
+NCONSUMERS=4
+
+# Maximum number of alerts to process per consumer
+MAX_ALERTS_PER_CONSUMER=10000000
+
+# Number of alerts per HDFS block
+HDFS_BATCH_SIZE=4000
+
+# Where the schemas are stored
+TABLE_SCHEMA_PATH=${FINK_HOME}/rubin_parquet_schema
