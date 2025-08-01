@@ -306,6 +306,7 @@ if __name__ == "__main__":
         "groupid": args.groupid,
         "stop_polling_at": args.stop_polling_at,
         "night": args.night,
+        "nconsumers": args.nconsumers
     }
 
     # Set logging level
@@ -333,7 +334,7 @@ if __name__ == "__main__":
 
     _LOG.info(
         "Number of consumers: {} with {} alerts each".format(
-            args.nconsumers, args.max_alerts_per_consumer
+            config["nconsumers"], config["max_alerts_per_consumer"]
         )
     )
 

@@ -90,7 +90,7 @@ Examples:
   ./launch_stream.sh --poll_only -stop_at 15:00 today
 
   # Check Kafka offsets
-  ./launch_stream.sh --poll_only --check_offset
+  ./launch_stream.sh --poll_only --check_offsets
 
   # Extract science until the end of the night
   ./launch_stream.sh --enrich_only
