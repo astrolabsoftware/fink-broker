@@ -17,7 +17,6 @@ import os
 import requests
 import argparse
 import logging
-import pyarrow.parquet as pq
 
 from pyspark.sql import SparkSession
 
