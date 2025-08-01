@@ -148,31 +148,31 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-lsst_kafka_server",
-        type="str",
+        type=str,
         default="",
         help="Kafka URL for LSST alerts",
     )
     parser.add_argument(
         "-lsst_schema_server",
-        type="str",
+        type=str,
         default="https://usdf-alert-schemas-dev.slac.stanford.edu",
         help="Kafka URL for schema",
     )
     parser.add_argument(
         "-lsst_kafka_username",
-        type="str",
+        type=str,
         default="",
         help="Username for Kafka",
     )
     parser.add_argument(
         "-lsst_kafka_password",
-        type="str",
+        type=str,
         default="",
         help="Password for Kafka",
     )
     parser.add_argument(
         "-hdfs_namenode",
-        type="str",
+        type=str,
         default="ccmaster1",
         help="HDFS namenode",
     )
