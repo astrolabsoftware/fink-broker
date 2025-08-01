@@ -81,7 +81,7 @@ def run(q, kafka_config, config):
         while True:
             message = c.poll(kafka_config["session.timeout.ms"] * 1000)
             if message is None:
-                _LOG.info("poll timeout")
+                _LOG.debug("poll timeout")
 
                 # dump on disk remaining alerts in the cache
                 if len(msgs) > 0:
@@ -105,7 +105,7 @@ def run(q, kafka_config, config):
                 _LOG.error("Error: {}".format(message.error()))
             else:
                 if started is False:
-                    _LOG.debug("Start polling at: {}".format(datetime.now()))
+                    _LOG.info("Start polling at: {}".format(datetime.now()))
                     t0 = time.time()
                     started = True
                 deserialized = message.value()
