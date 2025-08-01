@@ -36,91 +36,48 @@ from confluent_kafka.schema_registry.avro import AvroDeserializer
 
 _LOG = logging.getLogger(__name__)
 
-# Load input parameters from environment variables:
 
-# $KAFKA_USERNAME should be the username of the community broker.
-# $KAFKA_PASSWORD should be the password; this doesn't have a default and must
-USERNAME = os.environ.get("LSST_KAFKA_USERNAME", "")
-PASSWORD = os.environ.get("LSST_KAFKA_PASSWORD", "")
-
-if (USERNAME == "") or (PASSWORD == ""):
-    _LOG.warning("USERNAME and PASSWORD are empty and should be set")
-
-# These are the URLs for the integration environment of the alert stream on the
-# US data facility (aka the "USDF" environment).
-SERVER = "usdf-alert-stream-dev.lsst.cloud:9094"
-SCHEMA_REG_URL = "https://usdf-alert-schemas-dev.slac.stanford.edu"
-sr_client = SchemaRegistryClient({"url": SCHEMA_REG_URL})
-deserializer = AvroDeserializer(sr_client)
-
-config = {
-    # This is the URL to use to connect to the Kafka cluster.
-    "bootstrap.servers": SERVER,
-    # These next two properties tell the Kafka client about the specific
-    # authentication and authorization protocols that should be used when
-    # connecting.
-    "security.protocol": "SASL_PLAINTEXT",
-    "sasl.mechanisms": "SCRAM-SHA-512",
-    # The sasl.username and sasl.password are passed through over
-    # SCRAM-SHA-512 auth to connect to the cluster. The username is not
-    # sensitive, but the password is (of course) a secret value which
-    # should never be committed to source code.
-    "sasl.username": USERNAME,
-    "sasl.password": PASSWORD,
-    # The Consumer Group ID, as described above.
-    "group.id": USERNAME + "_group_",
-    # Finally, we pass in the deserializer that we created above,
-    # configuring the consumer so that it automatically does all the Schema
-    # Registry and Avro deserialization work.
-    "value.deserializer": deserializer,
-    "auto.offset.reset": "earliest",
-    "fetch.min.bytes": 10 * 1024 * 1024,
-    "max.poll.interval.ms": 300000,
-    "session.timeout.ms": 10000,
-}
-
-
-def run(
-    q,
-    max_alerts_per_consumer,
-    hdfs_batch_size,
-    table_schema_path,
-    groupid,
-    hdfs_folder,
-    stop_polling_at,
-    seed_out,
-):
+def run(q, kafka_config, config):
     """Single consumer poll"""
     _LOG.debug("PID: {}".format(os.getpid()))
-    if groupid is None:
-        if not isinstance(seed_out, int):
+    if config["groupid"] is None:
+        if not isinstance(config["seed_out"], int):
             # different group.id
             np.random.seed(None)
             rnd = np.random.randint(1e6)
         else:
-            np.random.seed(seed_out)
+            np.random.seed(config["seed_out"])
             rnd = np.random.randint(1e6)
-        config["group.id"] += str(rnd)
-    elif isinstance(groupid, str):
-        config["group.id"] += groupid
+        kafka_config["group.id"] += str(rnd)
+    elif isinstance(config["groupid"], str):
+        kafka_config["group.id"] += config["groupid"]
     else:
         raise TypeError("groupid must be None or string")
-    _LOG.debug("group.id: {}".format(config["group.id"]))
+    _LOG.debug("group.id: {}".format(kafka_config["group.id"]))
 
     rng = np.random.default_rng(os.getpid())
 
-    c = DeserializingConsumer(config)
-    c.subscribe(["alerts-simulated"])
-    fs = HadoopFileSystem("ccmaster1", 8020, user="fink", replication=2)
+    c = DeserializingConsumer(kafka_config)
+    c.subscribe([config["topic"]])
+    if config["hdfs_namenode"] != "":
+        fs = HadoopFileSystem(
+            config["hdfs_namenode"],
+            config["hdfs_port"],
+            user=config["hdfs_username"],
+            replication=2,
+        )
+    else:
+        # For local tests
+        fs = None
 
-    stop_polling_at_ = datetime.fromisoformat(stop_polling_at)
+    stop_polling_at_ = datetime.fromisoformat(config["stop_polling_at"])
     try:
         t0 = time.time()
         count = 0
         started = False
         msgs = []
         while True:
-            message = c.poll(30.0)
+            message = c.poll(kafka_config["session.timeout.ms"] * 1000)
             if message is None:
                 _LOG.info("poll timeout")
 
@@ -129,10 +86,10 @@ def run(
                     _LOG.info("Dump on disk remaining {} alerts...".format(len(msgs)))
                     write_alert(
                         msgs,
-                        table_schema_path,
+                        config["table_schema_path"],
                         fs,
                         rng.integers(0, 1e7),
-                        where=hdfs_folder,
+                        where=config["online_data_prefix"],
                     )
 
                     msgs = []
@@ -153,17 +110,17 @@ def run(
                 msgs.append(deserialized)
                 count += 1
 
-            if (count % hdfs_batch_size == 0) and (len(msgs) > 0):
+            if (count % config["hdfs_batch_size"] == 0) and (len(msgs) > 0):
                 # Dump on disk
                 write_alert(
                     msgs,
-                    table_schema_path,
+                    config["table_schema_path"],
                     fs,
                     rng.integers(0, 1e7),
-                    where=hdfs_folder,
+                    where=config["online_data_prefix"],
                 )
 
-                if count >= max_alerts_per_consumer:
+                if count >= config["max_alerts_per_consumer"]:
                     break
 
                 # re-initialise containers
@@ -187,6 +144,48 @@ def run(
 if __name__ == "__main__":
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-lsst_kafka_server",
+        type="str",
+        default="",
+        help="Kafka URL for LSST alerts",
+    )
+    parser.add_argument(
+        "-lsst_schema_server",
+        type="str",
+        default="https://usdf-alert-schemas-dev.slac.stanford.edu",
+        help="Kafka URL for schema",
+    )
+    parser.add_argument(
+        "-lsst_kafka_username",
+        type="str",
+        default="",
+        help="Username for Kafka",
+    )
+    parser.add_argument(
+        "-lsst_kafka_password",
+        type="str",
+        default="",
+        help="Password for Kafka",
+    )
+    parser.add_argument(
+        "-hdfs_namenode",
+        type="str",
+        default="ccmaster1",
+        help="HDFS namenode",
+    )
+    parser.add_argument(
+        "-hdfs_port",
+        type=int,
+        default=8020,
+        help="HDFS namenode port",
+    )
+    parser.add_argument(
+        "-hdfs_username",
+        type=str,
+        default="fink",
+        help="HDFS username",
+    )
     parser.add_argument(
         "-nconsumers",
         type=int,
@@ -214,14 +213,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-table_schema_path",
         type=str,
-        default="rubin_parquet_schema/lsst.v7_1.parquet",
-        help="HDFS path to a parquet file containing the alert schema in the pyarrow format",
+        default="rubin_parquet_schema",
+        help="Local folder containing the alert schemas in the pyarrow format. Must contains latest_schema.log",
     )
     parser.add_argument(
-        "-hdfs_folder",
+        "-online_data_prefix",
         type=str,
-        default="test",
-        help="Folder name on HDFS to store alerts. Typically basename/YYYYMMDD",
+        default="online",
+        help="Folder name to store alerts. Can be local or HDFS.",
     )
     parser.add_argument(
         "-stop_polling_at",
@@ -230,15 +229,21 @@ if __name__ == "__main__":
         help="Date YYYY-MM-DD [hh:mm:ss] from when the consumers should stop polling. The stop will happen after the next timeout.",
     )
     parser.add_argument(
-        "--log",
+        "-log",
         type=str,
         default="INFO",
         help="Logging level: DEBUG, INFO (default), WARN, ERROR.",
     )
     parser.add_argument(
+        "-topic",
+        type=str,
+        default="alerts-simulated",
+        help="Kafka topic name",
+    )
+    parser.add_argument(
         "--different_groupid",
         action="store_true",
-        help="If specified, all consumers will belong to different group.id.",
+        help="If specified, all consumers will belong to different group.id. Only for testing.",
     )
     parser.add_argument(
         "--check_offsets",
@@ -246,6 +251,53 @@ if __name__ == "__main__":
         help="If specified, check the size of the topic.",
     )
     args = parser.parse_args(None)
+
+    if (args.lsst_kafka_username == "") or (args.lsst_kafka_password == ""):
+        _LOG.error(
+            "LSST_KAFKA_USERNAME and LSST_KAFKA_PASSWORD are empty and should be set"
+        )
+
+    sr_client = SchemaRegistryClient({"url": args.lsst_schema_server})
+    deserializer = AvroDeserializer(sr_client)
+
+    kafka_config = {
+        # This is the URL to use to connect to the Kafka cluster.
+        "bootstrap.servers": args.lsst_kafka_server,
+        # These next two properties tell the Kafka client about the specific
+        # authentication and authorization protocols that should be used when
+        # connecting.
+        "security.protocol": "SASL_PLAINTEXT",
+        "sasl.mechanisms": "SCRAM-SHA-512",
+        # The sasl.username and sasl.password are passed through over
+        # SCRAM-SHA-512 auth to connect to the cluster. The username is not
+        # sensitive, but the password is (of course) a secret value which
+        # should never be committed to source code.
+        "sasl.username": args.lsst_kafka_username,
+        "sasl.password": args.lsst_kafka_password,
+        # The Consumer Group ID, as described above.
+        "group.id": args.lsst_kafka_username + "_group_",
+        # Finally, we pass in the deserializer that we created above,
+        # configuring the consumer so that it automatically does all the Schema
+        # Registry and Avro deserialization work.
+        "value.deserializer": deserializer,
+        "auto.offset.reset": "earliest",
+        "fetch.min.bytes": 10 * 1024 * 1024,
+        "max.poll.interval.ms": 300000,
+        "session.timeout.ms": 10000,
+    }
+
+    config = {
+        "topic": args.topic,
+        "online_data_prefix": args.online_data_prefix,
+        "hdfs_namenode": args.hdfs_namenode,
+        "hdfs_port": args.hdfs_port,
+        "hdfs_username": args.hdfs_username,
+        "max_alerts_per_consumer": args.max_alerts_per_consumer,
+        "hdfs_batch_size": args.hdfs_batch_size,
+        "table_schema_path": args.table_schema_path,
+        "groupid": args.groupid,
+        "stop_polling_at": args.stop_polling_at,
+    }
 
     # Set logging level
     numeric_level = getattr(logging, args.log.upper(), None)
@@ -258,13 +310,13 @@ if __name__ == "__main__":
     )
 
     if args.check_offsets:
-        if args.groupid is not None:
-            config["group.id"] += args.groupid
-        _LOG.info("group.id: {}".format(config["group.id"]))
-        c = DeserializingConsumer(config)
+        if config["groupid"] is not None:
+            kafka_config["group.id"] += config["groupid"]
+        _LOG.info("group.id: {}".format(kafka_config["group.id"]))
+        c = DeserializingConsumer(kafka_config)
         return_offsets(
             consumer=c,
-            topic="alerts-simulated",
+            topic=config["topic"],
             hide_empty_partition=False,
             verbose=True,
         )
@@ -282,19 +334,14 @@ if __name__ == "__main__":
     workers = []
     q = Queue()
 
-    seed_out = None if args.different_groupid else np.random.randint(1e6)
-    for _ in range(args.nconsumers):
+    config["seed_out"] = None if args.different_groupid else np.random.randint(1e6)
+    for _ in range(config["nconsumers"]):
         w = Process(
             target=run,
             args=(
                 q,
-                args.max_alerts_per_consumer,
-                args.hdfs_batch_size,
-                args.table_schema_path,
-                args.groupid,
-                args.hdfs_folder,
-                args.stop_polling_at,
-                seed_out,
+                kafka_config,
+                config,
             ),
         )
         w.start()
@@ -318,8 +365,8 @@ if __name__ == "__main__":
     )
     _LOG.info(
         "Throughput per consumer: {:.2f} +/- {:.2f} alerts/s".format(
-            np.mean(args.max_alerts_per_consumer / times),
-            np.std(args.max_alerts_per_consumer / times),
+            np.mean(config["max_alerts_per_consumer"] / times),
+            np.std(config["max_alerts_per_consumer"] / times),
         )
     )
     _LOG.info("Total time to solution: {:.2f} seconds".format(time.time() - t_start))
