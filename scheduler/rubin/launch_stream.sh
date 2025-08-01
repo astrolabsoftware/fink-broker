@@ -133,7 +133,7 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
   ${FINK_HOME}/bin/fink start fetch_schema -s rubin
 
   if [[ ${CHECK_OFFSET} == true ]]; then
-    CHECK_OFFSET="--check_offset"
+    CHECK_OFFSET="--check_offsets"
   fi
 
   nohup fink start stream2raw \
