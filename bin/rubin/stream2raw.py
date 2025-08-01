@@ -79,7 +79,7 @@ def run(q, kafka_config, config):
         started = False
         msgs = []
         while True:
-            message = c.poll(kafka_config["session.timeout.ms"] * 3000)
+            message = c.poll(kafka_config["session.timeout.ms"] / 3000)
             if message is None:
                 _LOG.debug("poll timeout")
 
