@@ -17,16 +17,15 @@ import logging
 
 
 import pyspark.sql.functions as F
-from pyspark.sql.utils import AnalysisException
 
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS
 from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
 
 from fink_broker.common.hbase_utils import select_relevant_columns
-from fink_broker.common.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
+from fink_broker.common.hbase_utils import flatten_dataframe
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -97,7 +96,7 @@ def load_fink_cols():
     return fink_cols, fink_nested_cols
 
 
-def load_all_cols():
+def load_all_ztf_cols():
     """Fink/ZTF columns used in HBase tables with type.
 
     Returns
@@ -107,7 +106,7 @@ def load_all_cols():
 
     Examples
     --------
-    >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
+    >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
     147
@@ -231,96 +230,6 @@ def load_all_cols():
     candidates = {"candidate." + k: v for k, v in candidates.items()}
 
     return root_level, candidates, fink_cols, fink_nested_cols
-
-
-def flatten_dataframe(df):
-    """Flatten DataFrame columns for HBase ingestion
-
-    Notes
-    -----
-    Check also all Fink columns exist, fill if necessary, and cast all columns
-
-    Parameters
-    ----------
-    df: DataFrame
-        Spark DataFrame with raw alert data
-
-    Returns
-    -------
-    df: DataFrame
-        Spark DataFrame with HBase data structure
-    col_i: list
-        List of columns for i column family
-    col_d: list
-        List of columns for d column family
-    cf: dict
-        Dictionary with keys being column names (also called
-        column qualifiers), and the corresponding column family.
-
-    """
-    root_level, candidates, fink_cols, fink_nested_cols = load_all_cols()
-
-    tmp_i = []
-    tmp_d = []
-
-    # assuming no missing columns
-    for colname, coltype in root_level.items():
-        tmp_i.append(F.col(colname).cast(coltype))
-
-    # assuming no missing columns
-    for colname, coltype in candidates.items():
-        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
-
-    cols_i = df.select(tmp_i).columns
-
-    # check all columns exist, otherwise create it
-    for colname, coltype_and_default in fink_cols.items():
-        try:
-            # ony here to check if the column exists
-            df.select(colname)
-        except AnalysisException:
-            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn(
-                "Adding a new column with value `{}` and type `{}`".format(
-                    coltype_and_default["default"], coltype_and_default["type"]
-                )
-            )
-            df = df.withColumn(colname, F.lit(coltype_and_default["default"]))
-        tmp_d.append(F.col(colname).cast(coltype_and_default["type"]))
-
-    # check all columns exist, otherwise create it
-    for colname, coltype_and_default in fink_nested_cols.items():
-        try:  # noqa: PERF203
-            # ony here to check if the column exists
-            df.select(colname)
-
-            # rename root.level into root_level
-            name = (
-                F.col(colname)
-                .alias(colname.replace(".", "_"))
-                .cast(coltype_and_default["type"])
-            )
-            tmp_d.append(name)
-        except AnalysisException:  # noqa: PERF203
-            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn(
-                "Adding a new column with value `{}` and type `{}`".format(
-                    coltype_and_default["default"], coltype_and_default["type"]
-                )
-            )
-            name = colname.replace(".", "_")
-            df = df.withColumn(name, F.lit(coltype_and_default["default"]))
-            tmp_d.append(F.col(name).cast(coltype_and_default["type"]))
-
-    cols_d = df.select(tmp_d).columns
-
-    # flatten names
-    cnames = tmp_i + tmp_d
-    df = df.select(cnames)
-
-    cf = assign_column_family_names(df, cols_i, cols_d)
-
-    return df, cols_i, cols_d, cf
 
 
 def load_ztf_index_cols():
@@ -475,7 +384,7 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     df_casted = cast_features(df)
 
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d, cf = flatten_dataframe(df_casted)
+    df_flat, cols_i, cols_d, cf = flatten_dataframe(df_casted, source="ztf")
 
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")

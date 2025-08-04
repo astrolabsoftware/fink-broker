@@ -28,7 +28,6 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
-from fink_broker.rubin.hbase_utils import ingest_diasource
 from fink_broker.rubin.hbase_utils import incremental_ingestion_with_salt
 
 
@@ -72,7 +71,6 @@ def main():
         paths=paths,
         table_name=args.science_db_name + ".diaSource",
         row_key_name=row_key_name,
-        ingestor=ingest_diasource,
         catfolder=args.science_db_catalogs,
         nfiles=nfiles,
         npartitions=npartitions,

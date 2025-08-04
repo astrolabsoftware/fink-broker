@@ -12,12 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.utils import AnalysisException
 
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
+
+from fink_broker.ztf.hbase_utils import load_all_ztf_cols
+from fink_broker.rubin.hbase_utils import load_all_rubin_cols
 
 import logging
 import json
@@ -457,3 +460,114 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
     # write catalog for the schema row
     file_name = table_name + "_schema_row.json"
     write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
+
+
+def flatten_dataframe(
+    df, source="ztf", section=None, major_version=None, minor_version=None
+):
+    """Flatten DataFrame columns of a nested Spark DF for HBase ingestion
+
+    Notes
+    -----
+    Check also all Fink columns exist, fill if necessary, and cast all columns
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark DataFrame with raw alert data
+    source: str
+        Data source among: ztf, rubin
+    section: str
+        If source=rubin, section to extract among: diaSource, diaObject
+
+    Returns
+    -------
+    df: DataFrame
+        Spark DataFrame with HBase data structure
+    col_i: list
+        List of columns for i column family
+    col_d: list
+        List of columns for d column family
+    cf: dict
+        Dictionary with keys being column names (also called
+        column qualifiers), and the corresponding column family.
+
+    """
+    if source == "ztf":
+        root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
+    if source == "rubin":
+        root_level, diaobject, diasource, fink_cols, fink_nested_cols = (
+            load_all_rubin_cols(major_version, minor_version)
+        )
+        if section == "diaSource":
+            candidates = diasource
+        elif section == "diaObject":
+            candidates = diaobject
+        else:
+            _LOG.error(
+                "section must be one of 'diaSource', 'diaObject'. {} is not allowed.".format(
+                    section
+                )
+            )
+
+    tmp_i = []
+    tmp_d = []
+
+    # assuming no missing columns
+    for colname, coltype in root_level.items():
+        tmp_i.append(F.col(colname).cast(coltype))
+
+    # assuming no missing columns
+    for colname, coltype in candidates.items():
+        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
+
+    cols_i = df.select(tmp_i).columns
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_cols.items():
+        try:
+            # ony here to check if the column exists
+            df.select(colname)
+        except AnalysisException:
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            df = df.withColumn(colname, F.lit(coltype_and_default["default"]))
+        tmp_d.append(F.col(colname).cast(coltype_and_default["type"]))
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_nested_cols.items():
+        try:  # noqa: PERF203
+            # ony here to check if the column exists
+            df.select(colname)
+
+            # rename root.level into root_level
+            name = (
+                F.col(colname)
+                .alias(colname.replace(".", "_"))
+                .cast(coltype_and_default["type"])
+            )
+            tmp_d.append(name)
+        except AnalysisException:  # noqa: PERF203
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            name = colname.replace(".", "_")
+            df = df.withColumn(name, F.lit(coltype_and_default["default"]))
+            tmp_d.append(F.col(name).cast(coltype_and_default["type"]))
+
+    cols_d = df.select(tmp_d).columns
+
+    # flatten names
+    cnames = tmp_i + tmp_d
+    df = df.select(cnames)
+
+    cf = assign_column_family_names(df, cols_i, cols_d)
+
+    return df, cols_i, cols_d, cf

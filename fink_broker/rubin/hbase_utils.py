@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pyspark.sql.functions as F
-from pyspark.sql.utils import AnalysisException
 
 from fink_broker.common.hbase_utils import select_relevant_columns
-from fink_broker.common.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
+from fink_broker.common.hbase_utils import flatten_dataframe
 from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
@@ -147,11 +146,14 @@ def select_type(atype, name):
         raise ValueError("Type {} for field {} is not supported".format(atype, name))
 
 
-def extract_diasource_schema(major_version, minor_version):
+def extract_avsc_schema(name, major_version, minor_version):
     """Convert avsc into useful dictionary
 
     Parameters
     ----------
+    name: str
+        Name of the avsc to extract. In the form:
+        lsst.v{major_version}_{minor_version}.{name}.avsc
     major_version: int
         Schema major version
     minor_version: int
@@ -165,21 +167,25 @@ def extract_diasource_schema(major_version, minor_version):
 
     Examples
     --------
-    >>> schema = extract_diasource_schema(7, 4)
+    >>> schema = extract_avsc_schema("diaSource", 7, 4)
     >>> len(schema)
     140
 
     >>> schema["psfFlux"]
     {'type': 'float', 'default': None}
+
+    >>> schema = extract_avsc_schema("diaObject", 7, 4)
+    >>> len(schema)
+    82
     """
-    _LOG.info("diaSource schema version {}.{}".format(major_version, minor_version))
+    _LOG.info("{} schema version {}.{}".format(name, major_version, minor_version))
 
     baseurl = "https://raw.githubusercontent.com/lsst/alert_packet/refs/heads/main/python/lsst/alert/packet/schema"
     pdf = pd.read_json(
         os.path.join(
             baseurl,
             "{}/{}".format(major_version, minor_version),
-            "lsst.v{}_{}.diaSource.avsc".format(major_version, minor_version),
+            "lsst.v{}_{}.{}.avsc".format(major_version, minor_version, name),
         )
     )
 
@@ -213,9 +219,9 @@ def load_all_cols(major_version, minor_version):
 
     Examples
     --------
-    >>> root_level, diasource, fink_cols, fink_nested_cols = load_all_cols(7, 4)
-    >>> out = {**root_level, **diasource, **fink_cols, **fink_nested_cols}
-    >>> assert len(out) == 3 + 140 + 18 + 4
+    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_cols(7, 4)
+    >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
+    >>> assert len(out) == 3 + 82 + 140 + 18 + 4
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -227,109 +233,19 @@ def load_all_cols(major_version, minor_version):
         "salt": "string",  # partitioning key
     }
 
-    diasource_schema = extract_diasource_schema(major_version, minor_version)
+    diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
 
-    return root_level, diasource, fink_cols, fink_nested_cols
+    diaobject_schema = extract_avsc_schema("diaObject", major_version, minor_version)
+    diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
 
-
-def flatten_dataframe(df, major_version, minor_version):
-    """Flatten DataFrame columns for HBase ingestion
-
-    Notes
-    -----
-    Check also all Fink columns exist, fill if necessary, and cast all columns
-
-    Parameters
-    ----------
-    df: DataFrame
-        Spark DataFrame with raw alert data
-
-    Returns
-    -------
-    df: DataFrame
-        Spark DataFrame with HBase data structure
-    col_i: list
-        List of columns for i column family
-    col_d: list
-        List of columns for d column family
-    cf: dict
-        Dictionary with keys being column names (also called
-        column qualifiers), and the corresponding column family.
-
-    """
-    root_level, diasource, fink_cols, fink_nested_cols = load_all_cols(
-        major_version, minor_version
-    )
-
-    tmp_i = []
-    tmp_d = []
-
-    # assuming no missing columns
-    for colname, coltype in root_level.items():
-        tmp_i.append(F.col(colname).cast(coltype))
-
-    # assuming no missing columns
-    for colname, coltype in diasource.items():
-        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
-
-    cols_i = df.select(tmp_i).columns
-
-    # check all columns exist, otherwise create it
-    for colname, coltype_and_default in fink_cols.items():
-        try:
-            # ony here to check if the column exists
-            df.select(colname)
-        except AnalysisException:
-            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn(
-                "Adding a new column with value `{}` and type `{}`".format(
-                    coltype_and_default["default"], coltype_and_default["type"]
-                )
-            )
-            df = df.withColumn(colname, F.lit(coltype_and_default["default"]))
-        tmp_d.append(F.col(colname).cast(coltype_and_default["type"]))
-
-    # check all columns exist, otherwise create it
-    for colname, coltype_and_default in fink_nested_cols.items():
-        try:  # noqa: PERF203
-            # ony here to check if the column exists
-            df.select(colname)
-
-            # rename root.level into root_level
-            name = (
-                F.col(colname)
-                .alias(colname.replace(".", "_"))
-                .cast(coltype_and_default["type"])
-            )
-            tmp_d.append(name)
-        except AnalysisException:  # noqa: PERF203
-            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
-            _LOG.warn(
-                "Adding a new column with value `{}` and type `{}`".format(
-                    coltype_and_default["default"], coltype_and_default["type"]
-                )
-            )
-            name = colname.replace(".", "_")
-            df = df.withColumn(name, F.lit(coltype_and_default["default"]))
-            tmp_d.append(F.col(name).cast(coltype_and_default["type"]))
-
-    cols_d = df.select(tmp_d).columns
-
-    # flatten names
-    cnames = tmp_i + tmp_d
-    df = df.select(cnames)
-
-    cf = assign_column_family_names(df, cols_i, cols_d)
-
-    return df, cols_i, cols_d, cf
+    return root_level, diaobject, diasource, fink_cols, fink_nested_cols
 
 
 def incremental_ingestion_with_salt(
     paths,
     table_name,
     row_key_name,
-    ingestor,
     catfolder,
     nfiles=100,
     npartitions=1000,
@@ -351,8 +267,6 @@ def incremental_ingestion_with_salt(
     row_key_name: str
         Name of the rowkey in the table. Should be a column name
         or a combination of column separated by _ (e.g. jd_objectId).
-    ingestor: func
-        Function to ingest data. Should correspond to `<suffix>`
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     nfiles: int
@@ -387,8 +301,8 @@ def incremental_ingestion_with_salt(
         # Drop images
         df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
 
-        # push diaSource data to HBase
-        ingestor(
+        # push section data to HBase
+        ingest_section(
             df,
             major_version=7,  # FIXME: should be programmatic from alert packet
             minor_version=4,  # FIXME: should be programmatic from alert packet
@@ -400,7 +314,7 @@ def incremental_ingestion_with_salt(
     return n_alerts
 
 
-def ingest_diasource(
+def ingest_section(
     df, major_version, minor_version, row_key_name, table_name, catfolder
 ):
     """Push diaSource + Fink added values stored in a Spark DataFrame into HBase
@@ -417,8 +331,17 @@ def ingest_diasource(
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     """
+    section = table_name.split(".")[1]
+    assert section in ["diaSource", "diaObject"]
+
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d, cf = flatten_dataframe(df, major_version, minor_version)
+    df_flat, cols_i, cols_d, cf = flatten_dataframe(
+        df,
+        source="rubin",
+        section=section,
+        major_version=major_version,
+        minor_version=minor_version,
+    )
 
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
