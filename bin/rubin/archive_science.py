@@ -38,7 +38,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="science_archival_{}".format(args.night), shuffle_partitions=2
+        name="science_archival_{}".format(args.night), shuffle_partitions=200
     )
 
     # The level here should be controlled by an argument.
