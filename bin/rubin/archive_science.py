@@ -22,15 +22,14 @@
 4. Push data
 """
 
-import pyspark.sql.functions as F
-
 import argparse
 
 from fink_broker.common.parser import getargs
-from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.rubin.hbase_utils import ingest_diasource
+from fink_broker.rubin.hbase_utils import incremental_ingestion_with_salt
 
 
 def main():
@@ -53,42 +52,31 @@ def main():
         args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
     )
 
+    # Get list of files
     paths = list_hdfs_files(folder)
-    logger.info("{} parquet detected".format(len(paths)))
+
+    # FIXME: should be CLI arg
+    nfiles = 100
+    npartitions = 1000
+
+    logger.info(
+        "{} parquet detected ({} loops to perform)".format(
+            len(paths), int(len(paths) / nfiles) + 1
+        )
+    )
 
     # Row key
     row_key_name = "salt_diaObjectId_midpointMjdTai"
 
-    n_alerts = 0
-    step = 100  # 100 files at once
-    for index in range(0, len(paths), step):
-        logger.info("Processing {} files".format(len(paths[index : index + step])))
-        df = load_parquet_files(paths[index : index + step])
-
-        # Key prefix will be the last 3 digits
-        # This will match the 1,000 partitions in the table
-        df = df.withColumn(
-            "salt", F.lpad(F.substring("diaObject.diaObjectId", -3, 3), 3, "0")
-        )
-
-        n_alerts_parquet = df.count()
-        n_alerts += n_alerts_parquet
-
-        # Drop unused partitioning columns
-        df = df.drop("year").drop("month").drop("day")
-
-        # Drop images
-        df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
-
-        # push diaSource data to HBase
-        ingest_diasource(
-            df,
-            major_version=7,  # FIXME: should be programmatic from alert packet
-            minor_version=4,  # FIXME: should be programmatic from alert packet
-            row_key_name=row_key_name,
-            table_name=args.science_db_name + ".diaSource",
-            catfolder=args.science_db_catalogs,
-        )
+    n_alerts = incremental_ingestion_with_salt(
+        paths=paths,
+        table_name=args.science_db_name + ".diaSource",
+        row_key_name=row_key_name,
+        ingestor=ingest_diasource,
+        catfolder=args.science_db_catalogs,
+        nfiles=nfiles,
+        npartitions=npartitions,
+    )
 
     logger.info("{} alerts pushed to HBase".format(n_alerts))
 

@@ -19,11 +19,11 @@ from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
-
+from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 
-
+import numpy as np
 import pandas as pd
 import os
 import logging
@@ -323,6 +323,81 @@ def flatten_dataframe(df, major_version, minor_version):
     cf = assign_column_family_names(df, cols_i, cols_d)
 
     return df, cols_i, cols_d, cf
+
+
+def incremental_ingestion_with_salt(
+    paths,
+    table_name,
+    row_key_name,
+    ingestor,
+    catfolder,
+    nfiles=100,
+    npartitions=1000,
+):
+    """Push data to HBase by batch of parquet files
+
+    Notes
+    -----
+    The row key is salted using the last 3 digits
+    of diaObject.diaObjectId
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        HBase table name, in the form `rubin.<suffix>`.
+        Must exist in the cluster.
+    row_key_name: str
+        Name of the rowkey in the table. Should be a column name
+        or a combination of column separated by _ (e.g. jd_objectId).
+    ingestor: func
+        Function to ingest data. Should correspond to `<suffix>`
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    nfiles: int
+        Number of parquet files to ingest at once
+    npartitions: int
+        Number of HBase partitions in the table.
+
+    Returns
+    -------
+    out: int
+        Number of alerts ingested
+    """
+    n_alerts = 0
+    for index in range(0, len(paths), nfiles):
+        df = load_parquet_files(paths[index : index + nfiles])
+
+        # Key prefix will be the last N digits
+        # This must match the number of partitions in the table
+        ndigits = int(np.log10(npartitions)) + 1
+        df = df.withColumn(
+            "salt",
+            F.lpad(
+                F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"
+            ),
+        )
+
+        n_alerts += df.count()
+
+        # Drop unused partitioning columns
+        df = df.drop("year").drop("month").drop("day")
+
+        # Drop images
+        df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
+        # push diaSource data to HBase
+        ingestor(
+            df,
+            major_version=7,  # FIXME: should be programmatic from alert packet
+            minor_version=4,  # FIXME: should be programmatic from alert packet
+            row_key_name=row_key_name,
+            table_name=table_name,
+            catfolder=catfolder,
+        )
+
+    return n_alerts
 
 
 def ingest_diasource(
