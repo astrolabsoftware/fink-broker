@@ -174,7 +174,7 @@ if [[ ${MERGE} == true ]]; then
     elif [[ ${SURVEY} == "rubin" ]]; then
       # Rubin is just a move to another place
       hdfs dfs -mkdir -p ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
-      hdfs dfs -mv ${ONLINE_DATA_PREFIX}/science/${NIGHT} ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+      hdfs dfs -mv ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
     fi
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
