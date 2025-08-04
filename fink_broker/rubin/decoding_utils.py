@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2024
+# Copyright 2019-2025
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import io
-import csv
 import os
 import glob
 import time
-import requests
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -29,7 +25,26 @@ import confluent_kafka
 
 
 def stamp_table(table, schema, name, fieldtype):
-    """ """
+    """Add timings in the alert packet & schema
+
+    Parameters
+    ----------
+    table: pyarrow.Table
+        Pyarrow table with alert data
+    schema: pyarrow.Schema
+        Table schema
+    name: str
+        Name for the new field
+    fieldtype: pyarrow.lib.DataType
+        Pyarrow data type for the new field
+
+    Returns
+    -------
+    table: pyarrow.Table
+        Pyarrow table with alert data
+    schema: pyarrow.Schema
+        Table schema
+    """
     # Add mjd in UTC
     brokerIngestMjd = Time.now().mjd
     table = table.append_column(
@@ -38,25 +53,6 @@ def stamp_table(table, schema, name, fieldtype):
     schema = schema.append(pa.field(name, fieldtype))
 
     return table, schema
-
-
-def crossmatch_cds(table, table_schema):
-    """ """
-    tmp = table["diaSource"].to_numpy()
-    results = cdsxmatch(
-        [el["diaSourceId"] for el in tmp],
-        [el["ra"] for el in tmp],
-        [el["dec"] for el in tmp],
-        distmaxarcsec=1.5,
-        extcatalog="simbad",
-        cols="main_type",
-    )
-    table = table.append_column(
-        pa.field("cdsxmatch", pa.string()), [results.to_numpy()]
-    )
-    table_schema = table_schema.append(pa.field("cdsxmatch", pa.string()))
-
-    return table, table_schema
 
 
 def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
@@ -95,9 +91,6 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
         table, table_schema, "brokerIngestMjd", pa.float64()
     )
 
-    # # Perform crossmatch
-    # table, table_schema = crossmatch_cds(table, table_schema)
-
     # Add mjd in UTC
     table, table_schema = stamp_table(
         table, table_schema, "brokerEndProcessMjd", pa.float64()
@@ -113,90 +106,6 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
         existing_data_behavior="overwrite_or_ignore",
         filesystem=fs,
     )
-
-
-def generate_csv(s: str, lists: list) -> str:
-    """Make a string (CSV formatted) given lists of data and header."""
-    output = io.StringIO()
-    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
-    _ = [writer.writerow(row) for row in zip(*lists)]
-    return s + output.getvalue().replace("\r", "")
-
-
-def cdsxmatch(
-    objectId, ra, dec, distmaxarcsec: float, extcatalog: str, cols: str
-) -> pd.Series:
-    """Query the CDSXmatch service to find identified objects"""
-    # If nothing
-    if len(ra) == 0:
-        return ""
-
-    # Catch TimeoutError and ConnectionError
-    try:
-        # Build a catalog of alert in a CSV-like string
-        table_header = """ra_in,dec_in,objectId\n"""
-        table = generate_csv(table_header, [ra, dec, objectId])
-
-        # Send the request!
-        r = requests.post(
-            "http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync",
-            data={
-                "request": "xmatch",
-                "distMaxArcsec": distmaxarcsec,
-                "selection": "all",
-                "RESPONSEFORMAT": "csv",
-                "cat2": extcatalog,
-                "cols2": cols,
-                "colRA1": "ra_in",
-                "colDec1": "dec_in",
-            },
-            files={"cat1": table},
-        )
-
-        if r.status_code != 200:
-            names = ["Fail {}".format(r.status_code)] * len(objectId)
-            return pd.Series(names)
-        else:
-            cols = cols.split(",")
-            pdf = pd.read_csv(io.BytesIO(r.content))
-
-            if pdf.empty:
-                name = ",".join(["Unknown"] * len(cols))
-                names = [name] * len(objectId)
-                return pd.Series(names)
-
-            # join
-            pdf_in = pd.DataFrame({"objectId_in": objectId})
-            pdf_in.index = pdf_in["objectId_in"]
-
-            # Remove duplicates (keep the one with minimum distance)
-            pdf_nodedup = pdf.loc[pdf.groupby("objectId").angDist.idxmin()]
-            pdf_nodedup.index = pdf_nodedup["objectId"]
-
-            pdf_out = pdf_in.join(pdf_nodedup)
-
-            # only for SIMBAD as we use `main_type` for our classification
-            if "main_type" in pdf_out.columns:
-                pdf_out["main_type"] = pdf_out["main_type"].replace(np.nan, "Unknown")
-
-            if len(cols) > 1:
-                # Concatenate all columns in one
-                # use comma-separated values
-                cols = [i.strip() for i in cols]
-                pdf_out = pdf_out[cols]
-                pdf_out["concat_cols"] = pdf_out.apply(
-                    lambda x: ",".join(x.astype(str).to_numpy().tolist()), axis=1
-                )
-                return pdf_out["concat_cols"]
-            elif len(cols) == 1:
-                # single column to return
-                return pdf_out[cols[0]].astype(str)
-
-    except (ConnectionError, TimeoutError, ValueError):
-        ncols = len(cols.split(","))
-        name = ",".join(["Fail"] * ncols)
-        names = [name] * len(objectId)
-        return pd.Series(names)
 
 
 def return_offsets(
