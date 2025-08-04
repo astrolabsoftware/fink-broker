@@ -24,6 +24,8 @@ from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 
+from fink_broker.common.tester import spark_unit_tests
+
 import pandas as pd
 import os
 import logging
@@ -136,6 +138,12 @@ def select_type(atype, name):
     -------
     out: str
         Type as string
+
+    Examples
+    --------
+    >>> atype = ['null', 'float']
+    >>> select_type(atype, "")
+    'float'
     """
     if isinstance(atype, list):
         # of type ["null", "something else"]
@@ -220,9 +228,10 @@ def load_all_rubin_cols(major_version, minor_version):
 
     Examples
     --------
-    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_cols(7, 4)
+    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(7, 4)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> assert len(out) == 3 + 82 + 140 + 18 + 4
+    >>> expected = 4 + 82 + 140 + 18 + 4
+    >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -435,3 +444,15 @@ def ingest_section(
         cf=cf,
         catfolder=catfolder,
     )
+
+
+if __name__ == "__main__":
+    """ Execute the test suite with SparkSession initialised """
+
+    globs = globals()
+    root = os.environ["FINK_HOME"]
+
+    # globs["rubin_7p4"] = os.path.join(root, "datasim/rubin_test_data_7_4.parquet")
+
+    # Run the Spark test suite
+    spark_unit_tests(globs, withstreaming=False)

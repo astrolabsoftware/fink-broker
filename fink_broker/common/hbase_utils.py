@@ -144,7 +144,7 @@ def assign_column_family_names(df, cols_i, cols_d):
         - i: for column that identify the alert (original alert)
         - d: for column that further describe the alert (Fink added value)
 
-    The split is done in `bring_to_current_schema`.
+    The split is done in `flatten_dataframe`.
 
     Parameters
     ----------
@@ -195,21 +195,6 @@ def construct_hbase_catalog_from_flatten_schema(
     -------
     catalog : str
         Catalog for HBase.
-
-    Examples
-    --------
-    # Read alert from the raw database
-    >>> df = spark.read.format("parquet").load(ztf_alert_sample_scidatabase)
-
-    >>> df_flat, cols_i, cols_d = bring_to_current_schema(df)
-
-    >>> cf = assign_column_family_names(df_flat, cols_i, cols_d)
-
-    Attach the row key
-    >>> df_rk = add_row_key(df_flat, 'objectId_jd', cols=['objectId', 'jd'])
-
-    >>> catalog = construct_hbase_catalog_from_flatten_schema(
-    ...     df_rk.schema, "mycatalogname", 'objectId_jd', cf)
     """
     schema_columns = schema.jsonValue()["fields"]
 
@@ -494,7 +479,6 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
     cf: dict
         Dictionary with keys being column names (also called
         column qualifiers), and the corresponding column family.
-
     """
     tmp_i = []
     tmp_d = []
@@ -580,6 +564,14 @@ def salt_from_diaobjectid(df, npartitions):
     df: Spark DataFrame
         Input df with a new column `salt` containing
         the partitioning key
+
+    Examples
+    --------
+    # Read Rubin alerts
+    >>> df = spark.read.format("parquet").load(rubin_7p4)
+    >>> df = salt_from_diaobjectid(df, 1000)
+    >>> df.select("salt").collect()[0][0]
+    '831'
     """
     # Key prefix will be the last N digits
     # This must match the number of partitions in the table
@@ -604,6 +596,8 @@ if __name__ == "__main__":
     globs["ztf_alert_sample_scidatabase"] = os.path.join(
         root, "online/science/20200101"
     )
+
+    globs["rubin_7p4"] = os.path.join(root, "datasim/rubin_test_data_7_4.parquet")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)
