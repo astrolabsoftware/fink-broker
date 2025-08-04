@@ -38,7 +38,26 @@ _LOG = logging.getLogger(__name__)
 
 
 def run(q, kafka_config, config):
-    """Single consumer poll"""
+    """Single consumer poll
+
+    Notes
+    -----
+    The consumer stops polling when the time crosses `config["stop_polling_at"]`
+
+    Parameters
+    ----------
+    q: mutiprocessing.Queue
+        Queue to store results
+    kafka_config: dict
+        Dictionary with Kafka parameters
+    config: dict
+        Dictionary with processing parameters
+
+    Returns
+    -------
+    out: float
+        Total time to process alerts
+    """
     _LOG.debug("PID: {}".format(os.getpid()))
     if config["groupid"] is None:
         if not isinstance(config["seed_out"], int):
@@ -144,7 +163,7 @@ def run(q, kafka_config, config):
 
 
 if __name__ == "__main__":
-    """ """
+    """Alert consumer for the LSST stream."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-lsst_kafka_server",
