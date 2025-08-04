@@ -67,16 +67,20 @@ def main():
     # Row key
     row_key_name = "salt_diaObjectId_midpointMjdTai"
 
-    n_alerts = incremental_ingestion_with_salt(
-        paths=paths,
-        table_name=args.science_db_name + ".diaSource",
-        row_key_name=row_key_name,
-        catfolder=args.science_db_catalogs,
-        nfiles=nfiles,
-        npartitions=npartitions,
-    )
+    for section in ["diaObject", "diaSource"]:
+        table_name = "{}.{}".format(args.science_db_name, section)
+        n_alerts = incremental_ingestion_with_salt(
+            paths=paths,
+            table_name=table_name,
+            row_key_name=row_key_name,
+            catfolder=args.science_db_catalogs,
+            nfiles=nfiles,
+            npartitions=npartitions,
+        )
 
-    logger.info("{} alerts pushed to HBase".format(n_alerts))
+        logger.info(
+            "{} alerts pushed to HBase for table {}".format(n_alerts, table_name)
+        )
 
 
 if __name__ == "__main__":
