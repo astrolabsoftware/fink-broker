@@ -39,7 +39,6 @@ from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import flatten_dataframe
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import add_row_key
-from fink_broker.common.hbase_utils import assign_column_family_names
 
 from fink_filters.ztf.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
@@ -80,7 +79,7 @@ def main():
 
     # Check all columns exist, fill if necessary, and cast data
     df_flat, cols_i, cols_d, cf = flatten_dataframe(
-        df_casted, root_level, candidates, fink_cols, fink_nested_cols
+        data, root_level, candidates, fink_cols, fink_nested_cols
     )
 
     # Restrict the input DataFrame to the subset of wanted columns,

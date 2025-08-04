@@ -24,6 +24,8 @@ import json
 import os
 import numpy as np
 
+from fink_broker.common.tester import spark_unit_tests
+
 _LOG = logging.getLogger(__name__)
 
 
