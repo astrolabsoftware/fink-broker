@@ -383,8 +383,13 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
     # Cast feature columns
     df_casted = cast_features(df)
 
+    # Load columns
+    root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
+
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d, cf = flatten_dataframe(df_casted, source="ztf")
+    df_flat, cols_i, cols_d, cf = flatten_dataframe(
+        df_casted, root_level, candidates, fink_cols, fink_nested_cols
+    )
 
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")

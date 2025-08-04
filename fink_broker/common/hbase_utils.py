@@ -19,9 +19,6 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker import __version__ as fbvsn
 from fink_science import __version__ as fsvsn
 
-from fink_broker.ztf.hbase_utils import load_all_ztf_cols
-from fink_broker.rubin.hbase_utils import load_all_rubin_cols
-
 import logging
 import json
 import os
@@ -462,23 +459,27 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
     write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
 
 
-def flatten_dataframe(
-    df, source="ztf", section=None, major_version=None, minor_version=None
-):
+def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
     """Flatten DataFrame columns of a nested Spark DF for HBase ingestion
 
     Notes
     -----
-    Check also all Fink columns exist, fill if necessary, and cast all columns
+    Check also all Fink columns exist, fill if necessary, and cast all columns.
 
     Parameters
     ----------
     df: DataFrame
         Spark DataFrame with raw alert data
-    source: str
-        Data source among: ztf, rubin
-    section: str
-        If source=rubin, section to extract among: diaSource, diaObject
+    root_level: dict
+        Dictionary with root level columns
+    section: dict
+        Dictionary with nested level columns.
+        For ZTF, this will be `candidates`.
+        For Rubin, this will be `diaSource` or `diaObject`
+    fink_cols: dict
+        Dictionary with Fink root level columns
+    fink_nested_cols: dict
+        Dictionary with Fink nested columns
 
     Returns
     -------
@@ -493,23 +494,6 @@ def flatten_dataframe(
         column qualifiers), and the corresponding column family.
 
     """
-    if source == "ztf":
-        root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
-    if source == "rubin":
-        root_level, diaobject, diasource, fink_cols, fink_nested_cols = (
-            load_all_rubin_cols(major_version, minor_version)
-        )
-        if section == "diaSource":
-            candidates = diasource
-        elif section == "diaObject":
-            candidates = diaobject
-        else:
-            _LOG.error(
-                "section must be one of 'diaSource', 'diaObject'. {} is not allowed.".format(
-                    section
-                )
-            )
-
     tmp_i = []
     tmp_d = []
 
@@ -518,7 +502,7 @@ def flatten_dataframe(
         tmp_i.append(F.col(colname).cast(coltype))
 
     # assuming no missing columns
-    for colname, coltype in candidates.items():
+    for colname, coltype in section.items():
         tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
 
     cols_i = df.select(tmp_i).columns

@@ -209,7 +209,7 @@ def extract_avsc_schema(name, major_version, minor_version):
     return dic
 
 
-def load_all_cols(major_version, minor_version):
+def load_all_rubin_cols(major_version, minor_version):
     """Fink/ZTF columns used in HBase tables with type.
 
     Returns
@@ -331,16 +331,26 @@ def ingest_section(
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     """
-    section = table_name.split(".")[1]
-    assert section in ["diaSource", "diaObject"]
+    section_name = table_name.split(".")[1]
+
+    root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(
+        major_version, minor_version
+    )
+    if section_name == "diaSource":
+        section = diasource
+    elif section_name == "diaObject":
+        section = diaobject
+    else:
+        _LOG.error(
+            "section must be one of 'diaSource', 'diaObject'. {} is not allowed.".format(
+                section_name
+            )
+        )
+        raise ValueError()
 
     # Check all columns exist, fill if necessary, and cast data
     df_flat, cols_i, cols_d, cf = flatten_dataframe(
-        df,
-        source="rubin",
-        section=section,
-        major_version=major_version,
-        minor_version=minor_version,
+        df, root_level, section, fink_cols, fink_nested_cols
     )
 
     df_flat = add_row_key(
