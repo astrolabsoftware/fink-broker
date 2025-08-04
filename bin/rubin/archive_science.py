@@ -29,6 +29,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.rubin.hbase_utils import incremental_ingestion_with_salt
+from fink_broker.rubin.hbase_utils import deduplicate_ingestion_with_salt
 
 
 def main():
@@ -64,23 +65,34 @@ def main():
         )
     )
 
-    # Row keys & table names
-    row_key_names = ["salt_diaObjectId", "salt_diaObjectId_midpointMjdTai"]
-    sections = ["diaObject", "diaSource"]
-    for row_key_name, section in zip(row_key_names, sections):
-        table_name = "{}.{}".format(args.science_db_name, section)
-        n_alerts = incremental_ingestion_with_salt(
-            paths=paths,
-            table_name=table_name,
-            row_key_name=row_key_name,
-            catfolder=args.science_db_catalogs,
-            nfiles=nfiles,
-            npartitions=npartitions,
-        )
+    # diaObject
+    row_key_name = "salt_diaObjectId"
+    table_name = "{}.{}".format(args.science_db_name, "diaObject")
+    n_alerts_diaobject = deduplicate_ingestion_with_salt(
+        paths=paths,
+        table_name=table_name,
+        row_key_name=row_key_name,
+        catfolder=args.science_db_catalogs,
+        npartitions=npartitions,
+    )
+    logger.info(
+        "{} alerts pushed to HBase for table {}".format(n_alerts_diaobject, table_name)
+    )
 
-        logger.info(
-            "{} alerts pushed to HBase for table {}".format(n_alerts, table_name)
-        )
+    # diaSource
+    row_key_name = "salt_diaObjectId_midpointMjdTai"
+    table_name = "{}.{}".format(args.science_db_name, "diaSource")
+    n_alerts_diasource = incremental_ingestion_with_salt(
+        paths=paths,
+        table_name=table_name,
+        row_key_name=row_key_name,
+        catfolder=args.science_db_catalogs,
+        nfiles=nfiles,
+        npartitions=npartitions,
+    )
+    logger.info(
+        "{} alerts pushed to HBase for table {}".format(n_alerts_diasource, table_name)
+    )
 
 
 if __name__ == "__main__":

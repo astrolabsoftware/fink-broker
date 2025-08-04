@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pyspark.sql.functions as F
+from pyspark.sql import Window
 
 from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
@@ -310,6 +311,78 @@ def incremental_ingestion_with_salt(
             table_name=table_name,
             catfolder=catfolder,
         )
+
+    return n_alerts
+
+
+def deduplicate_ingestion_with_salt(
+    paths,
+    table_name,
+    row_key_name,
+    catfolder,
+    npartitions=1000,
+):
+    """Remove duplicated and push data to HBase
+
+    Notes
+    -----
+    The duplicates are based on diaObject.diaObjectId
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        HBase table name, in the form `rubin.<suffix>`.
+        Must exist in the cluster.
+    row_key_name: str
+        Name of the rowkey in the table. Should be a column name
+        or a combination of column separated by _ (e.g. jd_objectId).
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    npartitions: int
+        Number of HBase partitions in the table.
+
+    Returns
+    -------
+    out: int
+        Number of alerts ingested
+    """
+    df = load_parquet_files(paths)
+
+    # Key prefix will be the last N digits
+    # This must match the number of partitions in the table
+    ndigits = int(np.log10(npartitions)) + 1
+    df = df.withColumn(
+        "salt",
+        F.lpad(F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"),
+    )
+
+    # Drop unused partitioning columns
+    df = df.drop("year").drop("month").drop("day")
+
+    # Drop images
+    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
+    # Keep only the last alert per object
+    w = Window.partitionBy("diaObject.diaObjectId")
+    df_dedup = (
+        df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+        .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
+        .drop("maxMjd")
+    )
+
+    n_alerts = df_dedup.count()
+
+    # push section data to HBase
+    ingest_section(
+        df_dedup,
+        major_version=7,  # FIXME: should be programmatic from alert packet
+        minor_version=4,  # FIXME: should be programmatic from alert packet
+        row_key_name=row_key_name,
+        table_name=table_name,
+        catfolder=catfolder,
+    )
 
     return n_alerts
 
