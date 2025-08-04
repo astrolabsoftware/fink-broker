@@ -64,10 +64,10 @@ def main():
         )
     )
 
-    # Row key
-    row_key_name = "salt_diaObjectId_midpointMjdTai"
-
-    for section in ["diaObject", "diaSource"]:
+    # Row keys & table names
+    row_key_names = ["salt_diaObjectId", "salt_diaObjectId_midpointMjdTai"]
+    sections = ["diaObject", "diaSource"]
+    for row_key_name, section in zip(row_key_names, sections):
         table_name = "{}.{}".format(args.science_db_name, section)
         n_alerts = incremental_ingestion_with_salt(
             paths=paths,
