@@ -413,6 +413,8 @@ def ingest_section(
         section = diasource
     elif section_name == "diaObject":
         section = diaobject
+        # do not push fink data into diaObject
+        fink_cols, fink_nested_cols = {}, {}
     else:
         _LOG.error(
             "section must be one of 'diaSource', 'diaObject'. {} is not allowed.".format(
