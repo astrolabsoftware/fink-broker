@@ -555,3 +555,36 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
     cf = assign_column_family_names(df, cols_i, cols_d)
 
     return df, cols_i, cols_d, cf
+
+
+def salt_from_diaobjectid(df, npartitions):
+    """Add simple salt column based on the last digits of diaObjectId
+
+    Notes
+    -----
+    The key will be the last N digits of diaObject.diaObjectId.
+    N = int(log10(npartitions))
+    The key will be padded with 0 for safety.
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Input Spark dataframe
+    npartitions: int
+        Number of partitions in the HBase table
+
+    Returns
+    -------
+    df: Spark DataFrame
+        Input df with a new column `salt` containing
+        the partitioning key
+    """
+    # Key prefix will be the last N digits
+    # This must match the number of partitions in the table
+    ndigits = int(np.log10(npartitions))
+    df = df.withColumn(
+        "salt",
+        F.lpad(F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"),
+    )
+
+    return df

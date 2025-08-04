@@ -19,11 +19,11 @@ from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import flatten_dataframe
+from fink_broker.common.hbase_utils import salt_from_diaobjectid
 from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 
-import numpy as np
 import pandas as pd
 import os
 import logging
@@ -232,6 +232,7 @@ def load_all_rubin_cols(major_version, minor_version):
         # "lsst_schema_version": "string", # FIXME: to be added in stream2raw ? Or in raw2science ?
         "alertId": "long",  # FIXME: there should be diaObjectId
         "salt": "string",  # partitioning key
+        # TODO: add finkclass?
     }
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
@@ -284,15 +285,8 @@ def incremental_ingestion_with_salt(
     for index in range(0, len(paths), nfiles):
         df = load_parquet_files(paths[index : index + nfiles])
 
-        # Key prefix will be the last N digits
-        # This must match the number of partitions in the table
-        ndigits = int(np.log10(npartitions)) + 1
-        df = df.withColumn(
-            "salt",
-            F.lpad(
-                F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"
-            ),
-        )
+        # add salt
+        df = salt_from_diaobjectid(df, npartitions)
 
         n_alerts += df.count()
 
@@ -350,13 +344,8 @@ def deduplicate_ingestion_with_salt(
     """
     df = load_parquet_files(paths)
 
-    # Key prefix will be the last N digits
-    # This must match the number of partitions in the table
-    ndigits = int(np.log10(npartitions)) + 1
-    df = df.withColumn(
-        "salt",
-        F.lpad(F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"),
-    )
+    # add salt
+    df = salt_from_diaobjectid(df, npartitions)
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")
