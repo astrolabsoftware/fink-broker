@@ -87,7 +87,8 @@ def write_alert(
     pdf = pd.DataFrame.from_records(msgs)
 
     # Get latest schema
-    with open(os.path.join(table_schema_path, "latest_schema.log"), "r") as f:
+    # FIXME: this will crash on CI if test data is not using latest schema
+    with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
         schema_version = f.read()
 
     schema_files = glob.glob(

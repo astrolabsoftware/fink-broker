@@ -80,5 +80,5 @@ if __name__ == "__main__":
             )
         )
 
-        with open(os.path.join(args.table_schema_path, "latest_schema.log"), "w") as f:
+        with open(os.path.join(args.table_schema_path, "latest_schema.txt"), "w") as f:
             f.write("{}.parquet".format(version))

@@ -237,7 +237,7 @@ if __name__ == "__main__":
         "-table_schema_path",
         type=str,
         default="rubin_parquet_schema",
-        help="Local folder containing the alert schemas in the pyarrow format. Must contains latest_schema.log",
+        help="Local folder containing the alert schemas in the pyarrow format. Must contains latest_schema.txt",
     )
     parser.add_argument(
         "-avro_schema",
