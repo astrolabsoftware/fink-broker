@@ -118,6 +118,9 @@ if [[ "$WITH_STREAM" = true ]] ; then
   if [ ! -d "$ONLINE_DATA_PREFIX/raw/$NIGHT" ]; then
     echo "ERROR: $ONLINE_DATA_PREFIX/raw/$NIGHT has not been created -- there might be a problem"
   fi
+
+  # Connect the service to build the science database from the raw one
+  fink start raw2science -s ${SURVEY} -exit_after 180 -c $conf -night $NIGHT ${RESOURCES}
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then

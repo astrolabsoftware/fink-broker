@@ -98,11 +98,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     _LOG.info("New processor: asteroids (random positions)")
     df = df.withColumn("roid", F.lit(0))
 
-    _LOG.info("New processor: EarlySN Ia")
-    early_ia_args = [F.col(i) for i in expanded]
-    df = df.withColumn(
-        "rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args)
-    )
+    # _LOG.info("New processor: EarlySN Ia")
+    # early_ia_args = [F.col(i) for i in expanded]
+    # df = df.withColumn(
+    #     "rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    # )
 
     _LOG.info("New processor: supernnova - Ia")
     snn_args = [F.col("diaSource.diaSourceId")]
@@ -183,11 +183,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     )
     df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
 
-    # SLSN
-    slsn_args = ["diaObject.diaObjectId"]
-    slsn_args += [F.col(i) for i in expanded]
-    slsn_args += ["diaSource.ra", "diaSource.dec"]
-    df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
+    # # SLSN
+    # slsn_args = ["diaObject.diaObjectId"]
+    # slsn_args += [F.col(i) for i in expanded]
+    # slsn_args += ["diaSource.ra", "diaSource.dec"]
+    # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
 
     # Drop temp columns
     df = df.drop(*expanded)
