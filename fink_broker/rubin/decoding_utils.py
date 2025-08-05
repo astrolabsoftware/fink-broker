@@ -109,9 +109,11 @@ def write_alert(
         table_schema,
     )
 
+    # FIXME: check carefuly that the schema version
+    # is in the form lsst.v{}_{}
     table, table_schema = add_constant_field_to_table(
         "lsst_schema_version",
-        schema_version,
+        schema_version.split(".parquet")[0],
         pa.string(),
         table,
         table_schema,
