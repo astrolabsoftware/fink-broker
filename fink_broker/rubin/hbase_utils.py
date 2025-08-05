@@ -230,7 +230,7 @@ def load_all_rubin_cols(major_version, minor_version):
     --------
     >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(7, 4)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 4 + 82 + 140 + 18 + 4
+    >>> expected = 5 + 82 + 140 + 18 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -238,9 +238,9 @@ def load_all_rubin_cols(major_version, minor_version):
     root_level = {
         "fink_broker_version": "string",
         "fink_science_version": "string",
-        # "lsst_schema_version": "string", # FIXME: to be added in stream2raw ? Or in raw2science ?
+        "lsst_schema_version": "string",
         "alertId": "long",  # FIXME: there should be diaObjectId
-        "salt": "string",  # partitioning key
+        "salt": "string",
         # TODO: add finkclass?
     }
 
@@ -258,6 +258,8 @@ def incremental_ingestion_with_salt(
     table_name,
     row_key_name,
     catfolder,
+    major_version,
+    minor_version,
     nfiles=100,
     npartitions=1000,
 ):
@@ -280,6 +282,10 @@ def incremental_ingestion_with_salt(
         or a combination of column separated by _ (e.g. jd_objectId).
     catfolder: str
         Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 7)
+    minor_version: int
+        LSST alert schema minor version (e.g. 4)
     nfiles: int
         Number of parquet files to ingest at once
     npartitions: int
@@ -308,8 +314,8 @@ def incremental_ingestion_with_salt(
         # push section data to HBase
         ingest_section(
             df,
-            major_version=7,  # FIXME: should be programmatic from alert packet
-            minor_version=4,  # FIXME: should be programmatic from alert packet
+            major_version=major_version,
+            minor_version=minor_version,
             row_key_name=row_key_name,
             table_name=table_name,
             catfolder=catfolder,
@@ -323,6 +329,8 @@ def deduplicate_ingestion_with_salt(
     table_name,
     row_key_name,
     catfolder,
+    major_version,
+    minor_version,
     npartitions=1000,
 ):
     """Remove duplicated and push data to HBase
@@ -343,6 +351,10 @@ def deduplicate_ingestion_with_salt(
         or a combination of column separated by _ (e.g. jd_objectId).
     catfolder: str
         Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 7)
+    minor_version: int
+        LSST alert schema minor version (e.g. 4)
     npartitions: int
         Number of HBase partitions in the table.
 
@@ -375,8 +387,8 @@ def deduplicate_ingestion_with_salt(
     # push section data to HBase
     ingest_section(
         df_dedup,
-        major_version=7,  # FIXME: should be programmatic from alert packet
-        minor_version=4,  # FIXME: should be programmatic from alert packet
+        major_version=major_version,
+        minor_version=minor_version,
         row_key_name=row_key_name,
         table_name=table_name,
         catfolder=catfolder,

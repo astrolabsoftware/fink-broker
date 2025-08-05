@@ -55,6 +55,18 @@ def main():
     # Get list of files
     paths = list_hdfs_files(folder)
 
+    # Get version from the alert directly rather than from remote
+    # This prevents reprocessing to use wrong schema
+    pqs = [i for i in paths if i.endswith(".parquet")]
+    schema_version = (
+        spark.read.format("parquet")
+        .load(pqs[0])
+        .select("lsst_schema_version")
+        .limit(1)
+        .collect()[0][0]
+    )
+    major_version, minor_version = schema_version.split("lsst.v")[1].split("_")
+
     # FIXME: should be CLI arg
     nfiles = 100
     npartitions = 1000
@@ -73,6 +85,8 @@ def main():
         table_name=table_name,
         row_key_name=row_key_name,
         catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
         npartitions=npartitions,
     )
     logger.info(
@@ -87,6 +101,8 @@ def main():
         table_name=table_name,
         row_key_name=row_key_name,
         catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
         nfiles=nfiles,
         npartitions=npartitions,
     )

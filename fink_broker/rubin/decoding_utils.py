@@ -24,33 +24,33 @@ from astropy.time import Time
 import confluent_kafka
 
 
-def stamp_table(table, schema, name, fieldtype):
-    """Add timings in the alert packet & schema
+def add_constant_field_to_table(fieldname, fieldvalue, fieldtype, table, schema):
+    """Add constant value field in the alert packet & schema
 
     Parameters
     ----------
+    fieldname: str
+        Name for the new field
+    fieldvalue: Any
+        Value of the new field
+    fieldtype: pyarrow.lib.DataType
+        Pyarrow data type for the new field
     table: pyarrow.Table
         Pyarrow table with alert data
     schema: pyarrow.Schema
         Table schema
-    name: str
-        Name for the new field
-    fieldtype: pyarrow.lib.DataType
-        Pyarrow data type for the new field
 
     Returns
     -------
     table: pyarrow.Table
-        Pyarrow table with alert data
+        Pyarrow table updated
     schema: pyarrow.Schema
-        Table schema
+        Table schema updated
     """
-    # Add mjd in UTC
-    brokerIngestMjd = Time.now().mjd
     table = table.append_column(
-        pa.field(name, fieldtype), [[brokerIngestMjd] * len(table)]
+        pa.field(fieldname, fieldtype), [[fieldvalue] * len(table)]
     )
-    schema = schema.append(pa.field(name, fieldtype))
+    schema = schema.append(pa.field(fieldname, fieldtype))
 
     return table, schema
 
@@ -86,14 +86,21 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
     table_schema = table_schema.remove_metadata()
     table = pa.Table.from_pandas(pdf, schema=table_schema)
 
-    # Add mjd in UTC
-    table, table_schema = stamp_table(
-        table, table_schema, "brokerIngestMjd", pa.float64()
+    # Add additional fields
+    table, table_schema = add_constant_field_to_table(
+        "brokerIngestMjd",
+        Time.now().mjd,
+        pa.float64(),
+        table,
+        table_schema,
     )
 
-    # Add mjd in UTC
-    table, table_schema = stamp_table(
-        table, table_schema, "brokerEndProcessMjd", pa.float64()
+    table, table_schema = add_constant_field_to_table(
+        "lsst_schema_version",
+        schema_version,
+        pa.string(),
+        table,
+        table_schema,
     )
 
     # Save on disk
