@@ -63,6 +63,7 @@ def main():
         logger.warning("No parquet found at {}".format(folder))
 
         import sys
+
         sys.exit()
 
     schema_version = (
