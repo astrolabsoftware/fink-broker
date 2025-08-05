@@ -84,8 +84,8 @@ export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 
 # TODO: change me
-export KAFKA_TOPIC="ztf_public_20200101"
-export NIGHT=20200101
+export KAFKA_TOPIC="rubin_20250412_lsst_v7.4"
+export NIGHT=20250412
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
@@ -97,6 +97,27 @@ if [ -n "${SINGLE_FILE}" ]; then
         --source=${FINK_HOME} \
         --rcfile ${FINK_HOME}/.coveragerc $SINGLE_FILE
     exit
+fi
+
+# Stream integration tests
+if [[ "$WITH_STREAM" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
+  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.dev
+  source $conf
+
+  # Fire another stream
+  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
+
+  # Connect the service to build the raw database from the stream
+  fink start stream2raw -s ${SURVEY} \
+    -c ${FINK_HOME}/conf/${SURVEY}/fink.conf.dev \
+    -conf_stream2raw ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw \
+    -night ${NIGHT} \
+    -stop_at "`date +'%Y-%m-%d %H:%M' -d "08:00 today"`"
+
+  if [ ! -d "$ONLINE_DATA_PREFIX/raw/$NIGHT" ]; then
+    echo "ERROR: $ONLINE_DATA_PREFIX/raw/$NIGHT has not been created -- there might be a problem"
+  fi
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then

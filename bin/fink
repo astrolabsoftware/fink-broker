@@ -321,14 +321,15 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     -lsst_schema_server ${LSST_SCHEMA_SERVER} \
     -lsst_kafka_username ${LSST_KAFKA_USERNAME} \
     -lsst_kafka_password ${LSST_KAFKA_PASSWORD} \
-    -hdfs_namenode ${HDFS_NAMENODE} \
-    -hdfs_port ${HDFS_PORT} \
-    -hdfs_username ${HDFS_USERNAME} \
+    -hdfs_namenode ${HDFS_NAMENODE:-""} \
+    -hdfs_port ${HDFS_PORT:-8020} \
+    -hdfs_username ${HDFS_USERNAME:-""} \
     -nconsumers ${NCONSUMERS} \
     -groupid ${GROUPID} \
     -max_alerts_per_consumer ${MAX_ALERTS_PER_CONSUMER} \
     -hdfs_batch_size ${HDFS_BATCH_SIZE} \
     -table_schema_path ${TABLE_SCHEMA_PATH} \
+    -avro_schema ${FINK_ALERT_SCHEMA:-""} \
     -online_data_prefix ${ONLINE_DATA_PREFIX} \
     -stop_polling_at "${STOP_AT}" \
     -night ${NIGHT} \

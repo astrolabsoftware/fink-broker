@@ -108,6 +108,7 @@ def run(q, kafka_config, config):
                     write_alert(
                         msgs,
                         config["table_schema_path"],
+                        config.get("avro_schema"),
                         fs,
                         rng.integers(0, 1e7),
                         where=output_folder,
@@ -136,6 +137,7 @@ def run(q, kafka_config, config):
                 write_alert(
                     msgs,
                     config["table_schema_path"],
+                    config.get("avro_schema"),
                     fs,
                     rng.integers(0, 1e7),
                     where=output_folder,
@@ -238,6 +240,12 @@ if __name__ == "__main__":
         help="Local folder containing the alert schemas in the pyarrow format. Must contains latest_schema.log",
     )
     parser.add_argument(
+        "-avro_schema",
+        type=str,
+        default=None,
+        help="PPath to an avro file used to simulate streams. Only used in the Continuous integration. Default is None.",
+    )
+    parser.add_argument(
         "-online_data_prefix",
         type=str,
         default="online",
@@ -290,23 +298,8 @@ if __name__ == "__main__":
     kafka_config = {
         # This is the URL to use to connect to the Kafka cluster.
         "bootstrap.servers": args.lsst_kafka_server,
-        # These next two properties tell the Kafka client about the specific
-        # authentication and authorization protocols that should be used when
-        # connecting.
-        "security.protocol": "SASL_PLAINTEXT",
-        "sasl.mechanisms": "SCRAM-SHA-512",
-        # The sasl.username and sasl.password are passed through over
-        # SCRAM-SHA-512 auth to connect to the cluster. The username is not
-        # sensitive, but the password is (of course) a secret value which
-        # should never be committed to source code.
-        "sasl.username": args.lsst_kafka_username,
-        "sasl.password": args.lsst_kafka_password,
         # The Consumer Group ID, as described above.
         "group.id": args.lsst_kafka_username + "_group_",
-        # Finally, we pass in the deserializer that we created above,
-        # configuring the consumer so that it automatically does all the Schema
-        # Registry and Avro deserialization work.
-        "value.deserializer": deserializer,
         "auto.offset.reset": "earliest",
         "fetch.min.bytes": 10 * 1024 * 1024,
         "max.poll.interval.ms": 300000,
@@ -327,6 +320,27 @@ if __name__ == "__main__":
         "night": args.night,
         "nconsumers": args.nconsumers,
     }
+
+    if args.lsst_kafka_username != "ci":
+        kafka_config.update({
+            # These next two properties tell the Kafka client about the specific
+            # authentication and authorization protocols that should be used when
+            # connecting.
+            "security.protocol": "SASL_PLAINTEXT",
+            "sasl.mechanisms": "SCRAM-SHA-512",
+            # The sasl.username and sasl.password are passed through over
+            # SCRAM-SHA-512 auth to connect to the cluster. The username is not
+            # sensitive, but the password is (of course) a secret value which
+            # should never be committed to source code.
+            "sasl.username": args.lsst_kafka_username,
+            "sasl.password": args.lsst_kafka_password,
+            # Finally, we pass in the deserializer that we created above,
+            # configuring the consumer so that it automatically does all the Schema
+            # Registry and Avro deserialization work.
+            "value.deserializer": deserializer,
+        })
+    else:
+        config.update({"avro_schema": args.avro_schema})
 
     # Set logging level
     numeric_level = getattr(logging, args.log.upper(), None)

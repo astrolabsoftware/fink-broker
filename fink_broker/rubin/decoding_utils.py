@@ -55,7 +55,9 @@ def add_constant_field_to_table(fieldname, fieldvalue, fieldtype, table, schema)
     return table, schema
 
 
-def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
+def write_alert(
+    msgs, table_schema_path, avro_schema=None, fs=None, uuid=0, where="rubin_kafka"
+):
     """Write alerts on disk
 
     Parameters
@@ -64,13 +66,24 @@ def write_alert(msgs, table_schema_path, fs, uuid, where="rubin_kafka"):
         Batch of alerts
     table_schema_path: str
         Folder containing LSST schemas in parquet format
+    avro_schema: str
+        Path to an avro file used to simulate streams.
+        Only used in the Continuous integration. Default is None
     fs: optional
-        Type of filesystem. None means local.
+        Type of filesystem. None (default for CI) means local.
+        Production uses HadoopFileSystem.
     uuid: int
-        ??
+        Extra uuid when writing parquet files on disk.
     where: str
         Folder to write alerts. Depends on filesystem chosen.
     """
+    if avro_schema is not None:
+        import io
+        import fastavro
+        from fink_alert_simulator.avroUtils import readschemafromavrofile
+
+        schema = readschemafromavrofile(avro_schema)
+        msgs = [fastavro.schemaless_reader(io.BytesIO(m), schema) for m in msgs]
     pdf = pd.DataFrame.from_records(msgs)
 
     # Get latest schema

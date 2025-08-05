@@ -14,20 +14,20 @@
 # limitations under the License.
 ######################################
 # Credentials -- mandatory for all
-LSST_KAFKA_USERNAME=
-LSST_KAFKA_PASSWORD=
-LSST_KAFKA_TOPIC=
+LSST_KAFKA_USERNAME=ci
+LSST_KAFKA_PASSWORD=ci
+LSST_KAFKA_TOPIC=rubin_20250412_lsst_v7.4
 SECURITY_PROTOCOL=
 SASL_MECHANISMS=
 
 # Connection URL to USDF
-LSST_KAFKA_SERVER=usdf-alert-stream-dev.lsst.cloud:9094
+LSST_KAFKA_SERVER=localhost:9092
 LSST_SCHEMA_SERVER=https://usdf-alert-schemas-dev.slac.stanford.edu
 
 # HDFS configuration -- mandatory for polling
-HDFS_NAMENODE=ccmaster1
-HDFS_PORT=8020
-HDFS_USERNAME=fink
+HDFS_NAMENODE=""
+HDFS_PORT=""
+HDFS_USERNAME=""
 
 # Suffix to be added to the group.id
 GROUPID=fink
