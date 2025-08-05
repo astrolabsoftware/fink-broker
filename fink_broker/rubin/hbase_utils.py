@@ -230,7 +230,7 @@ def load_all_rubin_cols(major_version, minor_version):
     --------
     >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(7, 4)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 5 + 82 + 140 + 18 + 4
+    >>> expected = 6 + 82 + 140 + 18 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -239,9 +239,9 @@ def load_all_rubin_cols(major_version, minor_version):
         "fink_broker_version": "string",
         "fink_science_version": "string",
         "lsst_schema_version": "string",
-        "alertId": "long",  # FIXME: there should be diaObjectId
+        "alertId": "long",  # FIXME: there should be diaObjectId for v8
         "salt": "string",
-        # TODO: add finkclass?
+        "finkclass": "string",
     }
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)

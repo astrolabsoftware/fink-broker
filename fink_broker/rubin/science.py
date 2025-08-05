@@ -189,6 +189,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
     # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
 
+    # Fake classification
+    df = df.withColumn("finkclass", F.lit("Unknown"))
+
     # Drop temp columns
     df = df.drop(*expanded)
     df = df.drop(*[
