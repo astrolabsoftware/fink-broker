@@ -58,6 +58,13 @@ def main():
     # Get version from the alert directly rather than from remote
     # This prevents reprocessing to use wrong schema
     pqs = [i for i in paths if i.endswith(".parquet")]
+
+    if len(pqs) == 0:
+        logger.warning("No parquet found at {}".format(folder))
+
+        import sys
+        sys.exit()
+
     schema_version = (
         spark.read.format("parquet")
         .load(pqs[0])
