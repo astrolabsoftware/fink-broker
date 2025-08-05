@@ -26,12 +26,12 @@ from fink_broker.common.tester import spark_unit_tests
 # Import of science modules
 from fink_broker.common.science import apply_all_xmatch
 
-from fink_science.rubin.random_forest_snia.processor import (
-    rfscore_rainbow_elasticc_nometa,
-)
+# from fink_science.rubin.random_forest_snia.processor import (
+#    rfscore_rainbow_elasticc_nometa,
+# )
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
-from fink_science.rubin.slsn.processor import slsn_rubin
+# from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
 # Local non-exported definitions --
