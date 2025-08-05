@@ -16,6 +16,13 @@
 ## Script to launch the python test suite and measure the coverage.
 ## Must be launched as fink_test
 set -e
+
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
 message_help="""
 Run units and integration test suites of Fink\n\n
 Usage:\n
@@ -121,6 +128,31 @@ if [[ "$WITH_STREAM" = true ]] ; then
 
   # Connect the service to build the science database from the raw one
   fink start raw2science -s ${SURVEY} -exit_after 180 -c $conf -night $NIGHT ${RESOURCES}
+fi
+
+check_table_output() {
+  local tablename="$1"
+  output=`echo -e "count '$tablename'" | /home/libs/hbase-2.5.8/bin/hbase shell -n`
+  num_rows=$(echo "$output" | grep -o '[0-9]\+ row(s)' | grep -o '[0-9]\+')
+  if [[ $num_rows != 101 ]]; then
+    echo -e "${SERROR} table ${tablename} has ${num_rows:-0} rows instead of 101"
+  else
+    echo -e "${SDONE} table ${tablename} is OK."
+  fi
+}
+
+# DB Integration tests
+if [[ "$WITH_DB" = true ]] ; then
+  # merge data
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --merge
+
+  # diaSource, diaObject only
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
+
+  # check HBase output
+  check_table_output "rubin.diaSource"
+  check_table_output "rubin.diaObject"
+
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
