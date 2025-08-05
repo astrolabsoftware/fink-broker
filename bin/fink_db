@@ -123,12 +123,38 @@ fink_db -s ztf --index_tables         # Push data to HBase index tables
 fink_db -s ztf --clean_night          # Clean temp files for the next night
 "
 
+check_hdfs_is_available() {
+  if command -v hdfs &> /dev/null; then
+    echo -e "${SINFO} HDFS is available"
+  else
+    echo -e "${SINFO} HDFS is not available, using local filesystem"
+  fi
+}
+
+run_hdfs_or_local() {
+    local action="$1"
+    shift
+    local args="$@"
+
+    # Determine the command prefix based on the availability of hdfs
+    if command -v hdfs &> /dev/null; then
+        co="hdfs dfs -"
+    else
+        co=""
+    fi
+
+    # Execute the command
+    ${co}${action} ${args}
+}
+
+
+
 if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
   echo -e "$__usage"
   exit 0
 fi
 
-hdfs version >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
+check_hdfs_is_available
 
 if [[ $SURVEY == "" ]]; then
   echo -e "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
@@ -157,7 +183,7 @@ source $conf
 
 # Merge streaming data
 if [[ ${MERGE} == true ]]; then
-  $(hdfs dfs -test -d ${ONLINE_DATA_PREFIX}/science/${NIGHT})
+  run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
   if [[ $? == 0 ]]; then
     echo -e "${SSTEP} Merge"
     # if nothing specified, get default
@@ -173,8 +199,8 @@ if [[ ${MERGE} == true ]]; then
       fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
     elif [[ ${SURVEY} == "rubin" ]]; then
       # Rubin is just a move to another place
-      hdfs dfs -mkdir -p ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
-      hdfs dfs -mv ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
+      run_hdfs_or_local "mkdir -p" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+      run_hdfs_or_local "mv" ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
     fi
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
@@ -194,7 +220,7 @@ else
 fi
 
 # Aggregated data is available
-$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+run_hdfs_or_local "test -d" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
 HAS_DATA=$?
 
 if [[ ${MAIN_TABLE} == true ]]; then
@@ -274,8 +300,8 @@ if [[ $DELETE_MERGE == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
     echo -e "${SINFO} Deleting merged files on HDFS..."
     # If merge went wrong -- clean
-    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
-    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+    run_hdfs_or_local "rm -r" ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+    run_hdfs_or_local "rm -r" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo -e "${SSTOP} Nothing to delete"
@@ -288,18 +314,18 @@ if [[ ${CLEAN_NIGHT} == true ]]; then
   if [[ $HAS_DATA == 0 ]]; then
     echo -e "${SINFO} Cleaning temporary files on HDFS..."
     # Remove data path
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
 
     # Remove checkpoints
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
 
     # Remove checkpoints for fink-mm
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
 
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
