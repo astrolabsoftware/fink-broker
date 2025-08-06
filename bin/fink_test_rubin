@@ -98,6 +98,9 @@ export NIGHT=20250412
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
+# Create folder for log & artifacts
+mkdir -p ${FINK_HOME}/broker_logs
+
 if [ -n "${SINGLE_FILE}" ]; then
     echo "single file testing..."
     coverage run \
