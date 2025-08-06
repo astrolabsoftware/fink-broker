@@ -62,7 +62,7 @@ def main():
         "diaSource.midpointMjdTai",
         "diaSource.diaSourceId",
         "hdfs_path",
-        "salt"
+        "salt",
     ]
 
     df = df.select(cols)
