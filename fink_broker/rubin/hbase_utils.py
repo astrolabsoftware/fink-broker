@@ -219,8 +219,52 @@ def extract_avsc_schema(name, major_version, minor_version):
     return dic
 
 
-def load_all_rubin_cols(major_version, minor_version):
+def load_rubin_root_level(include_salt=True):
+    """Root level fields for Rubin alerts
+
+    Parameters
+    ----------
+    include_salt: bool
+        Include salting columns. Default is True.
+
+    Returns
+    -------
+    out: dict
+        Dictionary with root level fields
+
+    Examples
+    --------
+    >>> root_level = load_rubin_root_level()
+    >>> len(load_rubin_root_level())
+    5
+
+    >>> assert "fink_broker_version" in root_level, root_level
+    """
+    root_level = {
+        "fink_broker_version": "string",
+        "fink_science_version": "string",
+        "lsst_schema_version": "string",
+        "alertId": "long",  # FIXME: there should be diaObjectId for v8
+    }
+
+    if include_salt:
+        # This is not included in the parquet files.
+        # Added at the level of HBase ingestion.
+        root_level.update({"salt": "string"})
+    return root_level
+
+
+def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     """Fink/ZTF columns used in HBase tables with type.
+
+    Parameters
+    ----------
+    major_version: int
+        Schema major version
+    minor_version: int
+        Schema minor version
+    include_salt: bool
+        Include salting columns. Default is True.
 
     Returns
     -------
@@ -236,13 +280,7 @@ def load_all_rubin_cols(major_version, minor_version):
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
-    root_level = {
-        "fink_broker_version": "string",
-        "fink_science_version": "string",
-        "lsst_schema_version": "string",
-        "alertId": "long",  # FIXME: there should be diaObjectId for v8
-        "salt": "string",
-    }
+    root_level = load_rubin_root_level(include_salt=include_salt)
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
@@ -251,6 +289,41 @@ def load_all_rubin_cols(major_version, minor_version):
     diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
 
     return root_level, diaobject, diasource, fink_cols, fink_nested_cols
+
+
+def load_rubin_index_cols():
+    """Load columns used for index tables (flattened and casted before).
+
+    Returns
+    -------
+    out: list of string
+        List of (flattened) column names
+
+    Examples
+    --------
+    >>> out = load_rubin_index_cols()
+    >>> print(len(out))
+    12
+    """
+    # All columns from root_level
+    common = list(load_rubin_root_level().keys())
+
+    # Some columns from diaObject
+    # FIXME: anything regarding flux, time, band, reliability?
+    # FIXME: anything regarding closest objects?
+    common += [
+        "diaObjectId",
+        "ra",
+        "dec",
+        # "nDiaSources",  # FIXME: for v8
+        # "firstDiaSourceMjdTai",  # FIXME: for v8
+        # "lastNonForcedSource",  # FIXME: for v8
+    ]
+
+    # Add only classfication from Fink
+    common += ["finkclass"]
+
+    return common
 
 
 def incremental_ingestion_with_salt(

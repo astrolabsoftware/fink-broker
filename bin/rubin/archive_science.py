@@ -30,6 +30,7 @@ from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.rubin.hbase_utils import incremental_ingestion_with_salt
 from fink_broker.rubin.hbase_utils import deduplicate_ingestion_with_salt
+from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
 def main():
@@ -66,14 +67,7 @@ def main():
 
         sys.exit()
 
-    schema_version = (
-        spark.read.format("parquet")
-        .load(pqs[0])
-        .select("lsst_schema_version")
-        .limit(1)
-        .collect()[0][0]
-    )
-    major_version, minor_version = schema_version.split("lsst.v")[1].split("_")
+    major_version, minor_version = get_schema_from_parquet(pqs[0])
 
     # FIXME: should be CLI arg
     nfiles = 100

@@ -139,6 +139,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
 fi
 
 check_table_output() {
+  # make 101 as args
   local tablename="$1"
   output=`echo -e "count '$tablename'" | /home/libs/hbase-2.5.8/bin/hbase shell -n`
   num_rows=$(echo "$output" | grep -o '[0-9]\+ row(s)' | grep -o '[0-9]\+')
@@ -158,9 +159,13 @@ if [[ "$WITH_DB" = true ]] ; then
   # diaSource, diaObject only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
 
+  # pixel128 only
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
+
   # check HBase output
   check_table_output "rubin.diaSource"
   check_table_output "rubin.diaObject"
+  check_table_output "rubin.pixel128"
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
