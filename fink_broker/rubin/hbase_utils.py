@@ -96,6 +96,7 @@ def load_fink_cols():
         "snn_sn_vs_others": {"type": "double", "default": 0.0},  # FIXME: float?
         # Other
         "roid": {"type": "int", "default": 0},
+        "finkclass": {"type": "string", "default": "Unknown"},
         # from ZTF
         # "snn_sn_vs_all": {"type": "double", "default": 0.0},
         # "anomaly_score": {"type": "double", "default": 0.0},
@@ -230,7 +231,7 @@ def load_all_rubin_cols(major_version, minor_version):
     --------
     >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(7, 4)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 6 + 82 + 140 + 18 + 4
+    >>> expected = 5 + 82 + 140 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -241,7 +242,6 @@ def load_all_rubin_cols(major_version, minor_version):
         "lsst_schema_version": "string",
         "alertId": "long",  # FIXME: there should be diaObjectId for v8
         "salt": "string",
-        "finkclass": "string",
     }
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
