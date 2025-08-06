@@ -102,6 +102,22 @@ Examples:
   ./launch_stream.sh -night 20241231 -stop_at 10:00 today
 "
 
+run_hdfs_or_local() {
+    local action="$1"
+    shift
+    local args="$@"
+
+    # Determine the command prefix based on the availability of hdfs
+    if command -v hdfs &> /dev/null; then
+        co="hdfs dfs -"
+    else
+        co=""
+    fi
+
+    # Execute the command
+    ${co}${action} ${args}
+}
+
 
 if [[ ${HELP_ON_SERVICE} == "-h" ]]; then
   echo -e "$__usage"
@@ -121,6 +137,7 @@ else
   echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/rubin/fink.conf.prod
   conf=${FINK_HOME}/conf/rubin/fink.conf.prod
 fi
+source $conf
 
 if [[ ! ${STOP_AT} ]]; then
   echo -e "${SINFO} No ending time specified, stopping at 20:00 today Paris time."
@@ -130,7 +147,7 @@ fi
 # stream2raw
 if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
   # Force fetch schema
-  ${FINK_HOME}/bin/fink start fetch_schema -s rubin
+  ${FINK_HOME}/bin/fink start fetch_schema -s rubin -c ${conf}
 
   if [[ ${CHECK_OFFSET} == true ]]; then
     CHECK_OFFSET="--check_offsets"
@@ -149,10 +166,11 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
     echo -e "${SINFO} Launching raw2science"
     while : ; do
         # check folder exist
-        $(hdfs dfs -test -d /user/fink/online/raw/${NIGHT})
+        run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
         if [[ $? == 0 ]]; then
             # check folder is not empty
-            isEmpty=$(hdfs dfs -count /user/fink/online/raw/${NIGHT} | awk '{print $2}')
+            result=$(run_hdfs_or_local "du" ${ONLINE_DATA_PREFIX}/raw/${NIGHT})
+            isEmpty=$(echo $result | awk '{print $1}')
             if [[ $isEmpty > 0 ]]; then
                 echo -e "${SINFO} Data detected."
                 echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
@@ -184,10 +202,11 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
     echo -e "${SINFO} Launching distribution"
     while true; do
         # check folder exist
-        $(hdfs dfs -test -d /user/fink/online/science/${NIGHT})
+        run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
         if [[ $? == 0 ]]; then
             # check folder is not empty
-            isEmpty=$(hdfs dfs -count /user/fink/online/science/${NIGHT} | awk '{print $2}')
+            result=$(run_hdfs_or_local "du" ${ONLINE_DATA_PREFIX}/science/${NIGHT})
+            isEmpty=$(echo $result | awk '{print $1}')
             if [[ $isEmpty > 0 ]]; then
                 echo -e "${SINFO} Data detected."
                 echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."

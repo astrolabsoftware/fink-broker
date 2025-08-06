@@ -106,28 +106,36 @@ if [ -n "${SINGLE_FILE}" ]; then
     exit
 fi
 
+ensure_folder_has_been_created() {
+  local path="$1"
+  if [ ! -d ${path} ]; then
+    echo -e "${SERROR} ${path} has not been created -- there might be a problem"
+    exit 1
+  else
+    echo -e "${SDONE} ${path} created as expected"
+  fi
+}
+
 # Stream integration tests
 if [[ "$WITH_STREAM" = true ]] ; then
   RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
-  conf=${FINK_HOME}/conf/${SURVEY}/fink.conf.dev
-  source $conf
 
-  # Fire another stream
+  # Fire a stream
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw -s ${SURVEY} \
-    -c ${FINK_HOME}/conf/${SURVEY}/fink.conf.dev \
-    -conf_stream2raw ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw \
-    -night ${NIGHT} \
-    -stop_at "`date +'%Y-%m-%d %H:%M' -d "08:00 today"`"
-
-  if [ ! -d "$ONLINE_DATA_PREFIX/raw/$NIGHT" ]; then
-    echo "ERROR: $ONLINE_DATA_PREFIX/raw/$NIGHT has not been created -- there might be a problem"
-  fi
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science -s ${SURVEY} -exit_after 180 -c $conf -night $NIGHT ${RESOURCES}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  echo "Sleeping 300 seconds to enable processing to produce output..."
+  sleep 300
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
+
+  # TODO: add distribute
+  # TODO: which other checks?
 fi
 
 check_table_output() {
@@ -145,6 +153,7 @@ check_table_output() {
 if [[ "$WITH_DB" = true ]] ; then
   # merge data
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --merge
+  ensure_folder_has_been_created $AGG_DATA_PREFIX/science
 
   # diaSource, diaObject only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
@@ -152,7 +161,6 @@ if [[ "$WITH_DB" = true ]] ; then
   # check HBase output
   check_table_output "rubin.diaSource"
   check_table_output "rubin.diaObject"
-
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
