@@ -75,7 +75,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: logs
-        path: /home/fink-broker/broker_logs
+        path: ${FINK_HOME}/broker_logs
         retention-days: 7
         overwrite: true
     - uses: act10ns/slack@v1
