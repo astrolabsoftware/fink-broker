@@ -72,6 +72,17 @@ jobs:
         elif [ "${{ matrix.survey }}" == "rubin" ]; then
           fink_test_rubin -c conf/rubin/fink.conf.dev --unit-tests --stream-integration
         fi
+    - uses: actions/upload-artifact@v4
+      with:
+        # Name of the artifact to upload.
+        # Optional. Default is 'artifact'
+        name: logs
+
+        # A file, directory or wildcard pattern that describes what to upload
+        # Required.
+        path: /home/fink-broker/broker_logs
+        retention-days: 7
+        overwrite: true
     - uses: act10ns/slack@v1
       with:
         status: ${{ job.status }}

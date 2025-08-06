@@ -169,6 +169,7 @@ if [[ "$WITH_DB" = true ]] ; then
   check_table_output "rubin.diaSource"
   check_table_output "rubin.diaObject"
   check_table_output "rubin.pixel128"
+  check_table_output "rubin.cutouts"
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
