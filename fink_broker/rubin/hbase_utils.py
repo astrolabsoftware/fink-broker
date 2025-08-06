@@ -45,7 +45,7 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    18
+    19
     """
     fink_cols = {
         # Crossmatch
@@ -303,7 +303,7 @@ def load_rubin_index_cols():
     --------
     >>> out = load_rubin_index_cols()
     >>> print(len(out))
-    12
+    9
     """
     # All columns from root_level
     common = list(load_rubin_root_level().keys())
