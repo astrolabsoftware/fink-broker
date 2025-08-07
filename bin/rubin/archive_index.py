@@ -46,7 +46,6 @@ from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.hbase_utils import assign_column_family_names
 
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -161,11 +160,15 @@ def main():
         )
 
         # add salt
-        df_flat = salt_from_last_digits(df_flat, colname="diaObjectId", npartitions=1000)
+        df_flat = salt_from_last_digits(
+            df_flat, colname="diaObjectId", npartitions=1000
+        )
 
         # Add row key
         index_row_key_name = "salt_diaObjectId_midpointMjdTai"
-        df_flat = add_row_key(df_flat, row_key_name=index_row_key_name, cols=index_row_key_name.split("_"))
+        df_flat = add_row_key(
+            df_flat, row_key_name=index_row_key_name, cols=index_row_key_name.split("_")
+        )
 
         # Salt not needed anymore
         df_flat = df_flat.drop("salt")

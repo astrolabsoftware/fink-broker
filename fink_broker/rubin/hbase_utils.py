@@ -374,7 +374,9 @@ def incremental_ingestion_with_salt(
         df = load_parquet_files(paths[index : index + nfiles])
 
         # add salt
-        df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=npartitions)
+        df = salt_from_last_digits(
+            df, colname="diaObject.diaObjectId", npartitions=npartitions
+        )
 
         n_alerts += df.count()
 
@@ -439,7 +441,9 @@ def deduplicate_ingestion_with_salt(
     df = load_parquet_files(paths)
 
     # add salt
-    df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=npartitions)
+    df = salt_from_last_digits(
+        df, colname="diaObject.diaObjectId", npartitions=npartitions
+    )
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")
