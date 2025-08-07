@@ -56,18 +56,14 @@ def main():
     # Get list of files
     paths = list_hdfs_files(folder)
 
-    # Get version from the alert directly rather than from remote
-    # This prevents reprocessing to use wrong schema
-    pqs = [i for i in paths if i.endswith(".parquet")]
-
-    if len(pqs) == 0:
+    if len(paths) == 0:
         logger.warning("No parquet found at {}".format(folder))
 
         import sys
 
         sys.exit()
 
-    major_version, minor_version = get_schema_from_parquet(pqs[0])
+    major_version, minor_version = get_schema_from_parquet(paths)
 
     # FIXME: should be CLI arg
     nfiles = 100

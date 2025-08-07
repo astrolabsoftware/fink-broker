@@ -75,8 +75,7 @@ def main():
     df = load_parquet_files(paths)
 
     # Load all columns
-    pqs = [i for i in paths if i.endswith(".parquet")]
-    major_version, minor_version = get_schema_from_parquet(pqs[0])
+    major_version, minor_version = get_schema_from_parquet(paths)
     root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(
         major_version, minor_version, include_salt=False
     )
