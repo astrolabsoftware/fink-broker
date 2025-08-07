@@ -369,8 +369,10 @@ def incremental_ingestion_with_salt(
     out: int
         Number of alerts ingested
     """
+    nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
     for index in range(0, len(paths), nfiles):
+        _LOG.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
         # add salt

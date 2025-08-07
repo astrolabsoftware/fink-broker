@@ -53,14 +53,12 @@ def main():
 
     nfiles = 100
     npartitions = 1000
+    nloops = int(len(paths) / nfiles) + 1
 
-    logger.info(
-        "{} parquet detected ({} loops to perform)".format(
-            len(paths), int(len(paths) / nfiles) + 1
-        )
-    )
+    logger.info("{} parquet detected ({} loops to perform)".format(len(paths), nloops))
 
     for index in range(0, len(paths), nfiles):
+        logger.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
         df = df.withColumn("hdfs_path", F.input_file_name())
