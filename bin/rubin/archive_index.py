@@ -165,10 +165,9 @@ def main():
             )
 
             # Columns to store
-            colnames = df_flat.columns
             cf = assign_column_family_names(
                 df_flat,
-                cols_i=colnames,
+                cols_i=df_flat.columns,
                 cols_d=[],
             )
 
