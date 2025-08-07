@@ -144,10 +144,12 @@ fi
 check_table_output() {
   # make 101 as args
   local tablename="$1"
+  shift
+  local number="$@"
   output=`echo -e "count '$tablename'" | /home/libs/hbase-2.5.8/bin/hbase shell -n`
   num_rows=$(echo "$output" | grep -o '[0-9]\+ row(s)' | grep -o '[0-9]\+')
-  if [[ $num_rows != 101 ]]; then
-    echo -e "${SERROR} table ${tablename} has ${num_rows:-0} rows instead of 101"
+  if [[ $num_rows != ${number} ]]; then
+    echo -e "${SERROR} table ${tablename} has ${num_rows:-0} rows instead of ${number}"
   else
     echo -e "${SDONE} table ${tablename} is OK."
   fi
@@ -162,14 +164,15 @@ if [[ "$WITH_DB" = true ]] ; then
   # diaSource, diaObject only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
 
-  # pixel128 only
+  # pixel128, cutouts, forcedSources only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
 
   # check HBase output
-  check_table_output "rubin.diaSource"
-  check_table_output "rubin.diaObject"
-  check_table_output "rubin.pixel128"
-  check_table_output "rubin.cutouts"
+  check_table_output "rubin.diaSource" 101
+  check_table_output "rubin.diaObject" 101
+  check_table_output "rubin.pixel128" 101
+  check_table_output "rubin.cutouts" 101
+  check_table_output "rubin.forcedSources" 99
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then

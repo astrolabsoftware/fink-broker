@@ -543,12 +543,12 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
     return df, cols_i, cols_d, cf
 
 
-def salt_from_diaobjectid(df, npartitions):
+def salt_from_last_digits(df, colname, npartitions):
     """Add simple salt column based on the last digits of diaObjectId
 
     Notes
     -----
-    The key will be the last N digits of diaObject.diaObjectId.
+    The key will be the last N digits of `colname` value.
     N = int(log10(npartitions))
     The key will be padded with 0 for safety.
 
@@ -556,6 +556,8 @@ def salt_from_diaobjectid(df, npartitions):
     ----------
     df: Spark DataFrame
         Input Spark dataframe
+    colname: str
+        Name of the column to take the salt from
     npartitions: int
         Number of partitions in the HBase table
 
@@ -569,7 +571,7 @@ def salt_from_diaobjectid(df, npartitions):
     --------
     # Read Rubin alerts
     >>> df = spark.read.format("parquet").load(rubin_7p4)
-    >>> df = salt_from_diaobjectid(df, 1000)
+    >>> df = salt_from_last_digits(df, "diaObject.diaObjectId", 1000)
     >>> df.select("salt").collect()[0][0]
     '831'
     """
@@ -578,7 +580,7 @@ def salt_from_diaobjectid(df, npartitions):
     ndigits = int(np.log10(npartitions))
     df = df.withColumn(
         "salt",
-        F.lpad(F.substring("diaObject.diaObjectId", -ndigits, ndigits), ndigits, "0"),
+        F.lpad(F.substring(colname, -ndigits, ndigits), ndigits, "0"),
     )
 
     return df

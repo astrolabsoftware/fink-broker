@@ -19,7 +19,7 @@ from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import flatten_dataframe
-from fink_broker.common.hbase_utils import salt_from_diaobjectid
+from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
@@ -374,7 +374,7 @@ def incremental_ingestion_with_salt(
         df = load_parquet_files(paths[index : index + nfiles])
 
         # add salt
-        df = salt_from_diaobjectid(df, npartitions)
+        df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=npartitions)
 
         n_alerts += df.count()
 
@@ -439,7 +439,7 @@ def deduplicate_ingestion_with_salt(
     df = load_parquet_files(paths)
 
     # add salt
-    df = salt_from_diaobjectid(df, npartitions)
+    df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=npartitions)
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")

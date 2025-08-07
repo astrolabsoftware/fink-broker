@@ -27,7 +27,7 @@ from fink_broker.common.spark_utils import list_hdfs_files
 
 from fink_broker.common.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import push_to_hbase, add_row_key
-from fink_broker.common.hbase_utils import salt_from_diaobjectid
+from fink_broker.common.hbase_utils import salt_from_last_digits
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
     df = df.withColumn("hdfs_path", F.input_file_name())
 
     # add salt
-    df = salt_from_diaobjectid(df, npartitions=1000)
+    df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=1000)
 
     cols = [
         "diaObject.diaObjectId",
