@@ -50,44 +50,57 @@ def main():
         args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
     )
     paths = list_hdfs_files(path)
-    df = load_parquet_files(paths)
 
-    df = df.withColumn("hdfs_path", F.input_file_name())
+    nfiles = 100
+    npartitions = 1000
 
-    # add salt
-    df = salt_from_last_digits(df, colname="diaObject.diaObjectId", npartitions=1000)
-
-    cols = [
-        "diaObject.diaObjectId",
-        "diaSource.midpointMjdTai",
-        "diaSource.diaSourceId",
-        "hdfs_path",
-        "salt",
-    ]
-
-    df = df.select(cols)
-
-    # Push to HBase
-    row_key_name = "salt_diaObjectId_midpointMjdTai"
-
-    cf = assign_column_family_names(
-        df,
-        cols_i=["diaObjectId", "diaSourceId", "midpointMjdTai"],
-        cols_d=["hdfs_path"],
+    logger.info(
+        "{} parquet detected ({} loops to perform)".format(
+            len(paths), int(len(paths) / nfiles) + 1
+        )
     )
 
-    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+    for index in range(0, len(paths), nfiles):
+        df = load_parquet_files(paths[index : index + nfiles])
 
-    # Not needed anymore
-    df = df.drop("salt")
+        df = df.withColumn("hdfs_path", F.input_file_name())
 
-    push_to_hbase(
-        df=df,
-        table_name=args.science_db_name + ".cutouts",
-        rowkeyname=row_key_name,
-        cf=cf,
-        catfolder=args.science_db_catalogs,
-    )
+        # add salt
+        df = salt_from_last_digits(
+            df, colname="diaObject.diaObjectId", npartitions=npartitions
+        )
+
+        cols = [
+            "diaObject.diaObjectId",
+            "diaSource.midpointMjdTai",
+            "diaSource.diaSourceId",
+            "hdfs_path",
+            "salt",
+        ]
+
+        df = df.select(cols)
+
+        # Push to HBase
+        row_key_name = "salt_diaObjectId_midpointMjdTai"
+
+        cf = assign_column_family_names(
+            df,
+            cols_i=["diaObjectId", "diaSourceId", "midpointMjdTai"],
+            cols_d=["hdfs_path"],
+        )
+
+        df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+
+        # Not needed anymore
+        df = df.drop("salt")
+
+        push_to_hbase(
+            df=df,
+            table_name=args.science_db_name + ".cutouts",
+            rowkeyname=row_key_name,
+            cf=cf,
+            catfolder=args.science_db_catalogs,
+        )
 
 
 if __name__ == "__main__":
