@@ -30,7 +30,7 @@ SECURED_KAFKA_CONFIG=''
 
 # If set to false, it will assume the fink_broker is in your PYTHONPATH
 # otherwise it will package it, and send it to the executors.
-DEPLOY_FINK_PYTHON=false
+DEPLOY_FINK_PYTHON=true
 
 # If set to false, it will take the fink jars under $FINK_HOME/libs
 # otherwise the Scala sources will be recompiled and send to executors.

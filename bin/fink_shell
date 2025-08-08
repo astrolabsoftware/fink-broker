@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2025 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +65,7 @@ export DEPLOY_FINK_SCALA=$DEPLOY_FINK_SCALA
 
 # Grab Fink and Python version numbers
 FINK_VERSION=`fink --version`
-PYTHON_VERSION=`python -c "import platform; print(platform.python_version()[:3])"`
+PYTHON_VERSION=`python -c "import platform; print('.'.join(platform.python_version_tuple()[0:2]))"`
 
 # For use on cluster, the HBase configuration file is actually mandatory.
 if [[ -f ${HBASE_XML_CONF} ]]; then
