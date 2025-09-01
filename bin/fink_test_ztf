@@ -136,6 +136,9 @@ if [[ "$WITH_DB" = true ]] ; then
   fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd ${RESOURCES}
   fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId ${RESOURCES}
 
+  # TDE
+  fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES}
+
   # SSO candidates
   fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
