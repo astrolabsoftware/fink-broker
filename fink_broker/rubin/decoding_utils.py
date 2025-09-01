@@ -91,27 +91,20 @@ def write_alert(
 
     # Get schema
     if avro_schema is not None:
-        # For CI, we directly get the schema from the data itself
-        # it works because we know what we injected...
-        table = pa.Table.from_pandas(pdf)
-        table_schema = table.schema
-        # remove metadata for compatibility
-        table_schema = table_schema.remove_metadata()
+        # Change this when re-creating test data
+        schema_version = "lsst.v7_4.parquet"
     else:
-        # For real data, we do not take schema from data
-        # We open the latest downloaded schema, and apply it to the data
-        # This way, we ensure correct types for example.
         with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
             schema_version = f.read()
 
-        schema_files = glob.glob(
-            os.path.join(table_schema_path, schema_version, "*.parquet")
-        )
-        table_schema = pq.read_schema(schema_files[0])
+    schema_files = glob.glob(
+        os.path.join(table_schema_path, schema_version, "*.parquet")
+    )
+    table_schema = pq.read_schema(schema_files[0])
 
-        # remove metadata for compatibility
-        table_schema = table_schema.remove_metadata()
-        table = pa.Table.from_pandas(pdf, schema=table_schema)
+    # remove metadata for compatibility
+    table_schema = table_schema.remove_metadata()
+    table = pa.Table.from_pandas(pdf, schema=table_schema)
 
     # Add additional fields
     table, table_schema = add_constant_field_to_table(
