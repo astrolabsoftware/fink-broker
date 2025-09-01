@@ -15,6 +15,7 @@
 # limitations under the License.
 """Run the early TDE candidates filter, and push data to Slack/Telegram."""
 
+import os
 import argparse
 
 from fink_broker.common.parser import getargs
@@ -46,7 +47,11 @@ def main():
     )
     df = load_parquet_files(path)
 
-    _ = early_tde_candidates(df, send_to_tg=True, send_to_slack=True)
+    _ = early_tde_candidates(
+        df,
+        send_to_tg="EARLY_TDE_TG_TOKEN" in os.environ,
+        send_to_slack="EARLY_TDE_SLACK_TOKEN" in os.environ,
+    )
 
 
 if __name__ == "__main__":
