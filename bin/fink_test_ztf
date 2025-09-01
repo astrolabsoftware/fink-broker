@@ -123,23 +123,26 @@ fi
 
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
-  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 2 -spark-executor-cores 1"
-  # merge data
-  fink start merge -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --merge
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
 
-  # Update science portal
-  fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd ${RESOURCES}
-  fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId ${RESOURCES}
+  # # merge data
+  # fink start merge -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
-  # SSO candidates
-  fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  # # Update science portal
+  # fink start archive_science -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table pixel128_jd_objectId ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table class_jd_objectId ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table upper_objectId_jd ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table uppervalid_objectId_jd ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table ssnamenr_jd ${RESOURCES}
+  # fink start archive_index -s ${SURVEY} -c $conf -night $NIGHT -index_table tracklet_objectId ${RESOURCES}
 
-  fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+  # # SSO candidates
+  # fink start archive_sso_cand -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
+
+  # fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
 fi
 
