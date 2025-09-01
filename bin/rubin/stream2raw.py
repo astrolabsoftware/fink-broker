@@ -365,7 +365,6 @@ if __name__ == "__main__":
             )
         )
         time.sleep(60)
-    kadmin.close()
 
     if args.check_offsets:
         if config["groupid"] is not None:
