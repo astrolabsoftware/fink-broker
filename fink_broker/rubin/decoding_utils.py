@@ -87,10 +87,7 @@ def write_alert(
 
         schema = readschemafromavrofile(avro_schema)
         msgs = [fastavro.schemaless_reader(io.BytesIO(m), schema) for m in msgs]
-    pdf = pd.DataFrame.from_records(msgs)
 
-    # Get schema
-    if avro_schema is not None:
         # Change this when re-creating test data
         schema_version = "lsst.v7_4.parquet"
     else:
@@ -104,6 +101,8 @@ def write_alert(
 
     # remove metadata for compatibility
     table_schema = table_schema.remove_metadata()
+
+    pdf = pd.DataFrame.from_records(msgs)
     table = pa.Table.from_pandas(pdf, schema=table_schema)
 
     # Add additional fields
