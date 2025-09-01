@@ -68,7 +68,8 @@ def write_alert(
         Folder containing LSST schemas in parquet format
     avro_schema: str
         Path to an avro file used to simulate streams.
-        Only used in the Continuous integration. Default is None
+        ONLY USE THIS in the Continuous integration.
+        Default is None, meaning it is not used.
     fs: optional
         Type of filesystem. None (default for CI) means local.
         Production uses HadoopFileSystem.
@@ -78,18 +79,20 @@ def write_alert(
         Folder to write alerts. Depends on filesystem chosen.
     """
     if avro_schema is not None:
+        # This is a workaround to work in CI with
+        # fixed test data & schema
         import io
         import fastavro
         from fink_alert_simulator.avroUtils import readschemafromavrofile
 
         schema = readschemafromavrofile(avro_schema)
         msgs = [fastavro.schemaless_reader(io.BytesIO(m), schema) for m in msgs]
-    pdf = pd.DataFrame.from_records(msgs)
 
-    # Get latest schema
-    # FIXME: this will crash on CI if test data is not using latest schema
-    with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
-        schema_version = f.read()
+        # Change this when re-creating test data
+        schema_version = "lsst.v7_4.parquet"
+    else:
+        with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
+            schema_version = f.read()
 
     schema_files = glob.glob(
         os.path.join(table_schema_path, schema_version, "*.parquet")
@@ -98,6 +101,8 @@ def write_alert(
 
     # remove metadata for compatibility
     table_schema = table_schema.remove_metadata()
+
+    pdf = pd.DataFrame.from_records(msgs)
     table = pa.Table.from_pandas(pdf, schema=table_schema)
 
     # Add additional fields

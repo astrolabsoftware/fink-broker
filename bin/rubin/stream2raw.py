@@ -31,6 +31,7 @@ import argparse
 from multiprocessing import Process, Queue
 
 from confluent_kafka import DeserializingConsumer
+from confluent_kafka.admin import AdminClient
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer
 
@@ -351,6 +352,19 @@ if __name__ == "__main__":
         format="%(asctime)s %(levelname)s:%(message)s",
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
+
+    # check topic exists
+    kadmin = AdminClient({
+        k: v for k, v in kafka_config.items() if k != "value.deserializer"
+    })
+    available_topics = kadmin.list_topics().topics
+    while args.topic not in available_topics:
+        _LOG.warning(
+            "{} is not in the list of available topics: {}. Sleeping 1 minute...".format(
+                args.topic, available_topics
+            )
+        )
+        time.sleep(60)
 
     if args.check_offsets:
         if config["groupid"] is not None:
