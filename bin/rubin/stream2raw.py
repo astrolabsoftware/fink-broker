@@ -354,7 +354,7 @@ if __name__ == "__main__":
     )
 
     # check topic exists
-    kadmin = AdminClient(kafka_config)
+    kadmin = AdminClient({k: v for k, v in kafka_config if k != "value.deserializer"})
     available_topics = kadmin.list_topics().topics
     while args.topic not in available_topics:
         _LOG.warning(
