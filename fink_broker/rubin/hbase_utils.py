@@ -236,7 +236,7 @@ def load_rubin_root_level(include_salt=True):
     --------
     >>> root_level = load_rubin_root_level()
     >>> len(load_rubin_root_level())
-    7
+    6
 
     >>> assert "fink_broker_version" in root_level, root_level
     """
@@ -244,7 +244,6 @@ def load_rubin_root_level(include_salt=True):
         "fink_broker_version": "string",
         "fink_science_version": "string",
         "lsst_schema_version": "string",
-        "diaSourceId": "long",
         "observation_reason": "string",
         "target_name": "string",
     }
@@ -277,7 +276,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     --------
     >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(9, 0)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 7 + 82 + 98 + 19 + 4
+    >>> expected = 6 + 82 + 98 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -305,7 +304,7 @@ def load_rubin_index_cols():
     --------
     >>> out = load_rubin_index_cols()
     >>> print(len(out))
-    14
+    13
     """
     # All columns from root_level
     common = list(load_rubin_root_level().keys())
