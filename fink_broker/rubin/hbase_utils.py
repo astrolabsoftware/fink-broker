@@ -177,14 +177,14 @@ def extract_avsc_schema(name, major_version, minor_version):
 
     Examples
     --------
-    >>> schema = extract_avsc_schema("diaSource", 7, 4)
+    >>> schema = extract_avsc_schema("diaSource", 9, 0)
     >>> len(schema)
     140
 
     >>> schema["psfFlux"]
     {'type': 'float', 'default': None}
 
-    >>> schema = extract_avsc_schema("diaObject", 7, 4)
+    >>> schema = extract_avsc_schema("diaObject", 9, 0)
     >>> len(schema)
     82
     """
@@ -236,7 +236,7 @@ def load_rubin_root_level(include_salt=True):
     --------
     >>> root_level = load_rubin_root_level()
     >>> len(load_rubin_root_level())
-    5
+    7
 
     >>> assert "fink_broker_version" in root_level, root_level
     """
@@ -244,7 +244,9 @@ def load_rubin_root_level(include_salt=True):
         "fink_broker_version": "string",
         "fink_science_version": "string",
         "lsst_schema_version": "string",
-        "alertId": "long",  # FIXME: there should be diaObjectId for v8
+        "diaSourceId": "long",
+        "observation_reason": "string",
+        "target_name", "string",
     }
 
     if include_salt:
@@ -273,9 +275,9 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(7, 4)
+    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(9, 0)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 5 + 82 + 140 + 19 + 4
+    >>> expected = 7 + 82 + 140 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -303,7 +305,7 @@ def load_rubin_index_cols():
     --------
     >>> out = load_rubin_index_cols()
     >>> print(len(out))
-    9
+    12
     """
     # All columns from root_level
     common = list(load_rubin_root_level().keys())
@@ -315,9 +317,9 @@ def load_rubin_index_cols():
         "diaObjectId",
         "ra",
         "dec",
-        # "nDiaSources",  # FIXME: for v8
-        # "firstDiaSourceMjdTai",  # FIXME: for v8
-        # "lastNonForcedSource",  # FIXME: for v8
+        "nDiaSources",
+        "firstDiaSourceMjdTai",
+        "lastDiaSourceMjdTai",
     ]
 
     # Add only classfication from Fink
@@ -356,9 +358,9 @@ def incremental_ingestion_with_salt(
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     major_version: int
-        LSST alert schema major version (e.g. 7)
+        LSST alert schema major version (e.g. 9)
     minor_version: int
-        LSST alert schema minor version (e.g. 4)
+        LSST alert schema minor version (e.g. 0)
     nfiles: int
         Number of parquet files to ingest at once
     npartitions: int
@@ -429,9 +431,9 @@ def deduplicate_ingestion_with_salt(
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     major_version: int
-        LSST alert schema major version (e.g. 7)
+        LSST alert schema major version (e.g. 9)
     minor_version: int
-        LSST alert schema minor version (e.g. 4)
+        LSST alert schema minor version (e.g. 0)
     npartitions: int
         Number of HBase partitions in the table.
 

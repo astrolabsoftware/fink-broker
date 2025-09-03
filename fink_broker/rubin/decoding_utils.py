@@ -89,7 +89,7 @@ def write_alert(
         msgs = [fastavro.schemaless_reader(io.BytesIO(m), schema) for m in msgs]
 
         # Change this when re-creating test data
-        schema_version = "lsst.v7_4.parquet"
+        schema_version = "lsst.v9_0.parquet"
     else:
         with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
             schema_version = f.read()
