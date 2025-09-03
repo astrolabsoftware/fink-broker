@@ -179,7 +179,7 @@ def extract_avsc_schema(name, major_version, minor_version):
     --------
     >>> schema = extract_avsc_schema("diaSource", 9, 0)
     >>> len(schema)
-    140
+    98
 
     >>> schema["psfFlux"]
     {'type': 'float', 'default': None}
@@ -246,7 +246,7 @@ def load_rubin_root_level(include_salt=True):
         "lsst_schema_version": "string",
         "diaSourceId": "long",
         "observation_reason": "string",
-        "target_name", "string",
+        "target_name": "string",
     }
 
     if include_salt:
@@ -277,7 +277,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     --------
     >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(9, 0)
     >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 7 + 82 + 140 + 19 + 4
+    >>> expected = 7 + 82 + 98 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_cols, fink_nested_cols = load_fink_cols()
@@ -305,7 +305,7 @@ def load_rubin_index_cols():
     --------
     >>> out = load_rubin_index_cols()
     >>> print(len(out))
-    12
+    14
     """
     # All columns from root_level
     common = list(load_rubin_root_level().keys())
