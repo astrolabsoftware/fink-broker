@@ -61,6 +61,10 @@ def main():
         logger.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
+        # Keep only valid diaObject
+        # This will discard SSO
+        df = df.filter(~df["diaObject"].isNull())
+
         df = df.withColumn("hdfs_path", F.input_file_name())
 
         # add salt
