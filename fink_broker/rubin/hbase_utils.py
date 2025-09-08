@@ -377,7 +377,7 @@ def incremental_ingestion_with_salt(
         df = load_parquet_files(paths[index : index + nfiles])
 
         # Keep only rows with diaObject
-        df = df.filter(~df["diaObject"].isNull()).count()
+        df = df.filter(~df["diaObject"].isNull())
 
         # add salt
         df = salt_from_last_digits(
@@ -447,7 +447,7 @@ def deduplicate_ingestion_with_salt(
     df = load_parquet_files(paths)
 
     # Keep only rows with diaObject
-    df = df.filter(~df["diaObject"].isNull()).count()
+    df = df.filter(~df["diaObject"].isNull())
 
     # add salt
     df = salt_from_last_digits(
