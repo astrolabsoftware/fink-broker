@@ -376,6 +376,9 @@ def incremental_ingestion_with_salt(
         _LOG.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
+        # Keep only rows with diaObject
+        df = df.filter(~df["diaObject"].isNull()).count()
+
         # add salt
         df = salt_from_last_digits(
             df, colname="diaObject.diaObjectId", npartitions=npartitions
@@ -442,6 +445,9 @@ def deduplicate_ingestion_with_salt(
         Number of alerts ingested
     """
     df = load_parquet_files(paths)
+
+    # Keep only rows with diaObject
+    df = df.filter(~df["diaObject"].isNull()).count()
 
     # add salt
     df = salt_from_last_digits(
