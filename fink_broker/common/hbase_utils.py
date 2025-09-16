@@ -218,11 +218,12 @@ def construct_hbase_catalog_from_flatten_schema(
 
         # Deal with array
         if isinstance(column["type"], dict):
-            # column["type"]["type"]
             column["type"] = "string"
 
         if column["type"] == "timestamp":
-            # column["type"]["type"]
+            column["type"] = "string"
+
+        if column["type"] == "boolean":
             column["type"] = "string"
 
         if column["name"] == rowkeyname:
