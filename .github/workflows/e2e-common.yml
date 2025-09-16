@@ -187,6 +187,7 @@ jobs:
         with:
           image: "${{ needs.build.outputs.image }}"
           fail-build: false
+          severity-cutoff: critical
       - name: Display SARIF report
         run: |
           cat ${{ steps.scan.outputs.sarif }}
