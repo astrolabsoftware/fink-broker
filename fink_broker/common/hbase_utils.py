@@ -218,11 +218,12 @@ def construct_hbase_catalog_from_flatten_schema(
 
         # Deal with array
         if isinstance(column["type"], dict):
-            # column["type"]["type"]
             column["type"] = "string"
 
         if column["type"] == "timestamp":
-            # column["type"]["type"]
+            column["type"] = "string"
+
+        if column["type"] == "boolean":
             column["type"] = "string"
 
         if column["name"] == rowkeyname:
@@ -570,10 +571,10 @@ def salt_from_last_digits(df, colname, npartitions):
     Examples
     --------
     # Read Rubin alerts
-    >>> df = spark.read.format("parquet").load(rubin_7p4)
+    >>> df = spark.read.format("parquet").load(rubin_sample)
     >>> df = salt_from_last_digits(df, "diaObject.diaObjectId", 1000)
-    >>> df.select("salt").collect()[0][0]
-    '831'
+    >>> len(df.select("salt").collect()[0][0])
+    3
     """
     # Key prefix will be the last N digits
     # This must match the number of partitions in the table
@@ -599,7 +600,7 @@ if __name__ == "__main__":
         root, "online/science/20200101"
     )
 
-    globs["rubin_7p4"] = os.path.join(root, "datasim/rubin_test_data_7_4.parquet")
+    globs["rubin_sample"] = os.path.join(root, "datasim/rubin_test_data_9_0.parquet")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

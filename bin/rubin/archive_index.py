@@ -93,6 +93,10 @@ def main():
         logger.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
+        # Keep only alerts diaObject
+        # This will discard SSO
+        df = df.filter(~df["diaObject"].isNull())
+
         # Check all columns exist, fill if necessary, and cast df
         # FIXME: diaobject should be replaced by a union/mix of diasource and diaobject carefully selected?
         # FIXME: careful with the union though about duplicated field names
