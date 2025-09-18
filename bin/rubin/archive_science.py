@@ -28,8 +28,8 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
-from fink_broker.rubin.hbase_utils import incremental_ingestion_with_salt
-from fink_broker.rubin.hbase_utils import deduplicate_ingestion_with_salt
+from fink_broker.rubin.hbase_utils import ingest_source_data
+from fink_broker.rubin.hbase_utils import ingest_object_data
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
@@ -76,25 +76,39 @@ def main():
     )
 
     # diaObject
-    row_key_name = "salt_diaObjectId"
-    table_name = "{}.{}".format(args.science_db_name, "diaObject")
-    n_alerts_diaobject = deduplicate_ingestion_with_salt(
+    n_alerts_diaobject, table_name = ingest_object_data(
+        kind="static",
         paths=paths,
-        table_name=table_name,
-        row_key_name=row_key_name,
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
         npartitions=npartitions,
     )
     logger.info(
-        "{} alerts pushed to HBase for table {}".format(n_alerts_diaobject, table_name)
+        "{} static alerts pushed to HBase for table {}".format(
+            n_alerts_diaobject, table_name
+        )
+    )
+
+    # ssObject/MPCORB
+    n_alerts_ssobject, table_name = ingest_object_data(
+        kind="sso",
+        paths=paths,
+        catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
+        npartitions=npartitions,
+    )
+    logger.info(
+        "{} sso alerts pushed to HBase for table {}".format(
+            n_alerts_ssobject, table_name
+        )
     )
 
     # diaSource
     row_key_name = "salt_diaObjectId_midpointMjdTai"
     table_name = "{}.{}".format(args.science_db_name, "diaSource")
-    n_alerts_diasource = incremental_ingestion_with_salt(
+    n_alerts_diasource = ingest_source_data(
         paths=paths,
         table_name=table_name,
         row_key_name=row_key_name,

@@ -14,11 +14,10 @@
 # limitations under the License.
 import pyspark.sql.functions as F
 from pyspark.sql import Window
+from pyspark.sql.utils import AnalysisException
 
-from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
-from fink_broker.common.hbase_utils import flatten_dataframe
 from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.spark_utils import load_parquet_files
 
@@ -36,18 +35,25 @@ _LOG = logging.getLogger(__name__)
 def load_fink_cols():
     """Fink-derived columns used in HBase tables with type.
 
+    Notes
+    -----
+    Keys are column names (flattened). Values are data type and default.
+
     Returns
     -------
-    out: dictionary
-        Keys are column names (flattened). Values are data type and default.
+    fink_source_cols: dictionary
+        Fink added values for each source.
+    fink_object_cols: dictionary
+        Fink added values for each object.
+
 
     Examples
     --------
-    >>> fink_cols, fink_nested_cols = load_fink_cols()
-    >>> print(len(fink_cols))
+    >>> fink_source_cols, fink_object_cols = load_fink_cols()
+    >>> print(len(fink_source_cols))
     19
     """
-    fink_cols = {
+    fink_source_cols = {
         # Crossmatch
         "DR3Name": {
             "type": "string",
@@ -96,32 +102,17 @@ def load_fink_cols():
         "snn_sn_vs_others": {"type": "double", "default": 0.0},  # FIXME: float?
         # Other
         "roid": {"type": "int", "default": 0},
-        "finkclass": {"type": "string", "default": "Unknown"},
-        # from ZTF
-        # "snn_sn_vs_all": {"type": "double", "default": 0.0},
-        # "anomaly_score": {"type": "double", "default": 0.0},
-        # "mulens": {"type": "double", "default": 0.0},
-        # "nalerthist": {"type": "int", "default": 0},
-        # "rf_kn_vs_nonkn": {"type": "double", "default": 0.0},
-        # "tracklet": {"type": "string", "default": ""},
-        # "lc_features_g": {"type": "string", "default": "[]"},
-        # "lc_features_r": {"type": "string", "default": "[]"},
-        # "jd_first_real_det": {"type": "double", "default": 0.0},
-        # "jdstarthist_dt": {"type": "double", "default": 0.0},
-        # "mag_rate": {"type": "double", "default": 0.0},
-        # "sigma_rate": {"type": "double", "default": 0.0},
-        # "lower_rate": {"type": "double", "default": 0.0},
-        # "upper_rate": {"type": "double", "default": 0.0},
-        # "delta_time": {"type": "double", "default": 0.0},
-        # "from_upper": {"type": "boolean", "default": False},
+        "fink_source_class": {"type": "string", "default": "Unknown"},
     }
 
-    fink_nested_cols = {}
     for col_ in MANGROVE_COLS:
         name = "mangrove.{}".format(col_)
-        fink_nested_cols.update({name: {"type": "string", "default": "None"}})
+        fink_source_cols.update({name: {"type": "string", "default": "None"}})
 
-    return fink_cols, fink_nested_cols
+    # FIXME: is_cataloged, classification, etc.
+    fink_object_cols = {}
+
+    return fink_source_cols, fink_object_cols
 
 
 def select_type(atype, name):
@@ -256,7 +247,7 @@ def load_rubin_root_level(include_salt=True):
 
 
 def load_all_rubin_cols(major_version, minor_version, include_salt=True):
-    """Fink/ZTF columns used in HBase tables with type.
+    """Fink/LSST columns used in HBase tables with type.
 
     Parameters
     ----------
@@ -274,22 +265,42 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(9, 0)
-    >>> out = {**root_level, **diaobject, **diasource, **fink_cols, **fink_nested_cols}
-    >>> expected = 6 + 82 + 98 + 19 + 4
+    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(9, 0)
+    >>> out = {
+    ...     **root_level.values(), **diaobject.values(),
+    ...     **mpcorb.values(), **diasource.values(),
+    ...     **sssource.values(), **fink_source_cols.values(),
+    ...     **fink_object_cols.values()}
+    >>> expected = 6 + 82 + 12 + 98 + 24 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
-    fink_cols, fink_nested_cols = load_fink_cols()
+    fink_source_cols, fink_object_cols = load_fink_cols()
 
     root_level = load_rubin_root_level(include_salt=include_salt)
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
 
+    sssource_schema = extract_avsc_schema("ssSource", major_version, minor_version)
+    sssource = {"diaSource." + k: v["type"] for k, v in sssource_schema.items()}
+
     diaobject_schema = extract_avsc_schema("diaObject", major_version, minor_version)
     diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
 
-    return root_level, diaobject, diasource, fink_cols, fink_nested_cols
+    mpcorb_schema = extract_avsc_schema("MPCORB", major_version, minor_version)
+    mpcorb = {"MPCORB." + k: v["type"] for k, v in mpcorb_schema.items()}
+
+    # FIXME: add ssObject {"sso": ssobject}
+
+    return (
+        {"r": root_level},
+        {"o": diaobject},
+        {"s": diasource},
+        {"sso": mpcorb},
+        {"sss": sssource},
+        {"fs": fink_source_cols},
+        {"fo": fink_object_cols},
+    )
 
 
 def load_rubin_index_cols():
@@ -327,7 +338,115 @@ def load_rubin_index_cols():
     return common
 
 
-def incremental_ingestion_with_salt(
+def cast_and_rename_field(colname, coltype, nested):
+    """ """
+
+    # rename root.level into root_level
+    # name = (
+    #     F.col(colname)
+    #     .alias(colname.replace(".", "_"))
+    #     .cast(coltype)
+    # )
+
+    if nested:
+        # Assume section.real_colname
+        return F.col(colname).cast(coltype).alias(colname.split(".")[-1])
+    else:
+        return F.col(colname).cast(coltype)
+
+
+def flatten_dataframe(df, sections):
+    """Flatten DataFrame columns of a nested Spark DF for HBase ingestion
+
+    Notes
+    -----
+    Check also all Fink columns exist, fill if necessary, and cast all columns.
+
+    Notes
+    -----
+    This is the LSST version, slightly different from the ZTF version
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark DataFrame with raw alert data
+    sections: dict of dict
+        Dictionary with nested level columns: {cf1: schema1, cf2, schema2, ...}
+        with `schemaX` given by `load_all_rubin_cols`.
+
+    Returns
+    -------
+    df: DataFrame
+        Spark DataFrame with HBase data structure
+    cols: list
+        List of selected columns
+    cf: dict
+        Dictionary with keys being column family names and
+        corresponding columns as values.
+    """
+    cols = []
+    cf = {}
+
+    for section in sections:
+        cf_name = section[0]
+        schema = section[1]
+
+        cols_ = {}
+        for colname, coltype_ in schema.items():
+            if isinstance(coltype_, dict):
+                # type & default (fink)
+                coltype = coltype_["type"]
+                default = coltype_["default"]
+            else:
+                # just type (lsst)
+                coltype = coltype_
+                default = None
+
+            if "." in colname:
+                nested = True
+            else:
+                nested = False
+
+            try:
+                # only here to check if the column exists
+                df.select(colname)
+
+                cols_.append(cast_and_rename_field(colname, coltype, nested))
+            except AnalysisException:  # noqa: PERF203
+                _LOG.warn(
+                    "Missing columns detected in the DataFrame: {}".format(colname)
+                )
+                if default is not None:
+                    _LOG.warn(
+                        "Adding a new column with value `{}` and type `{}`".format(
+                            default, coltype
+                        )
+                    )
+                    df = df.withColumn(colname, F.lit(default))
+                    cols_.append(cast_and_rename_field(colname, coltype, nested))
+                else:
+                    _LOG.warn(
+                        "No default value was provided -- skipping the ingestion of the {} field".format(
+                            colname
+                        )
+                    )
+
+        # Assign cf ID to columns
+        cf.update({
+            i: cf_name for i in df.select(["`{}`".format(k) for k in cols_]).columns
+        })
+
+        # Update total columns
+        cols += cols_
+
+    # flatten all names
+    df = df.select(cols)
+
+    return df, cols, cf
+
+
+def ingest_source_data(
+    kind,
     paths,
     table_name,
     row_key_name,
@@ -346,6 +465,8 @@ def incremental_ingestion_with_salt(
 
     Parameters
     ----------
+    kind: str
+        static or sso alerts.
     paths: list
         List of paths to parquet files on HDFS
     table_name: str
@@ -370,18 +491,34 @@ def incremental_ingestion_with_salt(
     out: int
         Number of alerts ingested
     """
+    if kind == "static":
+        section = "diaObject"
+        field = "diaObjectId"
+        # Name of the rowkey in the table. Should be a column name
+        # or a combination of column separated by _ (e.g. jd_objectId).
+        row_key_name = "salt_diaObjectId_midpointMjdTai"
+        table_name = "rubin.diaSource_static"
+    elif kind == "sso":
+        # FIXME: add ssObject when it will be available
+        section = "MPCORB"
+        field = "ssObjectId"
+        # Name of the rowkey in the table. Should be a column name
+        # or a combination of column separated by _ (e.g. jd_objectId).
+        row_key_name = "salt_ssObjectId_midpointMjdTai"
+        table_name = "rubin.diaSource_sso"
+
     nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
     for index in range(0, len(paths), nfiles):
         _LOG.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
-        # Keep only rows with diaObject
-        df = df.filter(~df["diaObject"].isNull())
+        # Keep only rows with corresponding section
+        df = df.filter(df[section].isNotNull())
 
         # add salt
         df = salt_from_last_digits(
-            df, colname="diaObject.diaObjectId", npartitions=npartitions
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
         )
 
         n_alerts += df.count()
@@ -405,10 +542,9 @@ def incremental_ingestion_with_salt(
     return n_alerts
 
 
-def deduplicate_ingestion_with_salt(
+def ingest_object_data(
+    kind,
     paths,
-    table_name,
-    row_key_name,
     catfolder,
     major_version,
     minor_version,
@@ -422,14 +558,10 @@ def deduplicate_ingestion_with_salt(
 
     Parameters
     ----------
+    kind: str
+        static or sso alerts.
     paths: list
         List of paths to parquet files on HDFS
-    table_name: str
-        HBase table name, in the form `rubin.<suffix>`.
-        Must exist in the cluster.
-    row_key_name: str
-        Name of the rowkey in the table. Should be a column name
-        or a combination of column separated by _ (e.g. jd_objectId).
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     major_version: int
@@ -441,17 +573,39 @@ def deduplicate_ingestion_with_salt(
 
     Returns
     -------
-    out: int
+    n_alerts: int
         Number of alerts ingested
+    table_name: str
+        Table name
     """
+    assert kind in ["static", "sso"], (
+        "kind={} is not recognized. Choose among: static, sso".format(kind)
+    )
+
     df = load_parquet_files(paths)
 
-    # Keep only rows with diaObject
-    df = df.filter(~df["diaObject"].isNull())
+    if kind == "static":
+        section = "diaObject"
+        field = "diaObjectId"
+        # Name of the rowkey in the table. Should be a column name
+        # or a combination of column separated by _ (e.g. jd_objectId).
+        row_key_name = "salt_diaObjectId"
+        table_name = "rubin.diaObject"
+    elif kind == "sso":
+        # FIXME: add ssObject when it will be available
+        section = "MPCORB"
+        field = "ssObjectId"
+        # Name of the rowkey in the table. Should be a column name
+        # or a combination of column separated by _ (e.g. jd_objectId).
+        row_key_name = "salt_ssObjectId"
+        table_name = "rubin.ssObject"
+
+    # Keep only rows with corresponding section
+    df = df.filter(df[section].isNotNull())
 
     # add salt
     df = salt_from_last_digits(
-        df, colname="diaObject.diaObjectId", npartitions=npartitions
+        df, colname="{}.{}".format(section, field), npartitions=npartitions
     )
 
     # Drop unused partitioning columns
@@ -461,7 +615,7 @@ def deduplicate_ingestion_with_salt(
     df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
 
     # Keep only the last alert per object
-    w = Window.partitionBy("diaObject.diaObjectId")
+    w = Window.partitionBy("{}.{}".format(section, field))
     df_dedup = (
         df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
         .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
@@ -480,7 +634,7 @@ def deduplicate_ingestion_with_salt(
         catfolder=catfolder,
     )
 
-    return n_alerts
+    return n_alerts, table_name
 
 
 def ingest_section(
@@ -502,38 +656,47 @@ def ingest_section(
     """
     section_name = table_name.split(".")[1]
 
-    root_level, diaobject, diasource, fink_cols, fink_nested_cols = load_all_rubin_cols(
-        major_version, minor_version
-    )
-    if section_name == "diaSource":
-        section = diasource
+    (
+        root_level,
+        diaobject,
+        mpcorb,
+        diasource,
+        sssource,
+        fink_source_cols,
+        fink_object_cols,
+    ) = load_all_rubin_cols(major_version, minor_version)
+
+    # which data to ingest
+    if section_name == "diaSource_static":
+        sections = [root_level, diasource, fink_source_cols]
+    elif section_name == "diaSource_sso":
+        sections = [root_level, diasource, sssource]
     elif section_name == "diaObject":
-        section = diaobject
-        # do not push fink data into diaObject
-        fink_cols, fink_nested_cols = {}, {}
+        sections = [root_level, diaobject, fink_object_cols]
+    elif section_name == "ssObject":
+        # FIXME: add ssObject
+        sections = [root_level, mpcorb]
     else:
         _LOG.error(
-            "section must be one of 'diaSource', 'diaObject'. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject'. {} is not allowed.".format(
                 section_name
             )
         )
         raise ValueError()
 
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d, cf = flatten_dataframe(
-        df, root_level, section, fink_cols, fink_nested_cols
-    )
+    df_flat, cols, cf = flatten_dataframe(df, sections)
 
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
     )
 
-    # Flatten columns
-    df_flat = select_relevant_columns(
-        df_flat,
-        row_key_name=row_key_name,
-        cols=cols_i + cols_d,
-    )
+    # FIXME: not sure what it brings after flatten_dataframe
+    # df_flat = select_relevant_columns(
+    #     df_flat,
+    #     row_key_name=row_key_name,
+    #     cols=cols,
+    # )
 
     push_to_hbase(
         df=df_flat,

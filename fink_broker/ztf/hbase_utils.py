@@ -15,7 +15,7 @@
 import os
 import logging
 
-
+from pyspark.sql.utils import AnalysisException
 import pyspark.sql.functions as F
 
 
@@ -25,7 +25,6 @@ from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
 from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
-from fink_broker.common.hbase_utils import flatten_dataframe
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -360,6 +359,133 @@ def cast_features(df):
         df = df.withColumn("lc_features_r", F.array("lc_features_r.*").astype("string"))
 
     return df
+
+
+def assign_column_family_names(df, cols_i, cols_d):
+    """Assign a column family name to each column qualifier.
+
+    There are currently 2 column families:
+        - i: for column that identify the alert (original alert)
+        - d: for column that further describe the alert (Fink added value)
+
+    The split is done in `flatten_dataframe`.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Input DataFrame containing alert data from the raw science DB (parquet).
+        See `load_parquet_files` for more information.
+    cols_*: list of string
+        List of DataFrame column names to use for the science portal.
+
+    Returns
+    -------
+    cf: dict
+        Dictionary with keys being column names (also called
+        column qualifiers), and the corresponding column family.
+
+    """
+    cf = {i: "i" for i in df.select(["`{}`".format(k) for k in cols_i]).columns}
+    cf.update({i: "d" for i in df.select(["`{}`".format(k) for k in cols_d]).columns})
+
+    return cf
+
+
+def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
+    """Flatten DataFrame columns of a nested Spark DF for HBase ingestion
+
+    Notes
+    -----
+    Check also all Fink columns exist, fill if necessary, and cast all columns.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Spark DataFrame with raw alert data
+    root_level: dict
+        Dictionary with root level columns
+    section: dict
+        Dictionary with nested level columns.
+        For ZTF, this will be `candidates`.
+        For Rubin, this will be `diaSource` or `diaObject`
+    fink_cols: dict
+        Dictionary with Fink root level columns
+    fink_nested_cols: dict
+        Dictionary with Fink nested columns
+
+    Returns
+    -------
+    df: DataFrame
+        Spark DataFrame with HBase data structure
+    col_i: list
+        List of columns for i column family
+    col_d: list
+        List of columns for d column family
+    cf: dict
+        Dictionary with keys being column names (also called
+        column qualifiers), and the corresponding column family.
+    """
+    tmp_i = []
+    tmp_d = []
+
+    # assuming no missing columns
+    for colname, coltype in root_level.items():
+        tmp_i.append(F.col(colname).cast(coltype))
+
+    # assuming no missing columns
+    for colname, coltype in section.items():
+        tmp_i.append(F.col(colname).cast(coltype).alias(colname.split(".")[-1]))
+
+    cols_i = df.select(tmp_i).columns
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_cols.items():
+        try:
+            # ony here to check if the column exists
+            df.select(colname)
+        except AnalysisException:
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            df = df.withColumn(colname, F.lit(coltype_and_default["default"]))
+        tmp_d.append(F.col(colname).cast(coltype_and_default["type"]))
+
+    # check all columns exist, otherwise create it
+    for colname, coltype_and_default in fink_nested_cols.items():
+        try:  # noqa: PERF203
+            # ony here to check if the column exists
+            df.select(colname)
+
+            # rename root.level into root_level
+            name = (
+                F.col(colname)
+                .alias(colname.replace(".", "_"))
+                .cast(coltype_and_default["type"])
+            )
+            tmp_d.append(name)
+        except AnalysisException:  # noqa: PERF203
+            _LOG.warn("Missing columns detected in the DataFrame: {}".format(colname))
+            _LOG.warn(
+                "Adding a new column with value `{}` and type `{}`".format(
+                    coltype_and_default["default"], coltype_and_default["type"]
+                )
+            )
+            name = colname.replace(".", "_")
+            df = df.withColumn(name, F.lit(coltype_and_default["default"]))
+            tmp_d.append(F.col(name).cast(coltype_and_default["type"]))
+
+    cols_d = df.select(tmp_d).columns
+
+    # flatten names
+    cnames = tmp_i + tmp_d
+    df = df.select(cnames)
+
+    cf = assign_column_family_names(df, cols_i, cols_d)
+
+    return df, cols_i, cols_d, cf
 
 
 def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
