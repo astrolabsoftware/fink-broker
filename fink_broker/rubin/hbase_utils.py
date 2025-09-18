@@ -381,15 +381,15 @@ def flatten_dataframe(df, sections):
     cols: list
         List of selected columns
     cf: dict
-        Dictionary with keys being column family names and
-        corresponding columns as values.
+        Dictionary with keys being column names and
+        corresponding column family as values.
     """
     cols = []
     cf = {}
 
     for section in sections:
-        cf_name = section[0]
-        schema = section[1]
+        cf_name = list(section.keys())[0]
+        schema = section.values()
 
         cols_ = {}
         for colname, coltype_ in schema.items():
