@@ -448,8 +448,6 @@ def flatten_dataframe(df, sections):
 def ingest_source_data(
     kind,
     paths,
-    table_name,
-    row_key_name,
     catfolder,
     major_version,
     minor_version,
@@ -469,12 +467,6 @@ def ingest_source_data(
         static or sso alerts.
     paths: list
         List of paths to parquet files on HDFS
-    table_name: str
-        HBase table name, in the form `rubin.<suffix>`.
-        Must exist in the cluster.
-    row_key_name: str
-        Name of the rowkey in the table. Should be a column name
-        or a combination of column separated by _ (e.g. jd_objectId).
     catfolder: str
         Folder to save catalog (saved locally for inspection)
     major_version: int
@@ -488,8 +480,10 @@ def ingest_source_data(
 
     Returns
     -------
-    out: int
+    n_alerts: int
         Number of alerts ingested
+    table_name: str
+        Table name
     """
     if kind == "static":
         section = "diaObject"
@@ -539,7 +533,7 @@ def ingest_source_data(
             catfolder=catfolder,
         )
 
-    return n_alerts
+    return n_alerts, table_name
 
 
 def ingest_object_data(
@@ -685,7 +679,7 @@ def ingest_section(
         raise ValueError()
 
     # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols, cf = flatten_dataframe(df, sections)
+    df_flat, _, cf = flatten_dataframe(df, sections)
 
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")

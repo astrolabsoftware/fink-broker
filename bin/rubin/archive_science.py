@@ -105,13 +105,10 @@ def main():
         )
     )
 
-    # diaSource
-    row_key_name = "salt_diaObjectId_midpointMjdTai"
-    table_name = "{}.{}".format(args.science_db_name, "diaSource")
-    n_alerts_diasource = ingest_source_data(
+    # diaSource (static)
+    n_alerts_diasource_static, table_name = ingest_source_data(
+        kind="static",
         paths=paths,
-        table_name=table_name,
-        row_key_name=row_key_name,
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
@@ -119,7 +116,25 @@ def main():
         npartitions=npartitions,
     )
     logger.info(
-        "{} alerts pushed to HBase for table {}".format(n_alerts_diasource, table_name)
+        "{} alerts pushed to HBase for table {}".format(
+            n_alerts_diasource_static, table_name
+        )
+    )
+
+    # diaSource (SSO)
+    n_alerts_diasource_sso, table_name = ingest_source_data(
+        kind="sso",
+        paths=paths,
+        catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
+        nfiles=nfiles,
+        npartitions=npartitions,
+    )
+    logger.info(
+        "{} alerts pushed to HBase for table {}".format(
+            n_alerts_diasource_sso, table_name
+        )
     )
 
 
