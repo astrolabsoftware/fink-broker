@@ -25,7 +25,6 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.spark_utils import list_hdfs_files
 
-from fink_broker.common.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import push_to_hbase, add_row_key
 from fink_broker.common.hbase_utils import salt_from_last_digits
 
@@ -61,15 +60,11 @@ def main():
         logger.info("Loop {}/{}".format(index + 1, nloops))
         df = load_parquet_files(paths[index : index + nfiles])
 
-        # Keep only valid diaObject
-        # This will discard SSO
-        df = df.filter(~df["diaObject"].isNull())
-
         df = df.withColumn("hdfs_path", F.input_file_name())
 
-        # add salt
+        # add salt based on diaSourceId
         df = salt_from_last_digits(
-            df, colname="diaObject.diaObjectId", npartitions=npartitions
+            df, colname="diaSource.diaSourceId", npartitions=npartitions
         )
 
         cols = [
@@ -83,13 +78,14 @@ def main():
         df = df.select(cols)
 
         # Push to HBase
-        row_key_name = "salt_diaObjectId_midpointMjdTai"
+        row_key_name = "salt_diaSourceId"
 
-        cf = assign_column_family_names(
-            df,
-            cols_i=["diaObjectId", "diaSourceId", "midpointMjdTai"],
-            cols_d=["hdfs_path"],
-        )
+        cf = {
+            "diaObjectId": "o",
+            "diaSourceId": "s",
+            "midpointMjdTai": "s",
+            "hdfs_path": "r",
+        }
 
         df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
 
