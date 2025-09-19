@@ -643,15 +643,23 @@ def ingest_object_data(
 def ingest_section(
     df, major_version, minor_version, row_key_name, table_name, catfolder
 ):
-    """Push diaSource + Fink added values stored in a Spark DataFrame into HBase
+    """Push values stored in a Spark DataFrame into HBase
+
+    Notes
+    -----
+    The fields to push depends on the table name.
 
     Parameters
     ----------
     df: Spark DataFrame
         Spark DataFrame (full alert schema)
+    major_version: int
+        LSST alert schema major version (e.g. 9)
+    minor_version: int
+        LSST alert schema minor version (e.g. 0)
     row_key_name: str
         Name of the rowkey in the table. Should be a column name
-        or a combination of column separated by _ (e.g. jd_objectId).
+        or a combination of column separated by _ (e.g. diaObjectId_midpointMjdTai).
     table_name: str
         HBase table name. Must exist in the cluster.
     catfolder: str
@@ -679,6 +687,27 @@ def ingest_section(
     elif section_name == "ssObject":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
+    elif section_name == "pixel128":
+        # assuming static objects
+        sections = [
+            root_level,
+            diasource,
+            [
+                diaobject[0],
+                {
+                    k: v
+                    for k, v in diaobject[1].items()
+                    if k
+                    in [
+                        "diaObject.nDiaSources",
+                        "diaObject.firstDiaSourceMjdTai",
+                        "diaObject.lastDiaSourceMjdTai",
+                    ]
+                },
+            ],
+            fink_object_cols,
+            ["r", {"pixel128": "int"}],  # for the rowkey
+        ]
     else:
         _LOG.error(
             "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject'. {} is not allowed.".format(
@@ -693,13 +722,6 @@ def ingest_section(
     df_flat = add_row_key(
         df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
     )
-
-    # FIXME: not sure what it brings after flatten_dataframe
-    # df_flat = select_relevant_columns(
-    #     df_flat,
-    #     row_key_name=row_key_name,
-    #     cols=cols,
-    # )
 
     push_to_hbase(
         df=df_flat,
