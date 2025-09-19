@@ -391,7 +391,7 @@ def flatten_dataframe(df, sections):
         cf_name = section[0]
         schema = section[1]
 
-        cols_ = {}
+        cols_ = []
         for colname, coltype_ in schema.items():
             if isinstance(coltype_, dict):
                 # type & default (fink)
