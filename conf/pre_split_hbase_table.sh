@@ -46,8 +46,8 @@ for TABLE_NAME in $STANDARD_TABLES; do
 			output=$(pre_split_three_digits 1 999 "i++")
 		fi
 		read -r SPLIT_POINTS NPARTS <<< "$output"
-		echo -e "$SINFO LZ4 compression, 2 column families (i, d), $((NPARTS + 1)) partitions"
-		COMMAND="create '${TABLE_NAME}', {NAME => 'i', COMPRESSION => 'LZ4'}, {NAME => 'd', COMPRESSION => 'LZ4'}, SPLITS=> [$SPLIT_POINTS]"
+		echo -e "$SINFO LZ4 compression, 7 column families (r, s, o, sss, sso, fs, fo), $((NPARTS + 1)) partitions"
+		COMMAND="create '${TABLE_NAME}', {NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 's', COMPRESSION => 'LZ4'}, {NAME => 'o', COMPRESSION => 'LZ4'}, {NAME => 'sss', COMPRESSION => 'LZ4'}, {NAME => 'sso', COMPRESSION => 'LZ4'}, {NAME => 'fs', COMPRESSION => 'LZ4'}, {NAME => 'fo', COMPRESSION => 'LZ4'}, SPLITS=> [$SPLIT_POINTS]"
 
 		# Create the table
 		echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
