@@ -267,10 +267,10 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     --------
     >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(9, 0)
     >>> out = {
-    ...     **root_level.values(), **diaobject.values(),
-    ...     **mpcorb.values(), **diasource.values(),
-    ...     **sssource.values(), **fink_source_cols.values(),
-    ...     **fink_object_cols.values()}
+    ...     **root_level[1], **diaobject[1],
+    ...     **mpcorb[1], **diasource[1],
+    ...     **sssource[1], **fink_source_cols[1],
+    ...     **fink_object_cols[1]}
     >>> expected = 6 + 82 + 12 + 98 + 24 + 19 + 4
     >>> assert len(out) == expected, (len(out), expected)
     """
@@ -293,13 +293,13 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     # FIXME: add ssObject {"sso": ssobject}
 
     return (
-        {"r": root_level},
-        {"o": diaobject},
-        {"s": diasource},
-        {"sso": mpcorb},
-        {"sss": sssource},
-        {"fs": fink_source_cols},
-        {"fo": fink_object_cols},
+        ["r", root_level],
+        ["o", diaobject],
+        ["s", diasource],
+        ["sso", mpcorb],
+        ["sss", sssource],
+        ["fs", fink_source_cols],
+        ["fo", fink_object_cols],
     )
 
 
@@ -388,8 +388,8 @@ def flatten_dataframe(df, sections):
     cf = {}
 
     for section in sections:
-        cf_name = list(section.keys())[0]
-        schema = section.values()
+        cf_name = section[0]
+        schema = section[1]
 
         cols_ = {}
         for colname, coltype_ in schema.items():
