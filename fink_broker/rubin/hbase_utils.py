@@ -282,7 +282,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
 
     sssource_schema = extract_avsc_schema("ssSource", major_version, minor_version)
-    sssource = {"diaSource." + k: v["type"] for k, v in sssource_schema.items()}
+    sssource = {"ssSource." + k: v["type"] for k, v in sssource_schema.items()}
 
     diaobject_schema = extract_avsc_schema("diaObject", major_version, minor_version)
     diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
@@ -386,6 +386,7 @@ def flatten_dataframe(df, sections):
     """
     cols = []
     cf = {}
+    all_colnames = []
 
     for section in sections:
         cf_name = section[0]
@@ -393,6 +394,16 @@ def flatten_dataframe(df, sections):
 
         cols_ = []
         for colname, coltype_ in schema.items():
+            if colname.split(".")[-1] in all_colnames:
+                # This can happen e.g. for ssSource.ssObjectId and diaSource.ssObjectId for table diaSource_sso
+                _LOG.warn(
+                    "Duplicate detected for {} -- ignoring the second apparition".format(
+                        colname
+                    )
+                )
+                continue
+            all_colnames.append(colname.split(".")[-1])
+
             if isinstance(coltype_, dict):
                 # type & default (fink)
                 coltype = coltype_["type"]
@@ -432,9 +443,7 @@ def flatten_dataframe(df, sections):
                     )
 
         # Assign cf ID to columns
-        cf.update({
-            i: cf_name for i in df.select(["`{}`".format(k) for k in cols_]).columns
-        })
+        cf.update({i: cf_name for i in df.select(cols_).columns})
 
         # Update total columns
         cols += cols_
@@ -653,8 +662,8 @@ def ingest_section(
     (
         root_level,
         diaobject,
-        mpcorb,
         diasource,
+        mpcorb,
         sssource,
         fink_source_cols,
         fink_object_cols,
