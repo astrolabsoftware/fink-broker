@@ -51,7 +51,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    23
+    26
     """
     fink_source_cols = {
         # Crossmatch
@@ -103,6 +103,9 @@ def load_fink_cols():
         # Other
         "roid": {"type": "int", "default": 0},
         "finkclass": {"type": "string", "default": "Unknown"},
+        "fink_broker_version": {"type": "string", "default": "Unknown"},
+        "fink_science_version": {"type": "string", "default": "Unknown"},
+        "lsst_schema_version": {"type": "string", "default": "Unknown"},
     }
 
     for col_ in MANGROVE_COLS:
@@ -227,14 +230,11 @@ def load_rubin_root_level(include_salt=True):
     --------
     >>> root_level = load_rubin_root_level()
     >>> len(load_rubin_root_level())
-    6
+    3
 
     >>> assert "fink_broker_version" in root_level, root_level
     """
     root_level = {
-        "fink_broker_version": "string",
-        "fink_science_version": "string",
-        "lsst_schema_version": "string",
         "observation_reason": "string",
         "target_name": "string",
     }
@@ -271,7 +271,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 6 + 82 + 12 + 98 + 24 + 23 + 0
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 26 + 0
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -301,41 +301,6 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
         ["f", fink_source_cols],
         ["f", fink_object_cols],
     )
-
-
-def load_rubin_index_cols():
-    """Load columns used for index tables (flattened and casted before).
-
-    Returns
-    -------
-    out: list of string
-        List of (flattened) column names
-
-    Examples
-    --------
-    >>> out = load_rubin_index_cols()
-    >>> print(len(out))
-    13
-    """
-    # All columns from root_level
-    common = list(load_rubin_root_level().keys())
-
-    # Some columns from diaObject
-    # FIXME: anything regarding flux, time, band, reliability?
-    # FIXME: anything regarding closest objects?
-    common += [
-        "diaObjectId",
-        "ra",
-        "dec",
-        "nDiaSources",
-        "firstDiaSourceMjdTai",
-        "lastDiaSourceMjdTai",
-    ]
-
-    # Add only classfication from Fink
-    common += ["finkclass"]
-
-    return common
 
 
 def cast_and_rename_field(colname, coltype, nested):
