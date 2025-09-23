@@ -81,9 +81,9 @@ def main():
         row_key_name = "salt_diaSourceId"
 
         cf = {
-            "diaObjectId": "o",
-            "diaSourceId": "s",
-            "midpointMjdTai": "s",
+            "diaObjectId": "r",
+            "diaSourceId": "r",
+            "midpointMjdTai": "r",
             "hdfs_path": "r",
         }
 

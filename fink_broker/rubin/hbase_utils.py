@@ -294,12 +294,12 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     return (
         ["r", root_level],
-        ["o", diaobject],
-        ["s", diasource],
-        ["sso", mpcorb],
-        ["sss", sssource],
-        ["fs", fink_source_cols],
-        ["fo", fink_object_cols],
+        ["r", diaobject],
+        ["r", diasource],
+        ["r", mpcorb],
+        ["r", sssource],
+        ["f", fink_source_cols],
+        ["f", fink_object_cols],
     )
 
 
@@ -706,7 +706,7 @@ def ingest_section(
                 },
             ],
             fink_object_cols,
-            ["r", {"pixel128": "int"}],  # for the rowkey
+            ["f", {"pixel128": "int"}],  # for the rowkey
         ]
     else:
         _LOG.error(
