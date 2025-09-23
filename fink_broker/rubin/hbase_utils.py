@@ -102,7 +102,7 @@ def load_fink_cols():
         "snn_sn_vs_others": {"type": "double", "default": 0.0},  # FIXME: float?
         # Other
         "roid": {"type": "int", "default": 0},
-        "fink_source_class": {"type": "string", "default": "Unknown"},
+        "finkclass": {"type": "string", "default": "Unknown"},
     }
 
     for col_ in MANGROVE_COLS:
