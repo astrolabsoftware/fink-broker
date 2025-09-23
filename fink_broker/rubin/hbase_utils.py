@@ -689,23 +689,13 @@ def ingest_section(
         sections = [root_level, mpcorb]
     elif section_name == "pixel128":
         # assuming static objects
+        # Contains only the last source for all objects
         sections = [
             root_level,
             diasource,
-            [
-                diaobject[0],
-                {
-                    k: v
-                    for k, v in diaobject[1].items()
-                    if k
-                    in [
-                        "diaObject.nDiaSources",
-                        "diaObject.firstDiaSourceMjdTai",
-                        "diaObject.lastDiaSourceMjdTai",
-                    ]
-                },
-            ],
+            diaobject,
             fink_object_cols,
+            fink_source_cols,
             ["f", {"pixel128": "int"}],  # for the rowkey
         ]
     else:
