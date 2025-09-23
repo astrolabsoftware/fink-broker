@@ -232,7 +232,7 @@ def load_rubin_root_level(include_salt=True):
     >>> len(load_rubin_root_level())
     3
 
-    >>> assert "fink_broker_version" in root_level, root_level
+    >>> assert "observation_reason" in root_level, root_level
     """
     root_level = {
         "observation_reason": "string",
