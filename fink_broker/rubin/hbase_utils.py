@@ -467,12 +467,12 @@ def ingest_source_data(
         row_key_name = "salt_diaObjectId_midpointMjdTai"
         table_name = "rubin.diaSource_static"
     elif kind == "sso":
-        # FIXME: add ssObject when it will be available
+        # Use MPCORB to make sure mpcDesignation & ssObjectId is available
         section = "MPCORB"
         field = "ssObjectId"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_ssObjectId_midpointMjdTai"
+        row_key_name = "salt_mpcDesignation_midpointMjdTai"
         table_name = "rubin.diaSource_sso"
 
     nloops = int(len(paths) / nfiles) + 1
@@ -565,7 +565,7 @@ def ingest_object_data(
         field = "ssObjectId"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_ssObjectId"
+        row_key_name = "salt_mpcDesignation"
         table_name = "rubin.ssObject"
 
     # Keep only rows with corresponding section
@@ -646,7 +646,12 @@ def ingest_section(
     if section_name == "diaSource_static":
         sections = [root_level, diasource, fink_source_cols]
     elif section_name == "diaSource_sso":
-        sections = [root_level, diasource, sssource]
+        sections = [
+            root_level,
+            diasource,
+            sssource,
+            ["r", {"MPCORB.mpcDesignation": "str"}] # for the row key
+        ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
     elif section_name == "ssObject":
@@ -665,7 +670,7 @@ def ingest_section(
         ]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject'. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
                 section_name
             )
         )
