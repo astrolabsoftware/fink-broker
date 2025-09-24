@@ -19,6 +19,7 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import salt_from_last_digits
+from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
@@ -467,9 +468,9 @@ def ingest_source_data(
         row_key_name = "salt_diaObjectId_midpointMjdTai"
         table_name = "rubin.diaSource_static"
     elif kind == "sso":
-        # Use MPCORB to make sure mpcDesignation & ssObjectId is available
+        # Use MPCORB to make sure mpcDesignation is available
         section = "MPCORB"
-        field = "ssObjectId"
+        field = "mpcDesignation"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
         row_key_name = "salt_mpcDesignation_midpointMjdTai"
@@ -485,9 +486,12 @@ def ingest_source_data(
         df = df.filter(df[section].isNotNull())
 
         # add salt
-        df = salt_from_last_digits(
-            df, colname="{}.{}".format(section, field), npartitions=npartitions
-        )
+        if kind == "static":
+            df = salt_from_last_digits(
+                df, colname="{}.{}".format(section, field), npartitions=npartitions
+            )
+        elif kind == "sso":
+            df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
 
         n_alerts += df.count()
 
@@ -562,7 +566,7 @@ def ingest_object_data(
     elif kind == "sso":
         # FIXME: add ssObject when it will be available
         section = "MPCORB"
-        field = "ssObjectId"
+        field = "mpcDesignation"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
         row_key_name = "salt_mpcDesignation"
@@ -572,9 +576,12 @@ def ingest_object_data(
     df = df.filter(df[section].isNotNull())
 
     # add salt
-    df = salt_from_last_digits(
-        df, colname="{}.{}".format(section, field), npartitions=npartitions
-    )
+    if kind == "static":
+        df = salt_from_last_digits(
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
+        )
+    elif kind == "sso":
+        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")

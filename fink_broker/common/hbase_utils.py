@@ -460,6 +460,43 @@ def salt_from_last_digits(df, colname, npartitions):
     return df
 
 
+def salt_from_mpc_designation(df, colname):
+    """Add simple salt column based on the year digits of mpcDesignation
+
+    Notes
+    -----
+    The key will be the 2 digits corresponding to the year from the packed designation
+    See https://minorplanetcenter.net/iau/info/PackedDes.html
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Input Spark dataframe
+    colname: str
+        Name of the column to take the salt from
+
+    Returns
+    -------
+    df: Spark DataFrame
+        Input df with a new column `salt` containing
+        the partitioning key
+
+    Examples
+    --------
+    # Read Rubin alerts
+    >>> df = spark.read.format("parquet").load(rubin_sample)
+    >>> df = salt_from_mpc_designation(df, "MPCORB.mpcDesignation")
+    >>> len(df.select("salt").collect()[0][0])
+    3
+    """
+    df = df.withColumn(
+        "salt",
+        F.lpad(F.substring(colname, 2, 4), 2, "0"),
+    )
+
+    return df
+
+
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 
