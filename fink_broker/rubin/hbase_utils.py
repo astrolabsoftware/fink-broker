@@ -650,7 +650,7 @@ def ingest_section(
             root_level,
             diasource,
             sssource,
-            ["r", {"MPCORB.mpcDesignation": "string"}] # for the row key
+            ["r", {"MPCORB.mpcDesignation": "string"}],  # for the row key
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
