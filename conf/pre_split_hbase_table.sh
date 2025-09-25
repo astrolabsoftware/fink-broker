@@ -19,11 +19,12 @@ SDONE="\xE2\x9C\x85"
 
 TABLE_PREFIX="rubin"
 
-pre_split_three_digits() {
+pre_split_nth_digits() {
         # Define start and stop boundaries
         START=$1
         STOP=$2
         INCREMENT=$3
+        NDIGITS=$4
 
         # Initialize an empty array for SPLITS
         SPLITS=()
@@ -31,7 +32,7 @@ pre_split_three_digits() {
         # Loop through the range and populate the SPLITS array with two-digit numbers
         for ((i=$START; i<=$STOP; $INCREMENT)); do
             # Format the number to two digits
-            SPLIT=$(printf "'%03d'" $i)
+            SPLIT=$(printf "${NDIGITS}" $i)
             SPLITS+=($SPLIT)
         done
 
@@ -73,10 +74,16 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
 
                 if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel128" ]]; then
                         # pixel128 has a different splitting
-                        output=$(pre_split_three_digits 1000 199999 "i+=1000")
+                        output=$(pre_split_nth_digits 1000 199999 "i+=1000" \'%03d\')
+		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
+                        # diaSource_sso has 100 partitions, based on year [YY]YY
+                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
+		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.ssObject" ]]; then
+                        # diaObject has 100 partitions, based on year [YY]YY
+                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
                 else
                         # Default splitting
-                        output=$(pre_split_three_digits 1 999 "i++")
+                        output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
                 fi
                 read -r SPLIT_POINTS NPARTS <<< "$output"
                 echo -e "$SINFO Number of regions: $((NPARTS + 1))"
@@ -86,3 +93,4 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
                 echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
         fi
 done
+
