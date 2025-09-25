@@ -609,6 +609,27 @@ def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     return pd.Series(to_return)
 
 
+def save_tns_parquet_on_disk(pdf_tns, path):
+    """Store TNS data on file
+
+    Parameters
+    ----------
+    pdf_tns: pd.DataFrame
+        TNS data as a DataFrame
+    path: str
+        Local path
+    """
+    # Save raw data
+    pdf_tns.to_parquet("{}/tns_raw.parquet".format(path))
+
+    # Filter TNS confirmed data
+    f1 = ~pdf_tns["type"].isna()
+    pdf_tns_filt = pdf_tns[f1]
+    pdf_tns_filt["type"] = pdf_tns_filt["type"].apply(lambda x: "(TNS) {}".format(x))
+
+    pdf_tns_filt.to_parquet("{}/tns.parquet".format(path))
+
+
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 

@@ -499,6 +499,48 @@ def salt_from_mpc_designation(df, colname):
     return df
 
 
+def format_tns_for_hbase(pdf, with_salt=False):
+    """Format the raw TNS data for HBase ingestion
+
+    Parameters
+    ----------
+    pdf: pd.DataFrame
+    with_salt: bool
+    """
+    # Add new or rename columns
+    pdf["fullname"] = pdf["name_prefix"] + " " + pdf["name"]
+    pdf["internalname"] = pdf["internal_names"]
+
+    # Apply quality cuts
+    mask = pdf["internalname"].apply(lambda x: (x is not None) and (x == x))  # NOSONAR
+    pdf_val = pdf[mask]
+    pdf_val["type"] = pdf_val["type"].astype("str")
+
+    pdf_val["internalname"] = pdf_val["internalname"].apply(
+        lambda x: [i.strip() for i in x.split(",")]
+    )
+
+    pdf_explode = pdf_val.explode("internalname")
+
+    cols = [
+        "fullname",
+        "ra",
+        "declination",
+        "type",
+        "redshift",
+        "internalname",
+        "discoverydate",
+    ]
+
+    if with_salt:
+        # salt last letter of the name
+        pdf_explode["salt"] = pdf_explode["fullname"].apply(lambda x: x[-1].lower())
+        cols = cols + ["salt"]
+
+    # Select columns of interest
+    return pdf_explode[cols]
+
+
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 

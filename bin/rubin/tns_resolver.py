@@ -15,7 +15,6 @@
 # limitations under the License.
 import pyspark.sql.functions as F
 
-import pandas as pd
 import argparse
 import os
 
@@ -24,41 +23,8 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs
 from fink_broker.common.logging_utils import init_logger
-
-
-def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
-    """Format the raw TNS data for HBase ingestion"""
-    # Add new or rename columns
-    pdf["fullname"] = pdf["name_prefix"] + " " + pdf["name"]
-    pdf["internalname"] = pdf["internal_names"]
-
-    # Apply quality cuts
-    mask = pdf["internalname"].apply(lambda x: (x is not None) and (x == x))  # NOSONAR
-    pdf_val = pdf[mask]
-    pdf_val["type"] = pdf_val["type"].astype("str")
-
-    pdf_val["internalname"] = pdf_val["internalname"].apply(
-        lambda x: [i.strip() for i in x.split(",")]
-    )
-
-    pdf_explode = pdf_val.explode("internalname")
-
-    # salt last letter of the name
-    pdf_explode["salt"] = pdf_explode["fullname"].apply(lambda x: x[-1].lower())
-
-    # Select columns of interest -- and create a Spark DataFrame
-    cols = [
-        "fullname",
-        "ra",
-        "declination",
-        "type",
-        "redshift",
-        "internalname",
-        "discoverydate",
-        "salt",
-    ]
-
-    return pdf_explode[cols]
+from fink_broker.common.hbase_utils import format_tns_for_hbase
+from fink_broker.common.spark_utils import save_tns_parquet_on_disk
 
 
 def main():
@@ -90,7 +56,7 @@ def main():
     pdf_tns = download_catalog(os.environ["TNS_API_KEY"], tns_marker)
 
     # Make a Spark DataFrame
-    df_index = spark.createDataFrame(format_tns_for_hbase(pdf_tns))
+    df_index = spark.createDataFrame(format_tns_for_hbase(pdf_tns, with_salt=True))
 
     df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
 
@@ -108,15 +74,7 @@ def main():
         catfolder=args.science_db_catalogs,
     )
 
-    # Save raw data
-    pdf_tns.to_parquet("{}/tns_raw.parquet".format(args.tns_raw_output))
-
-    # Filter TNS confirmed data
-    f1 = ~pdf_tns["type"].isna()
-    pdf_tns_filt = pdf_tns[f1]
-    pdf_tns_filt["type"] = pdf_tns_filt["type"].apply(lambda x: "(TNS) {}".format(x))
-
-    pdf_tns_filt.to_parquet("{}/tns.parquet".format(args.tns_raw_output))
+    save_tns_parquet_on_disk(pdf_tns, args.tns_raw_output)
 
 
 if __name__ == "__main__":
