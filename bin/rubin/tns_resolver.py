@@ -23,6 +23,7 @@ from fink_tns.utils import download_catalog
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs
+from fink_broker.common.spark_utils import ang2pix
 
 
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -54,7 +55,7 @@ def main():
     args = getargs(parser)
 
     # construct the index view 'fullname_internalname'
-    index_row_key_name = "fullname_internalname"
+    index_row_key_name = "salt_fullname_internalname"
     columns = index_row_key_name.split("_")
     index_name = ".tns_resolver"
 
@@ -63,20 +64,27 @@ def main():
         name="tns_resolver_{}".format(args.night), shuffle_partitions=2
     )
 
-    with open("{}/tns_marker.txt".format(args.tns_folder)) as f:
+    with open(os.environ["TNS_API_MARKER"]) as f:
         tns_marker = f.read().replace("\n", "")
 
     pdf_tns = download_catalog(os.environ["TNS_API_KEY"], tns_marker)
 
-    # Push to HBase
+    # Make a Spark DataFrame
     df_index = spark.createDataFrame(format_tns_for_hbase(pdf_tns))
+
+    # salt is pixel 128
+    df_index = df_index.withColumn(
+        "salt",
+        ang2pix(df_index["ra"], df_index["dec"], F.lit("128")),
+    )
 
     df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
 
     # make the rowkey lower case
     df_index = df_index.withColumn(index_row_key_name, F.lower(index_row_key_name))
 
-    cf = {i: "d" for i in df_index.columns}
+    # Fink added value
+    cf = {i: "f" for i in df_index.columns}
 
     push_to_hbase(
         df=df_index,
