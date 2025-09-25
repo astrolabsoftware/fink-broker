@@ -44,11 +44,8 @@ pre_split_nth_digits() {
 }
 
 pre_split_alphabetical() {
-        # Initialize an empty array for letters
-	letters=()
-	for ((i=97; i<=122; i++)); do
-		letters+=("$(printf "\\$(printf '%03o' $i)")")
-	done
+        # Array for letters
+	letters=($(echo {a..z} | tr ' ' '\n' | sed 's/^/"/;s/$/"/'))
 
         # Convert the array to a comma-separated string
         SPLITS_STRING=$(IFS=,; echo "${letters[*]}")
