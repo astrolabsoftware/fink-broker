@@ -15,8 +15,15 @@
 # limitations under the License.
 TABLE_PREFIX="rubin"
 
-STANDARD_TABLES="${TABLE_PREFIX}.diaObject ${TABLE_PREFIX}.ssObject ${TABLE_PREFIX}.diaSource_static ${TABLE_PREFIX}.diaSource_sso ${TABLE_PREFIX}.cutouts ${TABLE_PREFIX}.pixel128"
-
+STANDARD_TABLES=(
+        "${TABLE_PREFIX}.diaObject"
+        "${TABLE_PREFIX}.ssObject"
+        "${TABLE_PREFIX}.diaSource_static"
+        "${TABLE_PREFIX}.diaSource_sso"
+        "${TABLE_PREFIX}.cutouts"
+        "${TABLE_PREFIX}.pixel128"
+        "${TABLE_PREFIX}.tns_resolver"
+)
 
 for TABLE_NAME in $STANDARD_TABLES; do
         echo "Processing table $TABLE_NAME"
