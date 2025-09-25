@@ -34,9 +34,9 @@ from fink_broker.common.parser import getargs
 from fink_broker.ztf.hbase_utils import load_all_ztf_cols
 from fink_broker.ztf.hbase_utils import load_ztf_index_cols
 from fink_broker.ztf.hbase_utils import load_ztf_crossmatch_cols
+from fink_broker.ztf.hbase_utils import flatten_dataframe
 
 from fink_broker.common.hbase_utils import select_relevant_columns
-from fink_broker.common.hbase_utils import flatten_dataframe
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import add_row_key
 

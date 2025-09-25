@@ -60,14 +60,14 @@ MAX_OFFSETS_PER_TRIGGER=5000
 # Alert schema
 # Full path to schema to decode the alerts
 # Only used in CI, as in prod there is the schema registry
-FINK_ALERT_SCHEMA=${FINK_HOME}/datasim/rubin_test_data_9_0_avro/396841690595335_396841690595335.avro
+FINK_ALERT_SCHEMA=${FINK_HOME}/datasim/rubin_test_data_9_0_avro/169298433340342284_169298433340342284.avro
 
 # Prefix path on disk to save live data.
 # They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
 ONLINE_DATA_PREFIX=${FINK_HOME}/online_rubin_integration
-AGG_DATA_PREFIX=${FINK_HOME}/archive
+AGG_DATA_PREFIX=${FINK_HOME}/archive_rubin_integration
 
 # The name of the HBase table
 SCIENCE_DB_NAME="rubin"
