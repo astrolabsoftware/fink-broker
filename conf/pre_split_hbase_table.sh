@@ -63,6 +63,7 @@ STANDARD_TABLES=(
 	"${TABLE_PREFIX}.cutouts"
 	"${TABLE_PREFIX}.pixel128"
 	"${TABLE_PREFIX}.tns_resolver"
+        "${TABLE_PREFIX}.sso_resolver"
 )
 
 COLFAMILIES=(
@@ -73,6 +74,7 @@ COLFAMILIES=(
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
 	"{NAME => 'f', COMPRESSION => 'LZ4'}"
+        "{NAME => 'r', COMPRESSION => 'LZ4'}"
 )
 
 

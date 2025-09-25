@@ -71,16 +71,16 @@ def main():
         "MPCORB.ssObjectId",
         "diaSource.diaSourceId",
     ]
-    cols_fink = [
-        "salt",
-    ]
+    cols_fink = ["salt"]
+
     df = df.select(cols_rubin + cols_fink)
 
     df = add_row_key(df, row_key_name=index_row_key_name, cols=columns)
 
-    # Fink added value
     cf = {i: "r" for i in cols_rubin}
-    cf.update({i: "f" for i in cols_fink})
+
+    # Get rid of salt for HBase
+    df = df.select(cols_rubin + [index_row_key_name])
 
     push_to_hbase(
         df=df,
