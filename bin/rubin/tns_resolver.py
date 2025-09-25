@@ -23,7 +23,6 @@ from fink_tns.utils import download_catalog
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs
-from fink_broker.common.spark_utils import ang2pix
 
 
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -43,8 +42,20 @@ def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
 
     pdf_explode = pdf_val.explode("internalname")
 
+    # salt last letter of the name
+    pdf_explode["salt"] = pdf_explode["fullname"].apply(lambda x: x[-1].lower())
+
     # Select columns of interest -- and create a Spark DataFrame
-    cols = ["fullname", "ra", "declination", "type", "redshift", "internalname"]
+    cols = [
+        "fullname",
+        "ra",
+        "declination",
+        "type",
+        "redshift",
+        "internalname",
+        "discoverydate",
+        "salt",
+    ]
 
     return pdf_explode[cols]
 
@@ -71,12 +82,6 @@ def main():
 
     # Make a Spark DataFrame
     df_index = spark.createDataFrame(format_tns_for_hbase(pdf_tns))
-
-    # salt is pixel 128
-    df_index = df_index.withColumn(
-        "salt",
-        ang2pix(df_index["ra"], df_index["dec"], F.lit("128")),
-    )
 
     df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
 
