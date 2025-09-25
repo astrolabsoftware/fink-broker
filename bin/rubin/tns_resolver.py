@@ -23,6 +23,7 @@ from fink_tns.utils import download_catalog
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs
+from fink_broker.common.logging_utils import init_logger
 
 
 def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
@@ -64,6 +65,14 @@ def main():
     """Download the TNS catalog, and load it in HBase"""
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
+
+    logger = init_logger(args.log_level)
+
+    if os.environ.get("TNS_API_MARKER") is None:
+        logger.warning("TNS_API_MARKER is not defined. Exiting.")
+
+        # you do not want the rest of the pipeline to crash, e.g. in CI
+        return 0
 
     # construct the index view 'fullname_internalname'
     index_row_key_name = "salt_fullname_internalname"
