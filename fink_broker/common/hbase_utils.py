@@ -445,6 +445,7 @@ def salt_from_last_digits(df, colname, npartitions):
     --------
     # Read Rubin alerts
     >>> df = spark.read.format("parquet").load(rubin_sample)
+    >>> df = df.filter(df["diaObject.diaObjectId"].isNotNull())
     >>> df = salt_from_last_digits(df, "diaObject.diaObjectId", 1000)
     >>> len(df.select("salt").collect()[0][0])
     3
@@ -485,9 +486,10 @@ def salt_from_mpc_designation(df, colname):
     --------
     # Read Rubin alerts
     >>> df = spark.read.format("parquet").load(rubin_sample)
+    >>> df = df.filter(df["MPCORB.mpcDesignation"].isNotNull())
     >>> df = salt_from_mpc_designation(df, "MPCORB.mpcDesignation")
     >>> len(df.select("salt").collect()[0][0])
-    3
+    2
     """
     df = df.withColumn(
         "salt",
