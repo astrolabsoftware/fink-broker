@@ -80,7 +80,7 @@ def main():
     cf = {i: "r" for i in cols_rubin}
 
     # Get rid of salt for HBase
-    df = df.select(cols_rubin + [index_row_key_name])
+    df = df.drop("salt")
 
     push_to_hbase(
         df=df,
