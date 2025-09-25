@@ -77,10 +77,10 @@ def main():
 
     df = add_row_key(df, row_key_name=index_row_key_name, cols=columns)
 
-    cf = {i: "r" for i in cols_rubin}
-
     # Get rid of salt for HBase
     df = df.drop("salt")
+
+    cf = {i: "r" for i in df.columns}
 
     push_to_hbase(
         df=df,
