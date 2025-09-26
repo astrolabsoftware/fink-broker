@@ -297,6 +297,11 @@ if [[ ${INDEX_TABLES} == true ]]; then
       fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_early_tde_candidates_${SURVEY}_${NIGHT}.log 2>&1
 
     elif [[ ${SURVEY} == "rubin" ]]; then
+      echo -e "${SSTEP} 1/15: Download latest TNS data"
+      fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
+
+      fink start sso_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/sso_resolver_${SURVEY}_${NIGHT}.log 2>&1
+
       echo -e "${SSTEP} 1: images_archival"
       fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 

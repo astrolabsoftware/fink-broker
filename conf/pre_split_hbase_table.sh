@@ -43,6 +43,18 @@ pre_split_nth_digits() {
         echo "$SPLITS_STRING" "${#SPLITS[@]}"
 }
 
+pre_split_alphabetical() {
+        # Array for letters
+	letters=($(echo {a..z} | tr ' ' '\n' | sed 's/^/"/;s/$/"/'))
+
+        # Convert the array to a comma-separated string
+        SPLITS_STRING=$(IFS=,; echo "${letters[*]}")
+
+        # return split and number of partitions
+        echo "$SPLITS_STRING" "${#letters[@]}"
+}
+
+
 STANDARD_TABLES=(
 	"${TABLE_PREFIX}.diaObject"
 	"${TABLE_PREFIX}.ssObject"
@@ -50,6 +62,8 @@ STANDARD_TABLES=(
 	"${TABLE_PREFIX}.diaSource_sso"
 	"${TABLE_PREFIX}.cutouts"
 	"${TABLE_PREFIX}.pixel128"
+	"${TABLE_PREFIX}.tns_resolver"
+        "${TABLE_PREFIX}.sso_resolver"
 )
 
 COLFAMILIES=(
@@ -59,6 +73,8 @@ COLFAMILIES=(
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+	"{NAME => 'f', COMPRESSION => 'LZ4'}"
+        "{NAME => 'r', COMPRESSION => 'LZ4'}"
 )
 
 
@@ -81,6 +97,9 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.ssObject" ]]; then
                         # diaObject has 100 partitions, based on year [YY]YY
                         output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
+		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.tns_resolver" ]]; then
+                        # diaObject has 100 partitions, based on year [YY]YY
+                        output=$(pre_split_alphabetical)
                 else
                         # Default splitting
                         output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
