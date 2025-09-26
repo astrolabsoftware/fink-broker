@@ -31,7 +31,7 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 
-from fink_broker.ztf.hbase_utils import push_to_hbase
+from fink_broker.common.hbase_utils import push_to_hbase
 
 
 def main():
