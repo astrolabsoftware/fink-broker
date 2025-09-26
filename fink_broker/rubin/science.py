@@ -24,19 +24,147 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_broker.common.science import apply_all_xmatch
-
-# from fink_science.rubin.random_forest_snia.processor import (
-#    rfscore_rainbow_elasticc_nometa,
-# )
+from fink_science.rubin.random_forest_snia.processor import (
+    rfscore_rainbow_elasticc_nometa,
+)
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
+from fink_science.rubin.xmatch.processor import xmatch_cds
+from fink_science.rubin.xmatch.processor import xmatch_tns
+from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
+from fink_science.rubin.xmatch.processor import crossmatch_mangrove
 # from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
 # Local non-exported definitions --
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
+
+
+def apply_all_xmatch(df, tns_raw_output):
+    """Apply all xmatch to a DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark DataFrame containing alert data
+    tns_raw_output: str
+        If provided, local path to the TNS catalog.
+
+    Returns
+    -------
+    out: Spark DataFrame
+
+    Examples
+    --------
+    >>> from fink_broker.common.spark_utils import load_parquet_files
+    >>> df = load_parquet_files(rubin_alert_sample)
+    >>> df = apply_all_xmatch(df, tns_raw_output="")
+
+    # apply_science_modules is lazy, so trigger the computation
+    >>> an_alert = df.take(1)
+    """
+    alert_id = "diaSource.diaSourceId"
+    ra = "diaSource.ra"
+    dec = "diaSource.dec"
+
+    _LOG.info("New processor: cdsxmatch")
+    df = xmatch_cds(df)
+
+    _LOG.info("New processor: TNS")
+    df = xmatch_tns(df, tns_raw_output=tns_raw_output)
+
+    _LOG.info("New processor: Gaia main xmatch (1.0 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname="vizier:I/355/gaiadr3",
+        cols_out=["DR3Name", "Plx", "e_Plx", "VarFlag"],
+        types=["string", "float", "float", "string"],
+    )
+
+    # VarFlag is a string. Make it integer
+    # 0=NOT_AVAILABLE
+    # 1=VARIABLE
+    df = df.withColumn(
+        "vizier:I/355/gaiadr3_VarFlag",
+        F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
+    )
+
+    _LOG.info("New processor: Gaia var xmatch (1.0 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname="vizier:I/358/vclassre",
+        cols_out=["Class"],
+        types=["string"],
+    )
+
+    _LOG.info("New processor: VSX (1.5 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:B/vsx/vsx",
+        distmaxarcsec=1.5,
+        cols_out=["Type"],
+        types=["string"],
+    )
+
+    _LOG.info("New processor: SPICY (1.2 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:J/ApJS/254/33/table1",
+        distmaxarcsec=1.2,
+        cols_out=["SPICY", "class"],
+        types=["int", "string"],
+    )
+
+    _LOG.info("New processor: GCVS (1.5 arcsec)")
+    df = df.withColumn(
+        "gcvs_type",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("gcvs"),
+        ),
+    )
+
+    _LOG.info("New processor: 3HSP (1 arcmin)")
+    df = df.withColumn(
+        "x3hsp_type",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("3hsp"),
+            F.lit(60.0),
+        ),
+    )
+
+    _LOG.info("New processor: 4LAC (1 arcmin)")
+    df = df.withColumn(
+        "x4lac_type",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("4lac"),
+            F.lit(60.0),
+        ),
+    )
+
+    _LOG.info("New processor: Mangrove (1 acrmin)")
+    df = df.withColumn(
+        "mangrove",
+        crossmatch_mangrove(df[alert_id], df[ra], df[dec], F.lit(60.0)),
+    )
+
+    # Explode mangrove
+    for col_ in df.select("mangrove.*").columns:
+        df = df.withColumn("mangrove_{}".format(col_), "mangrove.{}".format(col_))
+    df = df.drop("mangrove")
+
+    return df
 
 
 def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
@@ -76,6 +204,10 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
     >>> df.write.format("noop").mode("overwrite").save()
     """
+    crossmatch_struct = []
+    prediction_struct = []
+    classifier_struct = ["cats_class", "earlySNIa_score", "snnSnVsOthers_score"]
+
     # Required alert columns
     to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
 
@@ -93,72 +225,24 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         )
     expanded = [prefix + i for i in to_expand]
 
-    df = apply_all_xmatch(df, tns_raw_output, survey="rubin")
+    df = apply_all_xmatch(df, tns_raw_output)
 
     _LOG.info("New processor: asteroids (random positions)")
     df = df.withColumn("roid", F.lit(0))
 
-    # _LOG.info("New processor: EarlySN Ia")
-    # early_ia_args = [F.col(i) for i in expanded]
-    # df = df.withColumn(
-    #     "rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args)
-    # )
+    _LOG.info("New processor: EarlySN Ia")
+    early_ia_args = [F.col(i) for i in expanded]
+    df = df.withColumn(
+        "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    )
 
     _LOG.info("New processor: supernnova - Ia")
     snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
 
-    # # Binary Ia
-    # snn_ia_args = snn_args + [F.lit("elasticc_ia")]
-    # df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*snn_ia_args))
-
     # Binary SN
     snn_ia_args = snn_args + [F.lit("elasticc_binary_broad/SN_vs_other")]
-    df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*snn_ia_args))
-
-    # # Binary Periodic
-    # full_args = args + [F.lit("elasticc_binary_broad/Periodic_vs_other")]
-    # df = df.withColumn("snn_periodic_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary nonperiodic
-    # full_args = args + [F.lit("elasticc_binary_broad/NonPeriodic_vs_other")]
-    # df = df.withColumn("snn_nonperiodic_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary Long
-    # full_args = args + [F.lit("elasticc_binary_broad/Long_vs_other")]
-    # df = df.withColumn("snn_long_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary Fast
-    # full_args = args + [F.lit("elasticc_binary_broad/Fast_vs_other")]
-    # df = df.withColumn("snn_fast_vs_others", snn_ia_elasticc(*full_args))
-
-    # _LOG.info("New processor: supernnova - Broad")
-    # args = [F.col("diaSource.diaSourceId")]
-    # args += [
-    #     F.col("cmidPointTai"),
-    #     F.col("cfilterName"),
-    #     F.col("cpsFlux"),
-    #     F.col("cpsFluxErr"),
-    # ]
-    # args += [F.col("roid"), F.col("cdsxmatch"), F.array_min("cmidPointTai")]
-    # args += [F.col("diaObject.mwebv"), F.col("redshift"), F.col("redshift_err")]
-    # args += [F.lit("elasticc_broad")]
-    # df = df.withColumn("preds_snn", snn_broad_elasticc(*args))
-
-    # mapping_snn = {
-    #     0: 11,
-    #     1: 13,
-    #     2: 12,
-    #     3: 22,
-    #     4: 21,
-    # }
-    # mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
-
-    # df = df.withColumn(
-    #     "snn_argmax", F.expr("array_position(preds_snn, array_max(preds_snn)) - 1")
-    # )
-    # df = df.withColumn("snn_broad_class", mapping_snn_expr[df["snn_argmax"]])
-    # df = df.withColumnRenamed("preds_snn", "snn_broad_array_prob")
+    df = df.withColumn("snnSnVsOthers_score", snn_ia_elasticc(*snn_ia_args))
 
     # CATS
     cats_args = ["cmidpointMjdTai", "cpsfFlux", "cpsfFluxErr", "cband"]
@@ -181,7 +265,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
         ),
     )
-    df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
+
+    # FIXME: do we want scores as well?
+    df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
 
     # # SLSN
     # slsn_args = ["diaObject.diaObjectId"]
@@ -189,8 +275,15 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
     # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
 
-    # Fake classification
-    df = df.withColumn("finkclass", F.lit("Unknown"))
+    # Wrap into structs
+    df = df.withColumn("classifiers", F.struct(*classifier_struct))
+    df = df.drop(*classifier_struct)
+
+    df = df.withColumn("crossmatch", F.struct(*crossmatch_struct))
+    df = df.drop(*crossmatch_struct)
+
+    df = df.withColumn("crossmatch", F.struct(*prediction_struct))
+    df = df.drop(*prediction_struct)
 
     # Drop temp columns
     df = df.drop(*expanded)
