@@ -45,8 +45,8 @@ org.slf4j:slf4j-log4j12:1.7.36,\
 org.slf4j:slf4j-simple:1.7.36
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar
+FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.5.8_spark3.4.3_scala2.12.0_hadoop3.3.6.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.5.8_spark3.4.3_scala2.12.0_hadoop3.3.6.jar
 
 # Time interval between 2 trigger updates (second)
 # i.e. the timing of streaming data processing.
@@ -59,17 +59,18 @@ MAX_OFFSETS_PER_TRIGGER=5000
 
 # Alert schema
 # Full path to schema to decode the alerts
-FINK_ALERT_SCHEMA=
+# Only used in CI, as in prod there is the schema registry
+FINK_ALERT_SCHEMA=${FINK_HOME}/datasim/rubin_test_data_9_0_avro/169298433340342284_169298433340342284.avro
 
 # Prefix path on disk to save live data.
 # They can be in local FS (/path/ or files:///path/) or
 # in distributed FS (e.g. hdfs:///path/).
 # Be careful though to have enough disk space!
-ONLINE_DATA_PREFIX=${FINK_HOME}/online_integration
-AGG_DATA_PREFIX=${FINK_HOME}/archive
+ONLINE_DATA_PREFIX=${FINK_HOME}/online_rubin_integration
+AGG_DATA_PREFIX=${FINK_HOME}/archive_rubin_integration
 
 # The name of the HBase table
-SCIENCE_DB_NAME="test_portal"
+SCIENCE_DB_NAME="rubin"
 SCIENCE_DB_CATALOGS=${FINK_HOME}/catalogs_hbase
 
 # HBase configuration file - must be under ${SPARK_HOME}/conf
