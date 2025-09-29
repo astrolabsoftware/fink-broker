@@ -69,13 +69,13 @@ def apply_all_xmatch(df, tns_raw_output):
     ra = "diaSource.ra"
     dec = "diaSource.dec"
 
-    _LOG.info("New processor: cdsxmatch")
+    _LOG.info("New xmatch: cdsxmatch")
     df = xmatch_cds(df)
 
-    _LOG.info("New processor: TNS")
+    _LOG.info("New xmatch: TNS")
     df = xmatch_tns(df, tns_raw_output=tns_raw_output)
 
-    _LOG.info("New processor: Gaia main xmatch (1.0 arcsec)")
+    _LOG.info("New xmatch: Gaia main xmatch (1.0 arcsec)")
     df = xmatch_cds(
         df,
         distmaxarcsec=1,
@@ -92,7 +92,7 @@ def apply_all_xmatch(df, tns_raw_output):
         F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
     )
 
-    _LOG.info("New processor: Gaia var xmatch (1.0 arcsec)")
+    _LOG.info("New xmatch: Gaia var xmatch (1.0 arcsec)")
     df = xmatch_cds(
         df,
         distmaxarcsec=1,
@@ -101,7 +101,7 @@ def apply_all_xmatch(df, tns_raw_output):
         types=["string"],
     )
 
-    _LOG.info("New processor: VSX (1.5 arcsec)")
+    _LOG.info("New xmatch: VSX (1.5 arcsec)")
     df = xmatch_cds(
         df,
         catalogname="vizier:B/vsx/vsx",
@@ -110,7 +110,7 @@ def apply_all_xmatch(df, tns_raw_output):
         types=["string"],
     )
 
-    _LOG.info("New processor: SPICY (1.2 arcsec)")
+    _LOG.info("New xmatch: SPICY (1.2 arcsec)")
     df = xmatch_cds(
         df,
         catalogname="vizier:J/ApJS/254/33/table1",
@@ -119,7 +119,7 @@ def apply_all_xmatch(df, tns_raw_output):
         types=["int", "string"],
     )
 
-    _LOG.info("New processor: GCVS (1.5 arcsec)")
+    _LOG.info("New xmatch: GCVS (1.5 arcsec)")
     df = df.withColumn(
         "gcvs_type",
         crossmatch_other_catalog(
@@ -130,7 +130,7 @@ def apply_all_xmatch(df, tns_raw_output):
         ),
     )
 
-    _LOG.info("New processor: 3HSP (1 arcmin)")
+    _LOG.info("New xmatch: 3HSP (1 arcmin)")
     df = df.withColumn(
         "x3hsp_type",
         crossmatch_other_catalog(
@@ -142,7 +142,7 @@ def apply_all_xmatch(df, tns_raw_output):
         ),
     )
 
-    _LOG.info("New processor: 4LAC (1 arcmin)")
+    _LOG.info("New xmatch: 4LAC (1 arcmin)")
     df = df.withColumn(
         "x4lac_type",
         crossmatch_other_catalog(
@@ -154,7 +154,7 @@ def apply_all_xmatch(df, tns_raw_output):
         ),
     )
 
-    _LOG.info("New processor: Mangrove (1 acrmin)")
+    _LOG.info("New xmatch: Mangrove (1 acrmin)")
     df = df.withColumn(
         "mangrove",
         crossmatch_mangrove(df[alert_id], df[ra], df[dec], F.lit(60.0)),
@@ -175,9 +175,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     """Load and apply Fink science modules to enrich Rubin alert content
 
     Currently available:
+    - xmatch
     - CBPF (broad)
     - SNN (Ia)
-    - SLSN
     - EarlySN Ia
 
     Parameters
@@ -201,30 +201,36 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     Examples
     --------
     >>> from fink_broker.common.spark_utils import load_parquet_files
-    >>> from fink_broker.common.logging_utils import get_fink_logger
-    >>> logger = get_fink_logger('raw2cience_rubin_test', 'INFO')
-    >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
+
+    >>> classifiers_cols = df.select("classifiers.*").columns
+    >>> assert len(classifiers_cols) == 4, classifiers_cols
+
+    >>> xmatch_cols = df.select("crossmatches.*").columns
+    >>> assert len(xmatch_cols) == 4, xmatch_cols
+
+    >>> prediction_cols = df.select("predictions.*").columns
+    >>> assert len(prediction_cols) == 5, prediction_cols
+
     >>> df.write.format("noop").mode("overwrite").save()
     """
-    # prediction_struct = []
-    # classifier_struct = ["cats_class", "earlySNIa_score", "snnSnVsOthers_score"]
-
     # Required alert columns
+    # FIXME: scienceFlux?
     to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
 
     # Use for creating temp name
     prefix = "c"
 
     # Append temp columns with historical + current measurements
+    # FIXME: ForcedSource when available?
     for colname in to_expand:
         df = concat_col(
             df,
             colname,
             prefix=prefix,
             current="diaSource",
-            history="prvDiaForcedSources",
+            history="prvDiaSources",
         )
     expanded = [prefix + i for i in to_expand]
 
@@ -237,16 +243,14 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     # CLASSIFIERS
     columns_pre_classifiers = df.columns  # initialise columns
-    _LOG.info("New processor: asteroids (random positions)")
-    df = df.withColumn("roid", F.lit(0))
 
-    _LOG.info("New processor: EarlySN Ia")
+    _LOG.info("New classifier: EarlySN Ia")
     early_ia_args = [F.col(i) for i in expanded]
     df = df.withColumn(
         "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
     )
 
-    _LOG.info("New processor: supernnova - Ia")
+    _LOG.info("New classifier: supernnova - Ia")
     snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
 
@@ -255,6 +259,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("snnSnVsOthers_score", snn_ia_elasticc(*snn_ia_args))
 
     # CATS
+    _LOG.info("New classifier: CATS")
     cats_args = ["cmidpointMjdTai", "cpsfFlux", "cpsfFluxErr", "cband"]
     df = df.withColumn("cats_broad_array_prob", predict_nn(*cats_args))
 
@@ -292,15 +297,40 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ])
     classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
 
+    # PREDICTIONS
+    columns_pre_predictor = df.columns  # initialise columns
+    _LOG.info("New predictor: asteroids")
+    df = df.withColumn("is_sso", df["ssSource"].isNotNull())
+
+    _LOG.info("New predictor: first alert")
+    df = df.withColumn("is_first", F.size(df["prvDiaSources"]) == -1)
+
+    _LOG.info("New predictor: cataloged")
+    df = df.withColumn(
+        "is_cataloged",
+    )
+
+    # This seems redundant with `classifiers.cat_class`, but it allows
+    # flexibility later to change our main classification
+    _LOG.info("New predictor: Main class candidate")
+    df = df.withColumn("main_label_classifier", df["cats_class"])
+
+    # This seems redundant with `crossmatch.simbad_otype`, but it allows
+    # flexibility later to change our main classification
+    _LOG.info("New predictor: Main xmatch")
+    df = df.withColumn("main_label_crossmatch", df["simbad_otype"])
+
+    prediction_struct = [i for i in df.columns if i not in columns_pre_predictor]
+
     # Wrap into structs
     df = df.withColumn("classifiers", F.struct(*classifier_struct))
     df = df.drop(*classifier_struct)
 
-    df = df.withColumn("crossmatch", F.struct(*crossmatch_struct))
+    df = df.withColumn("crossmatches", F.struct(*crossmatch_struct))
     df = df.drop(*crossmatch_struct)
 
-    # df = df.withColumn("prediction", F.struct(*prediction_struct))
-    # df = df.drop(*prediction_struct)
+    df = df.withColumn("predictions", F.struct(*prediction_struct))
+    df = df.drop(*prediction_struct)
 
     # Drop temp columns
     df = df.drop(*expanded)
