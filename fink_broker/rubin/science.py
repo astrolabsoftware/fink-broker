@@ -205,7 +205,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
 
     >>> classifiers_cols = df.select("classifiers.*").columns
-    >>> assert len(classifiers_cols) == 4, classifiers_cols
+    >>> assert len(classifiers_cols) == 17, classifiers_cols
 
     >>> xmatch_cols = df.select("crossmatches.*").columns
     >>> assert len(xmatch_cols) == 4, xmatch_cols
