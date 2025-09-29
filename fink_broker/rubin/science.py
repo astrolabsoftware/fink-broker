@@ -33,6 +33,7 @@ from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
+from fink_science.rubin.xmatch.utils import MANGROVE_COLS
 # from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
@@ -160,8 +161,11 @@ def apply_all_xmatch(df, tns_raw_output):
     )
 
     # Explode mangrove
-    for col_ in df.select("mangrove.*").columns:
-        df = df.withColumn("mangrove_{}".format(col_), "mangrove.{}".format(col_))
+    for col_ in MANGROVE_COLS:
+        df = df.withColumn(
+            "mangrove_{}".format(col_),
+            df["mangrove"].getItem(col_),
+        )
     df = df.drop("mangrove")
 
     return df
@@ -204,9 +208,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
     >>> df.write.format("noop").mode("overwrite").save()
     """
-    crossmatch_struct = []
-    prediction_struct = []
-    classifier_struct = ["cats_class", "earlySNIa_score", "snnSnVsOthers_score"]
+    # prediction_struct = []
+    # classifier_struct = ["cats_class", "earlySNIa_score", "snnSnVsOthers_score"]
 
     # Required alert columns
     to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
@@ -225,8 +228,15 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         )
     expanded = [prefix + i for i in to_expand]
 
+    # XMATCH
+    columns_pre_xmatch = df.columns  # initialise columns
     df = apply_all_xmatch(df, tns_raw_output)
 
+    # xmatch added columns
+    crossmatch_struct = [i for i in df.columns if i not in columns_pre_xmatch]
+
+    # CLASSIFIERS
+    columns_pre_classifiers = df.columns  # initialise columns
     _LOG.info("New processor: asteroids (random positions)")
     df = df.withColumn("roid", F.lit(0))
 
@@ -275,6 +285,13 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
     # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
 
+    # xmatch added columns
+    df = df.drop(*[
+        "cats_broad_array_prob",
+        "cats_argmax",
+    ])
+    classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
+
     # Wrap into structs
     df = df.withColumn("classifiers", F.struct(*classifier_struct))
     df = df.drop(*classifier_struct)
@@ -282,15 +299,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("crossmatch", F.struct(*crossmatch_struct))
     df = df.drop(*crossmatch_struct)
 
-    df = df.withColumn("crossmatch", F.struct(*prediction_struct))
-    df = df.drop(*prediction_struct)
+    # df = df.withColumn("prediction", F.struct(*prediction_struct))
+    # df = df.drop(*prediction_struct)
 
     # Drop temp columns
     df = df.drop(*expanded)
-    df = df.drop(*[
-        "cats_broad_array_prob",
-        "cats_argmax",
-    ])
 
     return df
 
