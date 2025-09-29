@@ -308,6 +308,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     _LOG.info("New predictor: cataloged")
     df = df.withColumn(
         "is_cataloged",
+        F.col("simbad_type").isNotNull() | F.col("vizier:I/355/gaiadr3").isNotNull(),
     )
 
     # This seems redundant with `classifiers.cat_class`, but it allows
