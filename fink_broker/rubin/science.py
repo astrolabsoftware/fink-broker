@@ -304,12 +304,12 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # FIXME: do we want scores as well?
     df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
 
-    _LOG.info("New classifier: SLSN (fake)")
+    # _LOG.info("New classifier: SLSN (fake)")
     # slsn_args = ["diaObject.diaObjectId"]
     # slsn_args += [F.col(i) for i in expanded]
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
-    # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
-    df = df.withColumn("slsn_score", F.lit(0.0))
+    # df = df.withColumn("slsn_score", slsn_rubin(*slsn_args))
+    # df = df.withColumn("slsn_score", F.lit(0.0))
 
     _LOG.info("New classifier: EarlySN Ia (fake)")
     # early_ia_args = [F.col(i) for i in expanded]

@@ -53,7 +53,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    24
+    23
 
     >>> print(len(fink_object_cols))
     5
@@ -73,8 +73,8 @@ def load_fink_cols():
 
     # Classifiers
     # FIXME: how to retrieve automatically names?
-    names = ["earlySNIa_score", "slsn_score", "snnSnVsOthers_score", "cats_class"]
-    types = ["float", "float", "float", "int"]
+    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
+    types = ["float", "float", "int"]
     for type_, name in zip(types, names):
         fink_source_cols["classifiers.{}".format(name)] = {
             "type": type_,
@@ -254,7 +254,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 24 + 5
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 5
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
