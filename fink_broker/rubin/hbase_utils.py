@@ -90,12 +90,12 @@ def load_fink_cols():
 
     # Predictions
     fink_object_cols = {
-        "is_sso": {"type": "boolean", "default": None},
-        "is_first": {"type": "boolean", "default": None},
-        "is_cataloged": {"type": "boolean", "default": None},
-        "main_label_crossmatch": {"type": "string", "default": None},
+        "predictions.is_sso": {"type": "boolean", "default": None},
+        "predictions.is_first": {"type": "boolean", "default": None},
+        "predictions.is_cataloged": {"type": "boolean", "default": None},
+        "predictions.main_label_crossmatch": {"type": "string", "default": None},
         # FIXME: Do we want to keep integer?
-        "main_label_classifier": {"type": "int", "default": None},
+        "predictions.main_label_classifier": {"type": "int", "default": None},
     }
 
     return fink_source_cols, fink_object_cols
