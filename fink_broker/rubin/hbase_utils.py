@@ -66,7 +66,9 @@ def load_fink_cols():
             CAT_PROPERTIES[k]["types"], CAT_PROPERTIES[k]["cols_out"]
         ):
             fink_source_cols[
-                "{}{}_{}".format(CAT_PROPERTIES[k].get("prefix", ""), k, name)
+                "crossmatches_{}{}_{}".format(
+                    CAT_PROPERTIES[k].get("prefix", ""), k, name
+                )
             ] = {"type": type_, "default": None}
 
     # Classifiers
@@ -74,7 +76,10 @@ def load_fink_cols():
     names = ["earlySNIa_score", "slsn_score", "snnSnVsOthers_score", "cats_class"]
     types = ["float", "float", "float", "int"]
     for type_, name in zip(types, names):
-        fink_source_cols[name] = {"type": type_, "default": None}
+        fink_source_cols["classifiers_{}".format(name)] = {
+            "type": type_,
+            "default": None,
+        }
 
     # Others
     fink_source_cols.update({
@@ -89,6 +94,7 @@ def load_fink_cols():
         "is_first": {"type": "boolean", "default": None},
         "is_cataloged": {"type": "boolean", "default": None},
         "main_label_crossmatch": {"type": "string", "default": None},
+        # FIXME: Do we want to keep integer?
         "main_label_classifier": {"type": "int", "default": None},
     }
 

@@ -176,7 +176,7 @@ def apply_all_xmatch(df, tns_raw_output):
                 "{}{}_{}".format(
                     CAT_PROPERTIES[catname]["prefix"],
                     catname,
-                    CAT_PROPERTIES[catname]["property"],
+                    CAT_PROPERTIES[catname]["cols_out"][0],
                 ),
                 crossmatch_other_catalog(
                     df[alert_id],
