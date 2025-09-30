@@ -22,7 +22,8 @@ from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
 
-from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
+# from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
+from fink_broker.rubin.science import CAT_PROPERTIES
 
 from fink_broker.common.tester import spark_unit_tests
 
@@ -52,69 +53,44 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    26
+    23
+
+    >>> print(len(fink_object_cols))
+    5
     """
-    fink_source_cols = {
-        # Crossmatch
-        "DR3Name": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "Plx": {"type": "float", "default": 0.0},  # FIXME: prefix xmatch by catalog
-        "cdsxmatch": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "e_Plx": {"type": "float", "default": 0.0},  # FIXME: prefix xmatch by catalog
-        "gcvs": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "vsx": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "x3hsp": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "x4lac": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "spicy_id": {"type": "int", "default": -1},  # FIXME: prefix xmatch by catalog
-        "spicy_class": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        "tns": {"type": "string", "default": ""},  # FIXME: prefix xmatch by catalog
-        "gaiaVarFlag": {"type": "int", "default": 0},  # FIXME: prefix xmatch by catalog
-        "gaiaClass": {
-            "type": "string",
-            "default": "Unknown",
-        },  # FIXME: prefix xmatch by catalog
-        # Machine learning
-        "rf_snia_vs_nonia": {"type": "double", "default": 0.0},  # FIXME: float?
-        "rf_slsn_vs_nonslsn": {"type": "double", "default": 0.0},  # FIXME: float?
-        "cats_broad_class": {
-            "type": "int",
-            "default": 11,
-        },  # FIXME: what should the default?
-        "snn_sn_vs_others": {"type": "double", "default": 0.0},  # FIXME: float?
-        # Other
-        "roid": {"type": "int", "default": 0},
-        "finkclass": {"type": "string", "default": "Unknown"},
-        "fink_broker_version": {"type": "string", "default": "Unknown"},
-        "fink_science_version": {"type": "string", "default": "Unknown"},
-        "lsst_schema_version": {"type": "string", "default": "Unknown"},
+    fink_source_cols = {}
+
+    # Crossmatch
+    for k in CAT_PROPERTIES.keys():
+        for type_, name in zip(
+            CAT_PROPERTIES[k]["types"], CAT_PROPERTIES[k]["cols_out"]
+        ):
+            fink_source_cols[
+                "{}{}_{}".format(CAT_PROPERTIES[k].get("prefix", ""), k, name)
+            ] = {"type": type_, "default": None}
+
+    # Classifiers
+    # FIXME: how to retrieve automatically names?
+    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
+    types = ["float", "float", "int"]
+    for type_, name in zip(types, names):
+        fink_source_cols[name] = {"type": type_, "default": None}
+
+    # Others
+    fink_source_cols.update({
+        "fink_broker_version": {"type": "string", "default": None},
+        "fink_science_version": {"type": "string", "default": None},
+        "lsst_schema_version": {"type": "string", "default": None},
+    })
+
+    # Predictions
+    fink_object_cols = {
+        "is_sso": {"type": "boolean", "default": None},
+        "is_first": {"type": "boolean", "default": None},
+        "is_cataloged": {"type": "boolean", "default": None},
+        "main_label_crossmatch": {"type": "string", "default": None},
+        "main_label_classifier": {"type": "int", "default": None},
     }
-
-    for col_ in MANGROVE_COLS:
-        name = "mangrove.{}".format(col_)
-        fink_source_cols.update({name: {"type": "string", "default": "None"}})
-
-    # FIXME: is_cataloged, classification, etc.
-    fink_object_cols = {}
 
     return fink_source_cols, fink_object_cols
 
@@ -272,7 +248,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 26 + 0
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 5
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -306,14 +282,6 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
-
-    # rename root.level into root_level
-    # name = (
-    #     F.col(colname)
-    #     .alias(colname.replace(".", "_"))
-    #     .cast(coltype)
-    # )
-
     if nested:
         # Assume section.real_colname
         return F.col(colname).cast(coltype).alias(colname.split(".")[-1])

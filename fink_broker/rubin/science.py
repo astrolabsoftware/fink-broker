@@ -41,6 +41,72 @@ from fink_science.rubin.xmatch.utils import MANGROVE_COLS
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
 
+CAT_PROPERTIES = {
+    "simbad": {
+        "kind": "cds",
+        "cols_out": ["otype"],
+        "types": ["string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:I/355/gaiadr3": {
+        "kind": "cds",
+        "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
+        "types": ["string", "float", "float", "string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:I/358/vclassre": {
+        "kind": "cds",
+        "cols_out": ["Class"],
+        "types": ["string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:B/vsx/vsx": {
+        "kind": "cds",
+        "cols_out": ["Type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "vizier:J/ApJS/254/33/table1": {
+        "kind": "cds",
+        "cols_out": ["SPICY", "class"],
+        "types": ["int", "string"],
+        "distmaxarcsec": 1.2,
+    },
+    "tns": {
+        "kind": "tns",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "gcvs": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "",
+        "distmaxarcsec": 1.5,
+    },
+    "3hsp": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "x",
+        "distmaxarcsec": 60.0,
+    },
+    "4lac": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "x",
+        "distmaxarcsec": 60.0,
+    },
+    "mangrove": {
+        "kind": "mangrove",
+        "cols_out": ["HyperLEDA_name", "2MASS_name", "lum_dist", "ang_dist"],
+        "types": ["string", "string", "float", "float"],
+        "distmaxarcsec": 60.0,
+    },
+}
+
 
 def apply_all_xmatch(df, tns_raw_output):
     """Apply all xmatch to a DataFrame
@@ -60,7 +126,12 @@ def apply_all_xmatch(df, tns_raw_output):
     --------
     >>> from fink_broker.common.spark_utils import load_parquet_files
     >>> df = load_parquet_files(rubin_alert_sample)
+    >>> cols_in = df.columns
     >>> df = apply_all_xmatch(df, tns_raw_output="")
+    >>> cols_out = df.columns
+
+    >>> new_cols = [col for col in cols_out if col not in cols_in]
+    >>> assert len(new_cols) == 17, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -69,104 +140,62 @@ def apply_all_xmatch(df, tns_raw_output):
     ra = "diaSource.ra"
     dec = "diaSource.dec"
 
-    _LOG.info("New xmatch: cdsxmatch")
-    df = xmatch_cds(df)
+    for catname in CAT_PROPERTIES.keys():
+        _LOG.info("New xmatch: {}".format(catname))
 
-    _LOG.info("New xmatch: TNS")
-    df = xmatch_tns(df, tns_raw_output=tns_raw_output)
-
-    _LOG.info("New xmatch: Gaia main xmatch (1.0 arcsec)")
-    df = xmatch_cds(
-        df,
-        distmaxarcsec=1,
-        catalogname="vizier:I/355/gaiadr3",
-        cols_out=["DR3Name", "Plx", "e_Plx", "VarFlag"],
-        types=["string", "float", "float", "string"],
-    )
+        if CAT_PROPERTIES[catname]["kind"] == "cds":
+            df = xmatch_cds(
+                df,
+                catalogname=catname,
+                distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
+                cols_out=CAT_PROPERTIES[catname]["cols_out"],
+                types=CAT_PROPERTIES[catname]["types"],
+            )
+        elif CAT_PROPERTIES[catname]["kind"] == "tns":
+            df = xmatch_tns(
+                df,
+                distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
+                tns_raw_output=tns_raw_output,
+            )
+        elif CAT_PROPERTIES[catname]["kind"] == "mangrove":
+            df = df.withColumn(
+                catname,
+                crossmatch_mangrove(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
+            # Explode mangrove
+            for col_ in MANGROVE_COLS:
+                df = df.withColumn(
+                    "mangrove_{}".format(col_),
+                    df["mangrove"].getItem(col_),
+                )
+            df = df.drop("mangrove")
+        elif CAT_PROPERTIES[catname]["kind"] == "internal":
+            df = df.withColumn(
+                "{}{}_{}".format(
+                    CAT_PROPERTIES[catname]["prefix"],
+                    catname,
+                    CAT_PROPERTIES[catname]["property"],
+                ),
+                crossmatch_other_catalog(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(catname),
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
 
     # VarFlag is a string. Make it integer
-    # 0=NOT_AVAILABLE
-    # 1=VARIABLE
+    # 0=NOT_AVAILABLE / 1=VARIABLE
     df = df.withColumn(
         "vizier:I/355/gaiadr3_VarFlag",
         F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
     )
-
-    _LOG.info("New xmatch: Gaia var xmatch (1.0 arcsec)")
-    df = xmatch_cds(
-        df,
-        distmaxarcsec=1,
-        catalogname="vizier:I/358/vclassre",
-        cols_out=["Class"],
-        types=["string"],
-    )
-
-    _LOG.info("New xmatch: VSX (1.5 arcsec)")
-    df = xmatch_cds(
-        df,
-        catalogname="vizier:B/vsx/vsx",
-        distmaxarcsec=1.5,
-        cols_out=["Type"],
-        types=["string"],
-    )
-
-    _LOG.info("New xmatch: SPICY (1.2 arcsec)")
-    df = xmatch_cds(
-        df,
-        catalogname="vizier:J/ApJS/254/33/table1",
-        distmaxarcsec=1.2,
-        cols_out=["SPICY", "class"],
-        types=["int", "string"],
-    )
-
-    _LOG.info("New xmatch: GCVS (1.5 arcsec)")
-    df = df.withColumn(
-        "gcvs_type",
-        crossmatch_other_catalog(
-            df[alert_id],
-            df[ra],
-            df[dec],
-            F.lit("gcvs"),
-        ),
-    )
-
-    _LOG.info("New xmatch: 3HSP (1 arcmin)")
-    df = df.withColumn(
-        "x3hsp_type",
-        crossmatch_other_catalog(
-            df[alert_id],
-            df[ra],
-            df[dec],
-            F.lit("3hsp"),
-            F.lit(60.0),
-        ),
-    )
-
-    _LOG.info("New xmatch: 4LAC (1 arcmin)")
-    df = df.withColumn(
-        "x4lac_type",
-        crossmatch_other_catalog(
-            df[alert_id],
-            df[ra],
-            df[dec],
-            F.lit("4lac"),
-            F.lit(60.0),
-        ),
-    )
-
-    _LOG.info("New xmatch: Mangrove (1 acrmin)")
-    df = df.withColumn(
-        "mangrove",
-        crossmatch_mangrove(df[alert_id], df[ra], df[dec], F.lit(60.0)),
-    )
-
-    # Explode mangrove
-    for col_ in MANGROVE_COLS:
-        df = df.withColumn(
-            "mangrove_{}".format(col_),
-            df["mangrove"].getItem(col_),
-        )
-    df = df.drop("mangrove")
 
     return df
 
@@ -205,10 +234,10 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
 
     >>> classifiers_cols = df.select("classifiers.*").columns
-    >>> assert len(classifiers_cols) == 17, classifiers_cols
+    >>> assert len(classifiers_cols) == 3, classifiers_cols
 
     >>> xmatch_cols = df.select("crossmatches.*").columns
-    >>> assert len(xmatch_cols) == 4, xmatch_cols
+    >>> assert len(xmatch_cols) == 17, xmatch_cols
 
     >>> prediction_cols = df.select("predictions.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
@@ -264,11 +293,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("cats_broad_array_prob", predict_nn(*cats_args))
 
     mapping_cats_general = {
-        0: 11,
-        1: 12,
-        2: 13,
-        3: 21,
-        4: 22,
+        0: 11,  # SN-like
+        1: 12,  # Fast: KN, ulens, Novae, ...
+        2: 13,  # Long: SLSN, TDE, PISN, ...
+        3: 21,  # Periodic: RRLyrae, EB, LPV, ...
+        4: 22,  # Non-periodic: AGN
     }
     mapping_cats_general_expr = F.create_map([
         F.lit(x) for x in chain(*mapping_cats_general.items())
