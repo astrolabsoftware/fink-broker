@@ -295,10 +295,10 @@ def cast_and_rename_field(colname, coltype, nested):
         if section in to_keep:
             name = F.col(colname).alias(colname.replace(".", "_")).cast(coltype)
         else:
-            name = colname.split(".")[-1]
+            name = F.col(colname).cast(coltype).alias(colname.split(".")[-1])
 
         # Assume section.real_colname
-        return F.col(colname).cast(coltype).alias(name)
+        return name
     else:
         return F.col(colname).cast(coltype)
 
@@ -375,20 +375,13 @@ def flatten_dataframe(df, sections):
                 _LOG.warn(
                     "Missing columns detected in the DataFrame: {}".format(colname)
                 )
-                if default is not None:
-                    _LOG.warn(
-                        "Adding a new column with value `{}` and type `{}`".format(
-                            default, coltype
-                        )
+                _LOG.warn(
+                    "Adding a new column with value `{}` and type `{}`".format(
+                        default, coltype
                     )
-                    df = df.withColumn(colname, F.lit(default))
-                    cols_.append(cast_and_rename_field(colname, coltype, nested))
-                else:
-                    _LOG.warn(
-                        "No default value was provided -- skipping the ingestion of the {} field".format(
-                            colname
-                        )
-                    )
+                )
+                df = df.withColumn(colname, F.lit(default))
+                cols_.append(cast_and_rename_field(colname, coltype, nested))
 
         # Assign cf ID to columns
         cf.update({i: cf_name for i in df.select(cols_).columns})
