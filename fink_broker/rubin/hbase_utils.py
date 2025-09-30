@@ -53,7 +53,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    23
+    24
 
     >>> print(len(fink_object_cols))
     5
@@ -254,7 +254,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 5
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 24 + 5
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -288,9 +288,17 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
+    to_keep = ["crossmatches", "classifiers"]
     if nested:
+        section = colname.split(".")[0]
+
+        if section in to_keep:
+            name = F.col(colname).alias(colname.replace(".", "_")).cast(coltype)
+        else:
+            name = colname.split(".")[-1]
+
         # Assume section.real_colname
-        return F.col(colname).cast(coltype).alias(colname.split(".")[-1])
+        return F.col(colname).cast(coltype).alias(name)
     else:
         return F.col(colname).cast(coltype)
 
