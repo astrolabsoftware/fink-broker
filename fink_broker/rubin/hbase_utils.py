@@ -71,8 +71,8 @@ def load_fink_cols():
 
     # Classifiers
     # FIXME: how to retrieve automatically names?
-    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
-    types = ["float", "float", "int"]
+    names = ["earlySNIa_score", "slsn_score", "snnSnVsOthers_score", "cats_class"]
+    types = ["float", "float", "float", "int"]
     for type_, name in zip(types, names):
         fink_source_cols[name] = {"type": type_, "default": None}
 

@@ -24,9 +24,6 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_science.rubin.random_forest_snia.processor import (
-    rfscore_rainbow_elasticc_nometa,
-)
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
 from fink_science.rubin.xmatch.processor import xmatch_cds
@@ -273,12 +270,6 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # CLASSIFIERS
     columns_pre_classifiers = df.columns  # initialise columns
 
-    _LOG.info("New classifier: EarlySN Ia")
-    early_ia_args = [F.col(i) for i in expanded]
-    df = df.withColumn(
-        "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
-    )
-
     _LOG.info("New classifier: supernnova - Ia")
     snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
@@ -313,11 +304,19 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # FIXME: do we want scores as well?
     df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
 
-    # # SLSN
+    _LOG.info("New classifier: SLSN (fake)")
     # slsn_args = ["diaObject.diaObjectId"]
     # slsn_args += [F.col(i) for i in expanded]
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
     # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
+    df = df.withColumn("slsn_score", F.lit(0.0))
+
+    _LOG.info("New classifier: EarlySN Ia (fake)")
+    # early_ia_args = [F.col(i) for i in expanded]
+    # df = df.withColumn(
+    #     "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    # )
+    df = df.withColumn("earlySNIa_score", F.lit(0.0))
 
     # xmatch added columns
     df = df.drop(*[
