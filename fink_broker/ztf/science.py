@@ -244,6 +244,17 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     _LOG.info("New processor: transient features")
     df = extract_transient_features(df)
+    df = df.withColumn(
+        "is_transient",
+        ~df["faint"]
+        & df["positivesubtraction"]
+        & df["real"]
+        & ~df["pointunderneath"]
+        & ~df["brightstar"]
+        & ~df["variablesource"]
+        & df["stationary"]
+        & (F.col("roid") == 0),
+    )
 
     # Clean temporary container
     df = df.drop("container")
