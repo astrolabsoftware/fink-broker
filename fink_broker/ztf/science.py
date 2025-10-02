@@ -242,8 +242,14 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     blazar_args = ["candid", "objectId", F.col("container").getItem("flux"), "cjd"]
     df = df.withColumn("blazar_stats", quiescent_state(*blazar_args))
 
+    # Clean temporary container
+    df = df.drop("container")
+
     _LOG.info("New processor: transient features")
+    cols_before = df.columns
     df = extract_transient_features(df)
+    extra_cols = [i for i in df.columns if i not in cols_before]
+
     df = df.withColumn(
         "is_transient",
         ~df["faint"]
@@ -256,8 +262,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         & (F.col("roid") == 0),
     )
 
-    # Clean temporary container
-    df = df.drop("container")
+    # Drop intermediate columns
+    df = df.drop(*extra_cols)
 
     # Drop temp columns
     df = df.drop(*expanded)
