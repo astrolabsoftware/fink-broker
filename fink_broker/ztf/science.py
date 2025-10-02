@@ -36,6 +36,7 @@ from fink_science.ztf.kilonova.processor import knscore
 from fink_science.ztf.ad_features.processor import extract_features_ad
 from fink_science.ztf.anomaly_detection.processor import anomaly_score
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
+from fink_science.ztf.transient_features.processor import extract_transient_features
 
 from fink_science.ztf.fast_transient_rate.processor import magnitude_rate
 from fink_science.ztf.fast_transient_rate import rate_module_output_schema
@@ -240,6 +241,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     _LOG.info("New processor: blazars low state detection")
     blazar_args = ["candid", "objectId", F.col("container").getItem("flux"), "cjd"]
     df = df.withColumn("blazar_stats", quiescent_state(*blazar_args))
+
+    _LOG.info("New processor: transient features")
+    df = extract_transient_features(df)
 
     # Clean temporary container
     df = df.drop("container")
