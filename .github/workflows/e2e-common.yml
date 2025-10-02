@@ -26,7 +26,7 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.5-rc0
+  CIUX_VERSION: v0.0.6-rc2
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   CI_REPO: ${{ inputs.ci_repo }}
