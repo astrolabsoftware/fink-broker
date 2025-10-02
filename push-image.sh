@@ -8,8 +8,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
-. "$CIUXCONFIG"
+. "$DIR/.ciux.d/ciux_build.sh"
 
 set -e
 

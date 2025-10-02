@@ -23,9 +23,7 @@
 set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-
-# This will avoid overriding user ciuxconfig during a build
-export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
+PROJECT_DIR=$(dirname "$DIR")
 
 usage() {
   cat << EOD
@@ -71,7 +69,7 @@ then
 fi
 
 ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
-. $CIUXCONFIG
+. "$PROJECT_DIR/.ciux.d/ciux_build.sh"
 
 if [[ $suffix =~ ^noscience* ]]; then
     target="noscience"
