@@ -49,3 +49,16 @@ Fink has participated to a number of events with the private sector, in particul
 * 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year. _Focus on graph database with JanusGraph_
 * 10/19: Fink was featured at the [Spark+AI Summit Europe 2019](https://www.databricks.com/session_eu19/accelerating-astronomical-discoveries-with-apache-spark).
 * 05/19: Fink has been selected to the Google Summer of Code 2019 (CERN-HSF org)! Congratulations to [abhishekchauhn](https://github.com/abhishekchauhn) who will work on the project this year. _Focus on alert redistribution with Apache Kafka_
+
+## Documentation
+
+Additional documentation is available in the [`doc/`](doc/) directory:
+
+- **[Development Guide](doc/devel.md)** - Developer guide for Kubernetes users
+- **[End-to-End Testing](doc/e2e.md)** - Installation and execution guide for end-to-end tests
+- **[HDFS Setup](doc/hdfs.md)** - HDFS on Kubernetes troubleshooting guide
+- **[Monitoring](doc/monitor.md)** - Monitor fink-broker platform
+- **[Release Guide](doc/release.md)** - How to build a Fink release
+- **[CI Debugging](doc/self-hosted-ci-debug.md)** - Debugging a crashed CI Kubernetes cluster
+- **[CI Setup](doc/self-hosted-ci-setup.md)** - Set up fink self-hosted CI
+- **[Troubleshooting](doc/troubleshoot.md)** - Troubleshooting guide
