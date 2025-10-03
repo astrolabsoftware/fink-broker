@@ -60,6 +60,7 @@ distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
+  memoryOverhead: ""
   instances: "{{.Values.instances}}"
   kafka:
     out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
