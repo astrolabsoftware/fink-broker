@@ -34,6 +34,7 @@ spec:
     coreRequest: "{{ tpl .Values.distribution.coreRequest . }}"
     env: {{- include "fink.hdfsconfig" . | nindent 6 }}
     memory: "{{ tpl .Values.distribution.memory . }}"
+    memoryOverhead: "{{ tpl .Values.distribution.memoryOverhead . }}"
     instances: {{ tpl .Values.distribution.instances . }}
     javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf -Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:

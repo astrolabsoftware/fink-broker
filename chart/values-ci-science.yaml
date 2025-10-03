@@ -44,6 +44,8 @@ distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
   memory: "2000m"
+  # Only for executor
+  memoryOverhead: "1000m"
   instances: "2"
   instances: "{{.Values.instances}}"
 
