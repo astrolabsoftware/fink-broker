@@ -19,17 +19,12 @@ import argparse
 
 import numpy as np
 
-from pyspark.sql import functions as F
-
-
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 
-from fink_science.ztf.superluminous.processor import superluminous_score
-from fink_filters.ztf.filter_superluminous.filter import slsn_filter
-
 from fink_filters.ztf.classification import extract_fink_classification
+from fink_filters.ztf.filter_anomaly_notification.filter_utils import msg_handler_slack
 from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
@@ -106,12 +101,8 @@ def main():
     ]
     df = df.withColumn("classification", extract_fink_classification(*cols))
 
-    # Run SLSN classification
-    args = ["is_transient", "objectId", "candidate.jd", "candidate.jdstarthist"]
-    df = df.withColumn("slsn_score", superluminous_score(*args))
-
-    # Filter at 0.5
-    df = df.filter(slsn_filter("slsn_score", F.lit(0.5)))
+    # Simply filter at 0.5
+    df_filt = df.filter(df["slsn_score"] >= 0.5)
 
     cols_ = [
         "objectId",
@@ -124,17 +115,17 @@ def main():
         "candidate.jd",
     ]
 
-    pdf = df.select(cols_).toPandas()
+    pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values("slsn_score", ascending=False)
 
     init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
     print(init_msg)
 
-    # slack_data = []
-    # for _, row in pdf.iterrows():
-    #     append_slack_messages(slack_data, row)
+    slack_data = []
+    for _, row in pdf.iterrows():
+        append_slack_messages(slack_data, row)
 
-    # msg_handler_slack(slack_data, "XXXXX", init_msg)
+    msg_handler_slack(slack_data, "#bot_slsn", init_msg)
 
 
 if __name__ == "__main__":

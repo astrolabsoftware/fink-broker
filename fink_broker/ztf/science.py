@@ -37,6 +37,7 @@ from fink_science.ztf.ad_features.processor import extract_features_ad
 from fink_science.ztf.anomaly_detection.processor import anomaly_score
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
 from fink_science.ztf.transient_features.processor import extract_transient_features
+from fink_science.ztf.superluminous.processor import superluminous_score
 
 from fink_science.ztf.fast_transient_rate.processor import magnitude_rate
 from fink_science.ztf.fast_transient_rate import rate_module_output_schema
@@ -264,6 +265,14 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     # Drop intermediate columns
     df = df.drop(*extra_cols)
+
+    _LOG.info("New processor: SLSN")
+
+    # Perform the fit + classification (default model)
+    args = ["is_transient", "objectId", "candidate.jdstarthist"]
+    args += ["cjd", "cfid", "cmagpsf", "csigmapsf"]
+
+    df = df.withColumn("slsn_score", superluminous_score(*args))
 
     # Drop temp columns
     df = df.drop(*expanded)
