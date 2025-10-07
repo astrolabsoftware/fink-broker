@@ -24,13 +24,13 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_broker.common.science import apply_all_xmatch
-
-# from fink_science.rubin.random_forest_snia.processor import (
-#    rfscore_rainbow_elasticc_nometa,
-# )
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
+from fink_science.rubin.xmatch.processor import xmatch_cds
+from fink_science.rubin.xmatch.processor import xmatch_tns
+from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
+from fink_science.rubin.xmatch.processor import crossmatch_mangrove
+from fink_science.rubin.xmatch.utils import MANGROVE_COLS
 # from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
@@ -38,14 +38,172 @@ from fink_science.rubin.cats.processor import predict_nn
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
 
+CAT_PROPERTIES = {
+    "simbad": {
+        "kind": "cds",
+        "cols_out": ["otype"],
+        "types": ["string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:I/355/gaiadr3": {
+        "kind": "cds",
+        "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
+        "types": ["string", "float", "float", "string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:I/358/vclassre": {
+        "kind": "cds",
+        "cols_out": ["Class"],
+        "types": ["string"],
+        "distmaxarcsec": 1.0,
+    },
+    "vizier:B/vsx/vsx": {
+        "kind": "cds",
+        "cols_out": ["Type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "vizier:J/ApJS/254/33/table1": {
+        "kind": "cds",
+        "cols_out": ["SPICY", "class"],
+        "types": ["int", "string"],
+        "distmaxarcsec": 1.2,
+    },
+    "tns": {
+        "kind": "tns",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "gcvs": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "",
+        "distmaxarcsec": 1.5,
+    },
+    "3hsp": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "x",
+        "distmaxarcsec": 60.0,
+    },
+    "4lac": {
+        "kind": "internal",
+        "cols_out": ["type"],
+        "types": ["string"],
+        "prefix": "x",
+        "distmaxarcsec": 60.0,
+    },
+    "mangrove": {
+        "kind": "mangrove",
+        "cols_out": ["HyperLEDA_name", "2MASS_name", "lum_dist", "ang_dist"],
+        "types": ["string", "string", "float", "float"],
+        "distmaxarcsec": 60.0,
+    },
+}
+
+
+def apply_all_xmatch(df, tns_raw_output):
+    """Apply all xmatch to a DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark DataFrame containing alert data
+    tns_raw_output: str
+        If provided, local path to the TNS catalog.
+
+    Returns
+    -------
+    out: Spark DataFrame
+
+    Examples
+    --------
+    >>> from fink_broker.common.spark_utils import load_parquet_files
+    >>> df = load_parquet_files(rubin_alert_sample)
+    >>> cols_in = df.columns
+    >>> df = apply_all_xmatch(df, tns_raw_output="")
+    >>> cols_out = df.columns
+
+    >>> new_cols = [col for col in cols_out if col not in cols_in]
+    >>> assert len(new_cols) == 17, (new_cols, cols_out)
+
+    # apply_science_modules is lazy, so trigger the computation
+    >>> an_alert = df.take(1)
+    """
+    alert_id = "diaSource.diaSourceId"
+    ra = "diaSource.ra"
+    dec = "diaSource.dec"
+
+    for catname in CAT_PROPERTIES.keys():
+        _LOG.info("New xmatch: {}".format(catname))
+
+        if CAT_PROPERTIES[catname]["kind"] == "cds":
+            df = xmatch_cds(
+                df,
+                catalogname=catname,
+                distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
+                cols_out=CAT_PROPERTIES[catname]["cols_out"],
+                types=CAT_PROPERTIES[catname]["types"],
+            )
+        elif CAT_PROPERTIES[catname]["kind"] == "tns":
+            df = xmatch_tns(
+                df,
+                distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
+                tns_raw_output=tns_raw_output,
+            )
+        elif CAT_PROPERTIES[catname]["kind"] == "mangrove":
+            df = df.withColumn(
+                catname,
+                crossmatch_mangrove(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
+            # Explode mangrove
+            for col_ in MANGROVE_COLS:
+                df = df.withColumn(
+                    "mangrove_{}".format(col_),
+                    df["mangrove"].getItem(col_),
+                )
+            df = df.drop("mangrove")
+        elif CAT_PROPERTIES[catname]["kind"] == "internal":
+            df = df.withColumn(
+                "{}{}_{}".format(
+                    CAT_PROPERTIES[catname]["prefix"],
+                    catname,
+                    CAT_PROPERTIES[catname]["cols_out"][0],
+                ),
+                crossmatch_other_catalog(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(catname),
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
+
+    # VarFlag is a string. Make it integer
+    # 0=NOT_AVAILABLE / 1=VARIABLE
+    df = df.withColumn(
+        "vizier:I/355/gaiadr3_VarFlag",
+        F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
+    )
+
+    return df
+
 
 def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     """Load and apply Fink science modules to enrich Rubin alert content
 
     Currently available:
+    - xmatch
     - CBPF (broad)
     - SNN (Ia)
-    - SLSN
     - EarlySN Ia
 
     Parameters
@@ -69,107 +227,68 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     Examples
     --------
     >>> from fink_broker.common.spark_utils import load_parquet_files
-    >>> from fink_broker.common.logging_utils import get_fink_logger
-    >>> logger = get_fink_logger('raw2cience_rubin_test', 'INFO')
-    >>> _LOG = logging.getLogger(__name__)
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
+
+    >>> classifiers_cols = df.select("classifiers.*").columns
+    >>> assert len(classifiers_cols) == 3, classifiers_cols
+
+    >>> xmatch_cols = df.select("crossmatches.*").columns
+    >>> assert len(xmatch_cols) == 17, xmatch_cols
+
+    >>> prediction_cols = df.select("predictions.*").columns
+    >>> assert len(prediction_cols) == 5, prediction_cols
+
     >>> df.write.format("noop").mode("overwrite").save()
     """
     # Required alert columns
+    # FIXME: scienceFlux?
     to_expand = ["midpointMjdTai", "band", "psfFlux", "psfFluxErr"]
 
     # Use for creating temp name
     prefix = "c"
 
     # Append temp columns with historical + current measurements
+    # FIXME: ForcedSource when available?
     for colname in to_expand:
         df = concat_col(
             df,
             colname,
             prefix=prefix,
             current="diaSource",
-            history="prvDiaForcedSources",
+            history="prvDiaSources",
         )
     expanded = [prefix + i for i in to_expand]
 
-    df = apply_all_xmatch(df, tns_raw_output, survey="rubin")
+    # XMATCH
+    columns_pre_xmatch = df.columns  # initialise columns
+    df = apply_all_xmatch(df, tns_raw_output)
 
-    _LOG.info("New processor: asteroids (random positions)")
-    df = df.withColumn("roid", F.lit(0))
+    # xmatch added columns
+    crossmatch_struct = [i for i in df.columns if i not in columns_pre_xmatch]
 
-    # _LOG.info("New processor: EarlySN Ia")
-    # early_ia_args = [F.col(i) for i in expanded]
-    # df = df.withColumn(
-    #     "rf_snia_vs_nonia", rfscore_rainbow_elasticc_nometa(*early_ia_args)
-    # )
+    # CLASSIFIERS
+    columns_pre_classifiers = df.columns  # initialise columns
 
-    _LOG.info("New processor: supernnova - Ia")
+    _LOG.info("New classifier: supernnova - Ia")
     snn_args = [F.col("diaSource.diaSourceId")]
     snn_args += [F.col(i) for i in expanded]
 
-    # # Binary Ia
-    # snn_ia_args = snn_args + [F.lit("elasticc_ia")]
-    # df = df.withColumn("snn_snia_vs_nonia", snn_ia_elasticc(*snn_ia_args))
-
     # Binary SN
     snn_ia_args = snn_args + [F.lit("elasticc_binary_broad/SN_vs_other")]
-    df = df.withColumn("snn_sn_vs_others", snn_ia_elasticc(*snn_ia_args))
-
-    # # Binary Periodic
-    # full_args = args + [F.lit("elasticc_binary_broad/Periodic_vs_other")]
-    # df = df.withColumn("snn_periodic_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary nonperiodic
-    # full_args = args + [F.lit("elasticc_binary_broad/NonPeriodic_vs_other")]
-    # df = df.withColumn("snn_nonperiodic_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary Long
-    # full_args = args + [F.lit("elasticc_binary_broad/Long_vs_other")]
-    # df = df.withColumn("snn_long_vs_others", snn_ia_elasticc(*full_args))
-
-    # # Binary Fast
-    # full_args = args + [F.lit("elasticc_binary_broad/Fast_vs_other")]
-    # df = df.withColumn("snn_fast_vs_others", snn_ia_elasticc(*full_args))
-
-    # _LOG.info("New processor: supernnova - Broad")
-    # args = [F.col("diaSource.diaSourceId")]
-    # args += [
-    #     F.col("cmidPointTai"),
-    #     F.col("cfilterName"),
-    #     F.col("cpsFlux"),
-    #     F.col("cpsFluxErr"),
-    # ]
-    # args += [F.col("roid"), F.col("cdsxmatch"), F.array_min("cmidPointTai")]
-    # args += [F.col("diaObject.mwebv"), F.col("redshift"), F.col("redshift_err")]
-    # args += [F.lit("elasticc_broad")]
-    # df = df.withColumn("preds_snn", snn_broad_elasticc(*args))
-
-    # mapping_snn = {
-    #     0: 11,
-    #     1: 13,
-    #     2: 12,
-    #     3: 22,
-    #     4: 21,
-    # }
-    # mapping_snn_expr = F.create_map([F.lit(x) for x in chain(*mapping_snn.items())])
-
-    # df = df.withColumn(
-    #     "snn_argmax", F.expr("array_position(preds_snn, array_max(preds_snn)) - 1")
-    # )
-    # df = df.withColumn("snn_broad_class", mapping_snn_expr[df["snn_argmax"]])
-    # df = df.withColumnRenamed("preds_snn", "snn_broad_array_prob")
+    df = df.withColumn("snnSnVsOthers_score", snn_ia_elasticc(*snn_ia_args))
 
     # CATS
+    _LOG.info("New classifier: CATS")
     cats_args = ["cmidpointMjdTai", "cpsfFlux", "cpsfFluxErr", "cband"]
     df = df.withColumn("cats_broad_array_prob", predict_nn(*cats_args))
 
     mapping_cats_general = {
-        0: 11,
-        1: 12,
-        2: 13,
-        3: 21,
-        4: 22,
+        0: 11,  # SN-like
+        1: 12,  # Fast: KN, ulens, Novae, ...
+        2: 13,  # Long: SLSN, TDE, PISN, ...
+        3: 21,  # Periodic: RRLyrae, EB, LPV, ...
+        4: 22,  # Non-periodic: AGN
     }
     mapping_cats_general_expr = F.create_map([
         F.lit(x) for x in chain(*mapping_cats_general.items())
@@ -181,23 +300,73 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
         ),
     )
-    df = df.withColumn("cats_broad_class", mapping_cats_general_expr[df["cats_argmax"]])
 
-    # # SLSN
+    # FIXME: do we want scores as well?
+    df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
+
+    # _LOG.info("New classifier: SLSN (fake)")
     # slsn_args = ["diaObject.diaObjectId"]
     # slsn_args += [F.col(i) for i in expanded]
     # slsn_args += ["diaSource.ra", "diaSource.dec"]
-    # df = df.withColumn("rf_slsn_vs_nonslsn", slsn_rubin(*slsn_args))
+    # df = df.withColumn("slsn_score", slsn_rubin(*slsn_args))
+    # df = df.withColumn("slsn_score", F.lit(0.0))
 
-    # Fake classification
-    df = df.withColumn("finkclass", F.lit("Unknown"))
+    _LOG.info("New classifier: EarlySN Ia (fake)")
+    # early_ia_args = [F.col(i) for i in expanded]
+    # df = df.withColumn(
+    #     "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    # )
+    df = df.withColumn("earlySNIa_score", F.lit(0.0))
 
-    # Drop temp columns
-    df = df.drop(*expanded)
+    # xmatch added columns
     df = df.drop(*[
         "cats_broad_array_prob",
         "cats_argmax",
     ])
+    classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
+
+    # PREDICTIONS
+    columns_pre_predictor = df.columns  # initialise columns
+    _LOG.info("New predictor: asteroids")
+    df = df.withColumn("is_sso", df["ssSource"].isNotNull())
+
+    _LOG.info("New predictor: first alert")
+    df = df.withColumn("is_first", F.size(df["prvDiaSources"]) == -1)
+
+    _LOG.info("New predictor: cataloged")
+    df = df.withColumn(
+        "is_cataloged",
+        (F.col("simbad_otype").isNotNull() & (F.col("simbad_otype") != "Fail"))
+        | (
+            F.col("vizier:I/355/gaiadr3_DR3Name").isNotNull()
+            & (F.col("vizier:I/355/gaiadr3_DR3Name") != "Fail")
+        ),
+    )
+
+    # This seems redundant with `classifiers.cat_class`, but it allows
+    # flexibility later to change our main classification
+    _LOG.info("New predictor: Main class candidate")
+    df = df.withColumn("main_label_classifier", df["cats_class"])
+
+    # This seems redundant with `crossmatch.simbad_otype`, but it allows
+    # flexibility later to change our main classification
+    _LOG.info("New predictor: Main xmatch")
+    df = df.withColumn("main_label_crossmatch", df["simbad_otype"])
+
+    prediction_struct = [i for i in df.columns if i not in columns_pre_predictor]
+
+    # Wrap into structs
+    df = df.withColumn("classifiers", F.struct(*classifier_struct))
+    df = df.drop(*classifier_struct)
+
+    df = df.withColumn("crossmatches", F.struct(*crossmatch_struct))
+    df = df.drop(*crossmatch_struct)
+
+    df = df.withColumn("predictions", F.struct(*prediction_struct))
+    df = df.drop(*prediction_struct)
+
+    # Drop temp columns
+    df = df.drop(*expanded)
 
     return df
 
