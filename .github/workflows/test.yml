@@ -70,8 +70,15 @@ jobs:
           fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
           curl -s https://codecov.io/bash | bash
         elif [ "${{ matrix.survey }}" == "rubin" ]; then
-          fink_test_rubin -c conf/rubin/fink.conf.dev --unit-tests
+          fink_test_rubin -c conf/rubin/fink.conf.dev --stream-integration --db-integration --unit-tests
         fi
+    - uses: actions/upload-artifact@v4
+      with:
+        name: logs
+        path: broker_logs
+        retention-days: 7
+        overwrite: true
+      if: always()
     - uses: act10ns/slack@v1
       with:
         status: ${{ job.status }}

@@ -27,16 +27,18 @@ import argparse
 import pyspark.sql.functions as F
 
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.common.spark_utils import ang2pix
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.parser import getargs
-from fink_broker.common.spark_utils import ang2pix
 
-from fink_broker.ztf.hbase_utils import push_to_hbase, add_row_key
-from fink_broker.ztf.hbase_utils import assign_column_family_names
+from fink_broker.ztf.hbase_utils import load_all_ztf_cols
 from fink_broker.ztf.hbase_utils import load_ztf_index_cols
 from fink_broker.ztf.hbase_utils import load_ztf_crossmatch_cols
-from fink_broker.ztf.hbase_utils import select_relevant_columns
-from fink_broker.ztf.hbase_utils import bring_to_current_schema
+from fink_broker.ztf.hbase_utils import flatten_dataframe
+
+from fink_broker.common.hbase_utils import select_relevant_columns
+from fink_broker.common.hbase_utils import push_to_hbase
+from fink_broker.common.hbase_utils import add_row_key
 
 from fink_filters.ztf.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
@@ -72,12 +74,13 @@ def main():
     # Drop partitioning columns
     data = data.drop("year").drop("month").drop("day")
 
-    # Check all columns exist, fill if necessary, and cast data
-    df_flat, cols_i, cols_d = bring_to_current_schema(data)
+    # Load all columns
+    root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
 
-    # Assign each column to a specific column family
-    # This is independent from the final structure
-    cf = assign_column_family_names(df_flat, cols_i, cols_d)
+    # Check all columns exist, fill if necessary, and cast data
+    df_flat, cols_i, cols_d, cf = flatten_dataframe(
+        data, root_level, candidates, fink_cols, fink_nested_cols
+    )
 
     # Restrict the input DataFrame to the subset of wanted columns,
     # except for tables containing uppervalid & upper limit data

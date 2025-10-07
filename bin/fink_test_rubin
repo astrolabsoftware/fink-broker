@@ -16,10 +16,17 @@
 ## Script to launch the python test suite and measure the coverage.
 ## Must be launched as fink_test
 set -e
+
+SINFO="\xF0\x9F\x9B\x88"
+SERROR="\xE2\x9D\x8C"
+SSTOP="\xF0\x9F\x9B\x91"
+SSTEP="\xF0\x9F\x96\xA7"
+SDONE="\xE2\x9C\x85"
+
 message_help="""
 Run units and integration test suites of Fink\n\n
 Usage:\n
-    \tfink_test_rubin -s <survey> [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
+    \tfink_test_rubin [--db-integration] [--unit-tests] [--stream-integration] [-h] [-c <conf>]\n\n
 
 By default, nothing is run.\n
 You can enable the database integration tests by specifying --db-integration.\n
@@ -84,12 +91,15 @@ export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 
 # TODO: change me
-export KAFKA_TOPIC="ztf_public_20200101"
-export NIGHT=20200101
+export KAFKA_TOPIC="rubin_20250412_lsst_v7.4"
+export NIGHT=20250412
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
 export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
+
+# Create folder for log & artifacts
+mkdir -p ${FINK_HOME}/broker_logs
 
 if [ -n "${SINGLE_FILE}" ]; then
     echo "single file testing..."
@@ -97,6 +107,75 @@ if [ -n "${SINGLE_FILE}" ]; then
         --source=${FINK_HOME} \
         --rcfile ${FINK_HOME}/.coveragerc $SINGLE_FILE
     exit
+fi
+
+ensure_folder_has_been_created() {
+  local path="$1"
+  if [ ! -d ${path} ]; then
+    echo -e "${SERROR} ${path} has not been created -- there might be a problem"
+    exit 1
+  else
+    echo -e "${SDONE} ${path} created as expected"
+  fi
+}
+
+# Stream integration tests
+if [[ "$WITH_STREAM" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
+
+  # Fire a stream
+  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
+
+  # Connect the service to build the raw database from the stream
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  # Connect the service to build the science database from the raw one
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  echo "Sleeping 300 seconds to enable processing to produce output..."
+  sleep 300
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
+
+  # TODO: add distribute
+  # TODO: which other checks?
+fi
+
+check_table_output() {
+  # make 101 as args
+  local tablename="$1"
+  shift
+  local number="$@"
+  output=`echo -e "count '$tablename'" | /home/libs/hbase-2.5.8/bin/hbase shell -n`
+  num_rows=$(echo "$output" | grep -o '[0-9]\+ row(s)' | grep -o '[0-9]\+')
+  if [[ $num_rows != ${number} ]]; then
+    echo -e "${SERROR} table ${tablename} has ${num_rows:-0} rows instead of ${number}"
+  else
+    echo -e "${SDONE} table ${tablename} is OK."
+  fi
+}
+
+# DB Integration tests
+if [[ "$WITH_DB" = true ]] ; then
+  # merge data
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --merge
+  ensure_folder_has_been_created $AGG_DATA_PREFIX/science
+
+  # diaSource, diaObject only
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
+
+  # pixel128, cutouts, forcedSources only
+  fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
+
+  # check HBase output
+  check_table_output "rubin.diaSource_static" 97
+  check_table_output "rubin.diaSource_sso" 5
+  check_table_output "rubin.diaObject" 97
+  check_table_output "rubin.ssObject" 4
+
+  check_table_output "rubin.cutouts" 101
+  check_table_output "rubin.pixel128" 97
+  # check_table_output "rubin.forcedSources" 99
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
