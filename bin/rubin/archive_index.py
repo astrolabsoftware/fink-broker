@@ -26,6 +26,7 @@ import sys
 import argparse
 
 import pyspark.sql.functions as F
+from pyspark.sql import Window
 
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.spark_utils import ang2pix
@@ -91,8 +92,16 @@ def main():
                 ang2pix(df["diaSource.ra"], df["diaSource.dec"], F.lit(nside)),
             )
 
+            # Keep only the last alert per object
+            w = Window.partitionBy("{}.{}".format("diaObject", "diaObjectId"))
+            df_dedup = (
+                df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+                .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
+                .drop("maxMjd")
+            )
+
             ingest_section(
-                df,
+                df_dedup,
                 major_version,
                 minor_version,
                 index_row_key_name,
