@@ -44,6 +44,10 @@ while [ "$#" -gt 0 ]; do
       DISTRIBUTE_ONLY=true
       shift 1
       ;;
+    --check_offsets)
+      CHECK_OFFSET=true
+      shift 1
+      ;;
     -night)
       NIGHT="$2"
       shift 2
@@ -76,6 +80,7 @@ Options:
   --poll_only       If specified, only poll incoming stream. [NOT AVAILABLE YET]
   --enrich_only     If specified, only enrich polled data.
   --distribute_only If specified, only distribute enriched data.
+  --check_offset    If specified, check offsets and exit (compatible only with --poll_only)
 
 Examples:
   # Launch full Fink until 20:00 today Paris time
@@ -83,6 +88,9 @@ Examples:
 
   # It is 14:00 Paris. Poll only for 1 hour
   ./launch_stream.sh --poll_only -stop_at 15:00 today
+
+  # Check Kafka offsets
+  ./launch_stream.sh --poll_only --check_offsets
 
   # Extract science until the end of the night
   ./launch_stream.sh --enrich_only
@@ -93,6 +101,22 @@ Examples:
   # 8:00 AM. Reprocess entirely another night in a couple of hours
   ./launch_stream.sh -night 20241231 -stop_at 10:00 today
 "
+
+run_hdfs_or_local() {
+    local action="$1"
+    shift
+    local args="$@"
+
+    # Determine the command prefix based on the availability of hdfs
+    if command -v hdfs &> /dev/null; then
+        co="hdfs dfs -"
+    else
+        co=""
+    fi
+
+    # Execute the command
+    ${co}${action} ${args}
+}
 
 
 if [[ ${HELP_ON_SERVICE} == "-h" ]]; then
@@ -113,6 +137,7 @@ else
   echo -e "${SINFO} Reading default Fink conf from " ${FINK_HOME}/conf/rubin/fink.conf.prod
   conf=${FINK_HOME}/conf/rubin/fink.conf.prod
 fi
+source $conf
 
 if [[ ! ${STOP_AT} ]]; then
   echo -e "${SINFO} No ending time specified, stopping at 20:00 today Paris time."
@@ -121,8 +146,19 @@ fi
 
 # stream2raw
 if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
-    echo "Not implemented yet"
-    exit 1
+  # Force fetch schema
+  ${FINK_HOME}/bin/fink start fetch_schema -s rubin -c ${conf}
+
+  if [[ ${CHECK_OFFSET} == true ]]; then
+    CHECK_OFFSET="--check_offsets"
+  fi
+
+  nohup fink start stream2raw \
+    -s rubin \
+    -c ${conf} \
+    -conf_stream2raw ${FINK_HOME}/conf/rubin/fink.conf.stream2raw \
+    -night ${NIGHT} \
+    -stop_at "`date +'%Y-%m-%d %H:%M' -d "${STOP_AT}"`" ${CHECK_OFFSET} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
 fi
 
 # raw2science
@@ -130,10 +166,11 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
     echo -e "${SINFO} Launching raw2science"
     while : ; do
         # check folder exist
-        $(hdfs dfs -test -d /user/fink/online/raw/${NIGHT})
+        run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
         if [[ $? == 0 ]]; then
             # check folder is not empty
-            isEmpty=$(hdfs dfs -count /user/fink/online/raw/${NIGHT} | awk '{print $2}')
+            result=$(run_hdfs_or_local "du" ${ONLINE_DATA_PREFIX}/raw/${NIGHT})
+            isEmpty=$(echo $result | awk '{print $1}')
             if [[ $isEmpty > 0 ]]; then
                 echo -e "${SINFO} Data detected."
                 echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
@@ -148,7 +185,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
                     -s rubin \
                     -c ${conf} \
                     -driver-memory 4g -executor-memory 2g \
-                    -spark-cores-max 80 -spark-executor-cores 1 \
+                    -spark-cores-max 48 -spark-executor-cores 1 \
                     -night ${NIGHT} \
                     -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
                 break
@@ -165,10 +202,11 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
     echo -e "${SINFO} Launching distribution"
     while true; do
         # check folder exist
-        $(hdfs dfs -test -d /user/fink/online/science/${NIGHT})
+        run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
         if [[ $? == 0 ]]; then
             # check folder is not empty
-            isEmpty=$(hdfs dfs -count /user/fink/online/science/${NIGHT} | awk '{print $2}')
+            result=$(run_hdfs_or_local "du" ${ONLINE_DATA_PREFIX}/science/${NIGHT})
+            isEmpty=$(echo $result | awk '{print $1}')
             if [[ $isEmpty > 0 ]]; then
                 echo -e "${SINFO} Data detected."
                 echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."

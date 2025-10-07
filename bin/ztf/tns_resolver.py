@@ -15,37 +15,15 @@
 # limitations under the License.
 import pyspark.sql.functions as F
 
-import pandas as pd
 import argparse
 import os
 
 from fink_tns.utils import download_catalog
 from fink_broker.common.spark_utils import init_sparksession
-from fink_broker.ztf.hbase_utils import add_row_key, push_to_hbase
+from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs
-
-
-def format_tns_for_hbase(pdf: pd.DataFrame) -> pd.DataFrame:
-    """Format the raw TNS data for HBase ingestion"""
-    # Add new or rename columns
-    pdf["fullname"] = pdf["name_prefix"] + " " + pdf["name"]
-    pdf["internalname"] = pdf["internal_names"]
-
-    # Apply quality cuts
-    mask = pdf["internalname"].apply(lambda x: (x is not None) and (x == x))  # NOSONAR
-    pdf_val = pdf[mask]
-    pdf_val["type"] = pdf_val["type"].astype("str")
-
-    pdf_val["internalname"] = pdf_val["internalname"].apply(
-        lambda x: [i.strip() for i in x.split(",")]
-    )
-
-    pdf_explode = pdf_val.explode("internalname")
-
-    # Select columns of interest -- and create a Spark DataFrame
-    cols = ["fullname", "ra", "declination", "type", "redshift", "internalname"]
-
-    return pdf_explode[cols]
+from fink_broker.common.hbase_utils import format_tns_for_hbase
+from fink_broker.common.spark_utils import save_tns_parquet_on_disk
 
 
 def main():
@@ -86,15 +64,7 @@ def main():
         catfolder=args.science_db_catalogs,
     )
 
-    # Save raw data
-    pdf_tns.to_parquet("{}/tns_raw.parquet".format(args.tns_raw_output))
-
-    # Filter TNS confirmed data
-    f1 = ~pdf_tns["type"].isna()
-    pdf_tns_filt = pdf_tns[f1]
-    pdf_tns_filt["type"] = pdf_tns_filt["type"].apply(lambda x: "(TNS) {}".format(x))
-
-    pdf_tns_filt.to_parquet("{}/tns.parquet".format(args.tns_raw_output))
+    save_tns_parquet_on_disk(pdf_tns, args.tns_raw_output)
 
 
 if __name__ == "__main__":

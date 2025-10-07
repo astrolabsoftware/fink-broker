@@ -30,7 +30,7 @@ SECURED_KAFKA_CONFIG=''
 
 # If set to false, it will assume the fink_broker is in your PYTHONPATH
 # otherwise it will package it, and send it to the executors.
-DEPLOY_FINK_PYTHON=false
+DEPLOY_FINK_PYTHON=true
 
 # If set to false, it will take the fink jars under $FINK_HOME/libs
 # otherwise the Scala sources will be recompiled and send to executors.
@@ -46,5 +46,6 @@ org.apache.spark:spark-avro_2.12:3.4.1,\
 org.apache.hbase:hbase-shaded-mapreduce:2.2.7
 
 # Other dependencies (incl. Scala part of Fink)
-FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar,\
-${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_hadoop3.3.6.jar
+FINK_JARS=${FINK_HOME}/libs/hbase-spark-hbase2.5.8_spark3.4.3_scala2.12.0_hadoop3.3.6.jar,\
+${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.5.8_spark3.4.3_scala2.12.0_hadoop3.3.6.jar
+

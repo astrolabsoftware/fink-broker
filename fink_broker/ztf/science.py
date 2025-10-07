@@ -24,8 +24,6 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_broker.common.science import apply_all_xmatch
-
 from fink_science.ztf.random_forest_snia.processor import rfscore_sigmoid_full
 
 from fink_science.ztf.snn.processor import snn_ia
@@ -39,6 +37,11 @@ from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
 from fink_science.ztf.transient_features.processor import extract_transient_features
 from fink_science.ztf.superluminous.processor import superluminous_score
 
+from fink_science.ztf.xmatch.processor import xmatch_cds
+from fink_science.ztf.xmatch.processor import xmatch_tns
+from fink_science.ztf.xmatch.processor import crossmatch_other_catalog
+from fink_science.ztf.xmatch.processor import crossmatch_mangrove
+
 from fink_science.ztf.fast_transient_rate.processor import magnitude_rate
 from fink_science.ztf.fast_transient_rate import rate_module_output_schema
 
@@ -49,6 +52,149 @@ from fink_science.ztf.standardized_flux.processor import standardized_flux
 # Local non-exported definitions --
 # ---------------------------------
 _LOG = logging.getLogger(__name__)
+
+
+def apply_all_xmatch(df, tns_raw_output):
+    """Apply all xmatch to a DataFrame
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Spark DataFrame containing alert data
+    tns_raw_output: str
+        If provided, local path to the TNS catalog.
+
+    Returns
+    -------
+    out: Spark DataFrame
+
+    Examples
+    --------
+    >>> from fink_broker.common.spark_utils import load_parquet_files
+    >>> df = load_parquet_files(ztf_alert_sample)
+    >>> df = apply_all_xmatch(df, tns_raw_output="")
+
+    # apply_science_modules is lazy, so trigger the computation
+    >>> an_alert = df.take(1)
+    """
+    alert_id = "candidate.candid"
+    ra = "candidate.ra"
+    dec = "candidate.dec"
+
+    _LOG.info("New processor: cdsxmatch")
+    df = xmatch_cds(df)
+
+    _LOG.info("New processor: TNS")
+    df = xmatch_tns(df, tns_raw_output=tns_raw_output)
+
+    _LOG.info("New processor: Gaia main xmatch (1.0 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname="vizier:I/355/gaiadr3",
+        cols_out=["DR3Name", "Plx", "e_Plx", "VarFlag"],
+        types=["string", "float", "float", "string"],
+    )
+
+    # VarFlag is a string. Make it integer
+    # 0=NOT_AVAILABLE
+    # 1=VARIABLE
+    df = df.withColumn(
+        "gaiaVarFlag", F.when(df["VarFlag"] == "VARIABLE", 1).otherwise(0)
+    )
+    df = df.drop("VarFlag")
+
+    _LOG.info("New processor: Gaia var xmatch (1.0 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1,
+        catalogname="vizier:I/358/vclassre",
+        cols_out=["Class"],
+        types=["string"],
+    )
+
+    df = df.withColumnRenamed("Class", "gaiaClass")
+
+    _LOG.info("New processor: VSX (1.5 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:B/vsx/vsx",
+        distmaxarcsec=1.5,
+        cols_out=["Type"],
+        types=["string"],
+    )
+    # legacy -- rename `Type` into `vsx`
+    # see https://github.com/astrolabsoftware/fink-broker/issues/787
+    df = df.withColumnRenamed("Type", "vsx")
+
+    _LOG.info("New processor: SPICY (1.2 arcsec)")
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:J/ApJS/254/33/table1",
+        distmaxarcsec=1.2,
+        cols_out=["SPICY", "class"],
+        types=["int", "string"],
+    )
+    # rename `SPICY` into `spicy_id`. Values are number or null
+    df = df.withColumnRenamed("SPICY", "spicy_id")
+    # Cast null into -1
+    df = df.withColumn(
+        "spicy_id", F.when(df["spicy_id"].isNull(), F.lit(-1)).otherwise(df["spicy_id"])
+    )
+
+    # rename `class` into `spicy_class`. Values are:
+    # Unknown, FS, ClassI, ClassII, ClassIII, or 'nan'
+    df = df.withColumnRenamed("class", "spicy_class")
+    # Make 'nan' 'Unknown'
+    df = df.withColumn(
+        "spicy_class",
+        F.when(df["spicy_class"] == "nan", F.lit("Unknown")).otherwise(
+            df["spicy_class"]
+        ),
+    )
+
+    _LOG.info("New processor: GCVS (1.5 arcsec)")
+    df = df.withColumn(
+        "gcvs",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("gcvs"),
+        ),
+    )
+
+    _LOG.info("New processor: 3HSP (1 arcmin)")
+    df = df.withColumn(
+        "x3hsp",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("3hsp"),
+            F.lit(60.0),
+        ),
+    )
+
+    _LOG.info("New processor: 4LAC (1 arcmin)")
+    df = df.withColumn(
+        "x4lac",
+        crossmatch_other_catalog(
+            df[alert_id],
+            df[ra],
+            df[dec],
+            F.lit("4lac"),
+            F.lit(60.0),
+        ),
+    )
+
+    _LOG.info("New processor: Mangrove (1 acrmin)")
+    df = df.withColumn(
+        "mangrove",
+        crossmatch_mangrove(df[alert_id], df[ra], df[dec], F.lit(60.0)),
+    )
+
+    return df
 
 
 def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
@@ -105,7 +251,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         df = concat_col(df, colname, prefix=prefix)
     expanded = [prefix + i for i in to_expand]
 
-    df = apply_all_xmatch(df, tns_raw_output, survey="ztf")
+    df = apply_all_xmatch(df, tns_raw_output)
 
     # Apply level one processor: asteroids
     _LOG.info("New processor: asteroids")

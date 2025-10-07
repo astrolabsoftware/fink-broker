@@ -123,12 +123,38 @@ fink_db -s ztf --index_tables         # Push data to HBase index tables
 fink_db -s ztf --clean_night          # Clean temp files for the next night
 "
 
+check_hdfs_is_available() {
+  if command -v hdfs &> /dev/null; then
+    echo -e "${SINFO} HDFS is available"
+  else
+    echo -e "${SINFO} HDFS is not available, using local filesystem"
+  fi
+}
+
+run_hdfs_or_local() {
+    local action="$1"
+    shift
+    local args="$@"
+
+    # Determine the command prefix based on the availability of hdfs
+    if command -v hdfs &> /dev/null; then
+        co="hdfs dfs -"
+    else
+        co=""
+    fi
+
+    # Execute the command
+    ${co}${action} ${args}
+}
+
+
+
 if [[ $service == "" ]] && [[ ${HELP_ON_SERVICE} == "-h" ]]; then
   echo -e "$__usage"
   exit 0
 fi
 
-hdfs version >/dev/null 2>&1 || { echo -e >&2 "${SERROR} hdfs is not found. Aborting."; exit 1; }
+check_hdfs_is_available
 
 if [[ $SURVEY == "" ]]; then
   echo -e "${SERROR} You need to specify a survey, e.g. fink -s ztf [options]"
@@ -140,6 +166,10 @@ if [[ ! $NIGHT ]]; then
   NIGHT=`date +"%Y%m%d"`
 fi
 echo -e "${SINFO} Processing night ${NIGHT} for survey ${SURVEY}"
+
+YEAR=${NIGHT:0:4}
+MONTH=${NIGHT:4:2}
+DAY=${NIGHT:6:2}
 
 # Check if the conf file exists
 if [[ -f $conf ]]; then
@@ -153,7 +183,7 @@ source $conf
 
 # Merge streaming data
 if [[ ${MERGE} == true ]]; then
-  $(hdfs dfs -test -d ${ONLINE_DATA_PREFIX}/science/${NIGHT})
+  run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
   if [[ $? == 0 ]]; then
     echo -e "${SSTEP} Merge"
     # if nothing specified, get default
@@ -162,8 +192,16 @@ if [[ ${MERGE} == true ]]; then
     else
       RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
     fi
-    echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
-    fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
+
+    if [[ ${SURVEY} == "ztf" ]]; then
+      # ZTF requires Spark to aggregate data
+      echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+      fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
+    elif [[ ${SURVEY} == "rubin" ]]; then
+      # Rubin is just a move to another place
+      run_hdfs_or_local "mkdir -p" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+      run_hdfs_or_local "mv" ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
+    fi
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
     echo -e "${SSTOP} Merging aborted..."
@@ -172,16 +210,17 @@ if [[ ${MERGE} == true ]]; then
 fi
 
 if [[ ! ${DRIVER_MEMORY} ]]; then
-  RESOURCES="-driver-memory 4g -executor-memory 4g -spark-cores-max 9 -spark-executor-cores 1"
+  if [[ ${SURVEY} == "ztf" ]]; then
+    RESOURCES="-driver-memory 4g -executor-memory 2g -spark-cores-max 9 -spark-executor-cores 1"
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    RESOURCES="-driver-memory 4g -executor-memory 2g -spark-cores-max 20 -spark-executor-cores 1"
+  fi
 else
   RESOURCES="-driver-memory ${DRIVER_MEMORY} -executor-memory ${EXECUTOR_MEMORY} -spark-cores-max ${SPARK_CORE_MAX} -spark-executor-cores ${SPARK_EXECUTOR_CORES}"
 fi
-YEAR=${NIGHT:0:4}
-MONTH=${NIGHT:4:2}
-DAY=${NIGHT:6:2}
 
 # Aggregated data is available
-$(hdfs dfs -test -d ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY})
+run_hdfs_or_local "test -d" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
 HAS_DATA=$?
 
 if [[ ${MAIN_TABLE} == true ]]; then
@@ -189,6 +228,10 @@ if [[ ${MAIN_TABLE} == true ]]; then
     echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
     echo -e "${SSTEP} Science archival"
     fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
+    if [[ $? != 0 ]]; then
+      echo -e "${SERROR} when archiving science. Check local logs or artifacts on the CI."
+      exit 1
+    fi
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo -e "${SERROR} Did you run --merge before?"
@@ -200,61 +243,77 @@ fi
 if [[ ${INDEX_TABLES} == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
     echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
+    if [[ ${SURVEY} == "ztf" ]]; then
+      echo -e "${SSTEP} 1/15: Download latest TNS data"
+      fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 1: Download latest TNS data"
-    fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 2/15: images_archival"
+      fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 2: images_archival"
-    fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 3/15: Update index tables"
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 3/15: Update index tables"
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_jdstarthist_objectId > ${FINK_HOME}/broker_logs/index_pixel128_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table class_jd_objectId > ${FINK_HOME}/broker_logs/index_class_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table upper_objectId_jd > ${FINK_HOME}/broker_logs/index_upper_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table ssnamenr_jd > ${FINK_HOME}/broker_logs/index_ssnamenr_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table uppervalid_objectId_jd > ${FINK_HOME}/broker_logs/index_uppervalid_objectId_jd_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
-    fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 4/15: Push TNS candidates"
+      fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 4: Push TNS candidates"
-    fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 5/15: Push Anomaly candidates"
+      fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 5: Push Anomaly candidates"
-    fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 6/15: Push Active Learning loop candidates"
+      fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 6: Push Active Learning loop candidates"
-    fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 7/15: Push Hostless candidates"
+      fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 7: Push Hostless candidates"
-    fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 8/15: Send Dwarf AGN candidates"
+      fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 8: Send Dwarf AGN candidates"
-    fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 9/15: Send Symbiotic and CV stars"
+      fink start archive_symbiotic_and_cv_stars -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_symbiotic_and_cv_stars_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 9: Send Symbiotic and CV stars"
-    fink start archive_symbiotic_and_cv_stars -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_symbiotic_and_cv_stars_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 10: Send SLSN candidates"
+      fink start archive_slsn_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_slsn_candidates_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 10: Send SLSN candidates"
-    fink start archive_slsn_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_slsn_candidates_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 10/15: Send Known TDE candidates"
+      fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 11: Send Known TDE candidates"
-    fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 11/15: Push low state blazar candidates"
+      fink start archive_low_state_blazar -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_low_state_blazar_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 12: Push low state blazar candidates"
-    fink start archive_low_state_blazar -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_low_state_blazar_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e " ${SSTEP} 12/15: Update statistics"
+      fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 13: Update statistics"
-    fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 13/15: Call to Fink-Fat"
+      fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
+      fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 14: Call to Fink-Fat"
-    fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
-    fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 14/15: Push SSO candidates to HBase"
+      fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 15: Push SSO candidates to HBase"
-    fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 15/15: Push early TDE candidates to HBase"
+      fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_early_tde_candidates_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 16: Push SSO candidates to HBase"
-    fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_early_tde_candidates_${SURVEY}_${NIGHT}.log 2>&1
+    elif [[ ${SURVEY} == "rubin" ]]; then
+      echo -e "${SSTEP} 1/15: Download latest TNS data"
+      fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
+
+      fink start sso_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/sso_resolver_${SURVEY}_${NIGHT}.log 2>&1
+
+      echo -e "${SSTEP} 1: images_archival"
+      fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
+
+      echo -e "${SSTEP} 2: Update index tables"
+      # for v8 we should change the rowkey to pixel128_firstDiaSourceMjdTai_diaObjectId
+      # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_firstDiaSourceMjdTai_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_firstDiaSourceMjdTai_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
+      # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table forcedSources_diaObjectId_midpointMjdTai > ${FINK_HOME}/broker_logs/index_forcedSources_diaObjectId_midpointMjdTai_${SURVEY}_${NIGHT}.log 2>&1
+    fi
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo -e "${SERROR} Did you run --merge before?"
@@ -267,8 +326,8 @@ if [[ $DELETE_MERGE == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
     echo -e "${SINFO} Deleting merged files on HDFS..."
     # If merge went wrong -- clean
-    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
-    hdfs dfs -rm -r ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+    run_hdfs_or_local "rm -r" ${AGG_DATA_PREFIX}/raw/year=${YEAR}/month=${MONTH}/day=${DAY}
+    run_hdfs_or_local "rm -r" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
     echo -e "${SSTOP} Nothing to delete"
@@ -281,18 +340,18 @@ if [[ ${CLEAN_NIGHT} == true ]]; then
   if [[ $HAS_DATA == 0 ]]; then
     echo -e "${SINFO} Cleaning temporary files on HDFS..."
     # Remove data path
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/raw/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
 
     # Remove checkpoints
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
-    hdfs dfs -rm -r ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/raw_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/science_checkpoint/${NIGHT}
+    run_hdfs_or_local "rm -r" ${ONLINE_DATA_PREFIX}/kafka_checkpoint/${NIGHT}
 
     # Remove checkpoints for fink-mm
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
-    hdfs dfs -rm -r /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/online/_spark_metadata
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/online_checkpoint
+    run_hdfs_or_local "rm -r" /user/julien.peloton/fink_mm/gcn_x_ztf/mm_distribute_checkpoint
 
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
