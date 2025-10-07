@@ -201,10 +201,10 @@ if [[ ${INDEX_TABLES} == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
     echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
 
-    echo -e "${SSTEP} 1/15: Download latest TNS data"
+    echo -e "${SSTEP} 1: Download latest TNS data"
     fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 2/15: images_archival"
+    echo -e "${SSTEP} 2: images_archival"
     fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
 
     echo -e "${SSTEP} 3/15: Update index tables"
@@ -216,41 +216,44 @@ if [[ ${INDEX_TABLES} == true ]]; then
     fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tracklet_objectId > ${FINK_HOME}/broker_logs/index_tracklet_objectId_${SURVEY}_${NIGHT}.log 2>&1
     fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table tns_jd_objectId > ${FINK_HOME}/broker_logs/index_tns_jd_objectId_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 4/15: Push TNS candidates"
+    echo -e "${SSTEP} 4: Push TNS candidates"
     fink start push_to_tns -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/push_to_tns_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 5/15: Push Anomaly candidates"
+    echo -e "${SSTEP} 5: Push Anomaly candidates"
     fink start archive_anomaly -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_anomaly_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 6/15: Push Active Learning loop candidates"
+    echo -e "${SSTEP} 6: Push Active Learning loop candidates"
     fink start archive_ia_active_learning -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_ia_active_learning_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 7/15: Push Hostless candidates"
+    echo -e "${SSTEP} 7: Push Hostless candidates"
     fink start archive_hostless -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_hostless_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 8/15: Send Dwarf AGN candidates"
+    echo -e "${SSTEP} 8: Send Dwarf AGN candidates"
     fink start archive_dwarf_agn -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_dwarf_agn_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 9/15: Send Symbiotic and CV stars"
+    echo -e "${SSTEP} 9: Send Symbiotic and CV stars"
     fink start archive_symbiotic_and_cv_stars -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_symbiotic_and_cv_stars_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 10/15: Send Known TDE candidates"
+    echo -e "${SSTEP} 10: Send SLSN candidates"
+    fink start archive_slsn_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_slsn_candidates_${SURVEY}_${NIGHT}.log 2>&1
+
+    echo -e "${SSTEP} 11: Send Known TDE candidates"
     fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 11/15: Push low state blazar candidates"
+    echo -e "${SSTEP} 12: Push low state blazar candidates"
     fink start archive_low_state_blazar -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_low_state_blazar_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e " ${SSTEP} 12/15: Update statistics"
+    echo -e "${SSTEP} 13: Update statistics"
     fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 13/15: Call to Fink-Fat"
+    echo -e "${SSTEP} 14: Call to Fink-Fat"
     fink_fat associations candidates --config $FINK_HOME/conf/fink_fat.conf --night ${YEAR}-${MONTH}-${DAY} --verbose > ${FINK_HOME}/broker_logs/fink_fat_association_${NIGHT}.log 2>&1
     fink_fat solve_orbit candidates local --config $FINK_HOME/conf/fink_fat.conf --verbose > ${FINK_HOME}/broker_logs/fink_fat_solve_orbit_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 14/15: Push SSO candidates to HBase"
+    echo -e "${SSTEP} 15: Push SSO candidates to HBase"
     fink start archive_sso_cand -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_sso_cand_${SURVEY}_${NIGHT}.log 2>&1
 
-    echo -e "${SSTEP} 14/15: Push SSO candidates to HBase"
+    echo -e "${SSTEP} 16: Push SSO candidates to HBase"
     fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_early_tde_candidates_${SURVEY}_${NIGHT}.log 2>&1
   else
     echo -e "${SERROR} No data at ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}"
