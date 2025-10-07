@@ -1,14 +1,3 @@
-image:
-  name: fink-broker
-
-# Can be overriden in stream2raw, raw2science and distribution sections
-cores: 1
-coreRequest: 0
-instances: 1
-# instances: 1
-
-fink_trigger_update: "2"
-
 # Can be overriden using --image option
 
 # Default to s3a://<s3.bucket>
@@ -21,10 +10,6 @@ log_level: INFO
 # Parameters used to run the stream2raw task
 #
 stream2raw:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
   kafka:
     topic: ztf_public_20200101
 
@@ -41,11 +26,7 @@ raw2science:
 # Parameters used to run the distribution task
 #
 distribution:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
   memory: "2000m"
-  # Only for executor
-  memoryOverhead: "1000m"
-  instances: "2"
-  instances: "{{.Values.instances}}"
+  executor:
+    memoryOverhead: "1000m"
 

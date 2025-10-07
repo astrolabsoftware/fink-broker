@@ -1,44 +1,13 @@
 image:
   name: fink-broker-noscience
 
-# Can be overriden in stream2raw, raw2science and distribution sections
-cores: 1
-coreRequest: 0
-instances: 1
-# instances: 1
-
-fink_trigger_update: "2"
-
-producer: ztf
-
-log_level: INFO
+log_level: DEBUG
 
 #
 # Parameters used to run the stream2raw task
 #
 stream2raw:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
   kafka:
     topic: ztf_public_20200101
 
-#
-# Parameters used to run the raw2science task
-#
-raw2science:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
-
-#
-# Parameters used to run the distribution task
-#
-distribution:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
 

@@ -14,7 +14,6 @@ cores: 1
 coreRequest: 0
 instances: 1
 memory: "1000m"
-# instances: 1
 
 fink_trigger_update: "2"
 
@@ -43,7 +42,6 @@ stream2raw:
     in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest
     topic: "ztf_public_{{.Values.night}}"
-
 #
 # Parameters used to run the raw2science task
 #
@@ -60,7 +58,8 @@ distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
   memory: "{{.Values.memory}}"
-  memoryOverhead: ""
+  executor:
+    memoryOverhead: ""
   instances: "{{.Values.instances}}"
   kafka:
     out_sockets: "kafka-cluster-kafka-external-bootstrap.kafka:9094"
