@@ -23,7 +23,6 @@
 set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-PROJECT_DIR=$(dirname "$DIR")
 
 usage() {
   cat << EOD
@@ -69,7 +68,7 @@ then
 fi
 
 ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
-. "$PROJECT_DIR/.ciux.d/ciux_build.sh"
+. "$DIR/.ciux.d/ciux_build.sh"
 
 if [[ $suffix =~ ^noscience* ]]; then
     target="noscience"
