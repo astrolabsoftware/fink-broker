@@ -277,6 +277,9 @@ if [[ ${INDEX_TABLES} == true ]]; then
       echo -e "${SSTEP} 9/15: Send Symbiotic and CV stars"
       fink start archive_symbiotic_and_cv_stars -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_symbiotic_and_cv_stars_${SURVEY}_${NIGHT}.log 2>&1
 
+      echo -e "${SSTEP} 10: Send SLSN candidates"
+      fink start archive_slsn_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_slsn_candidates_${SURVEY}_${NIGHT}.log 2>&1
+
       echo -e "${SSTEP} 10/15: Send Known TDE candidates"
       fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 

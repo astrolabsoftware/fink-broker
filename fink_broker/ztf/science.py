@@ -34,6 +34,8 @@ from fink_science.ztf.kilonova.processor import knscore
 from fink_science.ztf.ad_features.processor import extract_features_ad
 from fink_science.ztf.anomaly_detection.processor import anomaly_score
 from fink_science.ztf.anomaly_detection.processor import ANOMALY_MODELS
+from fink_science.ztf.transient_features.processor import extract_transient_features
+from fink_science.ztf.superluminous.processor import superluminous_score
 
 from fink_science.ztf.xmatch.processor import xmatch_cds
 from fink_science.ztf.xmatch.processor import xmatch_tns
@@ -389,6 +391,34 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     # Clean temporary container
     df = df.drop("container")
+
+    _LOG.info("New processor: transient features")
+    cols_before = df.columns
+    df = extract_transient_features(df)
+    extra_cols = [i for i in df.columns if i not in cols_before]
+
+    df = df.withColumn(
+        "is_transient",
+        ~df["faint"]
+        & df["positivesubtraction"]
+        & df["real"]
+        & ~df["pointunderneath"]
+        & ~df["brightstar"]
+        & ~df["variablesource"]
+        & df["stationary"]
+        & (F.col("roid") == 0),
+    )
+
+    # Drop intermediate columns
+    df = df.drop(*extra_cols)
+
+    _LOG.info("New processor: SLSN")
+
+    # Perform the fit + classification (default model)
+    args = ["is_transient", "objectId", "candidate.jdstarthist"]
+    args += ["cjd", "cfid", "cmagpsf", "csigmapsf"]
+
+    df = df.withColumn("slsn_score", superluminous_score(*args))
 
     # Drop temp columns
     df = df.drop(*expanded)
