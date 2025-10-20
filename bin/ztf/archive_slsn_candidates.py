@@ -50,7 +50,9 @@ EQU: {row.ra},   {row.dec}"""
 
     t3 = f"Score: {round(row.slsn_score, 3)}"
     t4 = f"Classification: {row.classification}"
-    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId, slack_token_env=slack_token_env)
+    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
+        row.objectId, slack_token_env=slack_token_env
+    )
     curve.seek(0)
     cutout.seek(0)
     cutout_perml = f"<{cutout_perml}|{' '}>"
@@ -130,7 +132,9 @@ def main():
         for _, row in pdf.iterrows():
             append_slack_messages(slack_data, row, slack_token_env)
 
-        msg_handler_slack(slack_data, channel, init_msg, slack_token_env=slack_token_env)
+        msg_handler_slack(
+            slack_data, channel, init_msg, slack_token_env=slack_token_env
+        )
 
 
 if __name__ == "__main__":
