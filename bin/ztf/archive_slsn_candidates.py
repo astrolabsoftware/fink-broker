@@ -30,7 +30,7 @@ from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
 )
 
 
-def append_slack_messages(slack_data: list, row: dict) -> None:
+def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> None:
     """Append messages to list for Slack distribution.
 
     Parameters
@@ -41,6 +41,8 @@ def append_slack_messages(slack_data: list, row: dict) -> None:
     row: dict
         Pandas DataFrame row as dictionary. Contains
         Fink data.
+    slack_token_env: str
+        Environment variable that has the Slack bot token
     """
     t1 = f"ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
     t2 = f"""
@@ -48,7 +50,9 @@ EQU: {row.ra},   {row.dec}"""
 
     t3 = f"Score: {round(row.slsn_score, 3)}"
     t4 = f"Classification: {row.classification}"
-    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(row.objectId)
+    cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
+        row.objectId, slack_token_env=slack_token_env
+    )
     curve.seek(0)
     cutout.seek(0)
     cutout_perml = f"<{cutout_perml}|{' '}>"
@@ -121,11 +125,16 @@ def main():
     init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
     print(init_msg)
 
-    slack_data = []
-    for _, row in pdf.iterrows():
-        append_slack_messages(slack_data, row)
+    envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
+    channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
+    for slack_token_env, channel in zip(envs, channels):
+        slack_data = []
+        for _, row in pdf.iterrows():
+            append_slack_messages(slack_data, row, slack_token_env)
 
-    msg_handler_slack(slack_data, "#bot_slsn", init_msg)
+        msg_handler_slack(
+            slack_data, channel, init_msg, slack_token_env=slack_token_env
+        )
 
 
 if __name__ == "__main__":
