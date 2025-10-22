@@ -44,19 +44,18 @@ def main():
 
     logger.debug("Initialise Spark session")
     init_sparksession(
-        name="generate_test_data_{}_{}".format(args.producer, args.night),
+        name="generate_test_data_{}".format(args.producer),
         shuffle_partitions=10,
         log_level=args.spark_log_level,
     )
 
-    # data paths
-    path = "{}/{}/year={}/month={}/day={}".format(
-        args.agg_data_prefix, "{}", args.night[:4], args.night[4:6], args.night[6:8]
-    )
+    # data path is fixed to irst week of September 2025
+    basepath = "{}/{}/year=2025/month=09".format(args.agg_data_prefix, "{}")
+    paths = [basepath + "/day={:02d}".format(day) for day in range(1, 8)]
 
     logger.debug("Connect to the TMP science database")
-    df = load_parquet_files(path.format("science"))
-    df_raw_cols = load_parquet_files(path.format("raw")).columns
+    df = load_parquet_files([path.format("science") for path in paths])
+    df_raw_cols = load_parquet_files([path.format("raw") for path in paths]).columns
 
     logger.debug("Retrieve time-series information")
     to_expand = [
