@@ -30,5 +30,5 @@ echo "Step 3: Transfer the compressed folder to all machines"
 pscp.pssh -p 12 -h "${HOSTFILE}" ${ARCHIVE_NAME} ${REMOTE_FOLDER_BASE}
 
 echo "Step 4: Decompress the folder on all machines"
-pssh -p 12 -t 100000000 -h "${HOSTFILE}" "tar -xzf ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME} -C ${REMOTE_FOLDER} && rm ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}"
+pssh -p 12 -t 100000000 -h "${HOSTFILE}" "tar -xzf ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME} -C ${REMOTE_FOLDER_BASE} && rm ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}"
 
