@@ -21,7 +21,7 @@ UIDD=$9
 ENCODED_NAME="${NAME// /%20}"
 
 # resolve the name
-response=$(curl "https://api.ssodnet.imcce.fr/quaero/1/sso/search?q=${ENCODED_NAME}&type=Asteroid")
+response=$(curl "https://api.ssodnet.imcce.fr/quaero/1/sso?q=${ENCODED_NAME}&type=Asteroid")
 
 # Use jq to extract the id
 id=$(echo "$response" | jq -r '.data[0].id')
