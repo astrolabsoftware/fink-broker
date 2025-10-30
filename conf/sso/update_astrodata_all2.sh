@@ -4,7 +4,7 @@
 FOLDER_TO_COMPRESS="/spark_mongo_tmp/julien.peloton/astrodata" 
 
 # File containing the list of hosts
-HOSTFILE="../ztf/spark_ips"
+HOSTFILE="../ztf/spark_ips_nomaster"
 
 # Folder on remotes where to decompress
 REMOTE_FOLDER="/spark-dir/astrodata"
