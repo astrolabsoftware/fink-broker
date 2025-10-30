@@ -17,11 +17,20 @@ IOFILE=$7
 RAMPATH=$8
 UIDD=$9
 
+# resolve the name
+response=$(curl https://api.ssodnet.imcce.fr/quaero/1/sso/search?q=$NAME)
+
+# Use jq to extract the id
+id=$(echo "$response" | jq -r '.data[0].id')
+
+# Print the id
+echo "$id"
+
 # For the epehe
 $EPHEMCC4/ephemcc4.4 \
     -u $USERCONF \
     --iofile $IOFILE \
-    -t ssocard:$NAME \
+    -t ssocard:$id \
     -tp $RPLANE \
     -tc $TCOOR \
     -c 3 \
