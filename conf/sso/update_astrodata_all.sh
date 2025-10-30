@@ -1,4 +1,7 @@
 #!/bin/bash
+set -e
+
+WORKDIR=$PWD
 
 # Folder to compress on Master
 FOLDER_TO_COMPRESS="/spark_mongo_tmp/julien.peloton/astrodata" 
@@ -13,8 +16,20 @@ REMOTE_FOLDER="${REMOTE_FOLDER_BASE}/astrodata"
 ARCHIVE_NAME="astrodata_compressed.tar.gz"
 
 # Backup name with date
-CURRENT_DATE=$(date +"%Y%m%d")
+CURRENT_DATE=$(date +%Y-%m-%d-%H%M%S)
 BACKUP_FOLDER="${REMOTE_FOLDER}_${CURRENT_DATE}_backup"
+
+echo "Step 0: get latest data for astrodata"
+cd "${FOLDER_TO_COMPRESS}/Catalog/ASTORB"
+./get_ASTORB.sh
+ 
+cd "${FOLDER_TO_COMPRESS}/Catalog/IAUOBS"
+./get_IAUOBS.sh
+ 
+cd "${FOLDER_TO_COMPRESS}/Theory/EOP"
+./get_EOP.sh
+
+cd "${WORKDIR}"
 
 echo "Step 1: Check if the folder exists on each machine and back it up"
 pssh -p 12 -t 100000000 -h "${HOSTFILE}" "if [ -d '${REMOTE_FOLDER}' ]; then
