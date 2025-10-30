@@ -11,12 +11,10 @@ REMOTE_DIR="/spark-dir"
 
 # Check and create astrodata directory
 if [ ! -d "$ASTRODATA_DIR" ] && [ ! -L "$ASTRODATA_DIR" ]; then
-    mkdir -p "$ASTRODATA_DIR"
     ln -s ${REMOTE_DIR}/astrodata "$ASTRODATA_DIR"
 fi
 
 # Check and create ssocards directory
 if [ ! -d "$SSOCARDS_DIR" ] && [ ! -L "$SSOCARDS_DIR" ]; then
-    mkdir -p "$SSOCARDS_DIR"
     ln -s ${REMOTE_DIR}/ssocards "$SSOCARDS_DIR"
 fi
