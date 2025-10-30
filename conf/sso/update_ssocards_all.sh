@@ -3,8 +3,9 @@ set -e
 
 WORKDIR=$PWD
 
-# Folder to compress on Master
-FOLDER_TO_COMPRESS="/spark_mongo_tmp/julien.peloton/ssocards/ssoCard-latest" 
+# Folder to compress on Master, resolving symlink
+FOLDER_TO_COMPRESS="/spark_mongo_tmp/julien.peloton/ssocards/ssoCard-latest"
+RESOLVED_FOLDER=$(readlink -f "$FOLDER_TO_COMPRESS")
 
 # File containing the list of hosts
 HOSTFILE="../ztf/spark_ips_nomaster"
@@ -27,7 +28,7 @@ else
 fi"
 
 echo "Step 2: Compress the folder on master"
-tar -czf ${ARCHIVE_NAME} -C "$(dirname "${FOLDER_TO_COMPRESS}")" "$(basename "${FOLDER_TO_COMPRESS}")"
+tar -czf ${ARCHIVE_NAME} -C "$(dirname "${RESOLVED_FOLDER}")" "$(basename "${RESOLVED_FOLDER}")"
 
 echo "Step 3: Transfer the compressed folder to all machines"
 pscp.pssh -p 12 -h "${HOSTFILE}" ${ARCHIVE_NAME} ${REMOTE_FOLDER_BASE}
