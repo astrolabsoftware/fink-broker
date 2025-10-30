@@ -7,7 +7,10 @@ FOLDER_TO_COMPRESS="/spark_mongo_tmp/julien.peloton/astrodata"
 HOSTFILE="../ztf/spark_ips_nomaster"
 
 # Folder on remotes where to decompress
-REMOTE_FOLDER="/spark-dir/astrodata"
+REMOTE_FOLDER_BASE="/spark-dir"
+REMOTE_FOLDER="${REMOTE_FOLDER_BASE}/astrodata"
+
+ARCHIVE_NAME="astrodata_compressed.tar.gz"
 
 # Backup name with date
 CURRENT_DATE=$(date +"%Y%m%d")
@@ -21,11 +24,11 @@ else
 fi"
 
 echo "Step 2: Compress the folder on master"
-tar -czf astrodata_compressed.tar.gz -C "$(dirname "${FOLDER_TO_COMPRESS}")" "$(basename "${FOLDER_TO_COMPRESS}")"
+tar -czf ${ARCHIVE_NAME} -C "$(dirname "${FOLDER_TO_COMPRESS}")" "$(basename "${FOLDER_TO_COMPRESS}")"
 
 echo "Step 3: Transfer the compressed folder to all machines"
-pscp.pssh astrodata_compressed.tar.gz -h "${HOSTFILE}:${REMOTE_FOLDER}/"
+pscp.pssh -p 12 -h "${HOSTFILE}" ${ARCHIVE_NAME} ${REMOTE_FOLDER_BASE}
 
 echo "Step 4: Decompress the folder on all machines"
-pssh -h "${HOSTFILE}" "tar -xzf '${REMOTE_FOLDER}/astrodata_compressed.tar.gz' -C '${REMOTE_FOLDER}' && rm '${REMOTE_FOLDER}/astrodata_compressed.tar.gz'"
+pssh -h "${HOSTFILE}" "tar -xzf '${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}' -C '${REMOTE_FOLDER}' && rm '${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}'"
 
