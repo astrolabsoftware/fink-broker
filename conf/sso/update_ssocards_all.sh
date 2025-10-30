@@ -28,11 +28,11 @@ else
 fi"
 
 echo "Step 2: Compress the folder on master"
-tar -czf ${ARCHIVE_NAME} -C "$(dirname "${RESOLVED_FOLDER}")" "$(basename "${RESOLVED_FOLDER}")"
+tar -cf - -C "$(dirname "${RESOLVED_FOLDER}")" "$(basename "${RESOLVED_FOLDER}")" | pigz > ${ARCHIVE_NAME}
 
 echo "Step 3: Transfer the compressed folder to all machines"
 pscp.pssh -p 12 -h "${HOSTFILE}" ${ARCHIVE_NAME} ${REMOTE_FOLDER_BASE}
 
-echo "Step 4: Decompress the folder on all machines"
-pssh -p 12 -t 100000000 -h "${HOSTFILE}" "tar -xzf ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME} -C ${REMOTE_FOLDER_BASE} && rm ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}"
 
+echo "Step 4: Decompress the folder on all machines using pigz"
+pssh -p 12 -t 100000000 -h "${HOSTFILE}" "tar -xOf ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME} | pigz -d | tar -xf - -C ${REMOTE_FOLDER_BASE} && rm ${REMOTE_FOLDER_BASE}/${ARCHIVE_NAME}"
