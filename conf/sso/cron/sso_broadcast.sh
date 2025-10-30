@@ -1,5 +1,6 @@
 #!/bin/bash
 
+FINK_HOME=/localhome/julien.peloton/fink-broker
 ROOTPATH=${FINK_HOME}/conf/sso/cron
 
 SCRIPT=fink_run_ephemcc4*.sh
