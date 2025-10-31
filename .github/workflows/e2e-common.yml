@@ -140,7 +140,7 @@ jobs:
       - name: Promote fink-broker image
         id: promote
         run: |
-          . "$HOME/.ciux/ciux.sh"
+          . .ciux.d/ciux_itest.sh"
           echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
