@@ -8,36 +8,84 @@ jobs:
   e2e-science:
     runs-on: ubuntu-latest
     steps:
-    - name: build
-      run: |
-        image="${{ github.event.client_payload.image }}"
-        if [ "${{ github.event.client_payload.build }}" == "true" ]; then
-          echo "build success for image $image"
-        else
-          echo "build failed for image $image"
-          exit 1
-        fi
-    - name: e2e
-      run: |
-        cluster="${{ github.event.client_payload.cluster }}"
-        if [ "${{ github.event.client_payload.e2e }}" == "true" ]; then
+      - name: Echo dispatch event
+        run: |
+          echo "Repository dispatch received!"
+          echo "Event type: ${{ github.event.action }}"
+          echo "Client payload: ${{ toJson(github.event.client_payload) }}"
 
-          echo "Succeed to run e2e tests on cluster $cluster"
-        else
-          echo "Failed to run e2e tests on cluster $cluster"
-          exit 1
-        fi
-    - name: push
-      run: |
-        image="${{ github.event.client_payload.image }}"
-        if [ "${{ github.event.client_payload.push }}" == "true" ]; then
-          echo "Succeed in pushing image $image"
-        else
-          echo "Failed to push image $image"
-          exit 1
-        fi
-    - uses: act10ns/slack@v1
-      with:
-        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        status: ${{ job.status }}
-      if: always()
+      - name: build
+        run: |
+          image="${{ github.event.client_payload.image }}"
+          if [ "${{ github.event.client_payload.build }}" == "true" ]; then
+            echo "build success for image $image"
+          else
+            echo "build failed for image $image"
+            exit 1
+          fi
+
+      - name: e2e
+        run: |
+          cluster="${{ github.event.client_payload.cluster }}"
+          if [ "${{ github.event.client_payload.e2e }}" == "true" ]; then
+            echo "Succeed to run e2e tests on cluster $cluster"
+          else
+            echo "Failed to run e2e tests on cluster $cluster"
+            exit 1
+          fi
+
+      - name: push
+        run: |
+          image="${{ github.event.client_payload.image }}"
+          if [ "${{ github.event.client_payload.push }}" == "true" ]; then
+            echo "Succeed in pushing image $image"
+          else
+            echo "Failed to push image $image"
+            exit 1
+          fi
+
+      - name: Extract and upload artifacts
+        if: github.event.client_payload.artifacts
+        run: |
+          mkdir -p artifacts
+
+          # Extract log file if present
+          if echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -e 'to_entries[] | select(.value.type == "log")' > /dev/null; then
+            for artifact in $(echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -r 'to_entries[] | select(.value.type == "log") | "\(.key):\(.value.content)"'); do
+              filename=$(echo $artifact | cut -d: -f1)
+              content=$(echo $artifact | cut -d: -f2-)
+              echo "$content" | base64 -d > "artifacts/$filename"
+              echo "Extracted: $filename"
+            done
+          fi
+
+          # Extract result file if present
+          if echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -e 'to_entries[] | select(.value.type == "result")' > /dev/null; then
+            for artifact in $(echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -r 'to_entries[] | select(.value.type == "result") | "\(.key):\(.value.content)"'); do
+              filename=$(echo $artifact | cut -d: -f1)
+              content=$(echo $artifact | cut -d: -f2-)
+              echo "$content" | base64 -d > "artifacts/$filename"
+              echo "Extracted: $filename"
+            done
+          fi
+
+          # Save metadata
+          if echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -e '.metadata' > /dev/null; then
+            echo '${{ toJson(github.event.client_payload.artifacts.metadata) }}' > artifacts/metadata.json
+            echo "Extracted: metadata.json"
+          fi
+
+          ls -la artifacts/
+
+      - name: Upload artifacts to GitHub Actions
+        if: github.event.client_payload.artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.client_payload.artifact_name || 'e2e-science-artifacts' }}
+          path: artifacts/
+
+      - uses: act10ns/slack@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: ${{ job.status }}
+        if: always()

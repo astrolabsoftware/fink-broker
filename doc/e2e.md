@@ -29,7 +29,7 @@ cd fink-broker
 Install the `ciux` tool based on the provided version.
 
 ```bash
-CIUX_VERSION=v0.0.4-rc6
+CIUX_VERSION=v0.0.7-rc1
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 
