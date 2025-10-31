@@ -8,7 +8,6 @@
 set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-. "$CIUXCONFIG"
 
 CONTAINER="fink-broker"
 
@@ -45,6 +44,8 @@ MOUNTS="$MOUNTS --volume /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro"
 echo "oOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoO"
 echo "   Welcome in $CONTAINER developement container"
 echo "oOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoOoO"
+CIUXCONFIG=$(ciux get configpath -l build "$DIR")
+. $CIUXCONFIG
 
 docker run --net=host --name "$CONTAINER" \
   --env FINK_HOME="$FINK_HOME" \

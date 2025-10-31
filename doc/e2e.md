@@ -42,7 +42,6 @@ Ignite the project using `ciux`.
 mkdir -p ~/.ciux
 # Define variables below for all the following commands
 export SUFFIX="noscience"
-export CIUXCONFIG=$HOME/.ciux/ciux.sh
 # Ignite the project
 ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 ```
