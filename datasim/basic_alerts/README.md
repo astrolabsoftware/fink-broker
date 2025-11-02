@@ -6,4 +6,14 @@ The goal is to have at leat one alert per user-filter. For this just generate da
 fink start generate_test_data -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES}
 ```
 
-The parameter `night` is actually not used, as it is set to 2023/10/18. In case you have a new filter, that requires new columns, just create them on-the-fly (like for TNS).
+The parameter `night` is actually not used, as it is set to 2023/10/18. In case you have a new filter, that requires new columns, just create them on-the-fly (like for TNS). Then get data and move all avro in the same folder:
+
+```bash
+scp -r remote:path .
+
+# Remove previous data
+git rm datasim/basic_alerts/all_distribute_topics/*avro
+mv test_ci_data/*/*.avro datasim/basic_alerts/all_distribute_topics/
+```
+
+Commit & push.
