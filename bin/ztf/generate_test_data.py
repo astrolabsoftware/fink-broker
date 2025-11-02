@@ -49,9 +49,10 @@ def main():
         log_level=args.spark_log_level,
     )
 
-    # data path is fixed to irst week of September 2025
-    basepath = "{}/{}/year=2025/month=09".format(args.agg_data_prefix, "{}")
-    paths = [basepath + "/day={:02d}".format(day) for day in range(1, 8)]
+    # data path is fixed to first week of September 2025
+    # basepath = "{}/{}/year=2025/month=09".format(args.agg_data_prefix, "{}")
+    # paths = [basepath + "/day={:02d}".format(day) for day in range(1, 8)]
+    paths = ["{}/{}/year=2023/month=10/day=18".format(args.agg_data_prefix, "{}")]
 
     logger.debug("Connect to the TMP science database")
     df = load_parquet_files([path.format("science") for path in paths])
@@ -93,7 +94,7 @@ def main():
         df_tmp = df_tmp.limit(10).repartition(nb_alert)
 
         df_tmp.write.format("avro").option("compression", "uncompressed").save(
-            f"filter_save/{userfilter}"
+            f"test_ci_data/{userfilter}"
         )
 
 
