@@ -15,6 +15,8 @@
 # limitations under the License.
 """Extract Avro files for test puroposes"""
 
+from pyspark.sql import functions as F
+
 import pkgutil
 import argparse
 import logging
@@ -22,8 +24,13 @@ import logging
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import init_logger
+
+from fink_science.ztf.xmatch.processor import xmatch_tns
+from fink_science.ztf.xmatch.processor import xmatch_cds
+
 from fink_utils.spark.utils import concat_col
 from fink_utils.spark.utils import apply_user_defined_filter
+
 import fink_filters.ztf.livestream as ffzl
 
 
@@ -34,6 +41,39 @@ userfilters = [
     "{}.{}.filter.{}".format(ffzl.__package__, mod, mod.split("filter_")[1])
     for _, mod, _ in pkgutil.iter_modules(ffzl.__path__)
 ]
+
+
+def add_missing_cols(df, args):
+    """Add missing columns"""
+    df = xmatch_tns(df, tns_raw_output=args.tns_raw_output)
+
+    # Add missing SPICY
+    df = xmatch_cds(
+        df,
+        catalogname="vizier:J/ApJS/254/33/table1",
+        distmaxarcsec=1.2,
+        cols_out=["SPICY", "class"],
+        types=["int", "string"],
+    )
+    # rename `SPICY` into `spicy_id`. Values are number or null
+    df = df.withColumnRenamed("SPICY", "spicy_id")
+    # Cast null into -1
+    df = df.withColumn(
+        "spicy_id", F.when(df["spicy_id"].isNull(), F.lit(-1)).otherwise(df["spicy_id"])
+    )
+
+    # rename `class` into `spicy_class`. Values are:
+    # Unknown, FS, ClassI, ClassII, ClassIII, or 'nan'
+    df = df.withColumnRenamed("class", "spicy_class")
+    # Make 'nan' 'Unknown'
+    df = df.withColumn(
+        "spicy_class",
+        F.when(df["spicy_class"] == "nan", F.lit("Unknown")).otherwise(
+            df["spicy_class"]
+        ),
+    )
+
+    return df
 
 
 def main():
@@ -49,14 +89,18 @@ def main():
         log_level=args.spark_log_level,
     )
 
-    # data path is fixed to first week of September 2025
-    # basepath = "{}/{}/year=2025/month=09".format(args.agg_data_prefix, "{}")
-    # paths = [basepath + "/day={:02d}".format(day) for day in range(1, 8)]
-    paths = ["{}/{}/year=2023/month=10/day=18".format(args.agg_data_prefix, "{}")]
+    # Add days if need be when adding new filters
+    paths = [
+        "{}/{}/year=2023/month=10/day=18".format(args.agg_data_prefix, "{}"),
+        "{}/{}/year=2023/month=10/day=19".format(args.agg_data_prefix, "{}"),
+    ]
 
     logger.debug("Connect to the TMP science database")
     df = load_parquet_files([path.format("science") for path in paths])
     df_raw_cols = load_parquet_files([path.format("raw") for path in paths]).columns
+
+    # Add missing columns
+    df = add_missing_cols(df, args)
 
     logger.debug("Retrieve time-series information")
     to_expand = [
