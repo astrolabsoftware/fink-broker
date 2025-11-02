@@ -89,7 +89,7 @@ def main():
         df_tmp = df_tmp.select(df_raw_cols)
 
         nb_alert = df_tmp.count()
-        _LOG.info(f"nb alerts: {nb_alert}")
+        _LOG.info(f"nb alerts before threshold: {nb_alert}")
 
         df_tmp = df_tmp.limit(10).repartition(nb_alert)
 
