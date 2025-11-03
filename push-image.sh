@@ -46,6 +46,13 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
+# Check if image exists
+docker image inspect "$CIUX_IMAGE_URL" > /dev/null 2>&1
+if [ $? -ne 0 ] ; then
+    echo "WARN: Docker image $CIUX_IMAGE_URL does not exist locally"
+    exit 0
+fi
+
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
 fi
