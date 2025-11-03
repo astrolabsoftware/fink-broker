@@ -8,7 +8,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-CIUXCONFIG=$(ciux get configpath -l ci "$DIR")
+CIUXCONFIG=$(ciux get configpath -l itest "$DIR")
 . $CIUXCONFIG
 
 set -e
