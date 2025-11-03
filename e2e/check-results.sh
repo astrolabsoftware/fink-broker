@@ -87,7 +87,7 @@ do
         kubectl get pods -A
         echo "FINK KAFKA TOPICS"
         finkctl get topics
-        sleep 7200
+        # sleep 7200
         exit 1
     fi
 done
