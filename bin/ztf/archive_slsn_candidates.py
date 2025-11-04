@@ -18,6 +18,9 @@
 import argparse
 
 import numpy as np
+import requests
+import urllib.parse
+from astropy.cosmology import LambdaCDM
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
@@ -44,15 +47,30 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     slack_token_env: str
         Environment variable that has the Slack bot token
     """
-    t1 = f"ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+    t1 = f"Fink: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+    t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"""
 EQU: {row.ra},   {row.dec}"""
 
     t3 = f"Score: {round(row.slsn_score, 3)}"
-    t4 = f"Classification: {row.classification}"
     cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
         row.objectId, slack_token_env=slack_token_env
     )
+    magnitudes = np.array(
+        [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
+    )
+    mask_nones = [type(k) == float for k in magnitudes]
+    magnitudes = magnitudes[mask_nones]
+    photoz, photozerr = get_photoz(row.ra, row.dec)
+    t4, t5 = "", ""
+    if photoz != "?":
+        t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
+
+    if (photoz != "?") and (len(magnitudes) > 0):
+        peak = np.min(magnitudes)
+        lower_M, upper_M = abs_peak(np.min(magnitudes), photoz, photozerr)
+        t5 = f"Peak absolute magnitude: {upper_M:.2f} < M < {lower_M:.2f}"
+
     curve.seek(0)
     cutout.seek(0)
     cutout_perml = f"<{cutout_perml}|{' '}>"
@@ -60,11 +78,69 @@ EQU: {row.ra},   {row.dec}"""
     slack_data.append(
         f"""==========================
 {t1}
+{t1bis}
 {t2}
 {t3}
 {t4}
+{t5}
 {cutout_perml}{curve_perml}"""
     )
+
+
+def SDSS_photoz(ra, dec, radius=0.2):
+    """Retrieve photoz from SDSS"""
+    try:
+        query = f"""
+        SELECT TOP 1 p.objID, p.ra, p.dec, z.z AS photoz, z.zErr AS photozErr
+        FROM PhotoObj AS p
+        JOIN Photoz AS z ON p.objID = z.objID
+        JOIN dbo.fGetNearbyObjEq({ra}, {dec}, {radius}) AS n
+          ON p.objID = n.objID
+        ORDER BY n.distance
+        """
+
+        base_url = "https://skyserver.sdss.org/dr16/SkyServerWS/SearchTools/SqlSearch"
+        params = {"cmd": query, "format": "json"}
+
+        url = f"{base_url}?{urllib.parse.urlencode(params)}"
+        response = requests.get(url)
+        table = response.json()[0]["Rows"]
+
+        if len(table) > 0:
+            return table[0]["photoz"], table[0]["photozErr"]
+
+    except:
+        return "?", "?"
+    return "?", "?"
+
+
+def legacy_photoz(ra, dec):
+    """Retrieve photoz from the legacy survey.
+    TO BE DONE ?"""
+    return "?", "?"
+
+
+def get_photoz(ra, dec):
+    """Retrieve photoz from SDSS, and if not available from the legacy survey"""
+    photoz, photozerr = SDSS_photoz(ra, dec)
+
+    if photoz == "?":
+        photoz, photozerr = legacy_photoz(ra, dec)
+
+    return photoz, photozerr
+
+
+def abs_peak(app_peak, photoz, photozerr):
+    """Compute the peak absolute magnitude based on the photoz, assuming a cosmology"""
+    cosmo = LambdaCDM(H0=67.8, Om0=0.308, Ode0=0.692)
+
+    upper_D_L = cosmo.luminosity_distance(photoz + photozerr).to("pc").value
+    upper_M = app_peak - 5 * np.log10(upper_D_L / 10)
+
+    lower_D_L = cosmo.luminosity_distance(photoz - photozerr).to("pc").value
+    lower_M = app_peak - 5 * np.log10(lower_D_L / 10)
+
+    return lower_M, upper_M
 
 
 def main():
@@ -102,8 +178,9 @@ def main():
         "candidate.jdstarthist",
         "rf_kn_vs_nonkn",
         "tracklet",
+        "prv_candidates",
     ]
-    df = df.withColumn("classification", extract_fink_classification(*cols))
+    df = df.withColumn("classification", extract_fink_classification(*cols[:-1]))
 
     # Simply filter at 0.5
     df_filt = df.filter(df["slsn_score"] >= 0.5)
@@ -117,16 +194,22 @@ def main():
         "candidate.ndethist",
         "candidate.jdstarthist",
         "candidate.jd",
+        "candidate.magpsf",
+        "prv_candidates",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values("slsn_score", ascending=False)
-
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
-    print(init_msg)
+    unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
+    summary = (unique[["objectId", "slsn_score"]]).sort_values(
+        "slsn_score", ascending=False
+    )
+    summary = summary.reset_index(drop=True)
+    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).\n\n{summary}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
+
     for slack_token_env, channel in zip(envs, channels):
         slack_data = []
         for _, row in pdf.iterrows():
