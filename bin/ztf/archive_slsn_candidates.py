@@ -59,7 +59,7 @@ EQU: {row.ra},   {row.dec}"""
     magnitudes = np.array(
         [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
     )
-    mask_nones = [type(k) == float for k in magnitudes]
+    mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
     photoz, photozerr = get_photoz(row.ra, row.dec)
     t4, t5 = "", ""
@@ -68,7 +68,7 @@ EQU: {row.ra},   {row.dec}"""
 
     if (photoz != "?") and (len(magnitudes) > 0):
         peak = np.min(magnitudes)
-        lower_M, upper_M = abs_peak(np.min(magnitudes), photoz, photozerr)
+        lower_M, upper_M = abs_peak(peak, photoz, photozerr)
         t5 = f"Peak absolute magnitude: {upper_M:.2f} < M < {lower_M:.2f}"
 
     curve.seek(0)
@@ -87,7 +87,7 @@ EQU: {row.ra},   {row.dec}"""
     )
 
 
-def SDSS_photoz(ra, dec, radius=0.2):
+def sdss_photoz(ra, dec, radius=0.2):
     """Retrieve photoz from SDSS"""
     try:
         query = f"""
@@ -109,20 +109,22 @@ def SDSS_photoz(ra, dec, radius=0.2):
         if len(table) > 0:
             return table[0]["photoz"], table[0]["photozErr"]
 
-    except:
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
         return "?", "?"
     return "?", "?"
 
 
 def legacy_photoz(ra, dec):
     """Retrieve photoz from the legacy survey.
-    TO BE DONE ?"""
+
+    TO BE DONE ?
+    """
     return "?", "?"
 
 
 def get_photoz(ra, dec):
     """Retrieve photoz from SDSS, and if not available from the legacy survey"""
-    photoz, photozerr = SDSS_photoz(ra, dec)
+    photoz, photozerr = sdss_photoz(ra, dec)
 
     if photoz == "?":
         photoz, photozerr = legacy_photoz(ra, dec)
