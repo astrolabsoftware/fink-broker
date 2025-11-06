@@ -103,8 +103,20 @@ def sdss_photoz(ra, dec, radius=0.2):
         params = {"cmd": query, "format": "json"}
 
         url = f"{base_url}?{urllib.parse.urlencode(params)}"
+
         response = requests.get(url)
-        table = response.json()[0]["Rows"]
+
+        # check we get a valid response
+        if response.status_code != 200:
+            return "?", "?"
+        
+        payload = response.json()
+        
+        # check the payload is not empty
+        if isinstance(payload, list) and len(payload) > 0:
+            table = payload[0].get("Rows", [])
+        else:
+            return "?", "?"
 
         if len(table) > 0:
             return table[0]["photoz"], table[0]["photozErr"]
@@ -180,9 +192,8 @@ def main():
         "candidate.jdstarthist",
         "rf_kn_vs_nonkn",
         "tracklet",
-        "prv_candidates",
     ]
-    df = df.withColumn("classification", extract_fink_classification(*cols[:-1]))
+    df = df.withColumn("classification", extract_fink_classification(*cols))
 
     # Simply filter at 0.5
     df_filt = df.filter(df["slsn_score"] >= 0.5)
