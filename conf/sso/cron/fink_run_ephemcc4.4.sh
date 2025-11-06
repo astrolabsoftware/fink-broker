@@ -20,11 +20,26 @@ UIDD=$9
 # encode the name
 ENCODED_NAME="${NAME// /%20}"
 
-# resolve the name
-response=$(curl "https://api.ssodnet.imcce.fr/quaero/1/sso?q=${ENCODED_NAME}&type=Asteroid")
+# Define a list of types
+# See https://ssp.imcce.fr/webservices/ssodnet/api/quaero/
+types=("Asteroid" "Comet" "Planet" "Dwarf%20Planet" "Interstellar%20Object")
+id=null
 
-# Use jq to extract the id
-id=$(echo "$response" | jq -r '.data[0].id')
+# Loop through each type
+for type in "${types[@]}"; do
+    # echo "Checking for ${type}"
+
+    # resolve the name
+    response=$(curl -s "https://api.ssodnet.imcce.fr/quaero/1/sso?q=${ENCODED_NAME}&type=${type}")
+
+    # Use jq to extract the id
+    id=$(echo "$response" | jq -r '.data[0].id')
+
+    # Check if id is not null
+    if [[ "$id" != "null" && -n "$id" ]]; then
+        break  # Exit the loop if a valid id is found
+    fi
+done
 
 # For the epehe
 $EPHEMCC4/ephemcc4.4 \
