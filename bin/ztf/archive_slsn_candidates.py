@@ -109,9 +109,9 @@ def sdss_photoz(ra, dec, radius=0.2):
         # check we get a valid response
         if response.status_code != 200:
             return "?", "?"
-        
+
         payload = response.json()
-        
+
         # check the payload is not empty
         if isinstance(payload, list) and len(payload) > 0:
             table = payload[0].get("Rows", [])
