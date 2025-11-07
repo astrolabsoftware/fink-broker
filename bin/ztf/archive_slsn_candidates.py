@@ -150,11 +150,13 @@ def abs_peak(app_peak, photoz, photozerr):
     """Compute the peak absolute magnitude based on the photoz, assuming a cosmology"""
     cosmo = LambdaCDM(H0=67.8, Om0=0.308, Ode0=0.692)
 
-    upper_D_L = cosmo.luminosity_distance(photoz + photozerr).to("pc").value
-    upper_M = app_peak - 5 * np.log10(upper_D_L / 10)
+    upz = photoz + photozerr
+    upper_D_L = cosmo.luminosity_distance(upz).to("pc").value
+    upper_M = app_peak - 5 * np.log10(upper_D_L / 10) + 2.5 * np.log10(1 + upz)
 
-    lower_D_L = cosmo.luminosity_distance(photoz - photozerr).to("pc").value
-    lower_M = app_peak - 5 * np.log10(lower_D_L / 10)
+    lowz = photoz - photozerr
+    lower_D_L = cosmo.luminosity_distance(lowz).to("pc").value
+    lower_M = app_peak - 5 * np.log10(lower_D_L / 10) + 2.5 * np.log10(1 + lowz)
 
     return lower_M, upper_M
 
