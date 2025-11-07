@@ -223,8 +223,8 @@ def main():
     summary = summary.reset_index(drop=True)
     init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).\n\n{summary}"
 
-    envs = ["SLSN_SLACK_OSCAR"]
-    channels = ["#slsn-candidates"]
+    envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
+    channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
 
     for slack_token_env, channel in zip(envs, channels):
         slack_data = []
