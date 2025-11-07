@@ -47,6 +47,7 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     slack_token_env: str
         Environment variable that has the Slack bot token
     """
+    t0 = f"TNS classification: {row.tns}"
     t1 = f"Fink: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"""
@@ -77,6 +78,7 @@ EQU: {row.ra},   {row.dec}"""
     curve_perml = f"<{curve_perml}|{' '}>"
     slack_data.append(
         f"""==========================
+{t0}
 {t1}
 {t1bis}
 {t2}
@@ -209,6 +211,7 @@ def main():
         "candidate.jd",
         "candidate.magpsf",
         "prv_candidates",
+        "tns",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
@@ -220,8 +223,8 @@ def main():
     summary = summary.reset_index(drop=True)
     init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).\n\n{summary}"
 
-    envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
-    channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
+    envs = ["SLSN_SLACK_OSCAR"]
+    channels = ["#slsn-candidates"]
 
     for slack_token_env, channel in zip(envs, channels):
         slack_data = []
