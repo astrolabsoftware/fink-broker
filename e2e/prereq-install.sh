@@ -34,7 +34,7 @@ done
 
 # Install ktbx
 if [ $GITHUB_ACTIONS == false ]; then
-  ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+  ciux ignite --selector itest "$src_dir"
 fi
 
 
