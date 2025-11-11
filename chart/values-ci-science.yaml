@@ -34,7 +34,7 @@ stream2raw:
 raw2science:
   cores: "2"
   coreRequest: "0"
-  memory: "3000m"
+  memory: "4000m"
   instances: "2"
 
 #
@@ -43,7 +43,7 @@ raw2science:
 distribution:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
-  memory: "2000m"
+  memory: "3000m"
   instances: "2"
   instances: "{{.Values.instances}}"
 
