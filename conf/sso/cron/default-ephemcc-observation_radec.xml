@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eprocSchema xmlns="file:/usr/local/src/eproc-4.2/XMLSchema/eproc4-v2.xsd"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="file:/usr/local/src/eproc-4.2/XMLSchema/eproc4-v2.xsd file:/usr/local/src/eproc-4.2/XMLSchema/eproc4-v2.xsd">
+
+    <comment>Eproc ephemeris - observation coordinates</comment>
+
+    <info>
+        <user>eproc</user>
+        <email>vo.imcce@obspm.fr</email>
+        <reference>eprocObservationCoordOutputs</reference>
+    </info>
+
+    <output>
+        <param id="1">
+            <name>RA</name>
+            <class>angle</class>
+            <label>RA</label>
+            <unit>h</unit>
+            <format>sexa</format>
+            <precision>4</precision>
+        </param>
+        <param id="2">
+            <name>DEC</name>
+            <class>angle</class>
+            <label>DEC</label>
+            <unit>sdeg</unit>
+            <format>sexa</format>
+            <precision>3</precision>
+        </param>
+        <param id="3">
+            <name>dobs</name>
+            <class>scalar</class>
+            <label>Dobs</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>12</width>
+            <precision>9</precision>
+        </param>
+        <param id="4">
+            <name>dhelio</name>
+            <class>scalar</class>
+            <label>Dhelio</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>12</width>
+            <precision>9</precision>
+        </param>
+
+    </output>
+
+</eprocSchema>

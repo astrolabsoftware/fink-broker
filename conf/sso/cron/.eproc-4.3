@@ -1,0 +1,164 @@
+#
+# Fichier de configuration pour EPROC 4.3 ... 
+# (C) 1998-2022, J. Berthier & F. Vachier - IMCCE
+#
+# Environnement de travail Eproc/XEproc :
+#
+eproc.langue             = en
+eproc.sortie             = ecran:text
+eproc.graphic            = xwin
+#
+eproc.bin_path           = /opt/miriade/bin/
+eproc.script_path        = /opt/miriade/src/eproc-4.3_20241029/scripts/
+eproc.doc_path           = /opt/miriade/src/eproc-4.3_20241029/doc/
+eproc.ress_path          = /
+eproc.tmp_path           = /tmp/
+eproc.ephem_path         = /tmp/Eproc/ephem/
+eproc.redu_path          = /tmp/Eproc/reduction/
+eproc.pred_path          = /tmp/Eproc/prediction/
+eproc.xml_path           = /tmp/Eproc/xml/
+eproc.xml_file           = user.xml
+eproc.xsl_stylesheet     = https://ssp.imcce.fr/webservices/miriade/miriade.xsl
+eproc.debug_file         = /tmp/Eproc/tmp/eproc.log
+#
+eproc.idl_bin            = 
+eproc.idl_suites         = 
+#
+# Liste des codes UAI des observatoires
+#
+data.obsUAI_file         = listobsIAU.dat
+data.obsUAI_path         = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/IAUOBS/
+#
+# Parametres d'orientation de la Terre
+#
+data.eop_file            = eopc04.62-now
+data.eop_path            = /spark_mongo_tmp/julien.peloton/astrodata/Theory/EOP/
+#
+# Bases de donnees planetes et satellites
+#
+data.eproc_planet_file   = sso_planets.csv
+data.eproc_planet_path   = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/EPROC/
+data.eproc_satel_file    = sso_satellites.csv
+data.eproc_satel_path    = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/EPROC/
+#
+# Bases de donnees asteroidales
+#
+data.astorb_path         = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/ASTORB/
+data.astorb_file         = astorb.dat
+data.nea_path            = ./
+data.nea_file            = ?
+data.mpcorb_path         = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/MPC/MPCORB/
+data.mpcorb_file         = MPCORB.DAT
+data.aster_kernel_path   = ./
+data.aster_kernel_file   = ?
+data.physmodel_path      = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/physical_models/
+data.physmodel_dbfile    = ?
+#
+# Genoide
+#
+data.genoide_path        = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/Genoide/
+data.genoide_sun_file    = ?
+data.genoide_system_file = System/db.csv
+#
+# Base de donnees APDT
+#
+data.apdt_file           = apdt-refactor.tab
+data.apdt_path           = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/APDT/
+#
+# Bases de donnees cometaires
+#
+data.comet_file          = wirtanen/wirtanen.dat
+data.cometpro_file       = ?
+data.comet_path          = ./
+#
+# Sso taxonomy
+data.ssotaxo_file        = taxonomy10.tab
+data.ssotaxo_path        = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/Taxonomy/
+#
+# Sso colors
+#
+data.ssocolors_file      = sso-colors-Vega.csv
+data.ssocolors_path      = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/SolarColors/
+#
+# Sso masses and diameters
+#
+data.ssodd_file          = ssodd.csv
+data.ssodd_path          = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/ssodd/
+#
+# Bases de donnees sondes spatiales
+#
+data.sonde_file          = *.orb # Format ExorSyst/CNES
+data.sonde_path          = /spark_mongo_tmp/julien.peloton/astrodata/Theory/spacecrafts/
+data.spice_path          = /spark_mongo_tmp/julien.peloton/astrodata/Theory/spacecrafts/SPICE-KERNELS/
+#
+# Theories planetaires
+#
+theoplan.theomod_path    = 
+theoplan.theomod_file    = 
+theoplan.inpop_path      = /spark_mongo_tmp/julien.peloton/astrodata/Theory/INPOP/
+theoplan.inpop_file      = inpop
+theoplan.bdl82_path      = ./
+theoplan.bdl82_file      = ?
+theoplan.slp98_path      = ./
+theoplan.slp98_file      = ?
+theoplan.de200_path      = ./
+theoplan.de403_path      = ./
+theoplan.de405_path      = ./
+theoplan.de406_path      = ./
+theoplan.de430_path      = ./
+theoplan.de430_file      = ?
+theoplan.de431_path      = ./
+theoplan.de431_file      = ?
+theoplan.satel_path      = ?
+#
+# Catalogues d'etoiles
+#
+catalog.usr_catpath      = ./
+catalog.usr_catfile      = local.cat
+catalog.bsc_path         = ./
+catalog.bsc_file         = ?
+catalog.fk5_path         = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/Stars/FK5/
+catalog.fk5_file         = fk5.cat
+catalog.fk6_path         = /spark_mongo_tmp/julien.peloton/astrodata/Catalog/Stars/FK6/
+catalog.fk61_file        = fk6_1.dat
+catalog.fk63_file        = fk6_3.dat
+catalog.hip_path         = ./
+catalog.hip_file         = ?
+catalog.tycho2_path      = ./
+catalog.tycho2_file      = ?
+#
+# Modele de precession-nutation
+#
+model.prec-nut           = IAU2000
+#
+# Preferences pour les calculs d'ephemerides
+#
+ephem.numplanet          = 4            # Mars
+ephem.cata               = HIP          # catalogue d'etoile
+ephem.teph               = 1            # 1:astrom. J2000, 2:apparent, 3:moyen de la date, 4:geometrique
+ephem.pref               = 1            # 1:equateur 2:ecliptique
+ephem.trep               = 1            # 1:spheriques, 2:rectang., 3:locales, 4:horaires,  5:dediees obs.
+ephem.keph               = 7            # 1:De200, 2:Bdl82, 3:De403, 4:Vsop87, 5:DE405, 6:DE406, 7:INPOP, 8:DE430, 9:DE431
+ephem.theomod            = 0            # 0:Par defaut 2,3,4,5:Integration numerique
+ephem.cent               = 2            # 1:helio. 2:geoc. 3:topoc. 4:sonde
+ephem.elosc              = 1            # 1:Bowell, 2: pos./vit. init., 3:utilisateur
+ephem.termrela           = 1            # (0,1) prise en compte ou non de la relativite
+ephem.termalpha          = 0            # (0,1,2) choix du syst. de coord. relativiste
+ephem.echel              = TT           # TT ou UTC
+ephem.ndat               = 5            # nombre de date de calcul (< 5000)
+ephem.pas                = 1.0          # pas de calcul en jour et fraction de jour
+ephem.fmt_date           = greg         # format d'affichage par defaut des dates (greg|iso|jd)
+ephem.date_file_fmt      = 1            # format du fichier dates utilisateur
+#
+# Station d'observation
+#
+ephem.lieu               = Observatoire de Paris (WGS84)
+ephem.geo1               =  2.20114874  # longitude en deg.mmsssss (negative vers l'ouest)
+ephem.geo2               = 48.50113200  # latitude en deg.mmsssss (negative vers le sud)
+ephem.geo3               = 67.0         # altitude en metres
+#
+# Preferences pour la reduction astrometrique
+#
+reduction.format         = Priam       # format du fichier de mesure
+reduction.mode           = simple      # mode de reduction: simple, avance, expert
+#
