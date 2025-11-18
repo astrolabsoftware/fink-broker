@@ -66,7 +66,7 @@ def load_fink_cols():
             CAT_PROPERTIES[k]["types"], CAT_PROPERTIES[k]["cols_out"]
         ):
             fink_source_cols[
-                "crossmatches.{}{}_{}".format(
+                "xm.{}{}_{}".format(
                     CAT_PROPERTIES[k].get("prefix", ""), k, name
                 )
             ] = {"type": type_, "default": None}
@@ -76,7 +76,7 @@ def load_fink_cols():
     names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
     types = ["float", "float", "int"]
     for type_, name in zip(types, names):
-        fink_source_cols["classifiers.{}".format(name)] = {
+        fink_source_cols["clf.{}".format(name)] = {
             "type": type_,
             "default": None,
         }
@@ -90,12 +90,12 @@ def load_fink_cols():
 
     # Predictions
     fink_object_cols = {
-        "predictions.is_sso": {"type": "boolean", "default": None},
-        "predictions.is_first": {"type": "boolean", "default": None},
-        "predictions.is_cataloged": {"type": "boolean", "default": None},
-        "predictions.main_label_crossmatch": {"type": "string", "default": None},
+        "pred.is_sso": {"type": "boolean", "default": None},
+        "pred.is_first": {"type": "boolean", "default": None},
+        "pred.is_cataloged": {"type": "boolean", "default": None},
+        "pred.main_label_crossmatch": {"type": "string", "default": None},
         # FIXME: Do we want to keep integer?
-        "predictions.main_label_classifier": {"type": "int", "default": None},
+        "pred.main_label_classifier": {"type": "int", "default": None},
     }
 
     return fink_source_cols, fink_object_cols
@@ -288,7 +288,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
-    to_keep = ["crossmatches", "classifiers"]
+    to_keep = ["xm", "clf"]
     if nested:
         section = colname.split(".")[0]
 
