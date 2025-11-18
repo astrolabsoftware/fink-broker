@@ -41,35 +41,12 @@ def main():
 
     print("Processing {}".format(args.night))
 
-    input_raw = "{}/raw/{}".format(args.online_data_prefix, args.night)
     input_science = "{}/science/{}".format(args.online_data_prefix, args.night)
 
     # basepath
-    output_raw = "{}/raw".format(args.agg_data_prefix)
     output_science = "{}/science".format(args.agg_data_prefix)
 
-    print("Raw data processing....")
-    df_raw = spark.read.format("parquet").load(input_raw)
-    print("Num partitions before: ", df_raw.rdd.getNumPartitions())
-    print("Num partitions after : ", compute_num_part(df_raw))
-
-    # We do not use the timestamp for the partitioning
-    # to stay coherent with the analysis which rely on
-    # the fact that we explicitly pass --night YYYYMMDD
-    # as an argument of all scripts. It also allows to
-    # run test data with any candidate.jd under the same
-    # fake night.
-    df_raw.withColumn(
-        "timestamp",
-        convert_to_datetime(df_raw["diaSource.midpointMjdTai"], F.lit("mjd")),
-    ).withColumn("year", F.lit(args.night[0:4])).withColumn(
-        "month", F.lit(args.night[4:6])
-    ).withColumn("day", F.lit(args.night[6:8])).coalesce(
-        compute_num_part(df_raw)
-    ).write.mode("append").partitionBy("year", "month", "day").parquet(output_raw)
-
     print("Science data processing....")
-
     df_science = spark.read.format("parquet").load(input_science)
     npart_after = int(compute_num_part(df_science))
     print("Num partitions before: ", df_science.rdd.getNumPartitions())
