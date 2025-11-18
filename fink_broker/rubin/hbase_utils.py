@@ -66,9 +66,7 @@ def load_fink_cols():
             CAT_PROPERTIES[k]["types"], CAT_PROPERTIES[k]["cols_out"]
         ):
             fink_source_cols[
-                "xm.{}{}_{}".format(
-                    CAT_PROPERTIES[k].get("prefix", ""), k, name
-                )
+                "xm.{}{}_{}".format(CAT_PROPERTIES[k].get("prefix", ""), k, name)
             ] = {"type": type_, "default": None}
 
     # Classifiers
