@@ -230,13 +230,13 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
 
-    >>> classifiers_cols = df.select("classifiers.*").columns
+    >>> classifiers_cols = df.select("clf.*").columns
     >>> assert len(classifiers_cols) == 3, classifiers_cols
 
-    >>> xmatch_cols = df.select("crossmatches.*").columns
+    >>> xmatch_cols = df.select("xm.*").columns
     >>> assert len(xmatch_cols) == 17, xmatch_cols
 
-    >>> prediction_cols = df.select("predictions.*").columns
+    >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
 
     >>> df.write.format("noop").mode("overwrite").save()
@@ -356,13 +356,13 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     prediction_struct = [i for i in df.columns if i not in columns_pre_predictor]
 
     # Wrap into structs
-    df = df.withColumn("classifiers", F.struct(*classifier_struct))
+    df = df.withColumn("clf", F.struct(*classifier_struct))
     df = df.drop(*classifier_struct)
 
-    df = df.withColumn("crossmatches", F.struct(*crossmatch_struct))
+    df = df.withColumn("xm", F.struct(*crossmatch_struct))
     df = df.drop(*crossmatch_struct)
 
-    df = df.withColumn("predictions", F.struct(*prediction_struct))
+    df = df.withColumn("pred", F.struct(*prediction_struct))
     df = df.drop(*prediction_struct)
 
     # Drop temp columns

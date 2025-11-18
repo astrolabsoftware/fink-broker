@@ -22,6 +22,8 @@
 3. Publish to Kafka Topic(s)
 """
 
+import pyspark.sql.functions as F
+
 import pkgutil
 import argparse
 import logging
@@ -171,6 +173,9 @@ def main():
         df = df.withColumnRenamed("c" + colname, "c" + colname + "c")
 
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
+
+    # YSO SPICY
+    df = df.withColumn("linear_fit_slope", F.col("lc_features_r.linear_fit_slope"))
 
     kafka_cfg = {
         "kafka.bootstrap.servers": args.distribution_servers,
