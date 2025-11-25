@@ -10,6 +10,9 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 kind_version_opt=""
 monitoring=false
+src_dir=$DIR/..
+# Check if running in github actions
+GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
 usage () {
     echo "Usage: $0 [-k kind_version] [-m]"
@@ -28,6 +31,12 @@ do
         *) usage; exit 1;;
     esac
 done
+
+# Install ktbx
+if [ $GITHUB_ACTIONS == false ]; then
+  ciux ignite --selector itest "$src_dir"
+fi
+
 
 ktbx install kind $kind_version_opt
 ktbx install kubectl
