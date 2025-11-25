@@ -16,11 +16,8 @@
 """Run the SLSN classifier, and push data to Slack."""
 
 import argparse
-
+import joblib
 import numpy as np
-import requests
-import urllib.parse
-from astropy.cosmology import LambdaCDM
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
@@ -31,6 +28,14 @@ from fink_filters.ztf.filter_anomaly_notification.filter_utils import msg_handle
 from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
+
+from fink_science.ztf.superluminous.slsn_classifier import (
+    get_sdss_photoz,
+    get_ebv,
+    abs_peak,
+)
+
+import fink_science.ztf.superluminous.kernel as kern
 
 
 def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> None:
@@ -47,7 +52,11 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     slack_token_env: str
         Environment variable that has the Slack bot token
     """
-    t0 = f"TNS classification: {row.tns}"
+    if row.tns == "":
+        t0 = "No TNS classification"
+    else:
+        t0 = f"TNS classification: {row.tns}"
+
     t1 = f"Fink: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"""
@@ -62,15 +71,16 @@ EQU: {row.ra},   {row.dec}"""
     )
     mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
-    photoz, photozerr = get_photoz(row.ra, row.dec)
+    photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
+    ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
     t4, t5 = "", ""
-    if photoz != "?":
+    if photoz == photoz:
         t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
 
-    if (photoz != "?") and (len(magnitudes) > 0):
+    if (photoz == photoz) and (len(magnitudes) > 0):
         peak = np.min(magnitudes)
-        lower_M, upper_M = abs_peak(peak, photoz, photozerr)
-        t5 = f"Peak absolute magnitude: {upper_M:.2f} < M < {lower_M:.2f}"
+        lower_M, M, upper_M = abs_peak(peak, photoz, photozerr, ebv)
+        t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
 
     curve.seek(0)
     cutout.seek(0)
@@ -87,78 +97,6 @@ EQU: {row.ra},   {row.dec}"""
 {t5}
 {cutout_perml}{curve_perml}"""
     )
-
-
-def sdss_photoz(ra, dec, radius=0.2):
-    """Retrieve photoz from SDSS"""
-    try:
-        query = f"""
-        SELECT TOP 1 p.objID, p.ra, p.dec, z.z AS photoz, z.zErr AS photozErr
-        FROM PhotoObj AS p
-        JOIN Photoz AS z ON p.objID = z.objID
-        JOIN dbo.fGetNearbyObjEq({ra}, {dec}, {radius}) AS n
-          ON p.objID = n.objID
-        ORDER BY n.distance
-        """
-
-        base_url = "https://skyserver.sdss.org/dr16/SkyServerWS/SearchTools/SqlSearch"
-        params = {"cmd": query, "format": "json"}
-
-        url = f"{base_url}?{urllib.parse.urlencode(params)}"
-
-        response = requests.get(url)
-
-        # check we get a valid response
-        if response.status_code != 200:
-            return "?", "?"
-
-        payload = response.json()
-
-        # check the payload is not empty
-        if isinstance(payload, list) and len(payload) > 0:
-            table = payload[0].get("Rows", [])
-        else:
-            return "?", "?"
-
-        if len(table) > 0:
-            return table[0]["photoz"], table[0]["photozErr"]
-
-    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
-        return "?", "?"
-    return "?", "?"
-
-
-def legacy_photoz(ra, dec):
-    """Retrieve photoz from the legacy survey.
-
-    TO BE DONE ?
-    """
-    return "?", "?"
-
-
-def get_photoz(ra, dec):
-    """Retrieve photoz from SDSS, and if not available from the legacy survey"""
-    photoz, photozerr = sdss_photoz(ra, dec)
-
-    if photoz == "?":
-        photoz, photozerr = legacy_photoz(ra, dec)
-
-    return photoz, photozerr
-
-
-def abs_peak(app_peak, photoz, photozerr):
-    """Compute the peak absolute magnitude based on the photoz, assuming a cosmology"""
-    cosmo = LambdaCDM(H0=67.8, Om0=0.308, Ode0=0.692)
-
-    upz = photoz + photozerr
-    upper_D_L = cosmo.luminosity_distance(upz).to("pc").value
-    upper_M = app_peak - 5 * np.log10(upper_D_L / 10) + 2.5 * np.log10(1 + upz)
-
-    lowz = photoz - photozerr
-    lower_D_L = cosmo.luminosity_distance(lowz).to("pc").value
-    lower_M = app_peak - 5 * np.log10(lower_D_L / 10) + 2.5 * np.log10(1 + lowz)
-
-    return lower_M, upper_M
 
 
 def main():
@@ -199,8 +137,10 @@ def main():
     ]
     df = df.withColumn("classification", extract_fink_classification(*cols))
 
-    # Simply filter at 0.5
-    df_filt = df.filter(df["slsn_score"] >= 0.5)
+    clf = joblib.load(kern.classifier_path)
+    optimal_threshold = clf.optimal_threshold
+
+    df_filt = df.filter(df["slsn_score"] >= optimal_threshold)
 
     cols_ = [
         "objectId",
