@@ -75,6 +75,9 @@ ADD deps/${input_survey}/requirements.txt $FINK_HOME/deps
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && pip install -r $FINK_HOME/deps/requirements.txt
 
 RUN git clone -c advice.detachedHead=false --depth 1 -b "v0.0.1" --single-branch https://github.com/astrolabsoftware/fink-alert-schemas.git
+RUN git clone --depth 1 --filter=blob:none --sparse --branch v0.0.2-rc0 https://github.com/astrolabsoftware/fink-alert-schemas.git \
+    && cd fink-alert-schemas \
+    && git sparse-checkout set ztf
 
 # TODO add a development image which include tools below
 # doctest requirements
