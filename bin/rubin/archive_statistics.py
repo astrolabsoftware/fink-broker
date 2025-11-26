@@ -22,7 +22,7 @@ import pandas as pd
 
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.parser import getargs
-from fink_broker.common.logging_utils import get_fink_logger, inspect_application
+from fink_broker.common.logging_utils import get_fink_logger
 from fink_broker.common.hbase_utils import push_to_hbase
 
 
@@ -38,20 +38,17 @@ def main():
     # Logger to print useful debug statements
     logger = get_fink_logger(spark.sparkContext.appName, args.log_level)
 
-    # debug statements
-    inspect_application(logger)
-
     year = args.night[:4]
     month = args.night[4:6]
     day = args.night[6:8]
 
-    print("Statistics for {}/{}/{}".format(year, month, day))
+    logger.info("Statistics for {}/{}/{}".format(year, month, day))
 
-    input_science = "{}/science/year={}/month={}/day={}".format(
+    folder = "{}/science/year={}/month={}/day={}".format(
         args.agg_data_prefix, year, month, day
     )
 
-    df = spark.read.format("parquet").load(input_science)
+    df = spark.read.format("parquet").load(folder)
 
     # Number of alerts
     n_sci_alert = df.count()
