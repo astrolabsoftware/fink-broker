@@ -20,7 +20,8 @@ import argparse
 import pandas as pd
 
 
-from fink_broker.common.spark_utils import init_sparksession
+from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
+from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.parser import getargs
 from fink_broker.common.logging_utils import get_fink_logger
 from fink_broker.common.hbase_utils import push_to_hbase
@@ -47,6 +48,9 @@ def main():
     folder = "{}/science/year={}/month={}/day={}".format(
         args.agg_data_prefix, year, month, day
     )
+
+    paths = list_hdfs_files(folder)
+    df = load_parquet_files(paths)
 
     df = spark.read.format("parquet").load(folder)
 
