@@ -41,12 +41,10 @@ jobs:
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink" >> $GITHUB_ENV
     - name: Download schemas
       run: |
-        git clone -c advice.detachedHead=false --depth 1 --filter=blob:none --sparse --branch v0.0.2-rc0 https://github.com/astrolabsoftware/fink-alert-schemas.git 
-        cd fink-alert-schemas
-        git sparse-checkout set ztf
+        git clone --depth 1 --branch v0.0.2-rc0 https://github.com/astrolabsoftware/fink-alert-schemas.git 
 
         # for the test suite
-        cp -r datasim ${GITHUB_WORKSPACE}/
+        cp -r fink-alert-schemas/datasim .
         echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
     - name: Set up env [2/2]
       run: |
