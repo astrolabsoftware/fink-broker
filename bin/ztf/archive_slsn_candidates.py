@@ -16,7 +16,7 @@
 """Run the SLSN classifier, and push data to Slack."""
 
 import argparse
-
+import joblib
 import numpy as np
 
 from fink_broker.common.parser import getargs
@@ -28,6 +28,14 @@ from fink_filters.ztf.filter_anomaly_notification.filter_utils import msg_handle
 from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
+
+from fink_science.ztf.superluminous.slsn_classifier import (
+    get_sdss_photoz,
+    get_ebv,
+    abs_peak,
+)
+
+import fink_science.ztf.superluminous.kernel as kern
 
 
 def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> None:
@@ -44,25 +52,49 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     slack_token_env: str
         Environment variable that has the Slack bot token
     """
-    t1 = f"ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+    if row.tns == "":
+        t0 = "No TNS classification"
+    else:
+        t0 = f"TNS classification: {row.tns}"
+
+    t1 = f"Fink: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+    t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"""
 EQU: {row.ra},   {row.dec}"""
 
     t3 = f"Score: {round(row.slsn_score, 3)}"
-    t4 = f"Classification: {row.classification}"
     cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
         row.objectId, slack_token_env=slack_token_env
     )
+    magnitudes = np.array(
+        [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
+    )
+    mask_nones = [type(k) is float for k in magnitudes]
+    magnitudes = magnitudes[mask_nones]
+    photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
+    ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
+    t4, t5 = "", ""
+    if photoz == photoz:
+        t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
+
+    if (photoz == photoz) and (len(magnitudes) > 0):
+        peak = np.min(magnitudes)
+        lower_M, M, upper_M = abs_peak(peak, photoz, photozerr, ebv)
+        t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
+
     curve.seek(0)
     cutout.seek(0)
     cutout_perml = f"<{cutout_perml}|{' '}>"
     curve_perml = f"<{curve_perml}|{' '}>"
     slack_data.append(
         f"""==========================
+{t0}
 {t1}
+{t1bis}
 {t2}
 {t3}
 {t4}
+{t5}
 {cutout_perml}{curve_perml}"""
     )
 
@@ -105,8 +137,10 @@ def main():
     ]
     df = df.withColumn("classification", extract_fink_classification(*cols))
 
-    # Simply filter at 0.5
-    df_filt = df.filter(df["slsn_score"] >= 0.5)
+    clf = joblib.load(kern.classifier_path)
+    optimal_threshold = clf.optimal_threshold
+
+    df_filt = df.filter(df["slsn_score"] >= optimal_threshold)
 
     cols_ = [
         "objectId",
@@ -117,16 +151,23 @@ def main():
         "candidate.ndethist",
         "candidate.jdstarthist",
         "candidate.jd",
+        "candidate.magpsf",
+        "prv_candidates",
+        "tns",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values("slsn_score", ascending=False)
-
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects)."
-    print(init_msg)
+    unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
+    summary = (unique[["objectId", "slsn_score"]]).sort_values(
+        "slsn_score", ascending=False
+    )
+    summary = summary.reset_index(drop=True)
+    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).\n\n{summary}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
+
     for slack_token_env, channel in zip(envs, channels):
         slack_data = []
         for _, row in pdf.iterrows():
