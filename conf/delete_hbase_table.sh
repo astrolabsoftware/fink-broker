@@ -24,6 +24,7 @@ STANDARD_TABLES=(
         "${TABLE_PREFIX}.pixel128"
         "${TABLE_PREFIX}.tns_resolver"
 	"${TABLE_PREFIX}.sso_resolver"
+	"${TABLE_PREFIX}.statistics"
 )
 
 for TABLE_NAME in $STANDARD_TABLES; do

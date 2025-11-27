@@ -175,6 +175,7 @@ if [[ "$WITH_DB" = true ]] ; then
 
   check_table_output "rubin.cutouts" 101
   check_table_output "rubin.pixel128" 97
+  check_table_output "rubin.statistics" 1
   # check_table_output "rubin.forcedSources" 99
 fi
 
