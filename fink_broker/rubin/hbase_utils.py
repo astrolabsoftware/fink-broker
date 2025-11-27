@@ -56,7 +56,7 @@ def load_fink_cols():
     23
 
     >>> print(len(fink_object_cols))
-    5
+    6
     """
     fink_source_cols = {}
 
@@ -94,6 +94,7 @@ def load_fink_cols():
         "pred.main_label_crossmatch": {"type": "string", "default": None},
         # FIXME: Do we want to keep integer?
         "pred.main_label_classifier": {"type": "int", "default": None},
+        "misc.firstDiaSourceMjdTai": {"type": "double", "default": None},
     }
 
     return fink_source_cols, fink_object_cols
@@ -252,7 +253,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 5
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
