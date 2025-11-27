@@ -174,8 +174,12 @@ def main():
 
     df = df.withColumn("cstampDatac", df["cutoutScience.stampData"])
 
-    # YSO SPICY
-    df = df.withColumn("linear_fit_slope", F.col("lc_features_r.linear_fit_slope"))
+    if not args.noscience:
+        # For YSO SPICY
+        df = df.withColumn("linear_fit_slope", F.col("lc_features_r.linear_fit_slope"))
+    else:
+        # fake big value for the slope
+        df = df.withColumn("linear_fit_slope", F.lit(1.0))
 
     kafka_cfg = {
         "kafka.bootstrap.servers": args.distribution_servers,
