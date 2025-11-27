@@ -20,8 +20,7 @@ import argparse
 import pandas as pd
 
 
-from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
-from fink_broker.common.spark_utils import list_hdfs_files
+from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.parser import getargs
 from fink_broker.common.logging_utils import get_fink_logger
 from fink_broker.common.hbase_utils import push_to_hbase
@@ -49,20 +48,19 @@ def main():
         args.agg_data_prefix, year, month, day
     )
 
-    paths = list_hdfs_files(folder)
-    df = load_parquet_files(paths)
-
     df = spark.read.format("parquet").load(folder)
 
-    # Number of alerts
-    n_sci_alert = df.count()
-
     out_dic = {}
-    out_dic["alerts"] = n_sci_alert
+
+    # Number of alerts
+    out_dic["alerts"] = df.count()
 
     # per band
     perband = df.groupby("diaSource.band").count().collect()
     [out_dic.update({"alerts_{}".format(i["band"]): i["count"]}) for i in perband]
+
+    # Number of objects (removing asteroids)
+    out_dic["objects"] = df.select("diaObject.diaObjectId").distinct().count() - 1
 
     # SSO, first, cataloged
     out_dic["is_sso"] = df.filter(df["pred.is_sso"]).count()
