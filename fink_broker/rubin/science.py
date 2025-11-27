@@ -239,6 +239,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
 
+    >>> misc_cols = df.select("misc.*").columns
+    >>> assert len(misc_cols) == 1, misc_cols
+
     >>> df.write.format("noop").mode("overwrite").save()
     """
     # Required alert columns
@@ -325,13 +328,21 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ])
     classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
 
+    # MISC
+    columns_pre_misc = df.columns  # initialise columns
+    # FIXME: this should be removed when
+    # diaObject.firstDiaSourceMjdTai will be populated
+    df = df.withColumn("firstDiaSourceMjdTai", F.array_min("cmidpointMjdTai"))
+
+    misc_struct = [i for i in df.columns if i not in columns_pre_misc]
+
     # PREDICTIONS
     columns_pre_predictor = df.columns  # initialise columns
     _LOG.info("New predictor: asteroids")
     df = df.withColumn("is_sso", df["ssSource"].isNotNull())
 
     _LOG.info("New predictor: first alert")
-    df = df.withColumn("is_first", F.size(df["prvDiaSources"]) == -1)
+    df = df.withColumn("is_first", df["diaObject.nDiaSources"] == 1)
 
     _LOG.info("New predictor: cataloged")
     df = df.withColumn(
@@ -364,6 +375,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     df = df.withColumn("pred", F.struct(*prediction_struct))
     df = df.drop(*prediction_struct)
+
+    df = df.withColumn("misc", F.struct(*misc_struct))
+    df = df.drop(*misc_struct)
 
     # Drop temp columns
     df = df.drop(*expanded)
