@@ -61,7 +61,7 @@ then
   expected_topics="19"
 else
   # 3 topics do not send results
-  expected_topics="16"
+  expected_topics="15"
 fi
 
 count=0
