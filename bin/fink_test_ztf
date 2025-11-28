@@ -108,13 +108,13 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw -s ${SURVEY} --simulator -exit_after 120 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
+  fink start stream2raw -s ${SURVEY} --simulator -exit_after 300 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science -s ${SURVEY} -exit_after 180 -c $conf -night $NIGHT ${RESOURCES}
+  fink start raw2science -s ${SURVEY} -exit_after 600 -c $conf -night $NIGHT ${RESOURCES}
 
   # Start the distribution service
-  fink start distribute -s ${SURVEY} -exit_after 60 -c $conf -night $NIGHT ${RESOURCES}
+  fink start distribute -s ${SURVEY} -exit_after 600 -c $conf -night $NIGHT ${RESOURCES}
 
   # check we have all topics
   echo "TOPICS FOUND:"
