@@ -23,7 +23,7 @@ log_level: INFO
 stream2raw:
   cores: "{{.Values.cores}}"
   coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
+  memory: "1500m"
   instances: "{{.Values.instances}}"
   kafka:
     topic: ztf_public_20200101
