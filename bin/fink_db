@@ -199,8 +199,9 @@ if [[ ${MERGE} == true ]]; then
       fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
     elif [[ ${SURVEY} == "rubin" ]]; then
       # Rubin is just a move to another place
-      run_hdfs_or_local "mkdir -p" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
-      run_hdfs_or_local "mv" ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
+      # run_hdfs_or_local "mkdir -p" ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}
+      # run_hdfs_or_local "mv" ${ONLINE_DATA_PREFIX}/science/${NIGHT}/* ${AGG_DATA_PREFIX}/science/year=${YEAR}/month=${MONTH}/day=${DAY}/
+      fink start merge -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/merge_${SURVEY}_${NIGHT}.log 2>&1
     fi
   else
     echo -e "${SERROR} No data at ${ONLINE_DATA_PREFIX}/science/${NIGHT}"
@@ -310,8 +311,10 @@ if [[ ${INDEX_TABLES} == true ]]; then
 
       echo -e "${SSTEP} 2: Update index tables"
       # for v8 we should change the rowkey to pixel128_firstDiaSourceMjdTai_diaObjectId
-      # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_firstDiaSourceMjdTai_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_firstDiaSourceMjdTai_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
-      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
+      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_firstDiaSourceMjdTai_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_firstDiaSourceMjdTai_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
+      
+      echo -e " ${SSTEP} 3: Update statistics"
+      fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
       # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table forcedSources_diaObjectId_midpointMjdTai > ${FINK_HOME}/broker_logs/index_forcedSources_diaObjectId_midpointMjdTai_${SURVEY}_${NIGHT}.log 2>&1
     fi
   else

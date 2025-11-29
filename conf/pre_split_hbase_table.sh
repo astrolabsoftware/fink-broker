@@ -64,6 +64,7 @@ STANDARD_TABLES=(
 	"${TABLE_PREFIX}.pixel128"
 	"${TABLE_PREFIX}.tns_resolver"
         "${TABLE_PREFIX}.sso_resolver"
+	"${TABLE_PREFIX}.statistics"
 )
 
 COLFAMILIES=(
@@ -100,6 +101,9 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.tns_resolver" ]]; then
                         # diaObject has 100 partitions, based on year [YY]YY
                         output=$(pre_split_alphabetical)
+		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.statistics" ]]; then
+                        # diaSource_sso has 100 partitions, without salt defined yet
+                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
                 else
                         # Default splitting
                         output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
