@@ -143,10 +143,10 @@ jobs:
           else
             echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
           fi
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
+          # - name: Setup tmate session
+          # uses: mxschmitt/action-tmate@v3
+          # with:
+          # detached: true
       - name: Run argoCD
         run: |
           ./e2e/argocd.sh -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
