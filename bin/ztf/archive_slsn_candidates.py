@@ -69,7 +69,7 @@ EQU: {row.ra},   {row.dec}"""
     magnitudes = np.array(
         [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
     )
-    mask_nones = [type(k) is float for k in magnitudes]
+    mask_nones = ~np.isnan(np.array(magnitudes, dtype=float))
     magnitudes = magnitudes[mask_nones]
     photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
     ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
