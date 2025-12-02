@@ -74,29 +74,31 @@ EQU: {row.ra},   {row.dec}"""
     photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
     ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
     t4, t5 = "", ""
-    if photoz == photoz:
-        t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
-
+    low_brightness = False
     if (photoz == photoz) and (len(magnitudes) > 0):
         peak = np.min(magnitudes)
         lower_M, M, upper_M = abs_peak(peak, photoz, photozerr, ebv)
         t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
 
-    curve.seek(0)
-    cutout.seek(0)
-    cutout_perml = f"<{cutout_perml}|{' '}>"
-    curve_perml = f"<{curve_perml}|{' '}>"
-    slack_data.append(
-        f"""==========================
-{t0}
-{t1}
-{t1bis}
-{t2}
-{t3}
-{t4}
-{t5}
-{cutout_perml}{curve_perml}"""
-    )
+        if upper_M > kern.not_sl_threshold:
+            low_brightness = True
+
+    if not low_brightness:
+        curve.seek(0)
+        cutout.seek(0)
+        cutout_perml = f"<{cutout_perml}|{' '}>"
+        curve_perml = f"<{curve_perml}|{' '}>"
+        slack_data.append(
+            f"""==========================
+    {t0}
+    {t1}
+    {t1bis}
+    {t2}
+    {t3}
+    {t4}
+    {t5}
+    {cutout_perml}{curve_perml}"""
+        )
 
 
 def main():
