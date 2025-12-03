@@ -82,7 +82,7 @@ def load_fink_cols():
         "gaiaVarFlag": {"type": "int", "default": 0},
         "gaiaClass": {"type": "string", "default": "Unknown"},
         "is_transient": {"type": "boolean", "default": False},
-        "slsn_score": {"type": "float", "default": -1},
+        "slsn_score": {"type": "double", "default": -1},
     }
 
     fink_nested_cols = {}
