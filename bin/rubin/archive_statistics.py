@@ -70,9 +70,13 @@ def main():
     # SIMBAD
     simbad = df.groupBy("pred.main_label_crossmatch").count().collect()
     [
-        out_dic.update({"{}".format(i["main_label_crossmatch"]): i["count"]})
+        out_dic.update({"SIMBAD_{}".format(i["main_label_crossmatch"]): i["count"]})
         for i in simbad
     ]
+
+    # TNS
+    tns = df.groupBy("xm.tns").count().collect()
+    [out_dic.update({"TNS_{}".format(i["tns"]): i["count"]}) for i in tns]
 
     # Number of visits
     out_dic["visits"] = df.select("diaSource.midpointMjdTai").distinct().count()
