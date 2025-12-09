@@ -67,6 +67,8 @@ def main():
     out_dic["is_first"] = df.filter(df["pred.is_first"]).count()
     out_dic["is_cataloged"] = df.filter(df["pred.is_cataloged"]).count()
 
+    # FIXME: is_candidate?
+
     # SIMBAD
     simbad = df.groupBy("pred.main_label_crossmatch").count().collect()
     [
