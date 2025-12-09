@@ -78,6 +78,15 @@ def main():
     tns = df.groupBy("xm.tns").count().collect()
     [out_dic.update({"TNS_{}".format(i["tns"]): i["count"]}) for i in tns]
 
+    # Various Flags
+    out_dic["glint_trail"] = df.select("diaSource.glint_trail").count()
+    out_dic["isDipole"] = df.select("diaSource.isDipole").count()
+    out_dic["pixelFlags_cr"] = df.select("diaSource.pixelFlags_cr").count()
+    out_dic["pixelFlags_saturated"] = df.select(
+        "diaSource.pixelFlags_saturated"
+    ).count()
+    out_dic["pixelFlags_streak"] = df.select("diaSource.pixelFlags_streak").count()
+
     # Number of visits
     out_dic["visits"] = df.select("diaSource.midpointMjdTai").distinct().count()
 
