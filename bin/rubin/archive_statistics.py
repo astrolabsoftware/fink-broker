@@ -77,7 +77,7 @@ def main():
     ]
 
     # TNS
-    tns = df.groupBy("xm.tns").count().collect()
+    tns = df.groupBy("xm.tns_type").count().collect()
     [out_dic.update({"TNS_{}".format(i["tns"]): i["count"]}) for i in tns]
 
     # Various Flags
