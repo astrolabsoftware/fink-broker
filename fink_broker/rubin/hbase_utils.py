@@ -65,8 +65,13 @@ def load_fink_cols():
         for type_, name in zip(
             CAT_PROPERTIES[k]["types"], CAT_PROPERTIES[k]["cols_out"]
         ):
+            # Name if either the prefix_col_out or the catalogname otherwise
             fink_source_cols[
-                "xm.{}{}_{}".format(CAT_PROPERTIES[k].get("prefix", ""), k, name)
+                "xm.{}{}_{}".format(
+                    CAT_PROPERTIES[k].get("prefix", ""),
+                    CAT_PROPERTIES[k].get("prefix_col_out", k),
+                    name,
+                )
             ] = {"type": type_, "default": None}
 
     # Classifiers
