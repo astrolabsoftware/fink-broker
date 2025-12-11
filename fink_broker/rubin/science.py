@@ -45,25 +45,25 @@ CAT_PROPERTIES = {
         "types": ["string"],
         "distmaxarcsec": 1.0,
     },
-    "vizier:I/355/gaiadr3": {
+    "gaiadr3": {
         "kind": "cds",
         "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
         "types": ["string", "float", "float", "string"],
         "distmaxarcsec": 1.0,
     },
-    "vizier:I/358/vclassre": {
+    "v_vclassre": {
         "kind": "cds",
         "cols_out": ["Class"],
         "types": ["string"],
         "distmaxarcsec": 1.0,
     },
-    "vizier:B/vsx/vsx": {
+    "v_vsx": {
         "kind": "cds",
         "cols_out": ["Type"],
         "types": ["string"],
         "distmaxarcsec": 1.5,
     },
-    "vizier:J/ApJS/254/33/table1": {
+    "v_spicy": {
         "kind": "cds",
         "cols_out": ["SPICY", "class"],
         "types": ["int", "string"],
@@ -190,8 +190,8 @@ def apply_all_xmatch(df, tns_raw_output):
     # VarFlag is a string. Make it integer
     # 0=NOT_AVAILABLE / 1=VARIABLE
     df = df.withColumn(
-        "vizier:I/355/gaiadr3_VarFlag",
-        F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
+        "gaiadr3_VarFlag",
+        F.when(df["gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
     )
 
     return df
@@ -348,10 +348,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn(
         "is_cataloged",
         (F.col("simbad_otype").isNotNull() & (F.col("simbad_otype") != "Fail"))
-        | (
-            F.col("vizier:I/355/gaiadr3_DR3Name").isNotNull()
-            & (F.col("vizier:I/355/gaiadr3_DR3Name") != "Fail")
-        ),
+        | (F.col("gaiadr3_DR3Name").isNotNull() & (F.col("gaiadr3_DR3Name") != "Fail")),
     )
 
     # This seems redundant with `classifiers.cat_class`, but it allows
