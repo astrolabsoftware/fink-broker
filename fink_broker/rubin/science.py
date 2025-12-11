@@ -137,13 +137,11 @@ def apply_all_xmatch(df, tns_raw_output):
     for catname in CAT_PROPERTIES.keys():
         _LOG.info("New xmatch: {}".format(catname))
 
-        if "prefix_col_out" not in CAT_PROPERTIES[catname].keys():
-            CAT_PROPERTIES[catname]["prefix_col_out"] = catname
-
         if CAT_PROPERTIES[catname]["kind"] == "cds":
             df = xmatch_cds(
                 df,
                 catalogname=catname,
+                prefix_col_out=CAT_PROPERTIES[catname].get("prefix_col_out", None),
                 distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
                 cols_out=CAT_PROPERTIES[catname]["cols_out"],
                 types=CAT_PROPERTIES[catname]["types"],
