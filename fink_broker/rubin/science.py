@@ -47,24 +47,21 @@ CAT_PROPERTIES = {
     },
     "vizier:I/355/gaiadr3": {
         "kind": "cds",
+        "prefix_col_out": "gaiadr3",
         "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
         "types": ["string", "float", "float", "string"],
         "distmaxarcsec": 1.0,
     },
-    "vizier:I/358/vclassre": {
-        "kind": "cds",
-        "cols_out": ["Class"],
-        "types": ["string"],
-        "distmaxarcsec": 1.0,
-    },
     "vizier:B/vsx/vsx": {
         "kind": "cds",
+        "prefix_col_out": "vsx",
         "cols_out": ["Type"],
         "types": ["string"],
         "distmaxarcsec": 1.5,
     },
     "vizier:J/ApJS/254/33/table1": {
         "kind": "cds",
+        "prefix_col_out": "spicy",
         "cols_out": ["SPICY", "class"],
         "types": ["int", "string"],
         "distmaxarcsec": 1.2,
@@ -128,7 +125,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 17, (new_cols, cols_out)
+    >>> assert len(new_cols) == 16, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -144,6 +141,7 @@ def apply_all_xmatch(df, tns_raw_output):
             df = xmatch_cds(
                 df,
                 catalogname=catname,
+                prefix_col_out=CAT_PROPERTIES[catname].get("prefix_col_out", None),
                 distmaxarcsec=CAT_PROPERTIES[catname]["distmaxarcsec"],
                 cols_out=CAT_PROPERTIES[catname]["cols_out"],
                 types=CAT_PROPERTIES[catname]["types"],
@@ -190,8 +188,8 @@ def apply_all_xmatch(df, tns_raw_output):
     # VarFlag is a string. Make it integer
     # 0=NOT_AVAILABLE / 1=VARIABLE
     df = df.withColumn(
-        "vizier:I/355/gaiadr3_VarFlag",
-        F.when(df["vizier:I/355/gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
+        "gaiadr3_VarFlag",
+        F.when(df["gaiadr3_VarFlag"] == "VARIABLE", 1).otherwise(0),
     )
 
     return df
@@ -234,7 +232,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 3, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 17, xmatch_cols
+    >>> assert len(xmatch_cols) == 16, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
@@ -348,10 +346,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn(
         "is_cataloged",
         (F.col("simbad_otype").isNotNull() & (F.col("simbad_otype") != "Fail"))
-        | (
-            F.col("vizier:I/355/gaiadr3_DR3Name").isNotNull()
-            & (F.col("vizier:I/355/gaiadr3_DR3Name") != "Fail")
-        ),
+        | (F.col("gaiadr3_DR3Name").isNotNull() & (F.col("gaiadr3_DR3Name") != "Fail")),
     )
 
     # This seems redundant with `classifiers.cat_class`, but it allows
