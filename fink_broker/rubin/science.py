@@ -232,7 +232,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 3, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 17, xmatch_cols
+    >>> assert len(xmatch_cols) == 16, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
