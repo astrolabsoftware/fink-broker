@@ -51,19 +51,13 @@ CAT_PROPERTIES = {
         "types": ["string", "float", "float", "string"],
         "distmaxarcsec": 1.0,
     },
-    "v_vclassre": {
-        "kind": "cds",
-        "cols_out": ["Class"],
-        "types": ["string"],
-        "distmaxarcsec": 1.0,
-    },
-    "v_vsx": {
+    "vsx": {
         "kind": "cds",
         "cols_out": ["Type"],
         "types": ["string"],
         "distmaxarcsec": 1.5,
     },
-    "v_spicy": {
+    "spicy": {
         "kind": "cds",
         "cols_out": ["SPICY", "class"],
         "types": ["int", "string"],
