@@ -45,20 +45,23 @@ CAT_PROPERTIES = {
         "types": ["string"],
         "distmaxarcsec": 1.0,
     },
-    "gaiadr3": {
+    "vizier:I/355/gaiadr3": {
         "kind": "cds",
+        "prefix_col_out": "gaiadr3",
         "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
         "types": ["string", "float", "float", "string"],
         "distmaxarcsec": 1.0,
     },
-    "vsx": {
+    "vizier:B/vsx/vsx": {
         "kind": "cds",
+        "prefix_col_out": "vsx",
         "cols_out": ["Type"],
         "types": ["string"],
         "distmaxarcsec": 1.5,
     },
-    "spicy": {
+    "vizier:J/ApJS/254/33/table1": {
         "kind": "cds",
+        "prefix_col_out": "spicy",
         "cols_out": ["SPICY", "class"],
         "types": ["int", "string"],
         "distmaxarcsec": 1.2,
@@ -122,7 +125,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 17, (new_cols, cols_out)
+    >>> assert len(new_cols) == 16, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -133,6 +136,9 @@ def apply_all_xmatch(df, tns_raw_output):
 
     for catname in CAT_PROPERTIES.keys():
         _LOG.info("New xmatch: {}".format(catname))
+
+        if "prefix_col_out" not in CAT_PROPERTIES[catname].keys():
+            CAT_PROPERTIES[catname]["prefix_col_out"] = catname
 
         if CAT_PROPERTIES[catname]["kind"] == "cds":
             df = xmatch_cds(
