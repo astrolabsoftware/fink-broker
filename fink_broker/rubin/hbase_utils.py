@@ -53,7 +53,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    23
+    22
 
     >>> print(len(fink_object_cols))
     6
@@ -258,7 +258,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 23 + 6
+    >>> expected = 3 + 82 + 12 + 98 + 24 + 22 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
