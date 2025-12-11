@@ -100,3 +100,6 @@ ADD deps/${input_survey}/requirements-science.txt $FINK_HOME/deps
 RUN pip install -r $FINK_HOME/deps/requirements.txt -r $FINK_HOME/deps/requirements-test.txt -r $FINK_HOME/deps/requirements-science.txt --use-pep517
 ADD deps/${input_survey}/requirements-science-no-deps.txt $FINK_HOME/deps
 RUN pip install -r $FINK_HOME/deps/requirements-science-no-deps.txt --no-deps
+
+# Finally initialise dustmaps
+RUN python -c "from dustmaps.config import config;import dustmaps.sfd;dustmaps.sfd.fetch()"
