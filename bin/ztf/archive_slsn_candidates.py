@@ -59,10 +59,8 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
 
     t1 = f"Fink: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
-    t2 = f"""
-EQU: {row.ra},   {row.dec}"""
+    t2 = f"Score: {round(row.slsn_score, 3)}"
 
-    t3 = f"Score: {round(row.slsn_score, 3)}"
     cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
         row.objectId, slack_token_env=slack_token_env
     )
@@ -73,11 +71,13 @@ EQU: {row.ra},   {row.dec}"""
     magnitudes = magnitudes[mask_nones]
     photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
     ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
+    t3 = f"E(B-V) = {ebv}"
     t4, t5 = "", ""
     low_brightness = False
     if (photoz == photoz) and (len(magnitudes) > 0):
         peak = np.min(magnitudes)
         lower_M, M, upper_M = abs_peak(peak, photoz, photozerr, ebv)
+        t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
         t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
 
         if upper_M > kern.not_sl_threshold:
