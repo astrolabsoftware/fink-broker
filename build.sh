@@ -25,7 +25,6 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 # This will avoid overriding user ciuxconfig during a build
-export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
 
 usage() {
   cat << EOD
@@ -61,7 +60,7 @@ ignite_msg="Run following command to prepare integration tests:"
 ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
 
 # This command avoid retrieving build dependencies if not needed
-$(ciux get image --check $DIR --suffix "$suffix" --tmp-registry "$tmp_registry" --env)
+$(ciux get image --check $DIR --suffix "$suffix" --env)
 
 if [ $CIUX_BUILD = false ];
 then
@@ -70,17 +69,31 @@ then
     exit 0
 fi
 
-ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
+if [[ $suffix =~ ^noscience* ]]; then
+    SELECTOR="build=noscience"
+else
+    SELECTOR="build=science"
+fi
+
+ciux ignite --selector "$SELECTOR" $DIR --suffix "$suffix"
+
+
+# TODO improve and use
+# . $DIR/.ciux.d/ciuxconfig.sh
+CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
+echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
 
 if [[ $suffix =~ ^noscience* ]]; then
     target="noscience"
+    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_NOSCIENCE_ZTF_IMAGE"
 else
-    target="full"
+    target="science"
+    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_SCIENCE_ZTF_IMAGE"
 fi
 
-# Build image
-docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" --build-arg input_survey="$input_survey" "$DIR" --target $target
+# Build image using pre-built fink-deps images
+docker image build --tag "$CIUX_IMAGE_URL" --build-arg base_image="$base_image" "$DIR"
 
 
 echo "Build successful"
