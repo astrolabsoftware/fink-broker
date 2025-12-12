@@ -61,7 +61,7 @@ ignite_msg="Run following command to prepare integration tests:"
 ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
 
 # This command avoid retrieving build dependencies if not needed
-$(ciux get image --check $DIR --suffix "$suffix" --tmp-registry "$tmp_registry" --env)
+$(ciux get image --check $DIR --suffix "$suffix" --env)
 
 if [ $CIUX_BUILD = false ];
 then
@@ -70,7 +70,7 @@ then
     exit 0
 fi
 
-ciux ignite --selector build $DIR --suffix "$suffix" --tmp-registry "$tmp_registry"
+ciux ignite --selector build $DIR --suffix "$suffix"
 . $CIUXCONFIG
 
 if [[ $suffix =~ ^noscience* ]]; then
