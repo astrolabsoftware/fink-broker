@@ -88,6 +88,7 @@ def main():
     for model in ANOMALY_MODELS:
         df_proc = df.select(
             "objectId",
+            "candid",
             "candidate.ra",
             "candidate.dec",
             "candidate.rb",
