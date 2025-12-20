@@ -67,8 +67,6 @@ jobs:
       run: |
         # to remove
         export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
-        cd $USRLIBS
-        source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
         cd $FINK_HOME
         if [ "${{ matrix.survey }}" == "ztf" ]; then
           fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
