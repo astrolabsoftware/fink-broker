@@ -23,7 +23,7 @@ jobs:
         survey: ["ztf", "rubin"]
 
     container:
-      image: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ matrix.survey }}:v2.52.0-55-gf1b816f"
+      image: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ matrix.survey }}:v2.52.0-56-g6927eb1"
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
