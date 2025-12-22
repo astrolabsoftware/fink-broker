@@ -23,37 +23,39 @@ jobs:
         survey: ["ztf", "rubin"]
 
     container:
-      image: "gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ matrix.survey }}:v2.52.0-56-g6927eb1"
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ matrix.survey }}:v2.52.0-68-gd0ee605
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
+    - name: Check env DEBUG
+      run: |
+        env
     - uses: actions/checkout@v4
 
-    - name: Set up env from container variables
-      run: |
-        echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))" >> $GITHUB_ENV
-        echo "${BINPATH}" >> $GITHUB_PATH
     - name: Download simulator
       run: |
+        pwd
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
-        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink" >> $GITHUB_ENV
     - name: Download schemas
       run: |
         git clone --depth 1 --branch v0.0.2-rc0 https://github.com/astrolabsoftware/fink-alert-schemas.git
 
         # for the test suite
         cp -r fink-alert-schemas/datasim .
-        echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
-    - name: Set up env [2/2]
+    - name: Set up env
       run: |
-        echo "PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.9.7-src.zip:${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
+        echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink" >> $GITHUB_ENV
+        echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
+        echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
+        # TODO test if needed
+        echo "KAFKA_OPTS=-Djava.net.preferIPv4Stack=True" >> $GITHUB_ENV
         echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
     - name: Check env
       run: |
-        echo "PATH: $GITHUB_ENV"
+        echo "PATH: $PATH"
         echo "FINK_HOME: $FINK_HOME"
         echo "SPARK_HOME: $SPARK_HOME"
         echo "SPARKLIB: $SPARKLIB"
@@ -63,10 +65,12 @@ jobs:
         echo "PYTHONPATH: $PYTHONPATH"
         echo "JAVA_HOME: $JAVA_HOME"
         echo `python -V`
-    - name: Run ZTF test suite
+    - name: Start services
       run: |
-        # to remove
-        export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
+        ${FINK_BROKER_ROOT}/sentinel/start_services.sh
+    - name: Run test suite for ${{ matrix.survey }}
+      run: |
+        # Github action does not use CMD in the Dockerfile, so we need to start the services here
         cd $FINK_HOME
         if [ "${{ matrix.survey }}" == "ztf" ]; then
           fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
