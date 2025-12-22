@@ -46,12 +46,14 @@ jobs:
         cp -r fink-alert-schemas/datasim .
     - name: Set up env
       run: |
-        echo "FINK_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        export FINK_HOME=$GITHUB_WORKSPACE
+        echo "FINK_HOME=$FINK_HOME" >> $GITHUB_ENV
         echo "FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink" >> $GITHUB_ENV
         echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
         echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
         # TODO test if needed
         echo "KAFKA_OPTS=-Djava.net.preferIPv4Stack=True" >> $GITHUB_ENV
+
         echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
     - name: Check env
       run: |
@@ -71,12 +73,11 @@ jobs:
     - name: Run test suite for ${{ matrix.survey }}
       run: |
         # Github action does not use CMD in the Dockerfile, so we need to start the services here
-        cd $FINK_HOME
         if [ "${{ matrix.survey }}" == "ztf" ]; then
-          fink_test_ztf -c conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
+          fink_test_ztf -c $FINK_HOME/conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
           curl -s https://codecov.io/bash | bash
         elif [ "${{ matrix.survey }}" == "rubin" ]; then
-          fink_test_rubin -c conf/rubin/fink.conf.dev --stream-integration --db-integration --unit-tests
+          fink_test_rubin -c $FINK_HOME/conf/rubin/fink.conf.dev --stream-integration --db-integration --unit-tests
         fi
     - uses: actions/upload-artifact@v4
       with:
