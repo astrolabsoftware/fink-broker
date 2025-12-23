@@ -146,7 +146,7 @@ check_table_output() {
   local tablename="$1"
   shift
   local number="$@"
-  output=`echo -e "count '$tablename'" | /home/libs/hbase-2.5.8/bin/hbase shell -n`
+  output=`echo -e "count '$tablename'" | hbase shell -n`
   num_rows=$(echo "$output" | grep -o '[0-9]\+ row(s)' | grep -o '[0-9]\+')
   if [[ $num_rows != ${number} ]]; then
     echo -e "${SERROR} table ${tablename} has ${num_rows:-0} rows instead of ${number}"
