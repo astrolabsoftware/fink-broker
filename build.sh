@@ -70,17 +70,23 @@ then
     exit 0
 fi
 
-ciux ignite --selector build $DIR --suffix "$suffix"
+if [[ $suffix =~ ^noscience* ]]; then
+    ciux ignite --selector build=noscience $DIR --suffix "$suffix"
+else
+    ciux ignite --selector build=science $DIR --suffix "$suffix"
+fi
 . $CIUXCONFIG
 
 if [[ $suffix =~ ^noscience* ]]; then
     target="noscience"
+    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_NOSCIENCE_ZTF_IMAGE"
 else
-    target="full"
+    target="science"
+    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_SCIENCE_ZTF_IMAGE"
 fi
 
-# Build image
-docker image build --tag "$CIUX_IMAGE_URL" --build-arg spark_py_image="$ASTROLABSOFTWARE_FINK_SPARK_PY_IMAGE" --build-arg input_survey="$input_survey" "$DIR" --target $target
+# Build image using pre-built fink-deps images
+docker image build --tag "$CIUX_IMAGE_URL" --build-arg base_image="$base_image" "$DIR"
 
 
 echo "Build successful"
