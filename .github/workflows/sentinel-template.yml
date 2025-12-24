@@ -1,26 +1,26 @@
-# Template workflow for Sentinel tests
-# This file contains the shared configuration and steps for both ZTF and Rubin surveys
-#
-# IMPORTANT: This is a template file - it should NOT be executed by GitHub Actions
-# Copy this template to create specific workflows for each survey
+# Reusable workflow for Sentinel tests
+# This workflow contains shared configuration and steps for both ZTF and Rubin surveys
 
-# name: Sentinel Template  # Commented out to prevent execution
+name: Sentinel Test Template
 
-# This is a template - it should not be triggered directly
-# Copy this template to create specific workflows for each survey
+on:
+  workflow_call:
+    inputs:
+      survey:
+        required: true
+        type: string
+        description: 'Survey name (ztf or rubin)'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Template job configuration
-# Replace SURVEY_NAME and IMAGE_SUFFIX in specific workflows
 jobs:
-  test-SURVEY_NAME:
+  test:
     runs-on: ubuntu-latest
 
     container:
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-IMAGE_SUFFIX:v2.52.0-74-g11c8ea9
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.52.0-77-g14a56ef
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -67,13 +67,17 @@ jobs:
     - name: Start services
       run: |
         ${FINK_BROKER_ROOT}/sentinel/start_services.sh
-    # Replace with specific test command for each survey
-    - name: Run SURVEY_NAME test suite
+    - name: Run ${{ inputs.survey }} test suite
       run: |
-        # REPLACE_WITH_SURVEY_SPECIFIC_COMMANDS
+        if [ "${{ inputs.survey }}" = "ztf" ]; then
+          fink_test_ztf -c $FINK_HOME/conf/ztf/fink.conf.dev --stream-integration --db-integration --mm-offline --unit-tests
+          curl -s https://codecov.io/bash | bash
+        elif [ "${{ inputs.survey }}" = "rubin" ]; then
+          fink_test_rubin -c $FINK_HOME/conf/rubin/fink.conf.dev --stream-integration --db-integration --unit-tests
+        fi
     - uses: actions/upload-artifact@v4
       with:
-        name: logs-SURVEY_NAME
+        name: logs-${{ inputs.survey }}
         path: broker_logs
         retention-days: 7
         overwrite: true
