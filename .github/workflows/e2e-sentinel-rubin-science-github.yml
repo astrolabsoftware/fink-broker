@@ -1,4 +1,4 @@
-name: Sentinel ZTF
+name: "e2e: platform=sentinel, survey=rubin, science=true, infra=github"
 
 on:
   workflow_dispatch:
@@ -7,4 +7,4 @@ jobs:
   call-sentinel-template:
     uses: ./.github/workflows/sentinel-template.yml
     with:
-      survey: ztf
+      survey: rubin
