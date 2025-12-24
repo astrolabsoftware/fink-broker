@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-rubin:v2.52.0-74-g11c8ea9
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-rubin:v2.52.0-77-g14a56ef
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
