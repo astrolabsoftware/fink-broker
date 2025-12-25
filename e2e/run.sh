@@ -22,7 +22,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.5-rc0
+ciux_version=v0.0.7-rc1
 export CIUXCONFIG=$HOME/.ciux/ciux.sh
 
 src_dir=$DIR/..
