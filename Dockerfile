@@ -15,11 +15,34 @@
 # limitations under the License.
 #
 ARG base_image
-
 FROM ${base_image}
+
+ARG spark_uid=185
+ENV spark_uid=${spark_uid}
 
 # The base image already contains all system dependencies, Python setup,
 # spark_uid, and input_survey environment variables
 # Just add the fink-broker code
+
+# Main process will run as spark_uid
+ENV HOME=/home/fink-broker
+RUN mkdir -p $HOME && chown ${spark_uid} $HOME
+
+WORKDIR $HOME
+
+ENV FINK_JARS=""
+ENV FINK_PACKAGES=""
+
+ENV PATH=$FINK_BROKER_ROOT/miniconda/bin:$PATH
+ENV FINK_HOME=$HOME
+ENV PYTHONPATH=$FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
+ENV PATH=$FINK_HOME/bin:$PATH
+
+
+ENV FINK_ALERT_SCHEMAS_VERSION=v0.0.2-rc0
+RUN git clone -c advice.detachedHead=false --depth 1 --filter=blob:none --sparse --branch "${FINK_ALERT_SCHEMAS_VERSION}" https://github.com/astrolabsoftware/fink-alert-schemas.git \
+    && cd fink-alert-schemas \
+    && git sparse-checkout set ztf
+
 
 ADD --chown=${spark_uid} . $FINK_HOME/
