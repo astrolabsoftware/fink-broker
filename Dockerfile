@@ -25,14 +25,14 @@ ENV spark_uid=${spark_uid}
 # Just add the fink-broker code
 
 # Main process will run as spark_uid
-ENV HOME=/home/fink-broker
+ENV HOME=/home/fink
 WORKDIR $HOME
 
 ENV FINK_JARS=""
 ENV FINK_PACKAGES=""
 
 ENV PATH=$FINK_BROKER_ROOT/miniconda/bin:$PATH
-ENV FINK_HOME=$HOME/fink
+ENV FINK_HOME=$HOME/fink-broker
 ENV PYTHONPATH=$FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 ENV PATH=$FINK_HOME/bin:$PATH
 
