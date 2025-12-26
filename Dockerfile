@@ -26,8 +26,6 @@ ENV spark_uid=${spark_uid}
 
 # Main process will run as spark_uid
 ENV HOME=/home/fink-broker
-RUN mkdir -p $HOME && chown ${spark_uid} $HOME
-
 WORKDIR $HOME
 
 ENV FINK_JARS=""
