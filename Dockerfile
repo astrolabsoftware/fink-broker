@@ -32,7 +32,7 @@ ENV FINK_JARS=""
 ENV FINK_PACKAGES=""
 
 ENV PATH=$FINK_BROKER_ROOT/miniconda/bin:$PATH
-ENV FINK_HOME=$HOME
+ENV FINK_HOME=$HOME/fink-broker
 ENV PYTHONPATH=$FINK_HOME:${SPARK_HOME}/python/lib/pyspark.zip:${SPARK_HOME}/python/lib/py4j-*.zip
 ENV PATH=$FINK_HOME/bin:$PATH
 
