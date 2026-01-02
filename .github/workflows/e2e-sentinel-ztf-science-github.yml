@@ -13,5 +13,6 @@ on:
 jobs:
   call-sentinel-template:
     uses: ./.github/workflows/sentinel-template.yml
+    secrets: inherit
     with:
       survey: ztf
