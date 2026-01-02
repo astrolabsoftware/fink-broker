@@ -21,8 +21,8 @@ ARG spark_uid=185
 ENV spark_uid=${spark_uid}
 
 # The base image already contains all system dependencies, Python setup,
-# spark_uid, and input_survey environment variables
-# Just add the fink-broker code
+# and environment variables such as spark_uid and input_survey.
+# This image only adds the fink-broker code on top of the base image.
 
 # Main process will run as spark_uid
 ENV HOME=/home/fink
