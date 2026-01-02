@@ -18,8 +18,8 @@
 ## Auto-approved Operations
 The following operations can be performed without user approval:
 - `WebFetch(domain:github.com)` - Fetch content from GitHub
-- `Read(//home/fjammes/src/github.com/k8s-school/home-ci/.github/workflows/**)` - Read workflow files from k8s-school project
-- `Read(//home/fjammes/src/github.com/astrolabsoftware/fink-broker-images/**)` - Read files from fink-broker-images project
+- `Read($HOME/src/github.com/k8s-school/home-ci/.github/workflows/**)` - Read workflow files from k8s-school project
+- `Read($HOME/src/github.com/astrolabsoftware/fink-broker-images/**)` - Read files from fink-broker-images project
 - `Bash(git add:*)` - Run git add commands
 - `Bash(git commit:*)` - Run git commit commands
 - `Bash(git push:*)` - Run git push commands
