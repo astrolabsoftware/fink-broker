@@ -1,12 +1,13 @@
-name: "e2e: noscience, gha"
+name: "e2e: platform=k8s, survey=ztf, science=false, infra=github"
 on:
   push:
   pull_request:
     branches:
       - master
   schedule:
-    # At 03:00 UTC on every day-of-week from Monday through Friday.
-    - cron:  '0 3 * * 1-5'
+    # At 03:00 UTC on Sunday
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
 jobs:
   call-workflow-passing-data:
     uses: ./.github/workflows/e2e-common.yml
