@@ -85,10 +85,8 @@ echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
 
 if [[ $suffix =~ ^noscience* ]]; then
-    target="noscience"
     base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_NOSCIENCE_ZTF_IMAGE"
 else
-    target="science"
     base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_SCIENCE_ZTF_IMAGE"
 fi
 
