@@ -108,7 +108,8 @@ def main():
     # For the Symbiotic stars bot we should filter all alerts
     # with delta mag between the last 2 points bigger than 0.5 (any filter).
     pdf = (
-        df.filter(df["mag_rate"] * df["delta_time"] <= -0.5)
+        df
+        .filter(df["mag_rate"] * df["delta_time"] <= -0.5)
         .filter(~df["from_upper"])
         .select([
             "candidate.ra",

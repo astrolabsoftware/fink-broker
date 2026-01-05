@@ -67,7 +67,8 @@ if __name__ == "__main__":
         schema = response.text
 
         spark = (
-            SparkSession.builder.master("local[1]")
+            SparkSession.builder
+            .master("local[1]")
             .config("spark.hadoop.fs.defaultFS", "file:///")
             .getOrCreate()
         )

@@ -556,7 +556,9 @@ def ingest_object_data(
     df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
 
     # Keep only the last alert per object
-    w = Window.partitionBy("{}.{}".format(section, field))
+    w = Window.partitionBy("{}.{}".format(section, field)).rowsBetween(
+        Window.unboundedPreceding, Window.unboundedFollowing
+    )
     df_dedup = (
         df
         .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))

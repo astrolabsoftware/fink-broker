@@ -270,7 +270,8 @@ def connect_to_kafka(
 
     # Create a streaming DF from the incoming stream from Kafka
     df = (
-        spark.readStream.format("kafka")
+        spark.readStream
+        .format("kafka")
         .option("kafka.bootstrap.servers", servers)
         .option("maxOffsetsPerTrigger", max_offsets_per_trigger)
     )
@@ -299,7 +300,8 @@ def connect_to_kafka(
             )
 
     df = (
-        df.option("subscribePattern", topic)
+        df
+        .option("subscribePattern", topic)
         .option("startingOffsets", startingoffsets)
         .option("failOnDataLoss", failondataloss)
         .load()
@@ -357,7 +359,8 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
             break
 
     df = (
-        spark.readStream.format("parquet")
+        spark.readStream
+        .format("parquet")
         .schema(userschema)
         .option("basePath", basepath)
         .option("path", path)
@@ -532,17 +535,17 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Parameters
     ----------
-    ra: float
+    ra: pd.Series
         Spark column containing RA (float)
-    dec: float
+    dec: pd.Series
         Spark column containing RA (float)
-    nside: int
-        Spark column containing nside
+    nside: pd.Series
+        Spark column containing (duplicated) nside
 
     Returns
     -------
-    out: long
-        Spark column containing pixel number
+    out: pd.Series
+        Spark column containing pixel number (long)
 
     Examples
     --------

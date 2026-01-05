@@ -1,4 +1,4 @@
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import pyspark.sql.functions as F
 from fink_broker.common.spark_utils import to_avro
 
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import struct, lit
 from pyspark.sql.avro.functions import to_avro as to_avro_native
 
+from fink_utils.spark import schema_converter
 from fink_broker.common.tester import spark_unit_tests
 
 
@@ -79,6 +80,58 @@ def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
     df_kafka = df_kafka.withColumn("key", lit(key))
 
     return df_kafka
+
+
+def push_to_kafka(
+    df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg, npart=None
+):
+    """Push data to a Kafka custer
+
+    Parameters
+    ----------
+    df_in: Spark DataFrame
+        Alert DataFrame
+    topicname: str
+        Name of the Kafka topic to create
+    cnames: list of str
+        List of columns to transfer in the stream
+    checkpointpath_kafka: str
+        Path on HDFS/S3 for the checkpoints
+    tinterval: int
+        Interval in seconds between two micro-batches
+    kafka_cfg: dict
+        Dictionnary with Kafka parameters
+    npart: int, optional
+        If not None, the number of partitions.
+
+    Returns
+    -------
+    out: Streaming DataFrame
+    """
+    df_in = df_in.selectExpr(cnames)
+
+    # get schema from the streaming dataframe to
+    # avoid non-nullable bug #852
+    schema = schema_converter.to_avro(df_in.schema)
+
+    df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
+
+    if (npart is not None) and isinstance(npart, int):
+        df_kafka = df_kafka.withColumn(
+            "partition", (F.rand(seed=0) * npart).astype("int")
+        )
+
+    disquery = (
+        df_kafka.writeStream
+        .format("kafka")
+        .options(**kafka_cfg)
+        .option("topic", topicname)
+        .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
+        .trigger(processingTime="{} seconds".format(tinterval))
+        .start()
+    )
+
+    return disquery
 
 
 if __name__ == "__main__":
