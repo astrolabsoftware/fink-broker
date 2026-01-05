@@ -22,12 +22,11 @@
 3. Publish to Kafka Topic(s)
 """
 
-import pyspark.sql.functions as F
 import argparse
 import logging
 import time
 
-from fink_broker.common.distribution_utils import get_kafka_df
+from fink_broker.common.distribution_utils import push_to_kafka
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
@@ -35,7 +34,6 @@ from fink_broker.common.spark_utils import (
     connect_to_raw_database,
 )
 
-from fink_utils.spark import schema_converter
 from fink_utils.spark.utils import apply_user_defined_filter
 
 
@@ -43,51 +41,6 @@ _LOG = logging.getLogger(__name__)
 
 # User-defined topics
 userfilters = ["no-filter.or5"]
-
-
-def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kafka_cfg):
-    """Push data to a Kafka custer
-
-    Parameters
-    ----------
-    df_in: Spark DataFrame
-        Alert DataFrame
-    topicname: str
-        Name of the Kafka topic to create
-    cnames: list of str
-        List of columns to transfer in the stream
-    checkpointpath_kafka: str
-        Path on HDFS/S3 for the checkpoints
-    tinterval: int
-        Interval in seconds between two micro-batches
-    kafka_cfg: dict
-        Dictionnary with Kafka parameters
-
-    Returns
-    -------
-    out: Streaming DataFrame
-    """
-    df_in = df_in.selectExpr(cnames)
-
-    # get schema from the streaming dataframe to
-    # avoid non-nullable bug #852
-    schema = schema_converter.to_avro(df_in.schema)
-
-    df_kafka = get_kafka_df(df_in, key=schema, elasticc=False)
-
-    df_kafka = df_kafka.withColumn("partition", (F.rand(seed=0) * 10).astype("int"))
-
-    disquery = (
-        df_kafka.writeStream
-        .format("kafka")
-        .options(**kafka_cfg)
-        .option("topic", topicname)
-        .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)
-        .trigger(processingTime="{} seconds".format(tinterval))
-        .start()
-    )
-
-    return disquery
 
 
 def main():
@@ -169,6 +122,7 @@ def main():
             checkpointpath_kafka,
             args.tinterval,
             kafka_cfg,
+            npart=10,
         )
 
     if args.noscience:
