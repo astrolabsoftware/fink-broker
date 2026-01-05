@@ -42,7 +42,8 @@ def get_schema_from_parquet(filename):
     spark = SparkSession.builder.getOrCreate()
 
     schema_version = (
-        spark.read.format("parquet")
+        spark.read
+        .format("parquet")
         .load(filename)
         .select("lsst_schema_version")
         .limit(1)

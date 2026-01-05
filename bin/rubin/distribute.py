@@ -78,7 +78,8 @@ def push_to_kafka(df_in, topicname, cnames, checkpointpath_kafka, tinterval, kaf
     df_kafka = df_kafka.withColumn("partition", (F.rand(seed=0) * 10).astype("int"))
 
     disquery = (
-        df_kafka.writeStream.format("kafka")
+        df_kafka.writeStream
+        .format("kafka")
         .options(**kafka_cfg)
         .option("topic", topicname)
         .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)

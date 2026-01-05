@@ -57,7 +57,8 @@ def main():
 
     args_func = ["candidate.candid", "candidate.ra", "candidate.dec"]
     pdf = (
-        df.withColumn("manga", crossmatch_dwarf_agn(*args_func))
+        df
+        .withColumn("manga", crossmatch_dwarf_agn(*args_func))
         .filter(F.col("manga") != "Unknown")
         .select(["objectId", "manga"] + args_func)
         .toPandas()

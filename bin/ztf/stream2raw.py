@@ -133,7 +133,8 @@ def main():
 
         # write unpartitioned data
         countquery_tmp = (
-            df_decoded.writeStream.outputMode("append")
+            df_decoded.writeStream
+            .outputMode("append")
             .format("parquet")
             .option("checkpointLocation", checkpointpath_raw)
             .option("path", os.path.join(rawdatapath, f"{args.night}"))
@@ -150,14 +151,16 @@ def main():
         )
 
         df_partitionedby = (
-            df_decoded.withColumn("timestamp", converter(df_decoded[timecol]))
+            df_decoded
+            .withColumn("timestamp", converter(df_decoded[timecol]))
             .withColumn("year", F.date_format("timestamp", "yyyy"))
             .withColumn("month", F.date_format("timestamp", "MM"))
             .withColumn("day", F.date_format("timestamp", "dd"))
         )
 
         countquery_tmp = (
-            df_partitionedby.writeStream.outputMode("append")
+            df_partitionedby.writeStream
+            .outputMode("append")
             .format("parquet")
             .option("checkpointLocation", checkpointpath_raw)
             .option("path", rawdatapath)

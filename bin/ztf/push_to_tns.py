@@ -77,7 +77,8 @@ def main():
     df = df.withColumn("class", extract_fink_classification(*cols))
 
     pdf = (
-        df.filter(df["class"] == "Early SN Ia candidate")
+        df
+        .filter(df["class"] == "Early SN Ia candidate")
         .filter(df["candidate.ndethist"] <= 20)
         .toPandas()
     )

@@ -96,7 +96,8 @@ def main():
 
     # matches with SIMBAD
     n_simbad = (
-        df_sci.withColumn("is_simbad", simbad_candidates("cdsxmatch"))
+        df_sci
+        .withColumn("is_simbad", simbad_candidates("cdsxmatch"))
         .filter(F.col("is_simbad"))
         .count()
     )
@@ -104,7 +105,8 @@ def main():
     out_dic["simbad_tot"] = n_simbad
 
     n_simbad_gal = (
-        df_sci.select("cdsxmatch")
+        df_sci
+        .select("cdsxmatch")
         .filter(df_sci["cdsxmatch"].isin(list(return_list_of_eg_host())))
         .count()
     )

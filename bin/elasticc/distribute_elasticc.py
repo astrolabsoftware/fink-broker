@@ -74,7 +74,8 @@ def format_df_to_elasticc(df):
     # Schema is struct("classifierName", "classifierParams", "classId", "probability")
     classifications_schema = "array<struct<classifierName:string,classifierParams:string,classId:int,probability:float>>"
     df = (
-        df.withColumn(
+        df
+        .withColumn(
             "scores",
             F.array(
                 df["rf_agn_vs_nonagn"].astype("float"),
@@ -198,7 +199,8 @@ def main():
 
     # Ensure that the topic(s) exist on the Kafka Server)
     disquery = (
-        df_kafka.writeStream.format("kafka")
+        df_kafka.writeStream
+        .format("kafka")
         .option("kafka.bootstrap.servers", broker_list)
         .option("kafka.security.protocol", "SASL_PLAINTEXT")
         .option("kafka.sasl.mechanism", "SCRAM-SHA-512")

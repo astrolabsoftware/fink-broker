@@ -95,7 +95,8 @@ def main():
             # Keep only the last alert per object
             w = Window.partitionBy("{}.{}".format("diaObject", "diaObjectId"))
             df_dedup = (
-                df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+                df
+                .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
                 .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
                 .drop("maxMjd")
             )
