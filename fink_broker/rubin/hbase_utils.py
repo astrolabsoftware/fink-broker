@@ -19,7 +19,6 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import salt_from_last_digits
-from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
@@ -532,29 +531,23 @@ def ingest_object_data(
     if kind == "static":
         section = "diaObject"
         field = "diaObjectId"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_diaObjectId"
         table_name = "rubin.diaObject"
     elif kind == "sso":
-        # FIXME: add ssObject when it will be available
-        section = "mpc_orbits"
-        field = "mpcDesignation"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_mpcDesignation"
+        section = "ssSource"
+        field = "ssObjectId"
         table_name = "rubin.ssObject"
+
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    row_key_name = "salt_{}".format(field)
 
     # Keep only rows with corresponding section
     df = df.filter(df[section].isNotNull())
 
     # add salt
-    if kind == "static":
-        df = salt_from_last_digits(
-            df, colname="{}.{}".format(section, field), npartitions=npartitions
-        )
-    elif kind == "sso":
-        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
+    df = salt_from_last_digits(
+        df, colname="{}.{}".format(section, field), npartitions=npartitions
+    )
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")
@@ -565,7 +558,8 @@ def ingest_object_data(
     # Keep only the last alert per object
     w = Window.partitionBy("{}.{}".format(section, field))
     df_dedup = (
-        df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+        df
+        .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
         .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
         .drop("maxMjd")
     )
@@ -623,9 +617,9 @@ def ingest_section(
     ) = load_all_rubin_cols(major_version, minor_version)
 
     # which data to ingest
-    if section_name == "diaSource_static":
+    if section_name == "diaSource_diaObjectId":
         sections = [root_level, diasource, fink_source_cols]
-    elif section_name == "diaSource_sso":
+    elif section_name == "diaSource_ssObjectId":
         sections = [
             root_level,
             diasource,
@@ -650,7 +644,7 @@ def ingest_section(
         ]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
+            "section must be one of 'diaSource_diaObjectId', 'diaSource_ssObjectId', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
                 section_name
             )
         )
