@@ -442,18 +442,15 @@ def ingest_source_data(
     if kind == "static":
         section = "diaObject"
         field = "diaObjectId"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_diaObjectId_midpointMjdTai"
-        table_name = "rubin.diaSource_static"
     elif kind == "sso":
         # Use mpc_orbits to make sure mpcDesignation is available
-        section = "mpc_orbits"
-        field = "mpcDesignation"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_mpcDesignation_midpointMjdTai"
-        table_name = "rubin.diaSource_sso"
+        section = "ssSource"
+        field = "ssObjectId"
+
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    row_key_name = "salt_{}_midpointMjdTai".format(field)
+    table_name = "rubin.diaSource_{}".format(field)
 
     nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
@@ -465,12 +462,9 @@ def ingest_source_data(
         df = df.filter(df[section].isNotNull())
 
         # add salt
-        if kind == "static":
-            df = salt_from_last_digits(
-                df, colname="{}.{}".format(section, field), npartitions=npartitions
-            )
-        elif kind == "sso":
-            df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
+        df = salt_from_last_digits(
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
+        )
 
         n_alerts += df.count()
 
