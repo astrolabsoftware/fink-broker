@@ -535,17 +535,17 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
 
     Parameters
     ----------
-    ra: float
+    ra: pd.Series
         Spark column containing RA (float)
-    dec: float
+    dec: pd.Series
         Spark column containing RA (float)
-    nside: int
-        Spark column containing nside
+    nside: pd.Series
+        Spark column containing (duplicated) nside
 
     Returns
     -------
-    out: long
-        Spark column containing pixel number
+    out: pd.Series
+        Spark column containing pixel number (long)
 
     Examples
     --------
