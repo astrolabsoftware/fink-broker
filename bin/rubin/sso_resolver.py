@@ -32,8 +32,7 @@ def main():
 
     logger = init_logger(args.log_level)
 
-    # construct the index view 'fullname_internalname'
-    index_row_key_name = "salt_ssObjectId_mpcDesignation"
+    index_row_key_name = "salt_ssObjectId"
     columns = index_row_key_name.split("_")
     index_name = ".sso_resolver"
 
@@ -58,17 +57,17 @@ def main():
     df = load_parquet_files(paths)
 
     # Keep only SSO
-    df = df.filter(df["mpc_orbits"].isNotNull())
+    df = df.filter(df["ssSource"].isNotNull())
 
     # Add salt
     df = salt_from_last_digits(
-        df, colname="{}.{}".format("mpc_orbits", "ssObjectId"), npartitions=1000
+        df, colname="{}.{}".format("ssSource", "ssObjectId"), npartitions=1000
     )
 
     # Select wanted columns
     cols_rubin = [
-        "mpc_orbits.mpcDesignation",
-        "mpc_orbits.ssObjectId",
+        "mpc_orbits.designation",
+        "ssSource.ssObjectId",
         "diaSource.diaSourceId",
     ]
     cols_fink = ["salt"]
