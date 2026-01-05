@@ -274,8 +274,8 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     diaobject_schema = extract_avsc_schema("diaObject", major_version, minor_version)
     diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
 
-    mpcorb_schema = extract_avsc_schema("MPCORB", major_version, minor_version)
-    mpcorb = {"MPCORB." + k: v["type"] for k, v in mpcorb_schema.items()}
+    mpcorb_schema = extract_avsc_schema("mpc_orbits", major_version, minor_version)
+    mpcorb = {"mpc_orbits." + k: v["type"] for k, v in mpcorb_schema.items()}
 
     # FIXME: add ssObject {"sso": ssobject}
 
@@ -447,8 +447,8 @@ def ingest_source_data(
         row_key_name = "salt_diaObjectId_midpointMjdTai"
         table_name = "rubin.diaSource_static"
     elif kind == "sso":
-        # Use MPCORB to make sure mpcDesignation is available
-        section = "MPCORB"
+        # Use mpc_orbits to make sure mpcDesignation is available
+        section = "mpc_orbits"
         field = "mpcDesignation"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
@@ -544,7 +544,7 @@ def ingest_object_data(
         table_name = "rubin.diaObject"
     elif kind == "sso":
         # FIXME: add ssObject when it will be available
-        section = "MPCORB"
+        section = "mpc_orbits"
         field = "mpcDesignation"
         # Name of the rowkey in the table. Should be a column name
         # or a combination of column separated by _ (e.g. jd_objectId).
@@ -636,7 +636,7 @@ def ingest_section(
             root_level,
             diasource,
             sssource,
-            ["r", {"MPCORB.mpcDesignation": "string"}],  # for the row key
+            ["r", {"mpc_orbits.mpcDesignation": "string"}],  # for the row key
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]

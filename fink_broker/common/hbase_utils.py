@@ -486,8 +486,8 @@ def salt_from_mpc_designation(df, colname):
     --------
     # Read Rubin alerts
     >>> df = spark.read.format("parquet").load(rubin_sample)
-    >>> df = df.filter(df["MPCORB.mpcDesignation"].isNotNull())
-    >>> df = salt_from_mpc_designation(df, "MPCORB.mpcDesignation")
+    >>> df = df.filter(df["mpc_orbits.mpcDesignation"].isNotNull())
+    >>> df = salt_from_mpc_designation(df, "mpc_orbits.mpcDesignation")
     >>> len(df.select("salt").collect()[0][0])
     2
     """

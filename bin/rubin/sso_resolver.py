@@ -58,17 +58,17 @@ def main():
     df = load_parquet_files(paths)
 
     # Keep only SSO
-    df = df.filter(df["MPCORB"].isNotNull())
+    df = df.filter(df["mpc_orbits"].isNotNull())
 
     # Add salt
     df = salt_from_last_digits(
-        df, colname="{}.{}".format("MPCORB", "ssObjectId"), npartitions=1000
+        df, colname="{}.{}".format("mpc_orbits", "ssObjectId"), npartitions=1000
     )
 
     # Select wanted columns
     cols_rubin = [
-        "MPCORB.mpcDesignation",
-        "MPCORB.ssObjectId",
+        "mpc_orbits.mpcDesignation",
+        "mpc_orbits.ssObjectId",
         "diaSource.diaSourceId",
     ]
     cols_fink = ["salt"]

@@ -90,7 +90,7 @@ def main():
         )
     )
 
-    # ssObject/MPCORB
+    # ssObject/mpc_orbits
     n_alerts_ssobject, table_name = ingest_object_data(
         kind="sso",
         paths=paths,
