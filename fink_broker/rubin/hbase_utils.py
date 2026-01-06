@@ -19,6 +19,7 @@ from pyspark.sql.utils import AnalysisException
 from fink_broker.common.hbase_utils import add_row_key
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import salt_from_last_digits
+from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
@@ -411,8 +412,9 @@ def ingest_source_data(
 
     Notes
     -----
-    The row key is salted using the last 3 digits
-    of diaObject.diaObjectId
+    For static data the row key is salted using the last 3 digits
+    of diaObject.diaObjectId. For SSO, the row key is salted using
+    the 2 digits corresponding to the year from the packed designation.
 
     Parameters
     ----------
@@ -442,14 +444,14 @@ def ingest_source_data(
         section = "diaObject"
         field = "diaObjectId"
     elif kind == "sso":
-        # Use mpc_orbits to make sure mpcDesignation is available
-        section = "ssSource"
-        field = "ssObjectId"
+        section = "mpc_orbits"
+        field = "packed_primary_provisional_designation"
 
     # Name of the rowkey in the table. Should be a column name
     # or a combination of column separated by _
-    row_key_name = "salt_{}_midpointMjdTai".format(field)
-    table_name = "rubin.diaSource_{}".format(field)
+    cols_row_key_name = ["salt", field, "midpointMjdTai"]
+    row_key_name = "_".join(cols_row_key_name)
+    table_name = "rubin.diaSource_{}".format(kind)
 
     nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
@@ -461,9 +463,12 @@ def ingest_source_data(
         df = df.filter(df[section].isNotNull())
 
         # add salt
-        df = salt_from_last_digits(
-            df, colname="{}.{}".format(section, field), npartitions=npartitions
-        )
+        if kind == "static":
+            df = salt_from_last_digits(
+                df, colname="{}.{}".format(section, field), npartitions=npartitions
+            )
+        elif kind == "sso":
+            df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
 
         n_alerts += df.count()
 
@@ -481,6 +486,7 @@ def ingest_source_data(
             row_key_name=row_key_name,
             table_name=table_name,
             catfolder=catfolder,
+            cols_row_key_name=cols_row_key_name,
         )
 
     return n_alerts, table_name
@@ -533,21 +539,25 @@ def ingest_object_data(
         field = "diaObjectId"
         table_name = "rubin.diaObject"
     elif kind == "sso":
-        section = "ssSource"
-        field = "ssObjectId"
-        table_name = "rubin.ssObject"
+        section = "mpc_orbits"
+        field = "packed_primary_provisional_designation"
+        table_name = "rubin.mpc_orbits"
 
     # Name of the rowkey in the table. Should be a column name
     # or a combination of column separated by _
-    row_key_name = "salt_{}".format(field)
+    cols_row_key_name = ["salt", field]
+    row_key_name = "_".join(cols_row_key_name)
 
     # Keep only rows with corresponding section
     df = df.filter(df[section].isNotNull())
 
     # add salt
-    df = salt_from_last_digits(
-        df, colname="{}.{}".format(section, field), npartitions=npartitions
-    )
+    if kind == "static":
+        df = salt_from_last_digits(
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
+        )
+    elif kind == "sso":
+        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
 
     # Drop unused partitioning columns
     df = df.drop("year").drop("month").drop("day")
@@ -576,13 +586,20 @@ def ingest_object_data(
         row_key_name=row_key_name,
         table_name=table_name,
         catfolder=catfolder,
+        cols_row_key_name=cols_row_key_name,
     )
 
     return n_alerts, table_name
 
 
 def ingest_section(
-    df, major_version, minor_version, row_key_name, table_name, catfolder
+    df,
+    major_version,
+    minor_version,
+    row_key_name,
+    table_name,
+    catfolder,
+    cols_row_key_name=None,
 ):
     """Push values stored in a Spark DataFrame into HBase
 
@@ -605,7 +622,14 @@ def ingest_section(
         HBase table name. Must exist in the cluster.
     catfolder: str
         Folder to save catalog (saved locally for inspection)
+    cols_row_key_name: list, optional
+        List of columns to use for the row key. If None (default),
+        split the row key using _. Only used for SSO for which
+        one column name contains _.
     """
+    if cols_row_key_name is None:
+        cols_row_key_name = row_key_name.split("_")
+
     section_name = table_name.split(".")[1]
 
     (
@@ -619,14 +643,17 @@ def ingest_section(
     ) = load_all_rubin_cols(major_version, minor_version)
 
     # which data to ingest
-    if section_name == "diaSource_diaObjectId":
+    if section_name == "diaSource_static":
         sections = [root_level, diasource, fink_source_cols]
-    elif section_name == "diaSource_ssObjectId":
+    elif section_name == "diaSource_sso":
         sections = [
             root_level,
             diasource,
             sssource,
-            ["r", {"mpc_orbits.mpcDesignation": "string"}],  # for the row key
+            [
+                "r",
+                {"mpc_orbits.packed_primary_provisional_designation": "string"},
+            ],  # for the row key
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
@@ -655,9 +682,7 @@ def ingest_section(
     # Check all columns exist, fill if necessary, and cast data
     df_flat, _, cf = flatten_dataframe(df, sections)
 
-    df_flat = add_row_key(
-        df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
-    )
+    df_flat = add_row_key(df_flat, row_key_name=row_key_name, cols=cols_row_key_name)
 
     push_to_hbase(
         df=df_flat,
