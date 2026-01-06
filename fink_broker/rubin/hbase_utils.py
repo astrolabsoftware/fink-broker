@@ -158,14 +158,14 @@ def extract_avsc_schema(name, major_version, minor_version):
 
     Examples
     --------
-    >>> schema = extract_avsc_schema("diaSource", 9, 0)
+    >>> schema = extract_avsc_schema("diaSource", 10, 0)
     >>> len(schema)
     98
 
     >>> schema["psfFlux"]
     {'type': 'float', 'default': None}
 
-    >>> schema = extract_avsc_schema("diaObject", 9, 0)
+    >>> schema = extract_avsc_schema("diaObject", 10, 0)
     >>> len(schema)
     82
     """
@@ -252,7 +252,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(9, 0)
+    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
     >>> out = {
     ...     **root_level[1], **diaobject[1],
     ...     **mpcorb[1], **diasource[1],
