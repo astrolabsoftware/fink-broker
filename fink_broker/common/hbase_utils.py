@@ -555,7 +555,7 @@ if __name__ == "__main__":
         root, "online/science/20200101"
     )
 
-    globs["rubin_sample"] = os.path.join(root, "datasim/rubin_test_data_9_0.parquet")
+    globs["rubin_sample"] = os.path.join(root, "datasim/rubin_test_data_10_0.parquet")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)
