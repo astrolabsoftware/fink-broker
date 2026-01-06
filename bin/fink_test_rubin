@@ -88,6 +88,7 @@ source $conf
 # Export variables for tester.py
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
+export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
 
 # TODO: change me
 export NIGHT=20250412
@@ -202,6 +203,7 @@ fi
 # Combine individual reports in one
 coverage combine
 
+unset KAFKA_IPPORT_SIM
 unset COVERAGE_PROCESS_START
 unset FINK_PACKAGES
 unset FINK_JARS
