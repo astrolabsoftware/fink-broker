@@ -91,19 +91,24 @@ def main():
     )
 
     # ssObject/mpc_orbits
-    n_alerts_ssobject, table_name = ingest_object_data(
-        kind="sso",
-        paths=paths,
-        catfolder=args.science_db_catalogs,
-        major_version=major_version,
-        minor_version=minor_version,
-        npartitions=npartitions,
-    )
-    logger.info(
-        "{} sso alerts pushed to HBase for table {}".format(
-            n_alerts_ssobject, table_name
+    if major_version >= 10:
+        n_alerts_ssobject, table_name = ingest_object_data(
+            kind="sso",
+            paths=paths,
+            catfolder=args.science_db_catalogs,
+            major_version=major_version,
+            minor_version=minor_version,
+            npartitions=npartitions,
         )
-    )
+        logger.info(
+            "{} sso alerts pushed to HBase for table {}".format(
+                n_alerts_ssobject, table_name
+            )
+        )
+    else:
+        logger.warning(
+            "Version {} detected. Skipping SSO injection".format(major_version)
+        )
 
     # diaSource (static)
     n_alerts_diasource_static, table_name = ingest_source_data(
@@ -122,20 +127,25 @@ def main():
     )
 
     # diaSource (SSO)
-    n_alerts_diasource_sso, table_name = ingest_source_data(
-        kind="sso",
-        paths=paths,
-        catfolder=args.science_db_catalogs,
-        major_version=major_version,
-        minor_version=minor_version,
-        nfiles=nfiles,
-        npartitions=npartitions,
-    )
-    logger.info(
-        "{} alerts pushed to HBase for table {}".format(
-            n_alerts_diasource_sso, table_name
+    if major_version >= 10:
+        n_alerts_diasource_sso, table_name = ingest_source_data(
+            kind="sso",
+            paths=paths,
+            catfolder=args.science_db_catalogs,
+            major_version=major_version,
+            minor_version=minor_version,
+            nfiles=nfiles,
+            npartitions=npartitions,
         )
-    )
+        logger.info(
+            "{} alerts pushed to HBase for table {}".format(
+                n_alerts_diasource_sso, table_name
+            )
+        )
+    else:
+        logger.warning(
+            "Version {} detected. Skipping SSO injection".format(major_version)
+        )
 
 
 if __name__ == "__main__":

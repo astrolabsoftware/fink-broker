@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
 import argparse
 
 from fink_broker.common.spark_utils import init_sparksession
@@ -23,6 +23,7 @@ from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.spark_utils import load_parquet_files
 from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.spark_utils import list_hdfs_files
+from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
 def main():
@@ -48,11 +49,16 @@ def main():
     # Get list of files
     paths = list_hdfs_files(folder)
 
+    major_version, minor_version = get_schema_from_parquet(paths)
+
+    if major_version < 10:
+        logger.warning(
+            "Version {} detected. Skipping SSO injection".format(major_version)
+        )
+        sys.exit()
+
     if len(paths) == 0:
         logger.warning("No parquet found at {}".format(folder))
-
-        import sys
-
         sys.exit()
 
     df = load_parquet_files(paths)
