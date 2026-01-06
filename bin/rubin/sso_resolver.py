@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ from fink_broker.common.spark_utils import list_hdfs_files
 
 
 def main():
-    """Table to resolve designation into ssObjectId"""
+    """Table to resolve ssObjectId into various designations"""
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
