@@ -359,7 +359,7 @@ def flatten_dataframe(df, sections):
             if isinstance(coltype_, dict):
                 # type & default (fink)
                 coltype = coltype_["type"]
-                default = coltype_["default"]
+                default = coltype_.get("default", None)
             else:
                 # just type (lsst)
                 coltype = coltype_
