@@ -166,14 +166,14 @@ if [[ "$WITH_DB" = true ]] ; then
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
 
   # check HBase output
-  check_table_output "rubin.diaSource_static" 97
-  check_table_output "rubin.diaSource_sso" 5
-  check_table_output "rubin.diaObject" 97
-  check_table_output "rubin.mpc_orbits" 4
+  check_table_output "rubin.diaSource_static" 94
+  check_table_output "rubin.diaSource_sso" 8
+  check_table_output "rubin.diaObject" 94
+  check_table_output "rubin.mpc_orbits" 8
 
   check_table_output "rubin.cutouts" 101
-  check_table_output "rubin.pixel128" 97
-  check_table_output "rubin.statistics" 1
+  check_table_output "rubin.pixel128" 94
+  check_table_output "rubin.statistics" 2
   # check_table_output "rubin.forcedSources" 99
 fi
 
