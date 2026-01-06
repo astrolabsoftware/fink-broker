@@ -22,8 +22,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.5-rc0
-export CIUXCONFIG=$HOME/.ciux/ciux.sh
+ciux_version=v0.0.7-rc1
 
 src_dir=$DIR/..
 cleanup=false
@@ -108,7 +107,6 @@ trap dispatch EXIT
 go install github.com/k8s-school/ciux@"$ciux_version"
 
 echo "Ignite the project using ciux"
-mkdir -p ~/.ciux
 
 # Build step
 $src_dir/build.sh -s "$SUFFIX" -i $input_survey

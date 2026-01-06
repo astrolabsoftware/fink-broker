@@ -1,11 +1,11 @@
-name: "e2e: science, self-hosted"
+name: "e2e: platform=k8s, survey=ztf, science=false, infra=self-hosted"
 
 on:
   repository_dispatch:
-    types: [e2e-science]
+    types: [e2e-noscience]
 
 jobs:
-  e2e-science:
+  e2e-noscience:
     runs-on: ubuntu-latest
     steps:
     - name: build
