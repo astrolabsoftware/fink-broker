@@ -325,7 +325,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     # extract tracklet information - beware there could be duplicated rows
     # so we use dropDuplicates to avoid these.
     df_trck = (
-        df_filt_tracklet.cache()
+        df_filt_tracklet
+        .cache()
         .dropDuplicates(["jd", "xpos", "ypos"])
         .groupBy("jd")
         .apply(extract_tracklet_number)

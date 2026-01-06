@@ -52,7 +52,8 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     spark = SparkSession.builder.getOrCreate()
 
     df = (
-        spark.read.option("catalog", catalog)
+        spark.read
+        .option("catalog", catalog)
         .format("org.apache.hadoop.hbase.spark")
         .option("hbase.spark.use.hbasecontext", False)
         .option("hbase.spark.pushdown.columnfilter", True)

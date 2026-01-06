@@ -223,7 +223,8 @@ def science2mm(
     checkpointpath_mm_tmp = os.path.join(mm_path_output, "online_checkpoint")
 
     query_mm = (
-        df_multi_messenger.writeStream.outputMode("append")
+        df_multi_messenger.writeStream
+        .outputMode("append")
         .format("parquet")
         .option("checkpointLocation", checkpointpath_mm_tmp)
         .option("path", mmtmpdatapath)
@@ -258,7 +259,8 @@ def mm2distribute(spark, config: configparser.ConfigParser, args: argparse.Names
 
             path = basepath
             df_grb_stream = (
-                spark.readStream.format("parquet")
+                spark.readStream
+                .format("parquet")
                 .schema(static_df.schema)
                 .option("basePath", basepath)
                 .option("path", path)
@@ -274,7 +276,8 @@ def mm2distribute(spark, config: configparser.ConfigParser, args: argparse.Names
             continue
 
     df_grb_stream = (
-        df_grb_stream.drop("brokerEndProcessTimestamp")
+        df_grb_stream
+        .drop("brokerEndProcessTimestamp")
         .drop("brokerStartProcessTimestamp")
         .drop("brokerIngestTimestamp")
     )

@@ -342,7 +342,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     # split features
     df = (
-        df.withColumn("lc_features_g", df["lc_features"].getItem("1"))
+        df
+        .withColumn("lc_features_g", df["lc_features"].getItem("1"))
         .withColumn("lc_features_r", df["lc_features"].getItem("2"))
         .drop("lc_features")
     )

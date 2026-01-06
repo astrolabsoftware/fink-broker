@@ -142,7 +142,8 @@ def compute_num_part(df, partition_size=128.0):
     logical_plan = df._jdf.queryExecution().logical()
     mode = df._jdf.queryExecution().mode()
     b = (
-        spark._jsparkSession.sessionState()
+        spark._jsparkSession
+        .sessionState()
         .executePlan(logical_plan, mode)
         .optimizedPlan()
         .stats()

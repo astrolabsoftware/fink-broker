@@ -463,7 +463,8 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
 
             # rename root.level into root_level
             name = (
-                F.col(colname)
+                F
+                .col(colname)
                 .alias(colname.replace(".", "_"))
                 .cast(coltype_and_default["type"])
             )
