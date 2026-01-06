@@ -673,7 +673,7 @@ def ingest_section(
         ]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_diaObjectId', 'diaSource_ssObjectId', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
                 section_name
             )
         )
