@@ -657,7 +657,7 @@ def ingest_section(
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
-    elif section_name == "ssObject":
+    elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
     elif section_name == "pixel128":
@@ -673,7 +673,7 @@ def ingest_section(
         ]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128'. {} is not allowed.".format(
                 section_name
             )
         )
