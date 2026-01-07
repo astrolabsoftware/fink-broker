@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,10 @@ while [ "$#" -gt 0 ]; do
       CHECK_OFFSET=true
       shift 1
       ;;
+    -reset_offsets_to)
+      RESET_OFFSETS_TO="$2"
+      shift 2
+      ;;
     -night)
       NIGHT="$2"
       shift 2
@@ -77,7 +81,8 @@ Options:
   -c                Path to configuration file. Default is at ${FINK_HOME}/conf/rubin/fink.conf.prod
   -night            Night to process, in the format YYYYMMDD. Default is today.
   -stop_at          Date to stop fink. Default is '20:00 today'
-  --poll_only       If specified, only poll incoming stream. [NOT AVAILABLE YET]
+  -reset_offsets_to Date to reprocess from (compatible only with --poll_only) 
+  --poll_only       If specified, only poll incoming stream.
   --enrich_only     If specified, only enrich polled data.
   --distribute_only If specified, only distribute enriched data.
   --check_offset    If specified, check offsets and exit (compatible only with --poll_only)
@@ -100,6 +105,14 @@ Examples:
 
   # 8:00 AM. Reprocess entirely another night in a couple of hours
   ./launch_stream.sh -night 20241231 -stop_at 10:00 today
+
+  # In case you missed the previous nights, or something bad happened
+  # you can replay from a particular night. Note that this reset offsets
+  # to the particular night but if you have several nights, it will put
+  # all data in the same directory! So use this option only if you 
+  # are night N and you want to poll again the night N-1.
+  ./launch_stream.sh --poll_only -reset_offsets_to 2025-12-12
+  ./launch_stream.sh --poll_only
 "
 
 run_hdfs_or_local() {
@@ -149,8 +162,15 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
   # Force fetch schema
   ${FINK_HOME}/bin/fink start fetch_schema -s rubin -c ${conf}
 
+  LOGFILE=${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log
+
   if [[ ${CHECK_OFFSET} == true ]]; then
     CHECK_OFFSET="--check_offsets"
+    LOGFILE=${FINK_HOME}/broker_logs/check_offsets_${NIGHT}.log
+  fi
+
+  if [[ "$RESET_OFFSETS_TO" ]] ; then
+    RESET_OFFSETS_TO="-reset_offsets_to ${RESET_OFFSETS_TO}"
   fi
 
   nohup fink start stream2raw \
@@ -158,7 +178,7 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
     -c ${conf} \
     -conf_stream2raw ${FINK_HOME}/conf/rubin/fink.conf.stream2raw \
     -night ${NIGHT} \
-    -stop_at "`date +'%Y-%m-%d %H:%M' -d "${STOP_AT}"`" ${CHECK_OFFSET} > ${FINK_HOME}/broker_logs/stream2raw_${NIGHT}.log 2>&1 &
+    -stop_at "`date +'%Y-%m-%d %H:%M' -d "${STOP_AT}"`" ${CHECK_OFFSET} ${RESET_OFFSETS_TO} > ${LOGFILE} 2>&1 &
 fi
 
 # raw2science
@@ -185,7 +205,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
                     -s rubin \
                     -c ${conf} \
                     -driver-memory 4g -executor-memory 2g \
-                    -spark-cores-max 48 -spark-executor-cores 1 \
+                    -spark-cores-max 16 -spark-executor-cores 1 \
                     -night ${NIGHT} \
                     -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
                 break

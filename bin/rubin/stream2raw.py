@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2025
+# Copyright 2019-2026
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import logging
 import numpy as np
 from datetime import datetime
 
-from fink_broker.rubin.decoding_utils import write_alert, return_offsets
+from fink_broker.rubin.decoding_utils import write_alert, return_offsets, reset_offsets
 
 from pyarrow.fs import HadoopFileSystem
 
@@ -79,6 +79,14 @@ def run(q, kafka_config, config):
 
     c = DeserializingConsumer(kafka_config)
     c.subscribe([config["topic"]])
+
+    # FIXME: this generates duplicates as it forces all consumer
+    # to restart at the same offsets, even if one already started to
+    # consume before the others...
+    # if config.get("partitions", None) is not None:
+    #    c.assign(config["partitions"])
+    #    c.commit(offsets=config["partitions"])
+
     if config["hdfs_namenode"] != "":
         fs = HadoopFileSystem(
             config["hdfs_namenode"],
@@ -277,6 +285,12 @@ if __name__ == "__main__":
         help="Observing night, in format YYYYMMDD",
     )
     parser.add_argument(
+        "-reset_offsets_to",
+        type=str,
+        default=None,
+        help="If specified, date to reset offsets from in the format YYYY-MM-DD. Exit after resetting the offsets.",
+    )
+    parser.add_argument(
         "--different_groupid",
         action="store_true",
         help="If specified, all consumers will belong to different group.id. Only for testing.",
@@ -320,6 +334,7 @@ if __name__ == "__main__":
         "stop_polling_at": args.stop_polling_at,
         "night": args.night,
         "nconsumers": args.nconsumers,
+        "reset_offsets_to": args.reset_offsets_to,
     }
 
     if args.lsst_kafka_username != "ci":
@@ -377,6 +392,25 @@ if __name__ == "__main__":
             hide_empty_partition=False,
             verbose=True,
         )
+        sys.exit()
+
+    if args.reset_offsets_to is not None and isinstance(args.reset_offsets_to, str):
+        _LOG.warning("Resetting offsets to {}".format(args.reset_offsets_to))
+        if config["groupid"] is not None:
+            kafka_config["group.id"] += config["groupid"]
+        _LOG.info("group.id: {}".format(kafka_config["group.id"]))
+        c = DeserializingConsumer(kafka_config)
+        partitions = reset_offsets(
+            consumer=c,
+            date=args.reset_offsets_to,
+            topic=config["topic"],
+            verbose=True,
+        )
+
+        # trigger the change
+        # c.poll(0)
+        c.close()
+        # config["partitions"] = partitions
         sys.exit()
 
     _LOG.info(

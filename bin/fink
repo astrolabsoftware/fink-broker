@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,6 +104,10 @@ while [ "$#" -gt 0 ]; do
       STOP_AT="$2"
       shift 2
       ;;
+    -reset_offsets_to)
+      RESET_OFFSETS_TO="$2"
+      shift 2
+      ;;
     --simulator)
       SIM_ONLY=true
       shift 1
@@ -159,6 +163,7 @@ Service options:
   -spark-executor-cores Number of cores per executor (see Spark options)
   -exit_after           Number of seconds after which the service should stop.
   -stop_at              Date at which the service should stop. Only available for rubin/stream2raw.
+  -reset_offsets_to Date to reprocess from (compatible only with rubin/stream2raw)
                         See -exit_after otherwise.
   --simulator           If specified, run in simulation mode.
   --noscience           If specified, do not enrich data with science modules.
@@ -316,6 +321,10 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     CHECK_LSST_OFFSETS="--check_offsets"
   fi
 
+  if [[ "$RESET_OFFSETS_TO" ]] ; then
+    RESET_OFFSETS_TO="-reset_offsets_to ${RESET_OFFSETS_TO}"
+  fi
+
   python ${FINK_HOME}/bin/${SURVEY}/${service}.py \
     -lsst_kafka_server ${LSST_KAFKA_SERVER} \
     -lsst_schema_server ${LSST_SCHEMA_SERVER} \
@@ -334,7 +343,7 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     -stop_polling_at "${STOP_AT}" \
     -night ${NIGHT} \
     -log ${LOG_LEVEL} \
-    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS}
+    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS} ${RESET_OFFSETS_TO}
 
 elif [[ $service == "fetch_schema" ]]; then
   if [[ -f $conf_stream2raw ]]; then

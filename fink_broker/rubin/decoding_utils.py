@@ -16,6 +16,7 @@
 import os
 import glob
 import time
+from datetime import datetime
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -92,7 +93,7 @@ def write_alert(
         schema_version = "lsst.v10_0.parquet"
     else:
         with open(os.path.join(table_schema_path, "latest_schema.txt"), "r") as f:
-            schema_version = f.read()
+            schema_version = f.read().strip()
 
     schema_files = glob.glob(
         os.path.join(table_schema_path, schema_version, "*.parquet")
@@ -134,6 +135,100 @@ def write_alert(
         existing_data_behavior="overwrite_or_ignore",
         filesystem=fs,
     )
+
+
+def get_partitions_by_date(consumer, topic, date_ms, timeout=10):
+    """Return partitions for a given date
+
+    Notes
+    -----
+    `date_ms` can be computed from a str date using:
+    int(time.mktime(datetime.strptime(date, '%Y-%m-%d').timetuple()) * 1000
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Consumer
+    topic: str
+        Topic name
+    date_ms: int
+        Targeted date to restart the offset in milliseconds.
+    timeout: int, optional
+        Timeout, in seconds. Default is 10 seconds.
+
+    Returns
+    -------
+    partitions_by_offsets: list
+        List of TopicPartitions with offsets at
+        the given `date`.
+
+    Examples
+    --------
+    # Date conversion
+    >>> date = "2025-12-01"
+    >>> struct_date = datetime.strptime(date, '%Y-%m-%d').timetuple()
+    >>> date_s = time.mktime(struct_date)
+    >>> date_ms = int(date_s * 1000)
+    """
+    # Create a list of TopicPartition objects
+    metadata = consumer.list_topics(topic, timeout=timeout)
+    if metadata.topics[topic].error is not None:
+        raise confluent_kafka.KafkaException(metadata.topics[topic].error)
+
+    # Construct TopicPartition list of partitions to query
+    partitions_by_time = [
+        confluent_kafka.TopicPartition(topic=topic, partition=p, offset=date_ms)
+        for p in metadata.topics[topic].partitions
+    ]
+
+    partitions_by_offsets = consumer.offsets_for_times(partitions_by_time)
+
+    return partitions_by_offsets
+
+
+def reset_offsets(consumer, date, topic, timeout=10, verbose=False):
+    """Reset offsets to the specified date
+
+    Notes
+    -----
+    This should be called before polling again. Without
+    polling, it has no effects.
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Consumer
+    date: str
+        Targeted date to restart the offset in
+        the format YYYY-MM-DD.
+    topic: str
+        Topic name
+    timeout: int, optional
+        Timeout, in seconds. Default is 10 seconds.
+    verbose: bool, optional
+        If True, count the the number of alerts in
+        between now and the targeted date.
+    """
+    date_ms = int(time.mktime(datetime.strptime(date, "%Y-%m-%d").timetuple()) * 1000)
+    partitions_at_date = get_partitions_by_date(consumer, topic, date_ms)
+
+    if verbose:
+        date_now = int(time.mktime(datetime.now().timetuple()) * 1000)
+        partitions_now = get_partitions_by_date(consumer, topic, date_now)
+        committed_now = consumer.committed(partitions_now)
+
+        ip_now, ip_d = 0, 0
+        print("Comparing {} and now".format(date))
+        print("Offsets per partitions: ")
+        for p_now, p_d in zip(committed_now, partitions_at_date):
+            ip_now += p_now.offset
+            ip_d += p_d.offset
+            print("Now: {} - {}: {}".format(p_now.offset, date, p_d.offset))
+        print("{} missing alerts".format(ip_now - ip_d))
+
+    consumer.assign(partitions_at_date)
+    consumer.commit(offsets=partitions_at_date)
+    return partitions_at_date
 
 
 def return_offsets(
