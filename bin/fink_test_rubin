@@ -89,9 +89,9 @@ source $conf
 export FINK_PACKAGES=$FINK_PACKAGES
 export FINK_JARS=$FINK_JARS
 export KAFKA_IPPORT_SIM=$KAFKA_IPPORT_SIM
+export KAFKA_TOPIC="rubin_20250903_lsst_v10.0"
 
 # TODO: change me
-export KAFKA_TOPIC="rubin_20250412_lsst_v7.4"
 export NIGHT=20250412
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
@@ -168,14 +168,14 @@ if [[ "$WITH_DB" = true ]] ; then
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
 
   # check HBase output
-  check_table_output "rubin.diaSource_static" 97
-  check_table_output "rubin.diaSource_sso" 5
-  check_table_output "rubin.diaObject" 97
-  check_table_output "rubin.ssObject" 4
+  check_table_output "rubin.diaSource_static" 94
+  check_table_output "rubin.diaSource_sso" 8
+  check_table_output "rubin.diaObject" 94
+  check_table_output "rubin.mpc_orbits" 8
 
   check_table_output "rubin.cutouts" 101
-  check_table_output "rubin.pixel128" 97
-  check_table_output "rubin.statistics" 1
+  check_table_output "rubin.pixel128" 94
+  check_table_output "rubin.statistics" 2
   # check_table_output "rubin.forcedSources" 99
 fi
 
@@ -204,8 +204,8 @@ fi
 # Combine individual reports in one
 coverage combine
 
-unset KAFKA_IPPORT_SIM
 unset KAFKA_TOPIC
+unset KAFKA_IPPORT_SIM
 unset COVERAGE_PROCESS_START
 unset FINK_PACKAGES
 unset FINK_JARS

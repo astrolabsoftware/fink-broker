@@ -386,7 +386,7 @@ if __name__ == "__main__":
     globs = globals()
     root = os.environ["FINK_HOME"]
     globs["rubin_alert_sample"] = os.path.join(
-        root, "datasim/rubin_test_data_9_0.parquet"
+        root, "datasim/rubin_test_data_10_0.parquet"
     )
 
     # Run the Spark test suite

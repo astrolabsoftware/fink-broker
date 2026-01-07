@@ -17,7 +17,7 @@ TABLE_PREFIX="rubin"
 
 STANDARD_TABLES=(
         "${TABLE_PREFIX}.diaObject"
-        "${TABLE_PREFIX}.ssObject"
+        "${TABLE_PREFIX}.mpc_orbits"
         "${TABLE_PREFIX}.diaSource_static"
         "${TABLE_PREFIX}.diaSource_sso"
         "${TABLE_PREFIX}.cutouts"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
 import argparse
 
 from fink_broker.common.spark_utils import init_sparksession
@@ -23,18 +23,19 @@ from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.spark_utils import load_parquet_files
 from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.spark_utils import list_hdfs_files
+from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
 def main():
-    """Download the TNS catalog, and load it in HBase"""
+    """Table to resolve ssObjectId into various designations"""
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
     logger = init_logger(args.log_level)
 
-    # construct the index view 'fullname_internalname'
-    index_row_key_name = "salt_ssObjectId_mpcDesignation"
-    columns = index_row_key_name.split("_")
+    # ssObjectId --> designation(s)
+    cols_row_key_name = ["salt", "ssObjectId"]
+    row_key_name = "_".join(cols_row_key_name)
     index_name = ".sso_resolver"
 
     # Initialise Spark session
@@ -48,34 +49,40 @@ def main():
     # Get list of files
     paths = list_hdfs_files(folder)
 
+    major_version, minor_version = get_schema_from_parquet(paths)
+
+    if major_version < 10:
+        logger.warning(
+            "Version {} detected. Skipping SSO injection".format(major_version)
+        )
+        sys.exit()
+
     if len(paths) == 0:
         logger.warning("No parquet found at {}".format(folder))
-
-        import sys
-
         sys.exit()
 
     df = load_parquet_files(paths)
 
     # Keep only SSO
-    df = df.filter(df["MPCORB"].isNotNull())
+    df = df.filter(df["mpc_orbits"].isNotNull())
 
     # Add salt
     df = salt_from_last_digits(
-        df, colname="{}.{}".format("MPCORB", "ssObjectId"), npartitions=1000
+        df, colname="{}.{}".format("ssSource", "ssObjectId"), npartitions=1000
     )
 
     # Select wanted columns
     cols_rubin = [
-        "MPCORB.mpcDesignation",
-        "MPCORB.ssObjectId",
+        "mpc_orbits.packed_primary_provisional_designation",
+        "mpc_orbits.unpacked_primary_provisional_designation",
+        "ssSource.ssObjectId",
         "diaSource.diaSourceId",
     ]
     cols_fink = ["salt"]
 
     df = df.select(cols_rubin + cols_fink)
 
-    df = add_row_key(df, row_key_name=index_row_key_name, cols=columns)
+    df = add_row_key(df, row_key_name=row_key_name, cols=cols_row_key_name)
 
     # Get rid of salt for HBase
     df = df.drop("salt")
@@ -85,7 +92,7 @@ def main():
     push_to_hbase(
         df=df,
         table_name=args.science_db_name + index_name,
-        rowkeyname=index_row_key_name,
+        rowkeyname=row_key_name,
         cf=cf,
         catfolder=args.science_db_catalogs,
     )

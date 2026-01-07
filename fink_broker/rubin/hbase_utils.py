@@ -158,14 +158,14 @@ def extract_avsc_schema(name, major_version, minor_version):
 
     Examples
     --------
-    >>> schema = extract_avsc_schema("diaSource", 9, 0)
+    >>> schema = extract_avsc_schema("diaSource", 10, 0)
     >>> len(schema)
     98
 
     >>> schema["psfFlux"]
     {'type': 'float', 'default': None}
 
-    >>> schema = extract_avsc_schema("diaObject", 9, 0)
+    >>> schema = extract_avsc_schema("diaObject", 10, 0)
     >>> len(schema)
     82
     """
@@ -252,13 +252,13 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(9, 0)
+    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
     >>> out = {
     ...     **root_level[1], **diaobject[1],
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 12 + 98 + 24 + 22 + 6
+    >>> expected = 3 + 82 + 53 + 98 + 39 + 22 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -274,8 +274,8 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     diaobject_schema = extract_avsc_schema("diaObject", major_version, minor_version)
     diaobject = {"diaObject." + k: v["type"] for k, v in diaobject_schema.items()}
 
-    mpcorb_schema = extract_avsc_schema("MPCORB", major_version, minor_version)
-    mpcorb = {"MPCORB." + k: v["type"] for k, v in mpcorb_schema.items()}
+    mpcorb_schema = extract_avsc_schema("mpc_orbits", major_version, minor_version)
+    mpcorb = {"mpc_orbits." + k: v["type"] for k, v in mpcorb_schema.items()}
 
     # FIXME: add ssObject {"sso": ssobject}
 
@@ -359,7 +359,7 @@ def flatten_dataframe(df, sections):
             if isinstance(coltype_, dict):
                 # type & default (fink)
                 coltype = coltype_["type"]
-                default = coltype_["default"]
+                default = coltype_.get("default", None)
             else:
                 # just type (lsst)
                 coltype = coltype_
@@ -412,8 +412,9 @@ def ingest_source_data(
 
     Notes
     -----
-    The row key is salted using the last 3 digits
-    of diaObject.diaObjectId
+    For static data the row key is salted using the last 3 digits
+    of diaObject.diaObjectId. For SSO, the row key is salted using
+    the 2 digits corresponding to the year from the packed designation.
 
     Parameters
     ----------
@@ -442,18 +443,15 @@ def ingest_source_data(
     if kind == "static":
         section = "diaObject"
         field = "diaObjectId"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_diaObjectId_midpointMjdTai"
-        table_name = "rubin.diaSource_static"
     elif kind == "sso":
-        # Use MPCORB to make sure mpcDesignation is available
-        section = "MPCORB"
-        field = "mpcDesignation"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_mpcDesignation_midpointMjdTai"
-        table_name = "rubin.diaSource_sso"
+        section = "mpc_orbits"
+        field = "packed_primary_provisional_designation"
+
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["salt", field, "midpointMjdTai"]
+    row_key_name = "_".join(cols_row_key_name)
+    table_name = "rubin.diaSource_{}".format(kind)
 
     nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
@@ -488,6 +486,7 @@ def ingest_source_data(
             row_key_name=row_key_name,
             table_name=table_name,
             catfolder=catfolder,
+            cols_row_key_name=cols_row_key_name,
         )
 
     return n_alerts, table_name
@@ -538,18 +537,16 @@ def ingest_object_data(
     if kind == "static":
         section = "diaObject"
         field = "diaObjectId"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_diaObjectId"
         table_name = "rubin.diaObject"
     elif kind == "sso":
-        # FIXME: add ssObject when it will be available
-        section = "MPCORB"
-        field = "mpcDesignation"
-        # Name of the rowkey in the table. Should be a column name
-        # or a combination of column separated by _ (e.g. jd_objectId).
-        row_key_name = "salt_mpcDesignation"
-        table_name = "rubin.ssObject"
+        section = "mpc_orbits"
+        field = "packed_primary_provisional_designation"
+        table_name = "rubin.mpc_orbits"
+
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["salt", field]
+    row_key_name = "_".join(cols_row_key_name)
 
     # Keep only rows with corresponding section
     df = df.filter(df[section].isNotNull())
@@ -589,13 +586,20 @@ def ingest_object_data(
         row_key_name=row_key_name,
         table_name=table_name,
         catfolder=catfolder,
+        cols_row_key_name=cols_row_key_name,
     )
 
     return n_alerts, table_name
 
 
 def ingest_section(
-    df, major_version, minor_version, row_key_name, table_name, catfolder
+    df,
+    major_version,
+    minor_version,
+    row_key_name,
+    table_name,
+    catfolder,
+    cols_row_key_name=None,
 ):
     """Push values stored in a Spark DataFrame into HBase
 
@@ -618,7 +622,14 @@ def ingest_section(
         HBase table name. Must exist in the cluster.
     catfolder: str
         Folder to save catalog (saved locally for inspection)
+    cols_row_key_name: list, optional
+        List of columns to use for the row key. If None (default),
+        split the row key using _. Only used for SSO for which
+        one column name contains _.
     """
+    if cols_row_key_name is None:
+        cols_row_key_name = row_key_name.split("_")
+
     section_name = table_name.split(".")[1]
 
     (
@@ -639,11 +650,14 @@ def ingest_section(
             root_level,
             diasource,
             sssource,
-            ["r", {"MPCORB.mpcDesignation": "string"}],  # for the row key
+            [
+                "r",
+                {"mpc_orbits.packed_primary_provisional_designation": "string"},
+            ],  # for the row key
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
-    elif section_name == "ssObject":
+    elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
     elif section_name == "pixel128":
@@ -659,7 +673,7 @@ def ingest_section(
         ]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'ssObject', 'pixel128'. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128'. {} is not allowed.".format(
                 section_name
             )
         )
@@ -668,9 +682,7 @@ def ingest_section(
     # Check all columns exist, fill if necessary, and cast data
     df_flat, _, cf = flatten_dataframe(df, sections)
 
-    df_flat = add_row_key(
-        df_flat, row_key_name=row_key_name, cols=row_key_name.split("_")
-    )
+    df_flat = add_row_key(df_flat, row_key_name=row_key_name, cols=cols_row_key_name)
 
     push_to_hbase(
         df=df_flat,

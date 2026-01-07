@@ -487,8 +487,8 @@ def salt_from_mpc_designation(df, colname):
     --------
     # Read Rubin alerts
     >>> df = spark.read.format("parquet").load(rubin_sample)
-    >>> df = df.filter(df["MPCORB.mpcDesignation"].isNotNull())
-    >>> df = salt_from_mpc_designation(df, "MPCORB.mpcDesignation")
+    >>> df = df.filter(df["mpc_orbits.packed_primary_provisional_designation"].isNotNull())
+    >>> df = salt_from_mpc_designation(df, "mpc_orbits.packed_primary_provisional_designation")
     >>> len(df.select("salt").collect()[0][0])
     2
     """
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         root, "online/science/20200101"
     )
 
-    globs["rubin_sample"] = os.path.join(root, "datasim/rubin_test_data_9_0.parquet")
+    globs["rubin_sample"] = os.path.join(root, "datasim/rubin_test_data_10_0.parquet")
 
     # Run the Spark test suite
     spark_unit_tests(globs, withstreaming=False)

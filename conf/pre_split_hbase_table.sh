@@ -57,7 +57,7 @@ pre_split_alphabetical() {
 
 STANDARD_TABLES=(
 	"${TABLE_PREFIX}.diaObject"
-	"${TABLE_PREFIX}.ssObject"
+	"${TABLE_PREFIX}.mpc_orbits"
 	"${TABLE_PREFIX}.diaSource_static"
 	"${TABLE_PREFIX}.diaSource_sso"
 	"${TABLE_PREFIX}.cutouts"
@@ -95,7 +95,7 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
                         # diaSource_sso has 100 partitions, based on year [YY]YY
                         output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
-		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.ssObject" ]]; then
+		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.mpc_orbits" ]]; then
                         # diaObject has 100 partitions, based on year [YY]YY
                         output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.tns_resolver" ]]; then
