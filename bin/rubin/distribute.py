@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Distribute the alerts to users
+"""Distribute the alerts to users and store data to HBase tables
 
 1. Use the Alert data that is stored in the Science TMP data lake (Parquet)
 2. Apply user defined filters
-3. Serialize into Avro
-3. Publish to Kafka Topic(s)
+3. Store data to HBase tables
+4. Serialize into Avro
+5. Publish to Kafka Topics
 """
 
+from pyspark.sql.types import BooleanType
+
+import pkgutil
 import argparse
 import logging
 import time
@@ -33,17 +36,31 @@ from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
 )
+from fink_broker.rubin.spark_utils import apply_kafka_serialisation
+from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
-from fink_utils.spark.utils import apply_user_defined_filter
+from fink_utils.spark.utils import (
+    retrieve_tag_from_string,
+    expand_function_from_string,
+    FinkUDF,
+)
+import fink_filters.rubin.livestream as ffrl
+from fink_broker.rubin.hbase_utils import ingest_section
 
 
 _LOG = logging.getLogger(__name__)
 
 # User-defined topics
-userfilters = ["no-filter.or5"]
+userfilters = [
+    "{}.{}.filter.{}".format(ffrl.__package__, mod, mod.split("filter_")[1])
+    for _, mod, _ in pkgutil.iter_modules(ffrl.__path__)
+]
 
 
 def main():
+    """TBD"""
+    # FIXME: should we have CLI args to do streaming and/or ingestion?
+    # FIXME: such as fink start distribute --ingest --distribute
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
@@ -65,15 +82,9 @@ def main():
     logger.debug("Connect to the TMP science database")
     df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
 
-    # drop science fields for the moment
-    df = df.drop("brokerIngestMjd", "cdsxmatch", "brokerEndProcessMjd")
-
     logger.debug("Cast fields to ease the distribution")
     cnames = df.columns
-
-    cnames[cnames.index("diaSource")] = "struct(diaSource.*) as diaSource"
-    cnames[cnames.index("diaObject")] = "struct(diaObject.*) as diaObject"
-    cnames[cnames.index("ssObject")] = "struct(ssObject.*) as ssObject"
+    cnames = apply_kafka_serialisation(cnames)
 
     kafka_cfg = {
         "kafka.bootstrap.servers": args.distribution_servers,
@@ -102,21 +113,51 @@ def main():
         spark.stop()
 
     for userfilter in userfilters:
+        filter_func, colnames = expand_function_from_string(df, userfilter)
+
+        # FIXME: should tag be userfilter.split(".")[-1] as before?
+        tag, description = retrieve_tag_from_string(userfilter)
+        fink_filter = FinkUDF(
+            filter_func,
+            BooleanType(),
+            tag,
+            description,
+        )
+
+        # Apply or not the filtering
         if args.noscience:
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
             )
-            df_tmp = df
+            df_filtered = df
         else:
             logger.debug("Apply user-defined filter %s", userfilter)
-            df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
+            df_filtered = df.filter(fink_filter.for_spark(*colnames))
 
-        # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_rubin"
+        # HBase ingestion
+        major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
 
-        # FIXME: shouldn't we collect in a list the disquery?
-        disquery = push_to_kafka(
-            df_tmp,
+        # Key is time_oid to perform date range search
+        cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
+        row_key_name = "_".join(cols_row_key_name)
+        table_name = "{}.{}".format(args.science_db_name, tag)
+
+        hbase_query = ingest_section(
+            df_filtered,
+            major_version,
+            minor_version,
+            row_key_name,
+            table_name=table_name,
+            catfolder=args.science_db_catalogs,
+            cols_row_key_name=cols_row_key_name,
+            streaming=True,
+        )
+
+        # Kafka distribution
+        topicname = args.substream_prefix + tag + "_rubin"
+
+        kafka_query = push_to_kafka(
+            df_filtered,
             topicname,
             cnames,
             checkpointpath_kafka,
@@ -125,24 +166,13 @@ def main():
             npart=10,
         )
 
-    if args.noscience:
-        logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, stream_distrib_list = 0, []
-    else:
-        logger.debug("Perform multi-messenger operations")
-        from fink_broker.rubin.mm_utils import distribute_launch_fink_mm
-
-        time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
-
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
-        remaining_time = args.exit_after - time_spent_in_wait
+        remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
-        disquery.stop()
-        if stream_distrib_list != []:
-            for stream in stream_distrib_list:
-                stream.stop()
+        kafka_query.stop()
+        hbase_query.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         logger.debug("Wait for the end of queries")

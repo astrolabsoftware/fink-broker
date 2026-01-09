@@ -361,7 +361,43 @@ def write_catalog_on_disk(catalog, catfolder, file_name) -> None:
         json.dump(catalog, json_file)
 
 
-def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> None:
+def push_to_hbase_partial(hbase_catalog, newtable):
+    """Wrapper around Hbase ingestion
+
+    Parameters
+    ----------
+    hbase_catalog: str
+        HBase catalog as a string.
+    newtable: int
+        Number of region to set if a new table needs
+        to be created.
+
+    Returns
+    -------
+    out: function
+        Function to ingest static data
+    """
+
+    def inwrap(batch_df, batch_id) -> None:
+        """Ingest static data to HBase table
+
+        Parameters
+        ----------
+        batch_df: Spark DataFrame
+            Static Spark DataFrame
+        batch_id: int
+            ID of the batch (used only for streaming)
+        """
+        batch_df.write.options(catalog=hbase_catalog, newtable=newtable).format(
+            "org.apache.hadoop.hbase.spark"
+        ).option("hbase.spark.use.hbasecontext", False).save()
+
+    return inwrap
+
+
+def push_to_hbase(
+    df, table_name, rowkeyname, cf, nregion=50, catfolder=".", streaming=False
+) -> None:
     """Push DataFrame data to HBase
 
     Parameters
@@ -378,18 +414,37 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
         Number of region to create if the table is newly created. Default is 50.
     catfolder: str
         Folder to write catalogs (must exist). Default is current directory.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
     """
+    if streaming:
+        assert df.isStreaming, (
+            "The DataFrame is static while you chose streaming ingestion. Please review your parameters."
+        )
+
     # construct the catalog
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
         df.schema, table_name, rowkeyname=rowkeyname, cf=cf
     )
 
     # Push table
-    df.write.options(catalog=hbcatalog_index, newtable=nregion).format(
-        "org.apache.hadoop.hbase.spark"
-    ).option("hbase.spark.use.hbasecontext", False).save()
+    if streaming:
+        # FIXME: do not hardcode checkpoint location
+        # FIXME: what should be the processing time?
+        query = (
+            df.writeStream
+            .foreachBatch(push_to_hbase_partial(hbcatalog_index, nregion))
+            .option("checkpointLocation", "/tmp/checkpoint")
+            .trigger(processingTime="2 seconds")
+            .start()
+        )
+    else:
+        push_to_hbase_partial(hbcatalog_index, nregion)(df, None)
+        query = None
 
     # write catalog for the table data
+    # This is done statically (for both static & streaming DF)
     file_name = table_name + ".json"
     write_catalog_on_disk(hbcatalog_index, catfolder, file_name)
 
@@ -401,21 +456,22 @@ def push_to_hbase(df, table_name, rowkeyname, cf, nregion=50, catfolder=".") -> 
         df, rowkeyname=schema_row_key_name, version="schema_{}_{}".format(fbvsn, fsvsn)
     )
 
-    # construct the hbase catalog for the schema
+    # construct the hbase catalog for the schema (static DF)
     hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
         df_index_schema.schema, table_name, rowkeyname=schema_row_key_name, cf=cf
     )
 
     # Push the data using the hbase connector
-    df_index_schema.write.options(
-        catalog=hbcatalog_index_schema, newtable=nregion
-    ).format("org.apache.hadoop.hbase.spark").option(
-        "hbase.spark.use.hbasecontext", False
-    ).save()
+    push_to_hbase_partial(hbcatalog_index_schema, nregion)(df_index_schema, None)
 
     # write catalog for the schema row
     file_name = table_name + "_schema_row.json"
     write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
+
+    # if streaming:
+    #    spark = SparkSession.builder.getOrCreate()
+    #    spark.streams.awaitAnyTermination()
+    return query
 
 
 def salt_from_last_digits(df, colname, npartitions):

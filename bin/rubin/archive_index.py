@@ -45,6 +45,7 @@ def main():
     args = getargs(parser)
 
     # construct the index view
+    # FIXME: construct row key from individual names instead
     index_row_key_name = args.index_table
     columns = index_row_key_name.split("_")
     index_name = "." + columns[0]
@@ -82,7 +83,7 @@ def main():
 
         # Keep only alerts diaObject
         # This will discard SSO
-        df = df.filter(~df["diaObject"].isNull())
+        df = df.filter(df["diaObject"].isNotNull())
 
         if columns[0].startswith("pixel"):
             nside = int(columns[0].split("pixel")[1])
@@ -110,6 +111,7 @@ def main():
                 index_row_key_name,
                 args.science_db_name + index_name,
                 args.science_db_catalogs,
+                streaming=False,
             )
         # elif columns[0] == "forcedSources":
         #     # FIXME: for lsst schema v8, rewrite with conditions on `diaObject.nDiaSources`

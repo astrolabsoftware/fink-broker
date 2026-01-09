@@ -407,6 +407,7 @@ def ingest_source_data(
     minor_version,
     nfiles=100,
     npartitions=1000,
+    streaming=False,
 ):
     """Push data to HBase by batch of parquet files
 
@@ -432,6 +433,9 @@ def ingest_source_data(
         Number of parquet files to ingest at once
     npartitions: int
         Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
 
     Returns
     -------
@@ -455,8 +459,11 @@ def ingest_source_data(
 
     nloops = int(len(paths) / nfiles) + 1
     n_alerts = 0
+
+    # FIXME: to be implemented for streaming (no need for loop)
     for index in range(0, len(paths), nfiles):
         _LOG.info("Loop {}/{}".format(index + 1, nloops))
+
         df = load_parquet_files(paths[index : index + nfiles])
 
         # Keep only rows with corresponding section
@@ -487,6 +494,7 @@ def ingest_source_data(
             table_name=table_name,
             catfolder=catfolder,
             cols_row_key_name=cols_row_key_name,
+            streaming=streaming,
         )
 
     return n_alerts, table_name
@@ -499,12 +507,19 @@ def ingest_object_data(
     major_version,
     minor_version,
     npartitions=1000,
+    streaming=False,
 ):
     """Remove duplicated and push data to HBase
 
     Notes
     -----
     The duplicates are based on diaObject.diaObjectId
+
+    Notes
+    -----
+    How to make the streaming working while there is
+    a need to drop duplicates? Probably for streaming
+    there should be no duplicates removal.
 
     Parameters
     ----------
@@ -520,6 +535,9 @@ def ingest_object_data(
         LSST alert schema minor version (e.g. 0)
     npartitions: int
         Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
 
     Returns
     -------
@@ -587,6 +605,7 @@ def ingest_object_data(
         table_name=table_name,
         catfolder=catfolder,
         cols_row_key_name=cols_row_key_name,
+        streaming=streaming,
     )
 
     return n_alerts, table_name
@@ -600,6 +619,7 @@ def ingest_section(
     table_name,
     catfolder,
     cols_row_key_name=None,
+    streaming=False,
 ):
     """Push values stored in a Spark DataFrame into HBase
 
@@ -626,6 +646,14 @@ def ingest_section(
         List of columns to use for the row key. If None (default),
         split the row key using _. Only used for SSO for which
         one column name contains _.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+
+    Returns
+    -------
+    query: StreamingQuery or None
+        StreamingQuery if `streaming=True`, None otherwise.
     """
     if cols_row_key_name is None:
         cols_row_key_name = row_key_name.split("_")
@@ -684,13 +712,16 @@ def ingest_section(
 
     df_flat = add_row_key(df_flat, row_key_name=row_key_name, cols=cols_row_key_name)
 
-    push_to_hbase(
+    query = push_to_hbase(
         df=df_flat,
         table_name=table_name,
         rowkeyname=row_key_name,
         cf=cf,
         catfolder=catfolder,
+        streaming=streaming,
     )
+
+    return query
 
 
 if __name__ == "__main__":
