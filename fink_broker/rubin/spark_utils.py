@@ -53,6 +53,49 @@ def get_schema_from_parquet(filename):
     return int(major_version), int(minor_version)
 
 
+def apply_kafka_serialisation(cnames):
+    """Apply proper serialization before sending to Kafka
+
+    Notes
+    -----
+    Timestamps are casted to strings
+
+    Parameters
+    ----------
+    cnames: list
+        List of fields
+
+    Returns
+    -------
+    cnames: list
+        List of fields, sanitized.
+    """
+    for col in [
+        "xm",
+        "clf",
+        "pred",
+        "misc",
+        "diaSource",
+        "diaObject",
+        "ssSource",
+        "MPCORB",
+    ]:
+        if col in cnames:
+            cnames[cnames.index(col)] = "struct({}.*) as {}".format(col, col)
+
+    for ts in [
+        "timestamp",
+        "brokerEndProcessTimestamp",
+        "brokerStartProcessTimestamp",
+        "brokerIngestTimestamp",
+    ]:
+        if ts in cnames:
+            cnames[cnames.index(ts)] = "cast({} as string) as {}".format(ts, ts)
+
+    # not needed actually as cnames is changed in-place
+    return cnames
+
+
 if __name__ == "__main__":
     """ Execute the test suite with SparkSession initialised """
 

@@ -18,7 +18,6 @@ import logging
 from pyspark.sql.utils import AnalysisException
 import pyspark.sql.functions as F
 
-
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS
 from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
 
@@ -491,7 +490,7 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
     return df, cols_i, cols_d, cf
 
 
-def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
+def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name, streaming=False):
     """Push data stored in a Spark DataFrame into HBase
 
     It assumes the main ZTF table schema
@@ -508,6 +507,9 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
         be created.
     catalog_name: str
         Name for the JSON catalog (saved locally for inspection)
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
     """
     # Cast feature columns
     df_casted = cast_features(df)
@@ -537,6 +539,7 @@ def push_full_df_to_hbase(df, row_key_name, table_name, catalog_name):
         rowkeyname=row_key_name,
         cf=cf,
         catfolder=catalog_name,
+        streaming=streaming,
     )
 
 
