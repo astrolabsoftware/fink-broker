@@ -78,6 +78,9 @@ def main():
     checkpointpath_kafka = args.online_data_prefix + "/kafka_checkpoint/{}".format(
         args.night
     )
+    checkpointpath_hbase = args.online_data_prefix + "/hbase_checkpoint/{}".format(
+        args.night
+    )
 
     logger.debug("Connect to the TMP science database")
     df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
@@ -151,6 +154,7 @@ def main():
             catfolder=args.science_db_catalogs,
             cols_row_key_name=cols_row_key_name,
             streaming=True,
+            checkpoint_path=checkpointpath_hbase + "/" + tag,
         )
 
         # Kafka distribution

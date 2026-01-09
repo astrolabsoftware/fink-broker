@@ -396,7 +396,14 @@ def push_to_hbase_partial(hbase_catalog, newtable):
 
 
 def push_to_hbase(
-    df, table_name, rowkeyname, cf, nregion=50, catfolder=".", streaming=False
+    df,
+    table_name,
+    rowkeyname,
+    cf,
+    nregion=50,
+    catfolder=".",
+    streaming=False,
+    checkpoint_path="",
 ) -> None:
     """Push DataFrame data to HBase
 
@@ -417,6 +424,8 @@ def push_to_hbase(
     streaming: bool
         If True, ingest data in real-time assuming df is a
         streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
     """
     if streaming:
         assert df.isStreaming, (
@@ -435,8 +444,8 @@ def push_to_hbase(
         query = (
             df.writeStream
             .foreachBatch(push_to_hbase_partial(hbcatalog_index, nregion))
-            .option("checkpointLocation", "/tmp/checkpoint")
-            .trigger(processingTime="2 seconds")
+            .option("checkpointLocation", checkpoint_path)
+            .trigger(processingTime="60 seconds")
             .start()
         )
     else:
@@ -468,9 +477,6 @@ def push_to_hbase(
     file_name = table_name + "_schema_row.json"
     write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
 
-    # if streaming:
-    #    spark = SparkSession.builder.getOrCreate()
-    #    spark.streams.awaitAnyTermination()
     return query
 
 

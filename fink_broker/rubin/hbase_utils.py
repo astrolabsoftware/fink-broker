@@ -408,6 +408,7 @@ def ingest_source_data(
     nfiles=100,
     npartitions=1000,
     streaming=False,
+    checkpoint_path="",
 ):
     """Push data to HBase by batch of parquet files
 
@@ -436,6 +437,8 @@ def ingest_source_data(
     streaming: bool
         If True, ingest data in real-time assuming df is a
         streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
 
     Returns
     -------
@@ -495,6 +498,7 @@ def ingest_source_data(
             catfolder=catfolder,
             cols_row_key_name=cols_row_key_name,
             streaming=streaming,
+            checkpoint_path=checkpoint_path,
         )
 
     return n_alerts, table_name
@@ -508,6 +512,7 @@ def ingest_object_data(
     minor_version,
     npartitions=1000,
     streaming=False,
+    checkpoint_path="",
 ):
     """Remove duplicated and push data to HBase
 
@@ -538,6 +543,8 @@ def ingest_object_data(
     streaming: bool
         If True, ingest data in real-time assuming df is a
         streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
 
     Returns
     -------
@@ -606,6 +613,7 @@ def ingest_object_data(
         catfolder=catfolder,
         cols_row_key_name=cols_row_key_name,
         streaming=streaming,
+        checkpoint_path=checkpoint_path,
     )
 
     return n_alerts, table_name
@@ -620,6 +628,7 @@ def ingest_section(
     catfolder,
     cols_row_key_name=None,
     streaming=False,
+    checkpoint_path="",
 ):
     """Push values stored in a Spark DataFrame into HBase
 
@@ -649,6 +658,8 @@ def ingest_section(
     streaming: bool
         If True, ingest data in real-time assuming df is a
         streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
 
     Returns
     -------
@@ -719,6 +730,7 @@ def ingest_section(
         cf=cf,
         catfolder=catfolder,
         streaming=streaming,
+        checkpoint_path=checkpoint_path,
     )
 
     return query
