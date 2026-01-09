@@ -404,7 +404,7 @@ def push_to_hbase(
     catfolder=".",
     streaming=False,
     checkpoint_path="",
-) -> None:
+):
     """Push DataFrame data to HBase
 
     Parameters
@@ -426,6 +426,10 @@ def push_to_hbase(
         streaming DataFrame. Default is False (static DataFrame).
     checkpoint_path: str
         Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    out: StreamingQuery or None
     """
     if streaming:
         assert df.isStreaming, (
