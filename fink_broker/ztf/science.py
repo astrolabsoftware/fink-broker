@@ -23,6 +23,9 @@ from fink_utils.spark.utils import concat_col
 
 from fink_broker.common.tester import spark_unit_tests
 
+from fink_filters.ztf.classification import extract_fink_classification
+from fink_science.ztf.hostless_detection.processor import run_potential_hostless
+
 # Import of science modules
 from fink_science.ztf.random_forest_snia.processor import rfscore_sigmoid_full
 
@@ -347,7 +350,6 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         .withColumn("lc_features_r", df["lc_features"].getItem("2"))
         .drop("lc_features")
     )
-
     # Apply level one processor: fast transient
     _LOG.info("New processor: magnitude rate for fast transient")
     mag_rate_args = [
@@ -420,6 +422,47 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     args += ["cjd", "cfid", "cmagpsf", "csigmapsf"]
 
     df = df.withColumn("slsn_score", superluminous_score(*args))
+
+    _LOG.info("New processor: ELEPHANT Hostless module")
+    fink_classifier_cols = [
+        "cdsxmatch",
+        "roid",
+        "mulens",
+        "snn_snia_vs_nonia",
+        "snn_sn_vs_all",
+        "rf_snia_vs_nonia",
+        "candidate.ndethist",
+        "candidate.drb",
+        "candidate.classtar",
+        "candidate.jd",
+        "candidate.jdstarthist",
+        "rf_kn_vs_nonkn",
+        "tracklet",
+    ]
+    df = df.withColumn("finkclass", extract_fink_classification(*fink_classifier_cols))
+    df = df.withColumn("tnsclass", F.lit("Unknown"))
+    df = df.withColumn(
+        "elephant_kstest",
+        F.slice(
+            run_potential_hostless(
+                df["cmagpsf"],
+                df["cutoutScience.stampData"],
+                df["cutoutTemplate.stampData"],
+                df["snn_snia_vs_nonia"],
+                df["snn_sn_vs_all"],
+                df["rf_snia_vs_nonia"],
+                df["rf_kn_vs_nonkn"],
+                df["finkclass"],
+                df["tnsclass"],
+                df["candidate.jd"] - df["candidate.jdstarthist"],
+                df["roid"],
+            ),
+            1,
+            2,
+        ),
+    )
+    expanded.extend(["finkclass", "tnsclass"])
+    df = df.drop(*expanded)
 
     # Drop temp columns
     df = df.drop(*expanded)
