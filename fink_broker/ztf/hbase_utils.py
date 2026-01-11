@@ -95,6 +95,8 @@ def load_fink_cols():
         "PA": {"type": "float", "default": None},
         "regalade_ra": {"type": "float", "default": None},
         "regalade_dec": {"type": "float", "default": None},
+        "finkclass": {"type": "float", "default": "Unknown"},
+        "is_hostless": {"type": "boolean", "default": False},
     }
 
     fink_nested_cols = {}
