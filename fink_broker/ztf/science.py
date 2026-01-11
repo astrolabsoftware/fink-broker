@@ -19,6 +19,7 @@ from pyspark.sql import functions as F
 import os
 import logging
 
+import numpy as np
 from fink_utils.spark.utils import concat_col
 
 from fink_broker.common.tester import spark_unit_tests
@@ -437,33 +438,41 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         "candidate.jd",
         "candidate.jdstarthist",
         "rf_kn_vs_nonkn",
-        "tracklet",
+        F.lit(""),
     ]
     df = df.withColumn("finkclass", extract_fink_classification(*fink_classifier_cols))
-    df = df.withColumn("tnsclass", F.lit("Unknown"))
     df = df.withColumn(
-        "elephant_kstest",
-        F.slice(
-            run_potential_hostless(
-                df["cmagpsf"],
-                df["cutoutScience.stampData"],
-                df["cutoutTemplate.stampData"],
-                df["snn_snia_vs_nonia"],
-                df["snn_sn_vs_all"],
-                df["rf_snia_vs_nonia"],
-                df["rf_kn_vs_nonkn"],
-                df["finkclass"],
-                df["tnsclass"],
-                df["candidate.jd"] - df["candidate.jdstarthist"],
-                df["roid"],
-            ),
-            1,
-            2,
+        "kstest_static",
+        run_potential_hostless(
+            df["cmagpsf"],
+            df["cutoutScience.stampData"],
+            df["cutoutTemplate.stampData"],
+            df["snn_snia_vs_nonia"],
+            df["snn_sn_vs_all"],
+            df["rf_snia_vs_nonia"],
+            df["rf_kn_vs_nonkn"],
+            df["finkclass"],
+            df["tns"],
+            df["candidate.jd"] - df["candidate.jdstarthist"],
+            df["roid"],
         ),
     )
-    expanded.extend(["finkclass", "tnsclass"])
-    df = df.drop(*expanded)
+    cond_science_low = df["kstest_static"][0] >= 0.0
+    cond_science_high = df["kstest_static"][0] <= 0.5
+    cond_template_low = df["kstest_static"][1] >= 0.0
+    cond_template_high = df["kstest_static"][1] <= 0.85
+    cond_max_detections = F.size(F.array_remove("cmagpsf", np.nan)) <= 20
 
+    df = df.withColumn(
+        "is_hostless",
+        cond_science_low
+        & cond_science_high
+        & cond_template_low
+        & cond_template_high
+        & cond_max_detections,
+    )
+
+    expanded.extend(["kstest_static"])
     # Drop temp columns
     df = df.drop(*expanded)
 
