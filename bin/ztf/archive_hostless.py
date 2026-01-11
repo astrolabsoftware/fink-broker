@@ -151,7 +151,7 @@ def main():
             cutout_template = get_cutout(cutout=alert["cutoutTemplate"])
 
             text = """
-*Object ID*: [{}](https://fink-portal.org/{})
+*Object ID*: [{}](https://ztf.fink-portal.org/{})
 *Scores:*\n- Science: {:.2f}\n- Template: {:.2f}
 *Fink class*: {}
             """.format(
