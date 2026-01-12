@@ -22,7 +22,7 @@ jobs:
     container:
       # Warning: use of 'latest' tag is discouraged in production because it can lead to non-reproducible runs,
       # it is used here for simplicity
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:latest
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.52.0-18-g81923fb
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
