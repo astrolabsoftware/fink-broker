@@ -29,7 +29,7 @@ import argparse
 import logging
 import time
 
-from fink_broker.common.distribution_utils import push_to_kafka
+from fink_broker.common.distribution_utils import push_to_kafka, FakeQuery
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
@@ -137,38 +137,46 @@ def main():
             logger.debug("Apply user-defined filter %s", userfilter)
             df_filtered = df.filter(fink_filter.for_spark(*colnames))
 
-        # HBase ingestion
-        major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
+        if not args.no_hbase_ingest:
+            # HBase ingestion
+            major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
 
-        # Key is time_oid to perform date range search
-        cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
-        row_key_name = "_".join(cols_row_key_name)
-        table_name = "{}.{}".format(args.science_db_name, tag)
+            # Key is time_oid to perform date range search
+            cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
+            row_key_name = "_".join(cols_row_key_name)
+            table_name = "{}.{}".format(args.science_db_name, tag)
 
-        hbase_query = ingest_section(
-            df_filtered,
-            major_version,
-            minor_version,
-            row_key_name,
-            table_name=table_name,
-            catfolder=args.science_db_catalogs,
-            cols_row_key_name=cols_row_key_name,
-            streaming=True,
-            checkpoint_path=checkpointpath_hbase + "/" + tag,
-        )
+            hbase_query = ingest_section(
+                df_filtered,
+                major_version,
+                minor_version,
+                row_key_name,
+                table_name=table_name,
+                catfolder=args.science_db_catalogs,
+                cols_row_key_name=cols_row_key_name,
+                streaming=True,
+                checkpoint_path=checkpointpath_hbase + "/" + tag,
+            )
+        else:
+            logger.warning("Skipping HBase ingestion")
+            hbase_query = FakeQuery()
 
-        # Kafka distribution
-        topicname = args.substream_prefix + tag + "_rubin"
+        if not args.no_kafka_ingest:
+            # Kafka distribution
+            topicname = args.substream_prefix + tag + "_rubin"
 
-        kafka_query = push_to_kafka(
-            df_filtered,
-            topicname,
-            cnames,
-            checkpointpath_kafka,
-            args.tinterval,
-            kafka_cfg,
-            npart=10,
-        )
+            kafka_query = push_to_kafka(
+                df_filtered,
+                topicname,
+                cnames,
+                checkpointpath_kafka,
+                args.tinterval,
+                kafka_cfg,
+                npart=10,
+            )
+        else:
+            logger.warning("Skipping Kafka ingestion")
+            kafka_query = FakeQuery()
 
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")

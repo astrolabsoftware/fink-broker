@@ -173,6 +173,20 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "--no_kafka_ingest",
+        action="store_true",
+        help="""
+        If set, DO NOT ingest data streams to Kafka [distribute]
+        """,
+    )
+    parser.add_argument(
+        "--no_hbase_ingest",
+        action="store_true",
+        help="""
+        If set, DO NOT ingest data to HBase in real-time [distribute]
+        """,
+    )
+    parser.add_argument(
         "-kafka_security_protocol",
         type=str,
         default="",

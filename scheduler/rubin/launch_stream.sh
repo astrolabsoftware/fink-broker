@@ -48,6 +48,14 @@ while [ "$#" -gt 0 ]; do
       CHECK_OFFSET=true
       shift 1
       ;;
+    --no_kafka_ingest)
+      NO_KAFKA_INGEST="--no_kafka_ingest"
+      shift 1
+      ;;
+    --no_hbase_ingest)
+      NO_HBASE_INGEST="--no_hbase_ingest"
+      shift 1
+      ;;
     -reset_offsets_to)
       RESET_OFFSETS_TO="$2"
       shift 2
@@ -86,6 +94,8 @@ Options:
   --enrich_only     If specified, only enrich polled data.
   --distribute_only If specified, only distribute enriched data.
   --check_offset    If specified, check offsets and exit (compatible only with --poll_only)
+  --no_kafka_ingest If specified, DO NOT ingest stream to Kafka. Only available for distribute.
+  --no_hbase_ingest If specified, DO NOT ingest stream to HBase. Only available for distribute.
 
 Examples:
   # Launch full Fink until 20:00 today Paris time
@@ -102,6 +112,9 @@ Examples:
 
   # Distribute until 5pm
   ./launch_stream.sh --distribute_only -stop_at 17:00 today
+
+  # Distribute until 5pm without sending to Kafka
+  ./launch_stream.sh --distribute_only --no_kafka_ingest -stop_at 17:00 today
 
   # 8:00 AM. Reprocess entirely another night in a couple of hours
   ./launch_stream.sh -night 20241231 -stop_at 10:00 today
@@ -243,7 +256,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
                     -spark-cores-max 4 -spark-executor-cores 1 \
-                    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
+                    -exit_after ${LEASETIME} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST} > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
                 break
             fi
         fi

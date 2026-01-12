@@ -65,7 +65,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -topic)
-      ZTF_KAFKA_TOPIC="$2"
+      ZTF_KAFKA_TOPIC="-topic $2"
       shift 2
       ;;
     -index_table)
@@ -105,7 +105,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -reset_offsets_to)
-      RESET_OFFSETS_TO="$2"
+      RESET_OFFSETS_TO="-reset_offsets_to ${2}"
       shift 2
       ;;
     --simulator)
@@ -113,7 +113,15 @@ while [ "$#" -gt 0 ]; do
       shift 1
       ;;
     --check_offsets)
-      CHECK_LSST_OFFSETS=true
+      CHECK_LSST_OFFSETS="--check_offsets"
+      shift 1
+      ;;
+    --no_kafka_ingest)
+      NO_KAFKA_INGEST="--no_kafka_ingest"
+      shift 1
+      ;;
+    --no_hbase_ingest)
+      NO_HBASE_INGEST="--no_hbase_ingest"
       shift 1
       ;;
     --version)
@@ -168,6 +176,8 @@ Service options:
   --simulator           If specified, run in simulation mode.
   --noscience           If specified, do not enrich data with science modules.
   --check_offsets       If specified, check Kafka offsets. Only available for rubin/stream2raw
+  --no_kafka_ingest     If specified, DO NOT ingest stream to Kafka. Only available for rubin/distribute.
+  --no_hbase_ingest     If specified, DO NOT ingest stream to HBase. Only available for rubin/distribute.
 
 Examples for ZTF:
   Start polling for an hour:
@@ -271,14 +281,6 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-# Topic required only for stream2raw ZTF
-# The topic for LSST is defined in conf/rubin/fink.conf.stream2raw
-if [[ ${ZTF_KAFKA_TOPIC} ]]; then
-  ZTF_KAFKA_TOPIC="-topic ${ZTF_KAFKA_TOPIC}"
-else
-  ZTF_KAFKA_TOPIC=""
-fi
-
 # Only if the operator pass an index table
 if [[ ${INDEXTABLE} ]]; then
   INDEXTABLE="-index_table ${INDEXTABLE}"
@@ -317,14 +319,6 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     source ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
   fi
 
-  if [[ "$CHECK_LSST_OFFSETS" = true ]] ; then
-    CHECK_LSST_OFFSETS="--check_offsets"
-  fi
-
-  if [[ "$RESET_OFFSETS_TO" ]] ; then
-    RESET_OFFSETS_TO="-reset_offsets_to ${RESET_OFFSETS_TO}"
-  fi
-
   python ${FINK_HOME}/bin/${SURVEY}/${service}.py \
     -lsst_kafka_server ${LSST_KAFKA_SERVER} \
     -lsst_schema_server ${LSST_SCHEMA_SERVER} \
@@ -343,7 +337,7 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     -stop_polling_at "${STOP_AT}" \
     -night ${NIGHT} \
     -log ${LOG_LEVEL} \
-    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS} ${RESET_OFFSETS_TO}
+    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS} ${RESET_OFFSETS_TO} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST}
 
 elif [[ $service == "fetch_schema" ]]; then
   if [[ -f $conf_stream2raw ]]; then
