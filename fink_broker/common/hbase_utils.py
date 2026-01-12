@@ -443,7 +443,6 @@ def push_to_hbase(
 
     # Push table
     if streaming:
-        # FIXME: do not hardcode checkpoint location
         # FIXME: what should be the processing time?
         query = (
             df.writeStream
