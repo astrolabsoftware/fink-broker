@@ -119,28 +119,6 @@ ensure_folder_has_been_created() {
   fi
 }
 
-# Stream integration tests
-if [[ "$WITH_STREAM" = true ]] ; then
-  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
-
-  # Fire a stream
-  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
-
-  # Connect the service to build the raw database from the stream
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
-
-  # Connect the service to build the science database from the raw one
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
-
-  echo "Sleeping 300 seconds to enable processing to produce output..."
-  sleep 300
-  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
-  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
-
-  # TODO: add distribute
-  # TODO: which other checks?
-fi
-
 check_table_output() {
   # make 101 as args
   local tablename="$1"
@@ -154,6 +132,35 @@ check_table_output() {
     echo -e "${SDONE} table ${tablename} is OK."
   fi
 }
+
+# Stream integration tests
+if [[ "$WITH_STREAM" = true ]] ; then
+  RESOURCES="-driver-memory 2g -executor-memory 2g -spark-cores-max 4 -spark-executor-cores 1"
+
+  # Fire a stream
+  fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
+
+  # Connect the service to build the raw database from the stream
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  # Connect the service to build the science database from the raw one
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+10 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  # Generate Kafka topics & HBase tables for classes
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+10 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
+  echo "Sleeping 600 seconds to enable processing to produce output..."
+  sleep 600
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
+
+  # check we have all topics
+  echo "TOPICS FOUND:"
+  /home/libs/kafka_2.12-2.8.1/bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+  # check HBase output
+  check_table_output "rubin.cataloged" 50
+fi
 
 # DB Integration tests
 if [[ "$WITH_DB" = true ]] ; then
