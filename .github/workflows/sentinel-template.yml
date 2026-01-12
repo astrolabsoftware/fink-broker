@@ -39,7 +39,7 @@ jobs:
         git clone https://github.com/astrolabsoftware/fink-alert-simulator.git
     - name: Download schemas
       run: |
-        git clone --depth 1 --branch v0.0.2-rc0 https://github.com/astrolabsoftware/fink-alert-schemas.git
+        git clone --depth 1 --branch v0.0.3 https://github.com/astrolabsoftware/fink-alert-schemas.git
 
         # for the test suite
         cp -r fink-alert-schemas/datasim .
