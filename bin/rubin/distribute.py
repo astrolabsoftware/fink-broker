@@ -40,7 +40,6 @@ from fink_broker.rubin.spark_utils import apply_kafka_serialisation
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 from fink_utils.spark.utils import (
-    retrieve_tag_from_string,
     expand_function_from_string,
     FinkUDF,
 )
@@ -118,13 +117,11 @@ def main():
     for userfilter in userfilters:
         filter_func, colnames = expand_function_from_string(df, userfilter)
 
-        # FIXME: should tag be userfilter.split(".")[-1] as before?
-        tag, description = retrieve_tag_from_string(userfilter)
+        tag = userfilter.split(".")[-1]
         fink_filter = FinkUDF(
             filter_func,
             BooleanType(),
             tag,
-            description,
         )
 
         # Apply or not the filtering
