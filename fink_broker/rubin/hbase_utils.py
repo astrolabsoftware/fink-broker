@@ -801,6 +801,57 @@ def ingest_section(
     return query
 
 
+def format_cutouts_for_hbase(df, row_key_name, npartitions):
+    """Initial formatting for ingestion of cutouts in HBase
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    row_key_name: str
+        Name of the rowkey in the table. Should be a column name
+        or a combination of column separated by _ (e.g. diaObjectId_midpointMjdTai).
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with the salt column,
+        and without images.
+    """
+    df = df.withColumn("hdfs_path", F.input_file_name())
+
+    # add salt based on diaSourceId
+    df = salt_from_last_digits(
+        df, colname="diaSource.diaSourceId", npartitions=npartitions
+    )
+
+    cols = [
+        "diaObject.diaObjectId",
+        "diaSource.midpointMjdTai",
+        "diaSource.diaSourceId",
+        "hdfs_path",
+        "salt",
+    ]
+
+    df = df.select(cols)
+
+    cf = {
+        "diaObjectId": "r",
+        "diaSourceId": "r",
+        "midpointMjdTai": "r",
+        "hdfs_path": "r",
+    }
+
+    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+
+    # Not needed anymore
+    df = df.drop("salt")
+
+    return df, cf
+
+
 def ingest_cutout_metadata(
     paths,
     table_name,
@@ -837,52 +888,42 @@ def ingest_cutout_metadata(
     hbase_query: StreamingQuery
         The Spark streaming query. None if streaming=False.
     """
-    if streaming:
-        df = connect_to_raw_database(paths, paths, latestfirst=False)
-    else:
-        df = load_parquet_files(paths)
-
-    df = df.withColumn("hdfs_path", F.input_file_name())
-
-    # add salt based on diaSourceId
-    df = salt_from_last_digits(
-        df, colname="diaSource.diaSourceId", npartitions=npartitions
-    )
-
-    cols = [
-        "diaObject.diaObjectId",
-        "diaSource.midpointMjdTai",
-        "diaSource.diaSourceId",
-        "hdfs_path",
-        "salt",
-    ]
-
-    df = df.select(cols)
-
-    # Push to HBase
     row_key_name = "salt_diaSourceId"
 
-    cf = {
-        "diaObjectId": "r",
-        "diaSourceId": "r",
-        "midpointMjdTai": "r",
-        "hdfs_path": "r",
-    }
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df, cf = format_cutouts_for_hbase(df, row_key_name, npartitions=npartitions)
+        query = push_to_hbase(
+            df=df,
+            table_name=table_name,
+            rowkeyname=row_key_name,
+            cf=cf,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
 
-    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
 
-    # Not needed anymore
-    df = df.drop("salt")
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+            df, cf = format_cutouts_for_hbase(df, row_key_name, npartitions=npartitions)
 
-    query = push_to_hbase(
-        df=df,
-        table_name=table_name,
-        rowkeyname=row_key_name,
-        cf=cf,
-        catfolder=catfolder,
-        streaming=streaming,
-        checkpoint_path=checkpoint_path,
-    )
+            query = push_to_hbase(
+                df=df,
+                table_name=table_name,
+                rowkeyname=row_key_name,
+                cf=cf,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
 
     return query
 
