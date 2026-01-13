@@ -27,11 +27,22 @@ from fink_broker.rubin.science import CAT_PROPERTIES
 
 from fink_broker.common.tester import spark_unit_tests
 
+import fink_filters.rubin.livestream as ffrl
+
 import pandas as pd
 import os
 import logging
+import pkgutil
 
 _LOG = logging.getLogger(__name__)
+
+userfilters = [
+    "{}.{}.filter.{}".format(ffrl.__package__, mod, mod.split("filter_")[1])
+    for _, mod, _ in pkgutil.iter_modules(ffrl.__path__)
+]
+
+# In-line with the definition of tags in bin/rubin/distribute.py
+ALLOWED_TAGS = [userfilter.split(".")[-1] for userfilter in userfilters]
 
 
 def load_fink_cols():
@@ -710,10 +721,14 @@ def ingest_section(
             fink_source_cols,
             ["f", {"pixel128": "int"}],  # for the rowkey
         ]
+    elif section_name in ALLOWED_TAGS:
+        # FIXME: Does not work for SSO filters!
+        sections = [root_level, diasource, fink_source_cols]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128'. {} is not allowed.".format(
-                section_name
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128', or a filter: {}. {} is not allowed.".format(
+                ALLOWED_TAGS,
+                section_name,
             )
         )
         raise ValueError()
