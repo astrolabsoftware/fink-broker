@@ -149,17 +149,28 @@ if [[ "$WITH_STREAM" = true ]] ; then
   # Generate Kafka topics & HBase tables for classes
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
+  # Ingest data to HBase
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --ingest_only -stop_at "`date -d '+2 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+
   echo "Sleeping 300 seconds to enable processing to produce output..."
   sleep 300
   ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
   ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science_checkpoint"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/kafka_checkpoint"
+  ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/hbase_checkpoint"
 
   # check we have all topics
   #echo "TOPICS FOUND:"
   #kafka-topics.sh --list --bootstrap-server localhost:9092
 
   # check HBase output
-  check_table_output "rubin.cataloged" 31
+  check_table_output "rubin.diaObject" 94
+  check_table_output "rubin.mpc_orbits" 8
+  check_table_output "rubin.diaSource_static" 94
+  check_table_output "rubin.diaSource_sso" 8
+
+  check_table_output "rubin.cataloged" 19
 fi
 
 # DB Integration tests

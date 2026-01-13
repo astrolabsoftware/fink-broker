@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Push science data to the science portal (HBase table)
+"""Push science data to HBase in real time"""
 
-1. Use the Alert data that is stored in the Science TMP database (Parquet)
-2. Extract relevant information from alerts
-3. Construct HBase catalog
-4. Push data
-"""
-
+import time
 import argparse
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
-from fink_broker.common.spark_utils import list_hdfs_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
+
 from fink_broker.rubin.hbase_utils import ingest_source_data
 from fink_broker.rubin.hbase_utils import ingest_object_data
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
@@ -39,7 +34,7 @@ def main():
 
     # Initialise Spark session
     spark = init_sparksession(
-        name="science_archival_{}".format(args.night), shuffle_partitions=200
+        name="archive_science_realtime_{}".format(args.night), shuffle_partitions=200
     )
 
     # The level here should be controlled by an argument.
@@ -49,103 +44,90 @@ def main():
     inspect_application(logger)
 
     # Connect to the aggregated science database
-    folder = "{}/science/year={}/month={}/day={}".format(
-        args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
+    path = args.online_data_prefix + "/science/{}".format(args.night)
+    checkpointpath_hbase = args.online_data_prefix + "/hbase_checkpoint/{}".format(
+        args.night
     )
 
-    # Get list of files
-    paths = list_hdfs_files(folder)
+    major_version, minor_version = get_schema_from_parquet(path)
 
-    if len(paths) == 0:
-        logger.warning("No parquet found at {}".format(folder))
-
-        import sys
-
-        sys.exit()
-
-    major_version, minor_version = get_schema_from_parquet(paths)
-
-    # FIXME: should be CLI arg
-    nfiles = 100
+    # FIXME: should be CLI arg. This is fixed when creating HBase tables
     npartitions = 1000
 
-    logger.info(
-        "{} parquet detected ({} loops to perform)".format(
-            len(paths), int(len(paths) / nfiles) + 1
-        )
-    )
-
+    queries = []
     # diaObject
-    n_alerts_diaobject, table_name, _ = ingest_object_data(
+    _, _, hbase_query_static = ingest_object_data(
         kind="static",
-        paths=paths,
+        paths=path,
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
         npartitions=npartitions,
+        streaming=True,
+        checkpoint_path=checkpointpath_hbase + "/static",
     )
-    logger.info(
-        "{} static alerts pushed to HBase for table {}".format(
-            n_alerts_diaobject, table_name
-        )
-    )
+    queries.append(hbase_query_static)
 
     # ssObject/mpc_orbits
     if major_version >= 10:
-        n_alerts_ssobject, table_name, _ = ingest_object_data(
+        _, _, hbase_query_sso = ingest_object_data(
             kind="sso",
-            paths=paths,
+            paths=path,
             catfolder=args.science_db_catalogs,
             major_version=major_version,
             minor_version=minor_version,
             npartitions=npartitions,
+            streaming=True,
+            checkpoint_path=checkpointpath_hbase + "/sso",
         )
-        logger.info(
-            "{} sso alerts pushed to HBase for table {}".format(
-                n_alerts_ssobject, table_name
-            )
-        )
+        queries.append(hbase_query_sso)
     else:
         logger.warning(
             "Version {} detected. Skipping SSO injection".format(major_version)
         )
 
     # diaSource (static)
-    n_alerts_diasource_static, table_name, _ = ingest_source_data(
+    _, _, hbase_query_static_source = ingest_source_data(
         kind="static",
-        paths=paths,
+        paths=path,
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
-        nfiles=nfiles,
         npartitions=npartitions,
+        streaming=True,
+        checkpoint_path=checkpointpath_hbase + "/static_source",
     )
-    logger.info(
-        "{} alerts pushed to HBase for table {}".format(
-            n_alerts_diasource_static, table_name
-        )
-    )
+    queries.append(hbase_query_static_source)
 
     # diaSource (SSO)
     if major_version >= 10:
-        n_alerts_diasource_sso, table_name, _ = ingest_source_data(
+        _, _, hbase_query_sso_source = ingest_source_data(
             kind="sso",
-            paths=paths,
+            paths=path,
             catfolder=args.science_db_catalogs,
             major_version=major_version,
             minor_version=minor_version,
-            nfiles=nfiles,
             npartitions=npartitions,
+            streaming=True,
+            checkpoint_path=checkpointpath_hbase + "/sso_source",
         )
-        logger.info(
-            "{} alerts pushed to HBase for table {}".format(
-                n_alerts_diasource_sso, table_name
-            )
-        )
+        queries.append(hbase_query_sso_source)
     else:
         logger.warning(
             "Version {} detected. Skipping SSO injection".format(major_version)
         )
+
+    if args.exit_after is not None:
+        logger.debug("Keep the Streaming running until something or someone ends it!")
+        remaining_time = args.exit_after
+        remaining_time = remaining_time if remaining_time > 0 else 0
+        time.sleep(remaining_time)
+        for hbase_query in queries:
+            hbase_query.stop()
+        logger.info("Exiting the archive_science_streaming service normally...")
+    else:
+        logger.debug("Wait for the end of queries")
+        spark.streams.awaitAnyTermination()
 
 
 if __name__ == "__main__":
