@@ -66,6 +66,7 @@ jobs:
       run: |
         # to remove
         pip install fink-utils==0.51.0
+        pip install fink-filters==7.11
         export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
