@@ -144,13 +144,13 @@ if [[ "$WITH_STREAM" = true ]] ; then
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Connect the service to build the science database from the raw one
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+10 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Generate Kafka topics & HBase tables for classes
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+10 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
-  echo "Sleeping 600 seconds to enable processing to produce output..."
-  sleep 600
+  echo "Sleeping 300 seconds to enable processing to produce output..."
+  sleep 300
   ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/raw"
   ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/science"
 
