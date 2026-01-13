@@ -1,4 +1,4 @@
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -411,6 +411,54 @@ def flatten_dataframe(df, sections):
     return df, cols, cf
 
 
+def format_for_hbase(df, section, field, kind, npartitions):
+    """Initial formatting for HBase ingestion
+
+    Notes
+    -----
+    This adds salt to the row key, and drop images. It
+    also keep alerts for which df[section].isNotNull()
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    section: str
+       Section of the schema to use that
+       hosts `field`. Use to generate the salt.
+    field: str
+        Field contains in `section`. Use to generate the salt.
+    kind: str
+        static or sso alerts. Defined the type of salt.
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with the salt column,
+        and without images.
+    """
+    # Keep only rows with corresponding section
+    df = df.filter(df[section].isNotNull())
+
+    # add salt
+    if kind == "static":
+        df = salt_from_last_digits(
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
+        )
+    elif kind == "sso":
+        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
+
+    # Drop unused partitioning columns
+    df = df.drop("year").drop("month").drop("day")
+
+    # Drop images
+    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
+    return df
+
+
 def ingest_source_data(
     kind,
     paths,
@@ -520,54 +568,6 @@ def ingest_source_data(
             )
 
     return n_alerts, table_name, hbase_query
-
-
-def format_for_hbase(df, section, field, kind, npartitions):
-    """Initial formatting for HBase ingestion
-
-    Notes
-    -----
-    This adds salt to the row key, and drop images. It
-    also keep alerts for which df[section].isNotNull()
-
-    Parameters
-    ----------
-    df: Spark DataFrame
-        Alert DataFrame
-    section: str
-       Section of the schema to use that
-       hosts `field`. Use to generate the salt.
-    field: str
-        Field contains in `section`. Use to generate the salt.
-    kind: str
-        static or sso alerts. Defined the type of salt.
-    npartitions: int
-        Number of partitions in the targeted HBase table
-
-    Returns
-    -------
-    out: Spark DataFrame
-        The initial dataframe with the salt column,
-        and without images.
-    """
-    # Keep only rows with corresponding section
-    df = df.filter(df[section].isNotNull())
-
-    # add salt
-    if kind == "static":
-        df = salt_from_last_digits(
-            df, colname="{}.{}".format(section, field), npartitions=npartitions
-        )
-    elif kind == "sso":
-        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
-
-    # Drop unused partitioning columns
-    df = df.drop("year").drop("month").drop("day")
-
-    # Drop images
-    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
-
-    return df
 
 
 def ingest_object_data(
@@ -790,6 +790,87 @@ def ingest_section(
 
     query = push_to_hbase(
         df=df_flat,
+        table_name=table_name,
+        rowkeyname=row_key_name,
+        cf=cf,
+        catfolder=catfolder,
+        streaming=streaming,
+        checkpoint_path=checkpoint_path,
+    )
+
+    return query
+
+
+def ingest_cutout_metadata(
+    paths,
+    table_name,
+    catfolder,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest cutout data into HBase
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+    else:
+        df = load_parquet_files(paths)
+
+    df = df.withColumn("hdfs_path", F.input_file_name())
+
+    # add salt based on diaSourceId
+    df = salt_from_last_digits(
+        df, colname="diaSource.diaSourceId", npartitions=npartitions
+    )
+
+    cols = [
+        "diaObject.diaObjectId",
+        "diaSource.midpointMjdTai",
+        "diaSource.diaSourceId",
+        "hdfs_path",
+        "salt",
+    ]
+
+    df = df.select(cols)
+
+    # Push to HBase
+    row_key_name = "salt_diaSourceId"
+
+    cf = {
+        "diaObjectId": "r",
+        "diaSourceId": "r",
+        "midpointMjdTai": "r",
+        "hdfs_path": "r",
+    }
+
+    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+
+    # Not needed anymore
+    df = df.drop("salt")
+
+    query = push_to_hbase(
+        df=df,
         table_name=table_name,
         rowkeyname=row_key_name,
         cf=cf,

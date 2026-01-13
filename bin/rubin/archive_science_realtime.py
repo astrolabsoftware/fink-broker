@@ -25,6 +25,7 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 
 from fink_broker.rubin.hbase_utils import ingest_source_data
 from fink_broker.rubin.hbase_utils import ingest_object_data
+from fink_broker.rubin.hbase_utils import ingest_cutout_metadata
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
@@ -116,6 +117,17 @@ def main():
         logger.warning(
             "Version {} detected. Skipping SSO injection".format(major_version)
         )
+
+    # Cutouts
+    hbase_query_cutout = ingest_cutout_metadata(
+        paths=path,
+        table_name=args.science_db_name + ".cutouts",
+        catfolder=args.science_db_catalogs,
+        npartitions=npartitions,
+        streaming=True,
+        checkpoint_path=checkpointpath_hbase + "/cutouts",
+    )
+    queries.append(hbase_query_cutout)
 
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
