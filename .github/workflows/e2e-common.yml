@@ -5,11 +5,6 @@ on:
       suffix:
         required: true
         type: string
-      ci_repo:
-        description: 'Intermediate registry to use'
-        required: false
-        type: string
-        default: ""
       runner:
         required: true
         type: string
@@ -26,10 +21,9 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.5-rc0
+  CIUX_VERSION: v0.0.7-rc1
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
-  CI_REPO: ${{ inputs.ci_repo }}
   STORAGE: ${{ inputs.storage }}
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
@@ -53,25 +47,16 @@ jobs:
       - name: Build fink-broker image for k8s
         run: |
           mkdir -p $HOME/.ciux
-          ./build.sh -s "${{ env.SUFFIX }}" -r "${{ env.CI_REPO }}"
+          ./build.sh -s "${{ env.SUFFIX }}"
       - name: Export fink-broker image
         id: export
         run: |
-          # Cannot use CIUXCONFIG because it may not have been created yet
-          # TODO make it simpler!
-          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}" --env)
           mkdir -p artifacts
+          # Cannot use CIUXCONFIG because it may not have been created yet
+          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
-            if [ -n "${{ env.CI_REPO }}" ]; then
-              echo "Login to CI private registry"
-              echo ${{ secrets.private_registry_token }} | docker login --username ${{ secrets.private_registry_token }} --password-stdin ${{ env.CI_REPO }}
-              echo "Pushing image $CIUX_IMAGE_URL to CI private registry"
-              docker push $CIUX_IMAGE_URL
-              touch artifacts/empty
-            else
               echo "Export $CIUX_IMAGE_URL to Github artifact store"
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
-            fi
           else
             echo "Using existing image $CIUX_IMAGE_URL"
             touch artifacts/empty
@@ -117,14 +102,11 @@ jobs:
         run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Ciux project ignition
         run: |
-          mkdir -p $HOME/.ciux
-          ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}" --tmp-registry "${{ env.CI_REPO }}"
+          ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}"
           ink "Ciux configuration file"
-          cat /home/runner/.ciux/ciux.sh
+          cat .ciux.d/ciux_itest.sh
       - name: Boostrap k8s (kind) cluster
         run: |
-          # Configure private registry if needed
-          ./e2e/kind-config.sh -r "${{ env.CI_REPO }}"
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
       - name: Download image
@@ -156,7 +138,7 @@ jobs:
       - name: Promote fink-broker image
         id: promote
         run: |
-          . "$HOME/.ciux/ciux.sh"
+          . .ciux.d/ciux_itest.sh
           echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
@@ -216,9 +198,6 @@ jobs:
               echo "Loading image "$IMAGE" from archive"
               docker load --input artifacts/image.tar
             # Self-hosted runners, new image is stored in the local registry
-            elif [ -n "$CI_REPO" ]; then
-              echo "Pulling image "$IMAGE" from $CI_REPO"
-              docker pull "$IMAGE"
             else
               echo "Error: no image found"
               exit 1
