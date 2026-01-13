@@ -811,6 +811,11 @@ def ingest_cutout_metadata(
 ):
     """Ingest cutout data into HBase
 
+    Notes
+    -----
+    Used in streaming, this pushes paths pointing to `online` during the night.
+    One still needs to re-run it (static mode) after merging files in `archive`.
+
     Parameters
     ----------
     paths: list
