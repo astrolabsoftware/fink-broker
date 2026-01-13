@@ -39,15 +39,13 @@ while getopts hmS:s: c ; do
 done
 shift "$((OPTIND-1))"
 
-CIUXCONFIG=${CIUXCONFIG:-"$HOME/.ciux/ciux.sh"}
-
 # Refresh ciux config if not in github actions
 # Used for interactive development
 if [ $GITHUB_ACTIONS == false ]; then
   ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 fi
 
-. $CIUXCONFIG
+. $DIR/../.ciux.d/ciux_itest.sh
 
 function retry {
   local n=1
@@ -148,4 +146,7 @@ then
   kubectl config set-context --current --namespace="argocd"
 fi
 
-argocd app wait -l app.kubernetes.io/instance=fink
+# Wait for operations then health to handle transient degraded states
+argocd app wait --operation -l app.kubernetes.io/instance=fink
+sleep 10
+argocd app wait --health -l app.kubernetes.io/instance=fink
