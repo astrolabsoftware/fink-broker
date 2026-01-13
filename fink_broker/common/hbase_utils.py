@@ -404,6 +404,7 @@ def push_to_hbase(
     catfolder=".",
     streaming=False,
     checkpoint_path="",
+    write_catalogs=False,
 ):
     """Push DataFrame data to HBase
 
@@ -426,6 +427,8 @@ def push_to_hbase(
         streaming DataFrame. Default is False (static DataFrame).
     checkpoint_path: str
         Path to the checkpoint for streaming. Only relevant if `streaming=True`
+    write_catalogs: bool
+        If True, write catalogs (json) on disk. Default is False
 
     Returns
     -------
@@ -436,12 +439,26 @@ def push_to_hbase(
             "The DataFrame is static while you chose streaming ingestion. Please review your parameters."
         )
 
-    # construct the catalog
+    # Construct the schema row
+    schema_row_key_name = "schema_version"
+    df_index_schema = construct_schema_row(
+        df.withColumnRenamed(rowkeyname, schema_row_key_name),
+        rowkeyname=schema_row_key_name,
+        version="schema_{}_{}".format(fbvsn, fsvsn),
+    )
+
+    # construct the hbase catalog for the schema (static DF)
+    hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
+        df_index_schema.schema, table_name, rowkeyname=schema_row_key_name, cf=cf
+    )
+
+    # Push the schema to HBase
+    push_to_hbase_partial(hbcatalog_index_schema, nregion)(df_index_schema, None)
+
+    # Push the alert data to HBase
     hbcatalog_index = construct_hbase_catalog_from_flatten_schema(
         df.schema, table_name, rowkeyname=rowkeyname, cf=cf
     )
-
-    # Push table
     if streaming:
         # FIXME: what should be the processing time?
         query = (
@@ -455,30 +472,14 @@ def push_to_hbase(
         push_to_hbase_partial(hbcatalog_index, nregion)(df, None)
         query = None
 
-    # write catalog for the table data
-    # This is done statically (for both static & streaming DF)
-    file_name = table_name + ".json"
-    write_catalog_on_disk(hbcatalog_index, catfolder, file_name)
+    if write_catalogs:
+        # write catalog for the schema row
+        file_name = table_name + "_schema_row.json"
+        write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
 
-    # Construct the schema row - inplace replacement
-    schema_row_key_name = "schema_version"
-    df = df.withColumnRenamed(rowkeyname, schema_row_key_name)
-
-    df_index_schema = construct_schema_row(
-        df, rowkeyname=schema_row_key_name, version="schema_{}_{}".format(fbvsn, fsvsn)
-    )
-
-    # construct the hbase catalog for the schema (static DF)
-    hbcatalog_index_schema = construct_hbase_catalog_from_flatten_schema(
-        df_index_schema.schema, table_name, rowkeyname=schema_row_key_name, cf=cf
-    )
-
-    # Push the data using the hbase connector
-    push_to_hbase_partial(hbcatalog_index_schema, nregion)(df_index_schema, None)
-
-    # write catalog for the schema row
-    file_name = table_name + "_schema_row.json"
-    write_catalog_on_disk(hbcatalog_index_schema, catfolder, file_name)
+        # write catalog for the table data
+        file_name = table_name + ".json"
+        write_catalog_on_disk(hbcatalog_index, catfolder, file_name)
 
     return query
 
