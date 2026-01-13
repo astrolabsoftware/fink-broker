@@ -65,6 +65,7 @@ jobs:
     - name: Run ZTF test suite
       run: |
         # to remove
+        pip install fink-utils==0.51.0
         export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
         cd $USRLIBS
         source scripts/start_services.sh --kafka-version ${KAFKA_VERSION} --hbase-version ${HBASE_VERSION}
