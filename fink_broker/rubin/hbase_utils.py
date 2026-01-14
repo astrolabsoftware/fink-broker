@@ -111,7 +111,7 @@ def load_fink_cols():
         "pred.main_label_crossmatch": {"type": "string", "default": None},
         # FIXME: Do we want to keep integer?
         "pred.main_label_classifier": {"type": "int", "default": None},
-        "misc.firstDiaSourceMjdTai": {"type": "double", "default": None},
+        "misc.firstDiaSourceMjdTaiFink": {"type": "double", "default": None},
     }
 
     return fink_source_cols, fink_object_cols
