@@ -290,13 +290,13 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]];
                 # difference between now and max end (8pm CEST)
                 LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
 
-                nohup ${FINK_HOME}/bin/fink start archive_science_realtime \
+                nohup ${FINK_HOME}/bin/fink start archive_science \
                     -s rubin \
                     -c ${conf} \
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
                     -spark-cores-max 4 -spark-executor-cores 1 \
-                    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/archive_science_realtime_${NIGHT}.log 2>&1 &
+                    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/archive_science_streaming_${NIGHT}.log 2>&1 &
                 break
             fi
         fi

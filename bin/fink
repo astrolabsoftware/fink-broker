@@ -124,6 +124,10 @@ while [ "$#" -gt 0 ]; do
       NO_HBASE_INGEST="--no_hbase_ingest"
       shift 1
       ;;
+    --static_hbase)
+      STATIC_HBASE="--static_hbase"
+      shift 1
+      ;;
     --version)
       python3 -c "import fink_broker; print(fink_broker.__version__)"
       exit 0
@@ -178,6 +182,7 @@ Service options:
   --check_offsets       If specified, check Kafka offsets. Only available for rubin/stream2raw
   --no_kafka_ingest     If specified, DO NOT ingest stream to Kafka. Only available for rubin/distribute.
   --no_hbase_ingest     If specified, DO NOT ingest stream to HBase. Only available for rubin/distribute.
+  --static_hbase        If specified, ingest data to HBase in bulk. Only available for archive_science
 
 Examples for ZTF:
   Start polling for an hour:
@@ -337,7 +342,7 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
     -stop_polling_at "${STOP_AT}" \
     -night ${NIGHT} \
     -log ${LOG_LEVEL} \
-    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS} ${RESET_OFFSETS_TO} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST}
+    -topic ${LSST_KAFKA_TOPIC} ${CHECK_LSST_OFFSETS} ${RESET_OFFSETS_TO}
 
 elif [[ $service == "fetch_schema" ]]; then
   if [[ -f $conf_stream2raw ]]; then
@@ -376,7 +381,7 @@ else
     -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
     -tns_folder ${TNS_FOLDER} \
     ${ZTF_KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
-    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER} ${STATIC_HBASE} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST}
 fi
 
 echo -e "${SDONE} $service exiting"

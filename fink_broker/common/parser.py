@@ -187,6 +187,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "--static_hbase",
+        action="store_true",
+        help="""
+        If set, perform HBase ingestion for the main tables in bulk instead of realtime (archive_science)
+        """,
+    )
+    parser.add_argument(
         "-kafka_security_protocol",
         type=str,
         default="",
