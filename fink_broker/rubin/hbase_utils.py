@@ -22,6 +22,7 @@ from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
 from fink_broker.common.spark_utils import connect_to_raw_database
+from fink_broker.common.spark_utils import ang2pix
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
@@ -819,6 +820,8 @@ def format_cutouts_for_hbase(df, row_key_name, npartitions):
     out: Spark DataFrame
         The initial dataframe with the salt column,
         and without images.
+    cf: dict
+        Dictionary for column family
     """
     df = df.withColumn("hdfs_path", F.input_file_name())
 
@@ -920,6 +923,139 @@ def ingest_cutout_metadata(
                 table_name=table_name,
                 rowkeyname=row_key_name,
                 cf=cf,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return query
+
+
+def format_pixels_for_hbase(df, nside, streaming):
+    """Initial formatting for ingestion of pixels in HBase
+
+    Notes
+    -----
+    This filters SSO objects, and add a column `pixel<NSIDE>`.
+    In addition, if streaming=False, apply deduplication based
+    on diaObjectId.
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    nside: int
+        Healpix NSIDE as integer
+    streaming: bool
+        If False, apply deduplication on diaObjectId.
+
+    Returns
+    -------
+    out: Spark DataFrame
+    """
+    # Keep only alerts with diaObject -- this will effectively discard SSO
+    df = df.filter(df["diaObject"].isNotNull())
+
+    df = df.withColumn(
+        "pixel{}".format(nside),
+        ang2pix(df["diaSource.ra"], df["diaSource.dec"], F.lit(nside)),
+    )
+
+    if not streaming:
+        # Keep only the last alert per object
+        w = Window.partitionBy("{}.{}".format("diaObject", "diaObjectId")).rowsBetween(
+            Window.unboundedPreceding, Window.unboundedFollowing
+        )
+        df_dedup = (
+            df
+            .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+            .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
+            .drop("maxMjd")
+        )
+    else:
+        df_dedup = df
+
+    return df_dedup
+
+
+def ingest_pixels(
+    paths,
+    table_name,
+    catfolder,
+    major_version,
+    minor_version,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest pixels data into HBase
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 9)
+    minor_version: int
+        LSST alert schema minor version (e.g. 0)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["pixel128", "firstDiaSourceMjdTaiFink", "diaObjectId"]
+    row_key_name = "_".join(cols_row_key_name)
+    nside = int(cols_row_key_name[0].split("pixel")[1])
+
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df = format_pixels_for_hbase(df, nside, streaming)
+
+        query = ingest_section(
+            df=df,
+            major_version=major_version,
+            minor_version=minor_version,
+            row_key_name=row_key_name,
+            table_name=table_name,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
+
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
+
+        # incremental push
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+
+            df = format_pixels_for_hbase(df, nside, streaming)
+
+            query = ingest_section(
+                df=df,
+                major_version=major_version,
+                minor_version=minor_version,
+                row_key_name=row_key_name,
+                table_name=table_name,
                 catfolder=catfolder,
                 streaming=streaming,
                 checkpoint_path=checkpoint_path,

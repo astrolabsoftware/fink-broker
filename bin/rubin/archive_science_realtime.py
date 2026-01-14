@@ -26,6 +26,7 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 from fink_broker.rubin.hbase_utils import ingest_source_data
 from fink_broker.rubin.hbase_utils import ingest_object_data
 from fink_broker.rubin.hbase_utils import ingest_cutout_metadata
+from fink_broker.rubin.hbase_utils import ingest_pixels
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
 
 
@@ -128,6 +129,19 @@ def main():
         checkpoint_path=checkpointpath_hbase + "/cutouts",
     )
     queries.append(hbase_query_cutout)
+
+    # Pixels
+    hbase_query_pixels = ingest_pixels(
+        paths=path,
+        table_name=args.science_db_name + ".pixel128",
+        catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
+        npartitions=npartitions,
+        streaming=True,
+        checkpoint_path=checkpointpath_hbase + "/pixel128",
+    )
+    queries.append(hbase_query_pixels)
 
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
