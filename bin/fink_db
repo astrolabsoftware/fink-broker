@@ -306,9 +306,9 @@ if [[ ${INDEX_TABLES} == true ]]; then
 
       fink start sso_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/sso_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-      # echo -e "${SSTEP} images_archival"
-      # Done in real-time. Uncomment if you want to reprocess data
-      # fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} images_archival"
+      # Done in real-time, but we need to run it again to update paths to the consolidated datalake
+      fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_bulk_${SURVEY}_${NIGHT}.log 2>&1
 
       # echo -e "${SSTEP} Update index tables"
       # FIXME: We should change firstDiaSourceMjdTaiFink with firstDiaSourceMjdTai
