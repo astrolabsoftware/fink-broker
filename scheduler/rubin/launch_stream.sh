@@ -273,7 +273,7 @@ fi
 
 # archive science
 if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
-    echo -e "${SINFO} Launching archive_science_realtime"
+    echo -e "${SINFO} Launching archive_science"
     while true; do
         # check folder exist
         run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
@@ -285,7 +285,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]];
                 echo -e "${SINFO} Data detected."
                 echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
                 sleep 60
-                echo -e "${SINFO} Launching archive_science_realtime service..."
+                echo -e "${SINFO} Launching archive_science service..."
                 # LEASETIME must be computed by taking the
                 # difference between now and max end (8pm CEST)
                 LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
