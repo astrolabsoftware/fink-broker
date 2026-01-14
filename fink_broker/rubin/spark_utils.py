@@ -79,6 +79,7 @@ def apply_kafka_serialisation(cnames):
         "diaObject",
         "ssSource",
         "MPCORB",
+        "mpc_orbits",
     ]:
         if col in cnames:
             cnames[cnames.index(col)] = "struct({}.*) as {}".format(col, col)
