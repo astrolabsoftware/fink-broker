@@ -23,6 +23,13 @@ from fink_utils.spark import schema_converter
 from fink_broker.common.tester import spark_unit_tests
 
 
+class FakeQuery(object):
+    """Mock streaming query"""
+
+    def stop(self):
+        return 0
+
+
 def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
     """Create and return a df to pubish to Kafka
 

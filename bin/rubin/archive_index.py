@@ -25,19 +25,15 @@
 import sys
 import argparse
 
-import pyspark.sql.functions as F
-from pyspark.sql import Window
 
-from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
-from fink_broker.common.spark_utils import ang2pix
+from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import list_hdfs_files
 
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.parser import getargs
 
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
-
-from fink_broker.rubin.hbase_utils import ingest_section
+from fink_broker.rubin.hbase_utils import ingest_pixels
 
 
 def main():
@@ -45,9 +41,9 @@ def main():
     args = getargs(parser)
 
     # construct the index view
+    # FIXME: construct row key from individual names instead
     index_row_key_name = args.index_table
     columns = index_row_key_name.split("_")
-    index_name = "." + columns[0]
 
     # Initialise Spark session
     spark = init_sparksession(
@@ -70,120 +66,85 @@ def main():
     # Load all columns
     major_version, minor_version = get_schema_from_parquet(paths)
 
-    nfiles = 100
-    nloops = int(len(paths) / nfiles) + 1
+    if columns[0].startswith("pixel"):
+        # FIXME: should be CLI arg. This is fixed when creating HBase tables
+        npartitions = 1000
 
-    logger.info("{} parquet detected ({} loops to perform)".format(len(paths), nloops))
+        # Pixels
+        ingest_pixels(
+            paths=paths,
+            table_name=args.science_db_name + ".pixel128",
+            catfolder=args.science_db_catalogs,
+            major_version=major_version,
+            minor_version=minor_version,
+            npartitions=npartitions,
+            streaming=False,
+        )
+    # elif columns[0] == "forcedSources":
+    #     # FIXME: for lsst schema v8, rewrite with conditions on `diaObject.nDiaSources`
+    #     # FIXME: see https://github.com/astrolabsoftware/fink-broker/issues/1016
 
-    # incremental push
-    for index in range(0, len(paths), nfiles):
-        logger.info("Loop {}/{}".format(index + 1, nloops))
-        df = load_parquet_files(paths[index : index + nfiles])
+    #     # step 1
+    #     # The logic would be that we filter on F.size("prvDiaSources") > 0
+    #     # but "prvDiaSources" is null if not provided
+    #     df_nonnull = df.filter(F.col("prvDiaSources").isNotNull())
 
-        # Keep only alerts diaObject
-        # This will discard SSO
-        df = df.filter(~df["diaObject"].isNull())
+    #     # step 2 -- set maxMidpointMjdTai
+    #     df_withlast = df_nonnull.withColumn(
+    #         "maxMidpointMjdTai",
+    #         F.when(
+    #             F.size("prvDiaSources") == 2,
+    #             0.0,  # Return ridiculously small number to not filter out afterwards
+    #         ).otherwise(
+    #             F.expr(
+    #                 "aggregate(prvDiaSources, cast(-1.0 as double), (acc, x) -> greatest(acc, x.midpointMjdTai))"
+    #             )
+    #         ),
+    #     )
 
-        if columns[0].startswith("pixel"):
-            nside = int(columns[0].split("pixel")[1])
+    #     # step 3 -- filter
+    #     df_filtered = df_withlast.filter(
+    #         ~F.col("maxMidpointMjdTai").isNull()
+    #     ).withColumn(
+    #         "prvDiaForcedSources_filt",
+    #         F.expr(
+    #             "filter(prvDiaForcedSources, x -> x.midpointMjdTai >= maxMidpointMjdTai)"
+    #         ),
+    #     )
 
-            df = df.withColumn(
-                columns[0],
-                ang2pix(df["diaSource.ra"], df["diaSource.dec"], F.lit(nside)),
-            )
+    #     # Flatten the DataFrame for HBase ingestion
+    #     df_flat = (
+    #         df_filtered.select("prvDiaForcedSources_filt")
+    #         .select(F.explode("prvDiaForcedSources_filt").alias("forcedSource"))
+    #         .select("forcedSource.*")
+    #     )
 
-            # Keep only the last alert per object
-            w = Window.partitionBy(
-                "{}.{}".format("diaObject", "diaObjectId")
-            ).rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
-            df_dedup = (
-                df
-                .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
-                .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
-                .drop("maxMjd")
-            )
+    #     # Columns to store
+    #     cf = assign_column_family_names(
+    #         df_flat,
+    #         cols_i=df_flat.columns,
+    #         cols_d=[],
+    #     )
 
-            ingest_section(
-                df_dedup,
-                major_version,
-                minor_version,
-                index_row_key_name,
-                args.science_db_name + index_name,
-                args.science_db_catalogs,
-            )
-        # elif columns[0] == "forcedSources":
-        #     # FIXME: for lsst schema v8, rewrite with conditions on `diaObject.nDiaSources`
-        #     # FIXME: see https://github.com/astrolabsoftware/fink-broker/issues/1016
+    #     # add salt
+    #     df_flat = salt_from_last_digits(
+    #         df_flat, colname="diaObjectId", npartitions=npartitions
+    #     )
 
-        #     # step 1
-        #     # The logic would be that we filter on F.size("prvDiaSources") > 0
-        #     # but "prvDiaSources" is null if not provided
-        #     df_nonnull = df.filter(F.col("prvDiaSources").isNotNull())
+    #     # Add row key
+    #     index_row_key_name = "salt_diaObjectId_midpointMjdTai"
+    #     df_flat = add_row_key(
+    #         df_flat,
+    #         row_key_name=index_row_key_name,
+    #         cols=index_row_key_name.split("_"),
+    #     )
 
-        #     # step 2 -- set maxMidpointMjdTai
-        #     df_withlast = df_nonnull.withColumn(
-        #         "maxMidpointMjdTai",
-        #         F.when(
-        #             F.size("prvDiaSources") == 2,
-        #             0.0,  # Return ridiculously small number to not filter out afterwards
-        #         ).otherwise(
-        #             F.expr(
-        #                 "aggregate(prvDiaSources, cast(-1.0 as double), (acc, x) -> greatest(acc, x.midpointMjdTai))"
-        #             )
-        #         ),
-        #     )
+    #     # Salt not needed anymore
+    #     df_flat = df_flat.drop("salt")
 
-        #     # step 3 -- filter
-        #     df_filtered = df_withlast.filter(
-        #         ~F.col("maxMidpointMjdTai").isNull()
-        #     ).withColumn(
-        #         "prvDiaForcedSources_filt",
-        #         F.expr(
-        #             "filter(prvDiaForcedSources, x -> x.midpointMjdTai >= maxMidpointMjdTai)"
-        #         ),
-        #     )
-
-        #     # Flatten the DataFrame for HBase ingestion
-        #     df_flat = (
-        #         df_filtered.select("prvDiaForcedSources_filt")
-        #         .select(F.explode("prvDiaForcedSources_filt").alias("forcedSource"))
-        #         .select("forcedSource.*")
-        #     )
-
-        #     # Columns to store
-        #     cf = assign_column_family_names(
-        #         df_flat,
-        #         cols_i=df_flat.columns,
-        #         cols_d=[],
-        #     )
-
-        #     # add salt
-        #     df_flat = salt_from_last_digits(
-        #         df_flat, colname="diaObjectId", npartitions=npartitions
-        #     )
-
-        #     # Add row key
-        #     index_row_key_name = "salt_diaObjectId_midpointMjdTai"
-        #     df_flat = add_row_key(
-        #         df_flat,
-        #         row_key_name=index_row_key_name,
-        #         cols=index_row_key_name.split("_"),
-        #     )
-
-        #     # Salt not needed anymore
-        #     df_flat = df_flat.drop("salt")
-
-        else:
-            logger.warning("{} is not a supported index name.".format(columns[0]))
-            sys.exit(1)
-
-        # push_to_hbase(
-        #     df=df_flat,
-        #     table_name=args.science_db_name + index_name,
-        #     rowkeyname=index_row_key_name,
-        #     cf=cf,
-        #     catfolder=args.science_db_catalogs,
-        # )
+    else:
+        logger.warning("{} is not a supported index name.".format(columns[0]))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

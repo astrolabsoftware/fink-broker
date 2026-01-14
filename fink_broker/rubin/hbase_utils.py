@@ -1,4 +1,4 @@
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,17 +21,30 @@ from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import salt_from_last_digits
 from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.spark_utils import load_parquet_files
+from fink_broker.common.spark_utils import connect_to_raw_database
+from fink_broker.common.spark_utils import ang2pix
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
 
 from fink_broker.common.tester import spark_unit_tests
 
+import fink_filters.rubin.livestream as ffrl
+
 import pandas as pd
 import os
 import logging
+import pkgutil
 
 _LOG = logging.getLogger(__name__)
+
+userfilters = [
+    "{}.{}.filter.{}".format(ffrl.__package__, mod, mod.split("filter_")[1])
+    for _, mod, _ in pkgutil.iter_modules(ffrl.__path__)
+]
+
+# In-line with the definition of tags in bin/rubin/distribute.py
+ALLOWED_TAGS = [userfilter.split(".")[-1] for userfilter in userfilters]
 
 
 def load_fink_cols():
@@ -99,7 +112,7 @@ def load_fink_cols():
         "pred.main_label_crossmatch": {"type": "string", "default": None},
         # FIXME: Do we want to keep integer?
         "pred.main_label_classifier": {"type": "int", "default": None},
-        "misc.firstDiaSourceMjdTai": {"type": "double", "default": None},
+        "misc.firstDiaSourceMjdTaiFink": {"type": "double", "default": None},
     }
 
     return fink_source_cols, fink_object_cols
@@ -399,6 +412,54 @@ def flatten_dataframe(df, sections):
     return df, cols, cf
 
 
+def format_for_hbase(df, section, field, kind, npartitions):
+    """Initial formatting for HBase ingestion
+
+    Notes
+    -----
+    This adds salt to the row key, and drop images. It
+    also keep alerts for which df[section].isNotNull()
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    section: str
+       Section of the schema to use that
+       hosts `field`. Use to generate the salt.
+    field: str
+        Field contains in `section`. Use to generate the salt.
+    kind: str
+        static or sso alerts. Defined the type of salt.
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with the salt column,
+        and without images.
+    """
+    # Keep only rows with corresponding section
+    df = df.filter(df[section].isNotNull())
+
+    # add salt
+    if kind == "static":
+        df = salt_from_last_digits(
+            df, colname="{}.{}".format(section, field), npartitions=npartitions
+        )
+    elif kind == "sso":
+        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
+
+    # Drop unused partitioning columns
+    df = df.drop("year").drop("month").drop("day")
+
+    # Drop images
+    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+
+    return df
+
+
 def ingest_source_data(
     kind,
     paths,
@@ -407,6 +468,8 @@ def ingest_source_data(
     minor_version,
     nfiles=100,
     npartitions=1000,
+    streaming=False,
+    checkpoint_path="",
 ):
     """Push data to HBase by batch of parquet files
 
@@ -432,13 +495,20 @@ def ingest_source_data(
         Number of parquet files to ingest at once
     npartitions: int
         Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
 
     Returns
     -------
     n_alerts: int
-        Number of alerts ingested
+        Number of alerts ingested. None if streaming=True.
     table_name: str
         Table name
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
     """
     if kind == "static":
         section = "diaObject"
@@ -453,33 +523,13 @@ def ingest_source_data(
     row_key_name = "_".join(cols_row_key_name)
     table_name = "rubin.diaSource_{}".format(kind)
 
-    nloops = int(len(paths) / nfiles) + 1
-    n_alerts = 0
-    for index in range(0, len(paths), nfiles):
-        _LOG.info("Loop {}/{}".format(index + 1, nloops))
-        df = load_parquet_files(paths[index : index + nfiles])
-
-        # Keep only rows with corresponding section
-        df = df.filter(df[section].isNotNull())
-
-        # add salt
-        if kind == "static":
-            df = salt_from_last_digits(
-                df, colname="{}.{}".format(section, field), npartitions=npartitions
-            )
-        elif kind == "sso":
-            df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
-
-        n_alerts += df.count()
-
-        # Drop unused partitioning columns
-        df = df.drop("year").drop("month").drop("day")
-
-        # Drop images
-        df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
+    if streaming:
+        # streaming ingestion
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df = format_for_hbase(df, section, field, kind, npartitions)
 
         # push section data to HBase
-        ingest_section(
+        hbase_query = ingest_section(
             df,
             major_version=major_version,
             minor_version=minor_version,
@@ -487,9 +537,38 @@ def ingest_source_data(
             table_name=table_name,
             catfolder=catfolder,
             cols_row_key_name=cols_row_key_name,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
         )
+        n_alerts = None
+    else:
+        # static ingestion
+        nloops = int(len(paths) / nfiles) + 1
+        n_alerts = 0
 
-    return n_alerts, table_name
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+
+            df = load_parquet_files(paths[index : index + nfiles])
+
+            df = format_for_hbase(df, section, field, kind, npartitions)
+
+            n_alerts += df.count()
+
+            # push section data to HBase
+            hbase_query = ingest_section(
+                df,
+                major_version=major_version,
+                minor_version=minor_version,
+                row_key_name=row_key_name,
+                table_name=table_name,
+                catfolder=catfolder,
+                cols_row_key_name=cols_row_key_name,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return n_alerts, table_name, hbase_query
 
 
 def ingest_object_data(
@@ -499,12 +578,21 @@ def ingest_object_data(
     major_version,
     minor_version,
     npartitions=1000,
+    streaming=False,
+    checkpoint_path="",
 ):
     """Remove duplicated and push data to HBase
 
     Notes
     -----
-    The duplicates are based on diaObject.diaObjectId
+    The duplicates are based on diaObject.diaObjectId.
+    They are removed only for streaming=False.
+
+    Notes
+    -----
+    How to make the streaming working while there is
+    a need to drop duplicates? Probably for streaming
+    there should be no duplicates removal.
 
     Parameters
     ----------
@@ -520,19 +608,29 @@ def ingest_object_data(
         LSST alert schema minor version (e.g. 0)
     npartitions: int
         Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
 
     Returns
     -------
     n_alerts: int
-        Number of alerts ingested
+        Number of alerts ingested. None if streaming=True.
     table_name: str
         Table name
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
     """
     assert kind in ["static", "sso"], (
         "kind={} is not recognized. Choose among: static, sso".format(kind)
     )
 
-    df = load_parquet_files(paths)
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+    else:
+        df = load_parquet_files(paths)
 
     if kind == "static":
         section = "diaObject"
@@ -548,38 +646,27 @@ def ingest_object_data(
     cols_row_key_name = ["salt", field]
     row_key_name = "_".join(cols_row_key_name)
 
-    # Keep only rows with corresponding section
-    df = df.filter(df[section].isNotNull())
+    df = format_for_hbase(df, section, field, kind, npartitions)
 
-    # add salt
-    if kind == "static":
-        df = salt_from_last_digits(
-            df, colname="{}.{}".format(section, field), npartitions=npartitions
+    if not streaming:
+        # Keep only the last alert per object
+        w = Window.partitionBy("{}.{}".format(section, field)).rowsBetween(
+            Window.unboundedPreceding, Window.unboundedFollowing
         )
-    elif kind == "sso":
-        df = salt_from_mpc_designation(df, colname="{}.{}".format(section, field))
+        df_dedup = (
+            df
+            .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+            .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
+            .drop("maxMjd")
+        )
 
-    # Drop unused partitioning columns
-    df = df.drop("year").drop("month").drop("day")
-
-    # Drop images
-    df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
-
-    # Keep only the last alert per object
-    w = Window.partitionBy("{}.{}".format(section, field)).rowsBetween(
-        Window.unboundedPreceding, Window.unboundedFollowing
-    )
-    df_dedup = (
-        df
-        .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
-        .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
-        .drop("maxMjd")
-    )
-
-    n_alerts = df_dedup.count()
+        n_alerts = df_dedup.count()
+    else:
+        df_dedup = df
+        n_alerts = None
 
     # push section data to HBase
-    ingest_section(
+    hbase_query = ingest_section(
         df_dedup,
         major_version=major_version,
         minor_version=minor_version,
@@ -587,9 +674,11 @@ def ingest_object_data(
         table_name=table_name,
         catfolder=catfolder,
         cols_row_key_name=cols_row_key_name,
+        streaming=streaming,
+        checkpoint_path=checkpoint_path,
     )
 
-    return n_alerts, table_name
+    return n_alerts, table_name, hbase_query
 
 
 def ingest_section(
@@ -600,6 +689,8 @@ def ingest_section(
     table_name,
     catfolder,
     cols_row_key_name=None,
+    streaming=False,
+    checkpoint_path="",
 ):
     """Push values stored in a Spark DataFrame into HBase
 
@@ -626,6 +717,16 @@ def ingest_section(
         List of columns to use for the row key. If None (default),
         split the row key using _. Only used for SSO for which
         one column name contains _.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    query: StreamingQuery or None
+        StreamingQuery if `streaming=True`, None otherwise.
     """
     if cols_row_key_name is None:
         cols_row_key_name = row_key_name.split("_")
@@ -671,10 +772,14 @@ def ingest_section(
             fink_source_cols,
             ["f", {"pixel128": "int"}],  # for the rowkey
         ]
+    elif section_name in ALLOWED_TAGS:
+        # FIXME: Does not work for SSO filters!
+        sections = [root_level, diasource, fink_source_cols]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128'. {} is not allowed.".format(
-                section_name
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128', or a filter: {}. {} is not allowed.".format(
+                ALLOWED_TAGS,
+                section_name,
             )
         )
         raise ValueError()
@@ -684,13 +789,279 @@ def ingest_section(
 
     df_flat = add_row_key(df_flat, row_key_name=row_key_name, cols=cols_row_key_name)
 
-    push_to_hbase(
+    query = push_to_hbase(
         df=df_flat,
         table_name=table_name,
         rowkeyname=row_key_name,
         cf=cf,
         catfolder=catfolder,
+        streaming=streaming,
+        checkpoint_path=checkpoint_path,
     )
+
+    return query
+
+
+def format_cutouts_for_hbase(df, row_key_name, npartitions):
+    """Initial formatting for ingestion of cutouts in HBase
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    row_key_name: str
+        Name of the rowkey in the table. Should be a column name
+        or a combination of column separated by _ (e.g. diaObjectId_midpointMjdTai).
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with the salt column,
+        and without images.
+    cf: dict
+        Dictionary for column family
+    """
+    df = df.withColumn("hdfs_path", F.input_file_name())
+
+    # add salt based on diaSourceId
+    df = salt_from_last_digits(
+        df, colname="diaSource.diaSourceId", npartitions=npartitions
+    )
+
+    cols = [
+        "diaObject.diaObjectId",
+        "diaSource.midpointMjdTai",
+        "diaSource.diaSourceId",
+        "hdfs_path",
+        "salt",
+    ]
+
+    df = df.select(cols)
+
+    cf = {
+        "diaObjectId": "r",
+        "diaSourceId": "r",
+        "midpointMjdTai": "r",
+        "hdfs_path": "r",
+    }
+
+    df = add_row_key(df, row_key_name=row_key_name, cols=row_key_name.split("_"))
+
+    # Not needed anymore
+    df = df.drop("salt")
+
+    return df, cf
+
+
+def ingest_cutout_metadata(
+    paths,
+    table_name,
+    catfolder,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest cutout data into HBase
+
+    Notes
+    -----
+    Used in streaming, this pushes paths pointing to `online` during the night.
+    One still needs to re-run it (static mode) after merging files in `archive`.
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    row_key_name = "salt_diaSourceId"
+
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df, cf = format_cutouts_for_hbase(df, row_key_name, npartitions=npartitions)
+        query = push_to_hbase(
+            df=df,
+            table_name=table_name,
+            rowkeyname=row_key_name,
+            cf=cf,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
+
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
+
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+            df, cf = format_cutouts_for_hbase(df, row_key_name, npartitions=npartitions)
+
+            query = push_to_hbase(
+                df=df,
+                table_name=table_name,
+                rowkeyname=row_key_name,
+                cf=cf,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return query
+
+
+def format_pixels_for_hbase(df, nside, streaming):
+    """Initial formatting for ingestion of pixels in HBase
+
+    Notes
+    -----
+    This filters SSO objects, and add a column `pixel<NSIDE>`.
+    In addition, if streaming=False, apply deduplication based
+    on diaObjectId.
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    nside: int
+        Healpix NSIDE as integer
+    streaming: bool
+        If False, apply deduplication on diaObjectId.
+
+    Returns
+    -------
+    out: Spark DataFrame
+    """
+    # Keep only alerts with diaObject -- this will effectively discard SSO
+    df = df.filter(df["diaObject"].isNotNull())
+
+    df = df.withColumn(
+        "pixel{}".format(nside),
+        ang2pix(df["diaSource.ra"], df["diaSource.dec"], F.lit(nside)),
+    )
+
+    if not streaming:
+        # Keep only the last alert per object
+        w = Window.partitionBy("{}.{}".format("diaObject", "diaObjectId")).rowsBetween(
+            Window.unboundedPreceding, Window.unboundedFollowing
+        )
+        df_dedup = (
+            df
+            .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+            .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
+            .drop("maxMjd")
+        )
+    else:
+        df_dedup = df
+
+    return df_dedup
+
+
+def ingest_pixels(
+    paths,
+    table_name,
+    catfolder,
+    major_version,
+    minor_version,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest pixels data into HBase
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 9)
+    minor_version: int
+        LSST alert schema minor version (e.g. 0)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["pixel128", "firstDiaSourceMjdTaiFink", "diaObjectId"]
+    row_key_name = "_".join(cols_row_key_name)
+    nside = int(cols_row_key_name[0].split("pixel")[1])
+
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df = format_pixels_for_hbase(df, nside, streaming)
+
+        query = ingest_section(
+            df=df,
+            major_version=major_version,
+            minor_version=minor_version,
+            row_key_name=row_key_name,
+            table_name=table_name,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
+
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
+
+        # incremental push
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+
+            df = format_pixels_for_hbase(df, nside, streaming)
+
+            query = ingest_section(
+                df=df,
+                major_version=major_version,
+                minor_version=minor_version,
+                row_key_name=row_key_name,
+                table_name=table_name,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return query
 
 
 if __name__ == "__main__":

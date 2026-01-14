@@ -65,7 +65,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -topic)
-      ZTF_KAFKA_TOPIC="$2"
+      ZTF_KAFKA_TOPIC="-topic $2"
       shift 2
       ;;
     -index_table)
@@ -105,7 +105,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     -reset_offsets_to)
-      RESET_OFFSETS_TO="$2"
+      RESET_OFFSETS_TO="-reset_offsets_to ${2}"
       shift 2
       ;;
     --simulator)
@@ -113,7 +113,19 @@ while [ "$#" -gt 0 ]; do
       shift 1
       ;;
     --check_offsets)
-      CHECK_LSST_OFFSETS=true
+      CHECK_LSST_OFFSETS="--check_offsets"
+      shift 1
+      ;;
+    --no_kafka_ingest)
+      NO_KAFKA_INGEST="--no_kafka_ingest"
+      shift 1
+      ;;
+    --no_hbase_ingest)
+      NO_HBASE_INGEST="--no_hbase_ingest"
+      shift 1
+      ;;
+    --static_hbase)
+      STATIC_HBASE="--static_hbase"
       shift 1
       ;;
     --version)
@@ -168,6 +180,9 @@ Service options:
   --simulator           If specified, run in simulation mode.
   --noscience           If specified, do not enrich data with science modules.
   --check_offsets       If specified, check Kafka offsets. Only available for rubin/stream2raw
+  --no_kafka_ingest     If specified, DO NOT ingest stream to Kafka. Only available for rubin/distribute.
+  --no_hbase_ingest     If specified, DO NOT ingest stream to HBase. Only available for rubin/distribute.
+  --static_hbase        If specified, ingest data to HBase in bulk. Only available for archive_science
 
 Examples for ZTF:
   Start polling for an hour:
@@ -271,14 +286,6 @@ if [[ $DEPLOY_FINK_PYTHON == "true" ]]; then
   cd -
 fi
 
-# Topic required only for stream2raw ZTF
-# The topic for LSST is defined in conf/rubin/fink.conf.stream2raw
-if [[ ${ZTF_KAFKA_TOPIC} ]]; then
-  ZTF_KAFKA_TOPIC="-topic ${ZTF_KAFKA_TOPIC}"
-else
-  ZTF_KAFKA_TOPIC=""
-fi
-
 # Only if the operator pass an index table
 if [[ ${INDEXTABLE} ]]; then
   INDEXTABLE="-index_table ${INDEXTABLE}"
@@ -315,14 +322,6 @@ if [[ ${SURVEY} == "rubin" ]] && [[ ${service} == "stream2raw" ]]; then
   else
     echo -e "${SINFO} Reading default Fink stream2raw conf from " ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
     source ${FINK_HOME}/conf/${SURVEY}/fink.conf.stream2raw
-  fi
-
-  if [[ "$CHECK_LSST_OFFSETS" = true ]] ; then
-    CHECK_LSST_OFFSETS="--check_offsets"
-  fi
-
-  if [[ "$RESET_OFFSETS_TO" ]] ; then
-    RESET_OFFSETS_TO="-reset_offsets_to ${RESET_OFFSETS_TO}"
   fi
 
   python ${FINK_HOME}/bin/${SURVEY}/${service}.py \
@@ -382,7 +381,7 @@ else
     -science_db_catalogs ${SCIENCE_DB_CATALOGS} \
     -tns_folder ${TNS_FOLDER} \
     ${ZTF_KAFKA_TOPIC} ${DISTRIBUTE_OPTIONS} ${TNS_RAW_OUTPUT} ${INDEXTABLE} ${NOSCIENCE} \
-    -log_level ${LOG_LEVEL} ${EXIT_AFTER}
+    -log_level ${LOG_LEVEL} ${EXIT_AFTER} ${STATIC_HBASE} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST}
 fi
 
 echo -e "${SDONE} $service exiting"

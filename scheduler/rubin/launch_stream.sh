@@ -44,8 +44,20 @@ while [ "$#" -gt 0 ]; do
       DISTRIBUTE_ONLY=true
       shift 1
       ;;
+    --ingest_only)
+      INGEST_ONLY=true
+      shift 1
+      ;;
     --check_offsets)
       CHECK_OFFSET=true
+      shift 1
+      ;;
+    --no_kafka_ingest)
+      NO_KAFKA_INGEST="--no_kafka_ingest"
+      shift 1
+      ;;
+    --no_hbase_ingest)
+      NO_HBASE_INGEST="--no_hbase_ingest"
       shift 1
       ;;
     -reset_offsets_to)
@@ -72,7 +84,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 __usage="
-Fink real-time operations: poll, enrich, distribute
+Fink real-time operations: poll, enrich, distribute to Kafka, ingest to HBase
 
 Usage: $(basename $0) [OPTIONS]
 
@@ -84,8 +96,11 @@ Options:
   -reset_offsets_to Date to reprocess from (compatible only with --poll_only) 
   --poll_only       If specified, only poll incoming stream.
   --enrich_only     If specified, only enrich polled data.
-  --distribute_only If specified, only distribute enriched data.
+  --distribute_only If specified, only distribute enriched data to Kafka.
+  --ingest_only     If specified, only ingest data to HBase
   --check_offset    If specified, check offsets and exit (compatible only with --poll_only)
+  --no_kafka_ingest If specified, DO NOT ingest stream to Kafka. Only available for distribute.
+  --no_hbase_ingest If specified, DO NOT ingest stream to HBase. Only available for distribute.
 
 Examples:
   # Launch full Fink until 20:00 today Paris time
@@ -102,6 +117,9 @@ Examples:
 
   # Distribute until 5pm
   ./launch_stream.sh --distribute_only -stop_at 17:00 today
+
+  # Distribute until 5pm without sending to Kafka
+  ./launch_stream.sh --distribute_only --no_kafka_ingest -stop_at 17:00 today
 
   # 8:00 AM. Reprocess entirely another night in a couple of hours
   ./launch_stream.sh -night 20241231 -stop_at 10:00 today
@@ -158,7 +176,7 @@ if [[ ! ${STOP_AT} ]]; then
 fi
 
 # stream2raw
-if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
+if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]] && [[ ! ${INGEST_ONLY} ]]; then
   # Force fetch schema
   ${FINK_HOME}/bin/fink start fetch_schema -s rubin -c ${conf}
 
@@ -182,7 +200,7 @@ if [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
 fi
 
 # raw2science
-if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
+if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]] && [[ ! ${INGEST_ONLY} ]]; then
     echo -e "${SINFO} Launching raw2science"
     while : ; do
         # check folder exist
@@ -218,7 +236,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
 fi
 
 # distribution
-if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
+if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${INGEST_ONLY} ]]; then
     echo -e "${SINFO} Launching distribution"
     while true; do
         # check folder exist
@@ -243,7 +261,42 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]]; then
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
                     -spark-cores-max 4 -spark-executor-cores 1 \
-                    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
+                    -exit_after ${LEASETIME} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST} > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
+                break
+            fi
+        fi
+        DDATE=`date`
+        echo -e "${SINFO} ${DDATE}: no data yet. Sleeping 60 seconds..."
+        sleep 60
+    done
+fi
+
+# archive science
+if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]]; then
+    echo -e "${SINFO} Launching archive_science"
+    while true; do
+        # check folder exist
+        run_hdfs_or_local "test -d" ${ONLINE_DATA_PREFIX}/science/${NIGHT}
+        if [[ $? == 0 ]]; then
+            # check folder is not empty
+            result=$(run_hdfs_or_local "du" ${ONLINE_DATA_PREFIX}/science/${NIGHT})
+            isEmpty=$(echo $result | awk '{print $1}')
+            if [[ $isEmpty > 0 ]]; then
+                echo -e "${SINFO} Data detected."
+                echo -e "${SINFO} Waiting 60 seconds for one batch to complete before launching..."
+                sleep 60
+                echo -e "${SINFO} Launching archive_science service..."
+                # LEASETIME must be computed by taking the
+                # difference between now and max end (8pm CEST)
+                LEASETIME=$(( `date +'%s' -d "${STOP_AT}"` - `date +'%s' -d 'now'` ))
+
+                nohup ${FINK_HOME}/bin/fink start archive_science \
+                    -s rubin \
+                    -c ${conf} \
+                    -night ${NIGHT} \
+                    -driver-memory 4g -executor-memory 2g \
+                    -spark-cores-max 4 -spark-executor-cores 1 \
+                    -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/archive_science_streaming_${NIGHT}.log 2>&1 &
                 break
             fi
         fi

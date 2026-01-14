@@ -228,7 +228,7 @@ if [[ ${MAIN_TABLE} == true ]]; then
   if [[ ${HAS_DATA} == 0 ]]; then
     echo -e "${SINFO} Using Spark resources: ${RESOURCES}"
     echo -e "${SSTEP} Science archival"
-    fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_science_${SURVEY}_${NIGHT}.log 2>&1
+    fink start archive_science -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} --static_hbase > ${FINK_HOME}/broker_logs/archive_science_bulk_${SURVEY}_${NIGHT}.log 2>&1
     if [[ $? != 0 ]]; then
       echo -e "${SERROR} when archiving science. Check local logs or artifacts on the CI."
       exit 1
@@ -301,19 +301,21 @@ if [[ ${INDEX_TABLES} == true ]]; then
       fink start archive_early_tde_candidates -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_early_tde_candidates_${SURVEY}_${NIGHT}.log 2>&1
 
     elif [[ ${SURVEY} == "rubin" ]]; then
-      echo -e "${SSTEP} 1/15: Download latest TNS data"
+      echo -e "${SSTEP} Download latest TNS data"
       fink start tns_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/tns_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
       fink start sso_resolver -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/sso_resolver_${SURVEY}_${NIGHT}.log 2>&1
 
-      echo -e "${SSTEP} 1: images_archival"
-      fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} images_archival"
+      # Done in real-time, but we need to run it again to update paths to the consolidated datalake
+      fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_bulk_${SURVEY}_${NIGHT}.log 2>&1
 
-      echo -e "${SSTEP} 2: Update index tables"
-      # for v8 we should change the rowkey to pixel128_firstDiaSourceMjdTai_diaObjectId
-      fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_firstDiaSourceMjdTai_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_firstDiaSourceMjdTai_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
+      # echo -e "${SSTEP} Update index tables"
+      # FIXME: We should change firstDiaSourceMjdTaiFink with firstDiaSourceMjdTai
+      # Done in real-time. Uncomment if you want to reprocess data
+      # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table pixel128_firstDiaSourceMjdTaiFink_diaObjectId > ${FINK_HOME}/broker_logs/index_pixel128_firstDiaSourceMjdTaiFink_diaObjectId_${SURVEY}_${NIGHT}.log 2>&1
       
-      echo -e " ${SSTEP} 3: Update statistics"
+      echo -e " ${SSTEP} Update statistics"
       fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
       # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table forcedSources_diaObjectId_midpointMjdTai > ${FINK_HOME}/broker_logs/index_forcedSources_diaObjectId_midpointMjdTai_${SURVEY}_${NIGHT}.log 2>&1
     fi
