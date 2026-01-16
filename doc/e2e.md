@@ -26,7 +26,7 @@ cd fink-broker
 
 ### Install ciux
 
-Install the `ciux` tool: (ciux install guide)[https://github.com/k8s-school/ciux#installation]
+Install the `ciux` tool: [ciux install guide](https://github.com/k8s-school/ciux#installation)
 
 ### Ciux Project Ignition
 
