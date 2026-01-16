@@ -26,7 +26,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.hbase_utils import push_to_hbase
 
-from fink_spins.ssoft import rockify
+from fink_utils.sso.utils import rockify
 
 
 def mark_as_duplicate(series, count=0):
