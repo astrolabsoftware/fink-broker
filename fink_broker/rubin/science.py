@@ -379,7 +379,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     _LOG.info("New processor: ELEPHANT Hostless module")
     df = df.withColumn(
         "elephant_kstest",
-        run_potential_hostless(df["cutoutScience"], df["cutoutTemplate"]),
+        run_potential_hostless(
+            df["cutoutScience"], df["cutoutTemplate"], df["ssSource.ssObjectId"]
+        ),
     )
     # Drop temp columns
     df = df.drop(*expanded)
