@@ -246,7 +246,7 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
   if [[ ${SURVEY} == "ztf" ]]; then
     EXTRA_ARGS="-mode all"
   elif [[ ${SURVEY} == "atlas" ]]; then
-    EXTRA_ARGS="-path sso_aggregated_ATLAS_only_ztf_objects_${OBSCODE} -observer ${OBSCODE}"
+    EXTRA_ARGS="-path sso_aggregated_ATLAS_v3_only_ztf_objects_${OBSCODE} -observer ${OBSCODE}"
   fi
   echo -e "${SINFO} Reconstructing the aggregated data and ephemerides..."
   spark-submit --master ${SPARK_MASTER} \
