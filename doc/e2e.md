@@ -26,12 +26,7 @@ cd fink-broker
 
 ### Install ciux
 
-Install the `ciux` tool based on the provided version.
-
-```bash
-CIUX_VERSION=v0.0.4-rc6
-go install github.com/k8s-school/ciux@"$CIUX_VERSION"
-```
+Install the `ciux` tool: (ciux install guide)[https://github.com/k8s-school/ciux#installation]
 
 ### Ciux Project Ignition
 
