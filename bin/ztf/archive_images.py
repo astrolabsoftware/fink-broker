@@ -22,7 +22,7 @@ import pyspark.sql.functions as F
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
-from fink_broker.common.hbase_utils import assign_column_family_names
+from fink_broker.ztf.hbase_utils import assign_column_family_names
 from fink_broker.common.hbase_utils import push_to_hbase, add_row_key
 
 

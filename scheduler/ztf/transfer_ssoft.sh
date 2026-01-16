@@ -26,8 +26,8 @@ source ~/.bashrc
 FOLDER=/spark_mongo_tmp/julien.peloton/ssoft/
 YEAR=`date +"%Y"`
 MONTH=`date +"%m"`
-#/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_SSHG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_SHG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG1G2_${YEAR}.${MONTH}.parquet SSOFT/
-/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG_${YEAR}.${MONTH}.parquet SSOFT/
+#/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_SSHG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_SSHG1G2_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_SHG1G2_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG1G2_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG_${YEAR}.${MONTH}.parquet
 EOF

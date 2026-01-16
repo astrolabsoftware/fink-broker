@@ -22,7 +22,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
-SSO_FILE = "sso_atlas_lc_aggregated_v2_{}.parquet"
+SSO_FILE = "sso_atlas_lc_aggregated_v3_{}.parquet"
 
 
 def read_and_add_ephem(df, npart, limit, logger):
@@ -56,7 +56,7 @@ def read_and_add_ephem(df, npart, limit, logger):
     df = df.withColumn(
         col_,
         extract_ztf_ephemerides_from_miriade(
-            "name", "cjd", "obscode", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
+            "name", "cjd_obs", "obscode", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
         ),
     )
     df_expanded = expand_columns(df, col_to_expand=col_)
@@ -78,7 +78,7 @@ def main():
     parser.add_argument(
         "-path",
         type=str,
-        default="sso_aggregated_ATLAS_only_ztf_objects_T05",
+        default="sso_aggregated_ATLAS_v3_only_ztf_objects_T05",
         help="""
         Path to ATLAS or ATLAS x ZTF data on HDFS.
         """,
@@ -113,6 +113,9 @@ def main():
 
     # get station as str
     df = df.withColumn("obscode", F.element_at(df["ciauobs"], 1))
+
+    # sanitize names for quaero
+    df = df.withColumn("name", F.regexp_replace(df["name"], " ", "_"))
 
     # Compute ephemerides
     df = read_and_add_ephem(df, nparts, args.limit, logger)

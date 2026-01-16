@@ -75,6 +75,11 @@ if [[ $SURVEY == "" ]]; then
   exit 1
 fi
 
+if [[ $FINK_IMAGES == "" ]]; then
+  echo -e "${SERROR} You need to define FINK_IMAGES to point to the fink-broker-images repository"
+  exit 1
+fi
+
 PYTHON_VERSION=`python -c "import platform; print(platform.python_version())"`
 echo -e "${SINFO} Using Python ${PYTHON_VERSION}"
 
@@ -89,7 +94,7 @@ function install_python_deps {
 
 if [[ ! ${SINGLE_PACKAGE} ]]; then
     echo -e "${SINFO} Copying requirements on all machines"
-    pscp.pssh -p 12 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips ${FINK_HOME}/deps/${SURVEY}/requirements*txt /tmp
+    pscp.pssh -p 12 -h ${FINK_HOME}/conf/${SURVEY}/spark_ips ${FINK_IMAGES}/containerfs/${SURVEY}/deps/requirements*txt /tmp
 
     echo -e "${SINFO} Installing packages on all machines from ${FINK_HOME}/conf/${SURVEY}/spark_ips"
     pssh -p 12 -t 100000000 -o /tmp/python_deps_out/ -e /tmp/python_deps_err/ -h ${FINK_HOME}/conf/${SURVEY}/spark_ips "$(typeset -f install_python_deps); install_python_deps"

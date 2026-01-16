@@ -21,25 +21,20 @@ UIDD=$9
 ENCODED_NAME="${NAME// /%20}"
 
 # Define a list of types
-# See https://ssp.imcce.fr/webservices/ssodnet/api/quaero/
-types=("Asteroid" "Comet" "Planet" "Dwarf%20Planet" "Interstellar%20Object")
 id=null
 
-# Loop through each type
-for type in "${types[@]}"; do
-    # echo "Checking for ${type}"
+types="Asteroid OR %22Dwarf planet%22 OR Comet OR %22Interstellar Object%22"
+types="${types// /%20}"
+[[ ${NAME} =~ ^[0-9]+$ ]] && qstring="aliases.raw:${NAME}" || qstring="${NAME}"
+qstring="${qstring}%20AND%20type:(${types})"
 
-    # resolve the name
-    response=$(curl -s "https://api.ssodnet.imcce.fr/quaero/1/sso?q=${ENCODED_NAME}&type=${type}")
+# resolve the name
+response=$(curl -s "https://api.ssodnet.imcce.fr/quaero/1/sso/search?q=${qstring}")
 
-    # Use jq to extract the id
-    id=$(echo "$response" | jq -r '.data[0].id')
+# Use jq to extract the id
+id=$(echo "$response" | jq -r '.data[0].id')
 
-    # Check if id is not null
-    if [[ "$id" != "null" && -n "$id" ]]; then
-        break  # Exit the loop if a valid id is found
-    fi
-done
+id=$(printf '%s' "$id" | jq -sRr @uri)
 
 # For the epehe
 $EPHEMCC4/ephemcc4.4 \
