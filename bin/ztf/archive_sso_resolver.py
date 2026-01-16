@@ -43,30 +43,30 @@ def mark_as_duplicate(series, count=0):
     -------
     series: pd.Series
         Input series with duplicate markers of
-        the form _{level of duplicate}
+        the form @{level of duplicate}
 
     Examples
     --------
     >>> pdf = pd.DataFrame({'col': [['a', 'b', 'c'], ['a', 'b'], ['b', 'c']]}).explode('col')
     >>> mark_as_duplicate(pdf['col'].copy())
-    0    a_0
-    0    b_0
-    0    c_0
-    1    a_1
-    1    b_1
-    2    b_2
-    2    c_1
+    0    a@0
+    0    b@0
+    0    c@0
+    1    a@1
+    1    b@1
+    2    b@2
+    2    c@1
     Name: col, dtype: object
     """
     if count == 0:
         # initialise markers
-        series = series.apply(lambda x: x + "-{}".format(count))
+        series = series.apply(lambda x: x + "@{}".format(count))
 
     mask = series.duplicated(keep="first")
     if np.sum(mask) > 0:
         # duplicates exists
         series[mask] = series[mask].apply(
-            lambda x: x.replace("-{}".format(count), "-{}".format(count + 1))
+            lambda x: x.replace("@{}".format(count), "@{}".format(count + 1))
         )
         return mark_as_duplicate(series.copy(), count + 1)
     else:
