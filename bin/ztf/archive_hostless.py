@@ -112,6 +112,7 @@ def main():
         "kstest_static",
         "finkclass",
         "tnsclass",
+        "slsn_score",
         F.col("cutoutScience.stampData").alias("cutoutScience"),
         F.col("cutoutTemplate.stampData").alias("cutoutTemplate"),
     ]
@@ -154,12 +155,14 @@ def main():
 *Object ID*: [{}](https://ztf.fink-portal.org/{})
 *Scores:*\n- Science: {:.2f}\n- Template: {:.2f}
 *Fink class*: {}
+*SLSN score*: {}
             """.format(
                 alert["objectId"],
                 alert["objectId"],
                 alert["kstest_static"][0],
                 alert["kstest_static"][1],
                 alert["finkclass"],
+                alert["slsn_score"],
             )
 
             payloads.append((text, curve_png, [cutout_science, cutout_template]))
