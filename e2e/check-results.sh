@@ -58,10 +58,10 @@ done
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="19"
+  expected_topics="20"
 else
   # 3 topics do not send results
-  expected_topics="15"
+  expected_topics="16"
 fi
 
 count=0
