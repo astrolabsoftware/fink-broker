@@ -216,16 +216,18 @@ def compute_offsets_between_date(
         time.mktime(datetime.strptime(startdate, "%Y-%m-%d").timetuple()) * 1000
     )
     partitions_at_startdate = get_partitions_by_date(consumer, topic, startdate_ms)
+    committed_start = consumer.committed(partitions_at_startdate)
 
     stopdate_ms = int(
         time.mktime(datetime.strptime(stopdate, "%Y-%m-%d").timetuple()) * 1000
     )
     partitions_at_stopdate = get_partitions_by_date(consumer, topic, stopdate_ms)
+    committed_stop = consumer.committed(partitions_at_stopdate)
 
     ip_start, ip_stop = 0, 0
     print("Comparing {} and {}".format(startdate, stopdate))
     print("Offsets per partitions: ")
-    for p_stop, p_start in zip(partitions_at_stopdate, partitions_at_startdate):
+    for p_stop, p_start in zip(committed_start, committed_stop):
         ip_stop += p_stop.offset
         ip_start += p_start.offset
     print("{} missing alerts".format(ip_stop - ip_start))
