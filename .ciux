@@ -30,10 +30,10 @@ dependencies:
   - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/stackable-hadoop:v24.11.0
     labels:
       itest: "true"
-  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-noscience-ztf:v2.52.0-83-g8db26f3
+  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-noscience-ztf:latest
     labels:
       build: "noscience"
-  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-science-ztf:v2.52.0-83-g8db26f3
+  - image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-science-ztf:latest
     labels:
       build: "science"
   - package: github.com/k8s-school/ktbx@v1.1.4-rc7
