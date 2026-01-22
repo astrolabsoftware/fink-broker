@@ -47,24 +47,6 @@ fi
 
 . $DIR/../.ciux.d/ciux_itest.sh
 
-function retry {
-  local n=1
-  local max=10
-  local delay=15
-  while true; do
-    "$@" && break || {
-      if [[ $n -lt $max ]]; then
-        ((n++))
-        echo "Command failed. Attempt $n/$max:"
-        sleep $delay;
-      else
-        echo "The command has failed after $n attempts." >&2
-        exit 1
-      fi
-    }
-  done
-}
-
 NS=argocd
 e2e_enabled="true"
 
@@ -130,9 +112,6 @@ argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/
 sleep 10
 argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
-# Sync fink-broker
-argocd app sync -l app.kubernetes.io/instance=fink
-
 if [ $e2e_enabled == "true" ]
 then
   echo "Retrieve kafka secrets for e2e tests"
@@ -146,7 +125,10 @@ then
   kubectl config set-context --current --namespace="argocd"
 fi
 
-# Wait for operations then health to handle transient degraded states
-argocd app wait --operation -l app.kubernetes.io/instance=fink
+# Sync fink-alert-simulator and fink-broker
+argocd app sync -l app.kubernetes.io/part-of="fink"
+argocd app wait --operation -l app.kubernetes.io/part-of="fink"
 sleep 10
-argocd app wait --health -l app.kubernetes.io/instance=fink
+argocd app wait --health -l app.kubernetes.io/part-of="fink"
+
+
