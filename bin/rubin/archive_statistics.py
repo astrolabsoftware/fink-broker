@@ -55,6 +55,15 @@ def main():
     # Number of alerts
     out_dic["alerts"] = df.count()
 
+    # Versions
+    version_fields = [
+        "fink_broker_version",
+        "fink_science_version",
+        "lsst_schema_version",
+    ]
+    for version_field in version_fields:
+        out_dic[version_field] = df.select(version_field).limit(1).collect()[0][0]
+
     # per band
     perband = df.groupby("diaSource.band").count().collect()
     [out_dic.update({"alerts_{}".format(i["band"]): i["count"]}) for i in perband]
