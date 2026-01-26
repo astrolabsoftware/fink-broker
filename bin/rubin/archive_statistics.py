@@ -66,7 +66,16 @@ def main():
 
     # per band
     perband = df.groupby("diaSource.band").count().collect()
-    [out_dic.update({"alerts_{}".format(i["band"]): i["count"]}) for i in perband]
+
+    # Create a dictionary from list a for quick lookup
+    a_dict = {item["band"]: item["count"] for item in perband}
+
+    all_bands = ["u", "g", "r", "i", "z", "y"]
+    container = [{"band": i, "count": 0} for i in all_bands]
+    for item in container:
+        if item["band"] in a_dict:
+            item["count"] = a_dict[item["band"]]
+        out_dic.update({"alerts_{}".format(item["band"]): item["count"]})
 
     # Number of objects (removing asteroids)
     out_dic["objects"] = df.select("diaObject.diaObjectId").distinct().count() - 1
@@ -76,18 +85,18 @@ def main():
     out_dic["is_first"] = df.filter(df["pred.is_first"]).count()
     out_dic["is_cataloged"] = df.filter(df["pred.is_cataloged"]).count()
 
-    # FIXME: is_candidate?
-
-    # SIMBAD
-    simbad = df.groupBy("pred.main_label_crossmatch").count().collect()
-    [
-        out_dic.update({"SIMBAD_{}".format(i["main_label_crossmatch"]): i["count"]})
-        for i in simbad
-    ]
-
     # TNS
-    tns = df.groupBy("xm.tns_type").count().collect()
-    [out_dic.update({"TNS_{}".format(i["tns_type"]): i["count"]}) for i in tns]
+    tns = (
+        df
+        .filter(df["xm.tns_type"].isNotNull())
+        .groupBy("xm.tns_type")
+        .count()
+        .collect()
+    )
+    if len(tns) > 0:
+        out_dic["in_tns"] = sum(i["count"] for i in tns)
+    else:
+        out_dic["in_tns"] = 0
 
     # Various Flags
     out_dic["glint_trail"] = df.select("diaSource.glint_trail").count()
