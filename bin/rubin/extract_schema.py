@@ -15,6 +15,7 @@
 # limitations under the License.
 """Extract AVRO schemas from a DataFrame"""
 
+import os
 import argparse
 
 from fink_broker.common.parser import getargs
@@ -74,8 +75,10 @@ def main():
     # extract full schema
     full_schema = schema_converter.to_avro(df.schema)
 
+    os.makedirs(args.out_schema_folder, exist_ok=True)
     with open(
-        "lsst{}.{}_fink_{}_{}_full_schema.avsc".format(
+        "{}/lsst{}.{}_fink_{}_{}_full_schema.avsc".format(
+            args.out_schema_folder,
             major_version,
             minor_version,
             fink_versions["fink_broker_version"],

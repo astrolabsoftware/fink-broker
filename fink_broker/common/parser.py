@@ -268,6 +268,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-out_schema_folder",
+        type=str,
+        default="",
+        help="""
+        Folder to store full output schema (LSST + Fink)
+        [OUT_SCHEMAS_FOLDER]
+        """,
+    )
+    parser.add_argument(
         "-tns_folder",
         type=str,
         default="",
