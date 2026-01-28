@@ -24,8 +24,9 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_science.rubin.snn.processor import snn_ia_elasticc
+from fink_science.rubin.ad_features.processor import extract_features_ad
 from fink_science.rubin.cats.processor import predict_nn
+from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
@@ -269,6 +270,16 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             history="prvDiaSources",
         )
     expanded = [prefix + i for i in to_expand]
+
+    # Apply SNAD light curve features
+    ad_args = [
+        "cmidpointMjdTai",
+        "cpsfFlux",
+        "cpsfFluxErr",
+        "cband",
+        "diaObject.diaObjectId",
+    ]
+    df = df.withColumn("lc_features", extract_features_ad(*ad_args))
 
     # XMATCH
     columns_pre_xmatch = df.columns  # initialise columns
