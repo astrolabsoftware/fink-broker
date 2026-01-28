@@ -24,7 +24,10 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_science.rubin.ad_features.processor import extract_features_ad
+from fink_science.rubin.ad_features.processor import (
+    extract_features_ad_rubin,
+    LSST_FILTER_LIST,
+)
 from fink_science.rubin.cats.processor import predict_nn
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.xmatch.processor import xmatch_cds
@@ -36,7 +39,6 @@ from fink_science.rubin.random_forest_snia.processor import (
     rfscore_rainbow_elasticc_nometa,
 )
 from fink_science.rubin.hostless_detection.processor import run_potential_hostless
-# from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
 # Local non-exported definitions --
@@ -137,7 +139,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 16, (new_cols, cols_out)
+    >>> assert len(new_cols) == 20, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -240,8 +242,12 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
 
+    >>> for band in ["u", "g", "r", "i", "z", "y"]:
+    ...     lc_cols = df.select("{}_lc_features.*".format(band)).columns
+    ...     assert len(lc_cols) == 26, lc_cols
+
     >>> classifiers_cols = df.select("clf.*").columns
-    >>> assert len(classifiers_cols) == 4, classifiers_cols
+    >>> assert len(classifiers_cols) == 5, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
     >>> assert len(xmatch_cols) == 20, xmatch_cols
@@ -273,7 +279,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         )
     expanded = [prefix + i for i in to_expand]
 
-    # Apply SNAD light curve features
+    _LOG.info("New LC feature extractor: SNAD")
     ad_args = [
         "cmidpointMjdTai",
         "cpsfFlux",
@@ -281,7 +287,19 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         "cband",
         "diaObject.diaObjectId",
     ]
-    df = df.withColumn("lc_features", extract_features_ad(*ad_args))
+    df = df.withColumn("lc_features", extract_features_ad_rubin(*ad_args))
+
+    # Explode lightcurves -- from map(band, struct) to band -> struct
+    for col_ in LSST_FILTER_LIST:
+        df = df.withColumn(
+            "{}_lc_feat".format(col_),
+            F.when(
+                df["lc_features"].isNotNull()
+                & df["lc_features"].getItem(col_).isNotNull(),
+                df["lc_features"].getItem(col_),
+            ).otherwise(F.lit(None)),
+        )
+    df = df.drop("lc_features")
 
     # XMATCH
     columns_pre_xmatch = df.columns  # initialise columns
@@ -327,13 +345,6 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # FIXME: do we want scores as well?
     df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
 
-    # _LOG.info("New classifier: SLSN (fake)")
-    # slsn_args = ["diaObject.diaObjectId"]
-    # slsn_args += [F.col(i) for i in expanded]
-    # slsn_args += ["diaSource.ra", "diaSource.dec"]
-    # df = df.withColumn("slsn_score", slsn_rubin(*slsn_args))
-    # df = df.withColumn("slsn_score", F.lit(0.0))
-
     _LOG.info("New classifier: EarlySN Ia")
     early_ia_args = [F.col(i) for i in expanded]
     df = df.withColumn(
@@ -347,12 +358,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             df["cutoutScience"], df["cutoutTemplate"], df["ssSource.ssObjectId"]
         ),
     )
+    df = df.withColumn("elephant_kstest_science", df.elephant_kstest.kstest_science)
+    df = df.withColumn("elephant_kstest_template", df.elephant_kstest.kstest_template)
 
-    # xmatch added columns
-    df = df.drop(*[
-        "cats_broad_array_prob",
-        "cats_argmax",
-    ])
+    # drop internal columns
+    df = df.drop(*["cats_broad_array_prob", "cats_argmax", "elephant_kstest"])
     classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
 
     # MISC
