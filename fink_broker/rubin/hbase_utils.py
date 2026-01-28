@@ -26,9 +26,9 @@ from fink_broker.common.spark_utils import ang2pix
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
-
 from fink_broker.common.tester import spark_unit_tests
 
+from fink_science.rubin.ad_features.processor import LSST_FILTER_LIST, FEATURES_COLS
 import fink_filters.rubin.livestream as ffrl
 
 import pandas as pd
@@ -66,7 +66,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    22
+    184
 
     >>> print(len(fink_object_cols))
     6
@@ -89,13 +89,27 @@ def load_fink_cols():
 
     # Classifiers
     # FIXME: how to retrieve automatically names?
-    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
-    types = ["float", "float", "int"]
+    names = [
+        "earlySNIa_score",
+        "snnSnVsOthers_score",
+        "cats_class",
+        "elephant_kstest_science",
+        "elephant_kstest_template",
+    ]
+    types = ["float", "float", "int", "float", "float"]
     for type_, name in zip(types, names):
         fink_source_cols["clf.{}".format(name)] = {
             "type": type_,
             "default": None,
         }
+
+    # LC features
+    for band in LSST_FILTER_LIST:
+        for name in FEATURES_COLS:
+            fink_source_cols["{}_lc_feat.{}".format(band, name)] = {
+                "type": "float",
+                "default": None,
+            }
 
     # Others
     fink_source_cols.update({
@@ -271,7 +285,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 53 + 98 + 39 + 22 + 6
+    >>> expected = 3 + 82 + 53 + 98 + 39 + 184 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -305,7 +319,12 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
-    to_keep = ["xm", "clf"]
+    to_keep = [
+        "misc",
+        "xm",
+        "clf",
+        *["{}_lc_feat".format(band) for band in LSST_FILTER_LIST],
+    ]
     if nested:
         section = colname.split(".")[0]
 
