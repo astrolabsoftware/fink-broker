@@ -31,6 +31,8 @@ from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
 from fink_science.rubin.xmatch.utils import MANGROVE_COLS
+from fink_science.rubin.random_forest_snia.processor import rfscore_rainbow_elasticc_nometa
+from fink_science.rubin.hostless_detection.processor import run_potential_hostless
 # from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
@@ -51,6 +53,13 @@ CAT_PROPERTIES = {
         "cols_out": ["DR3Name", "Plx", "e_Plx", "VarFlag"],
         "types": ["string", "float", "float", "string"],
         "distmaxarcsec": 1.0,
+    },
+    "vizier:VII/292/south": {
+        "kind": "cds",
+        "prefix_col_out": "legacydr8",
+        "cols_out": ["zphot", "e_zphot", "pstar", "fqual"],
+        "types": ["float", "float", "float", "int"],
+        "distmaxarcsec": 1.5,
     },
     "vizier:B/vsx/vsx": {
         "kind": "cds",
@@ -229,10 +238,10 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
 
     >>> classifiers_cols = df.select("clf.*").columns
-    >>> assert len(classifiers_cols) == 3, classifiers_cols
+    >>> assert len(classifiers_cols) == 4, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 16, xmatch_cols
+    >>> assert len(xmatch_cols) == 20, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
@@ -312,12 +321,20 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # df = df.withColumn("slsn_score", slsn_rubin(*slsn_args))
     # df = df.withColumn("slsn_score", F.lit(0.0))
 
-    _LOG.info("New classifier: EarlySN Ia (fake)")
-    # early_ia_args = [F.col(i) for i in expanded]
-    # df = df.withColumn(
-    #     "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
-    # )
-    df = df.withColumn("earlySNIa_score", F.lit(0.0))
+    _LOG.info("New classifier: EarlySN Ia")
+    early_ia_args = [F.col(i) for i in expanded]
+    df = df.withColumn(
+        "earlySNIa_score", rfscore_rainbow_elasticc_nometa(*early_ia_args)
+    )
+
+    _LOG.info("New classifier: Hostless")
+    df = df.withColumn('elephant_kstest',
+        run_potential_hostless(
+            df["cutoutScience"],
+            df["cutoutTemplate"],
+            df["ssSource.ssObjectId"]
+        )
+    )
 
     # xmatch added columns
     df = df.drop(*[
