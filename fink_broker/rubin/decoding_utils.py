@@ -186,6 +186,54 @@ def get_partitions_by_date(consumer, topic, date_ms, timeout=10):
     return partitions_by_offsets
 
 
+def compute_offsets_between_date(
+    consumer, startdate, stopdate, topic, timeout=10, verbose=False
+):
+    """Return the number of alerts produced between two dates for a topic
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Consumer
+    startdate: str
+        Start date in the format YYYY-MM-DD.
+    stopdate: str
+        Stop date in the format YYYY-MM-DD.
+    topic: str
+        Topic name
+    timeout: int, optional
+        Timeout, in seconds. Default is 10 seconds.
+    verbose: bool, optional
+        If True, count the the number of alerts in
+        between now and the targeted date.
+
+    Returns
+    -------
+    out: int
+        The number of alerts produced between the two dates
+    """
+    startdate_ms = int(
+        time.mktime(datetime.strptime(startdate, "%Y-%m-%d").timetuple()) * 1000
+    )
+    partitions_at_startdate = get_partitions_by_date(consumer, topic, startdate_ms)
+    committed_start = consumer.committed(partitions_at_startdate)
+
+    stopdate_ms = int(
+        time.mktime(datetime.strptime(stopdate, "%Y-%m-%d").timetuple()) * 1000
+    )
+    partitions_at_stopdate = get_partitions_by_date(consumer, topic, stopdate_ms)
+    committed_stop = consumer.committed(partitions_at_stopdate)
+
+    ip_start, ip_stop = 0, 0
+    print("Comparing {} and {}".format(startdate, stopdate))
+    print("Offsets per partitions: ")
+    for p_stop, p_start in zip(committed_start, committed_stop):
+        ip_stop += p_stop.offset
+        ip_start += p_start.offset
+    print("{} missing alerts".format(ip_stop - ip_start))
+    return ip_stop - ip_start
+
+
 def reset_offsets(consumer, date, topic, timeout=10, verbose=False):
     """Reset offsets to the specified date
 
