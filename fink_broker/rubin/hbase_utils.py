@@ -44,7 +44,7 @@ userfilters = [
 ]
 
 # In-line with the definition of tags in bin/rubin/distribute.py
-ALLOWED_TAGS = [userfilter.split(".")[-1] for userfilter in userfilters]
+ALLOWED_TAGS = ["tag_" + userfilter.split(".")[-1] for userfilter in userfilters]
 
 
 def load_fink_cols():
