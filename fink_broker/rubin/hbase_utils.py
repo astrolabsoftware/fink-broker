@@ -26,9 +26,9 @@ from fink_broker.common.spark_utils import ang2pix
 
 # from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
-
 from fink_broker.common.tester import spark_unit_tests
 
+# from fink_science.rubin.ad_features.processor import LSST_FILTER_LIST, FEATURES_COLS
 import fink_filters.rubin.livestream as ffrl
 
 import pandas as pd
@@ -44,7 +44,7 @@ userfilters = [
 ]
 
 # In-line with the definition of tags in bin/rubin/distribute.py
-ALLOWED_TAGS = [userfilter.split(".")[-1] for userfilter in userfilters]
+ALLOWED_TAGS = ["tag_" + userfilter.split(".")[-1] for userfilter in userfilters]
 
 
 def load_fink_cols():
@@ -89,13 +89,28 @@ def load_fink_cols():
 
     # Classifiers
     # FIXME: how to retrieve automatically names?
-    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
-    types = ["float", "float", "int"]
+    names = [
+        "earlySNIa_score",
+        "snnSnVsOthers_score",
+        "cats_class",
+        "elephant_kstest_science",
+        "elephant_kstest_template",
+    ]
+    types = ["float", "float", "int", "float", "float"]
     for type_, name in zip(types, names):
         fink_source_cols["clf.{}".format(name)] = {
             "type": type_,
             "default": None,
         }
+
+    # FIXME: do not push lc features for the moment
+    # # LC features
+    # for band in LSST_FILTER_LIST:
+    #     for name in FEATURES_COLS:
+    #         fink_source_cols["{}_lc_feat.{}".format(band, name)] = {
+    #             "type": "float",
+    #             "default": None,
+    #         }
 
     # Others
     fink_source_cols.update({
@@ -305,7 +320,11 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
-    to_keep = ["xm", "clf"]
+    to_keep = [
+        "xm",
+        "clf",
+        # *["{}_lc_feat".format(band) for band in LSST_FILTER_LIST],
+    ]
     if nested:
         section = colname.split(".")[0]
 
@@ -1055,6 +1074,7 @@ def ingest_pixels(
                 major_version=major_version,
                 minor_version=minor_version,
                 row_key_name=row_key_name,
+                cols_row_key_name=cols_row_key_name,
                 table_name=table_name,
                 catfolder=catfolder,
                 streaming=streaming,
