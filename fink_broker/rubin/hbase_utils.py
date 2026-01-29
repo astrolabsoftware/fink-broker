@@ -28,7 +28,7 @@ from fink_broker.common.spark_utils import ang2pix
 from fink_broker.rubin.science import CAT_PROPERTIES
 from fink_broker.common.tester import spark_unit_tests
 
-from fink_science.rubin.ad_features.processor import LSST_FILTER_LIST, FEATURES_COLS
+# from fink_science.rubin.ad_features.processor import LSST_FILTER_LIST, FEATURES_COLS
 import fink_filters.rubin.livestream as ffrl
 
 import pandas as pd
@@ -66,7 +66,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    184
+    22
 
     >>> print(len(fink_object_cols))
     6
@@ -103,13 +103,14 @@ def load_fink_cols():
             "default": None,
         }
 
-    # LC features
-    for band in LSST_FILTER_LIST:
-        for name in FEATURES_COLS:
-            fink_source_cols["{}_lc_feat.{}".format(band, name)] = {
-                "type": "float",
-                "default": None,
-            }
+    # FIXME: do not push lc features for the moment
+    # # LC features
+    # for band in LSST_FILTER_LIST:
+    #     for name in FEATURES_COLS:
+    #         fink_source_cols["{}_lc_feat.{}".format(band, name)] = {
+    #             "type": "float",
+    #             "default": None,
+    #         }
 
     # Others
     fink_source_cols.update({
@@ -285,7 +286,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 53 + 98 + 39 + 184 + 6
+    >>> expected = 3 + 82 + 53 + 98 + 39 + 22 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -320,10 +321,9 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 def cast_and_rename_field(colname, coltype, nested):
     """ """
     to_keep = [
-        "misc",
         "xm",
         "clf",
-        *["{}_lc_feat".format(band) for band in LSST_FILTER_LIST],
+        # *["{}_lc_feat".format(band) for band in LSST_FILTER_LIST],
     ]
     if nested:
         section = colname.split(".")[0]
@@ -1074,6 +1074,7 @@ def ingest_pixels(
                 major_version=major_version,
                 minor_version=minor_version,
                 row_key_name=row_key_name,
+                cols_row_key_name=cols_row_key_name,
                 table_name=table_name,
                 catfolder=catfolder,
                 streaming=streaming,

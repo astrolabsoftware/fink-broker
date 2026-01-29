@@ -26,7 +26,6 @@ from fink_broker.common.tester import spark_unit_tests
 # Import of science modules
 from fink_science.rubin.ad_features.processor import (
     extract_features_ad_rubin,
-    LSST_FILTER_LIST,
 )
 from fink_science.rubin.cats.processor import predict_nn
 from fink_science.rubin.snn.processor import snn_ia_elasticc
@@ -289,17 +288,17 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ]
     df = df.withColumn("lc_features", extract_features_ad_rubin(*ad_args))
 
-    # Explode lightcurves -- from map(band, struct) to band -> struct
-    for col_ in LSST_FILTER_LIST:
-        df = df.withColumn(
-            "{}_lc_feat".format(col_),
-            F.when(
-                df["lc_features"].isNotNull()
-                & df["lc_features"].getItem(col_).isNotNull(),
-                df["lc_features"].getItem(col_),
-            ).otherwise(F.lit(None)),
-        )
-    df = df.drop("lc_features")
+    # # Explode lightcurves -- from map(band, struct) to band -> struct
+    # for col_ in LSST_FILTER_LIST:
+    #     df = df.withColumn(
+    #         "{}_lc_feat".format(col_),
+    #         F.when(
+    #             df["lc_features"].isNotNull()
+    #             & df["lc_features"].getItem(col_).isNotNull(),
+    #             df["lc_features"].getItem(col_),
+    #         ).otherwise(F.lit(None)),
+    #     )
+    # df = df.drop("lc_features")
 
     # XMATCH
     columns_pre_xmatch = df.columns  # initialise columns
