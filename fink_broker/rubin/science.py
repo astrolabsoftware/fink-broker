@@ -33,7 +33,7 @@ from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
-from fink_science.rubin.xmatch.utils import MANGROVE_COLS
+from fink_science.rubin.xmatch.utils import MANGROVE_COLS, MANGROVE_TYPES
 from fink_science.rubin.random_forest_snia.processor import (
     rfscore_rainbow_elasticc_nometa,
 )
@@ -108,8 +108,8 @@ CAT_PROPERTIES = {
     },
     "mangrove": {
         "kind": "mangrove",
-        "cols_out": ["HyperLEDA_name", "2MASS_name", "lum_dist", "ang_dist"],
-        "types": ["string", "string", "float", "float"],
+        "cols_out": MANGROVE_COLS,
+        "types": MANGROVE_TYPES,
         "distmaxarcsec": 60.0,
     },
 }
@@ -176,10 +176,10 @@ def apply_all_xmatch(df, tns_raw_output):
                 ),
             )
             # Explode mangrove
-            for col_ in MANGROVE_COLS:
+            for col_, type_ in zip(MANGROVE_COLS, MANGROVE_TYPES):
                 df = df.withColumn(
                     "mangrove_{}".format(col_),
-                    df["mangrove"].getItem(col_),
+                    df["mangrove"].getItem(col_).cast(type_),
                 )
             df = df.drop("mangrove")
         elif CAT_PROPERTIES[catname]["kind"] == "internal":

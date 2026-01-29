@@ -161,8 +161,8 @@ if [[ "$WITH_STREAM" = true ]] ; then
   ensure_folder_has_been_created "${ONLINE_DATA_PREFIX}/hbase_checkpoint"
 
   # check we have all topics
-  #echo "TOPICS FOUND:"
-  #kafka-topics.sh --list --bootstrap-server localhost:9092
+  echo "TOPICS FOUND:"
+  kafka-topics.sh --list --bootstrap-server localhost:9092
 
   # check HBase output
   check_table_output "rubin.diaObject" 94
