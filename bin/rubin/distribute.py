@@ -160,7 +160,7 @@ def main():
 
         if not args.no_kafka_ingest:
             # Kafka distribution
-            topicname = args.substream_prefix + tag + "_rubin"
+            topicname = args.substream_prefix + tag + "_lsst"
 
             kafka_query = push_to_kafka(
                 df_filtered,
