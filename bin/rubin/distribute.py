@@ -141,7 +141,7 @@ def main():
             # Key is time_oid to perform date range search
             cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
             row_key_name = "_".join(cols_row_key_name)
-            table_name = "{}.{}".format(args.science_db_name, tag)
+            table_name = "{}.tag_{}".format(args.science_db_name, tag)
 
             hbase_query = ingest_section(
                 df_filtered,
