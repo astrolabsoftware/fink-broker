@@ -242,11 +242,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = apply_science_modules(df)
 
     >>> for band in ["u", "g", "r", "i", "z", "y"]:
-    ...     lc_cols = df.select("{}_lc_features.*".format(band)).columns
+    ...     lc_cols = df.select("lc_features.{}.*".format(band)).columns
     ...     assert len(lc_cols) == 26, lc_cols
 
     >>> classifiers_cols = df.select("clf.*").columns
-    >>> assert len(classifiers_cols) == 5, classifiers_cols
+    >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
     >>> assert len(xmatch_cols) == 20, xmatch_cols

@@ -24,7 +24,6 @@ from fink_broker.common.spark_utils import load_parquet_files
 from fink_broker.common.spark_utils import connect_to_raw_database
 from fink_broker.common.spark_utils import ang2pix
 
-# from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
 from fink_broker.common.tester import spark_unit_tests
 
@@ -66,7 +65,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    22
+    29
 
     >>> print(len(fink_object_cols))
     6
@@ -97,7 +96,7 @@ def load_fink_cols():
         "elephant_kstest_science",
         "elephant_kstest_template",
     ]
-    types = ["float", "float", "int", "float", "float"]
+    types = ["float", "float", "int", "float", "float", "float"]
     for type_, name in zip(types, names):
         fink_source_cols["clf.{}".format(name)] = {
             "type": type_,
@@ -287,7 +286,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 53 + 98 + 39 + 22 + 6
+    >>> expected = 3 + 82 + 53 + 98 + 39 + 29 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
