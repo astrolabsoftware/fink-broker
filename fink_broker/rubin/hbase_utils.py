@@ -93,6 +93,7 @@ def load_fink_cols():
         "earlySNIa_score",
         "snnSnVsOthers_score",
         "cats_class",
+        "clf_cats_score",
         "elephant_kstest_science",
         "elephant_kstest_template",
     ]
