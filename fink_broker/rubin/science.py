@@ -324,6 +324,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("cats_broad_array_prob", predict_nn(*cats_args))
 
     mapping_cats_general = {
+        -1: -1,  # Not processed, single point alert
         0: 11,  # SN-like
         1: 12,  # Fast: KN, ulens, Novae, ...
         2: 13,  # Long: SLSN, TDE, PISN, ...
@@ -336,13 +337,16 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     df = df.withColumn(
         "cats_argmax",
-        F.expr(
-            "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
-        ),
+        F.when(
+            F.array_max("cats_broad_array_prob") > 0,
+            F.expr(
+                "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
+            ),
+        ).otherwise(F.lit(-1)),
     )
 
-    # FIXME: do we want scores as well?
     df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
+    df = df.withColumn("cats_score", F.array_max("cats_broad_array_prob"))
 
     _LOG.info("New classifier: EarlySN Ia")
     early_ia_args = [F.col(i) for i in expanded]
