@@ -34,6 +34,7 @@ from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
 from fink_science.rubin.xmatch.utils import MANGROVE_COLS, MANGROVE_TYPES
+from fink_science.rubin.xmatch.utils import TNS_COLS, TNS_TYPES
 from fink_science.rubin.random_forest_snia.processor import (
     rfscore_rainbow_elasticc_nometa,
 )
@@ -81,8 +82,8 @@ CAT_PROPERTIES = {
     },
     "tns": {
         "kind": "tns",
-        "cols_out": ["type"],
-        "types": ["string"],
+        "cols_out": TNS_COLS,
+        "types": TNS_TYPES,
         "distmaxarcsec": 1.5,
     },
     "gcvs": {
@@ -249,7 +250,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 20, xmatch_cols
+    >>> assert len(xmatch_cols) == 22, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
