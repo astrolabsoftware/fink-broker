@@ -41,6 +41,7 @@ jobs:
         run: |
           home-ci-reporter summary payload.json -vvv
       - name: Parse E2E Report
+        if: always()
         run: |
           report_path="artifacts/e2e-report.yaml"
           echo "=== Contents of test-artifacts ==="
