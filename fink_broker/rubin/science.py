@@ -23,6 +23,8 @@ from fink_utils.spark.utils import concat_col
 
 from fink_broker.common.tester import spark_unit_tests
 
+from fink_science.rubin.hostless_detection.processor import run_potential_hostless
+
 # Import of science modules
 from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.cats.processor import predict_nn
@@ -391,6 +393,13 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("misc", F.struct(*misc_struct))
     df = df.drop(*misc_struct)
 
+    _LOG.info("New processor: ELEPHANT Hostless module")
+    df = df.withColumn(
+        "elephant_kstest",
+        run_potential_hostless(
+            df["cutoutScience"], df["cutoutTemplate"], df["ssSource.ssObjectId"]
+        ),
+    )
     # Drop temp columns
     df = df.drop(*expanded)
 
