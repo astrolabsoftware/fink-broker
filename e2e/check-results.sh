@@ -64,32 +64,52 @@ else
   expected_topics="16"
 fi
 
+# Wait for topics to be created, and check if fink-broker has not crashed in the meantime
+# display logs of failed pods if any, and of running pods if no topics after 10 attempts (5 minutes)
 count=0
+max_attempts=10
+selector="spark-app-name"
 while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
 do
     echo "INFO: Waiting for expected topics: $expected_topics"
     sleep 5
     echo "INFO: List pods in spark namespace:"
     kubectl get pods -n spark
-    if [ $(kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker --field-selector=status.phase!=Running | wc -l) -ge 1 ];
-    then
-        echo "ERROR: fink-broker has crashed" 1>&2
-        # Useful for debugging on github actions
-        echo "ERROR: enabling interactive access for debugging purpose" 1>&2
-        kubectl get pods -n spark -l app.kubernetes.io/instance=fink-broker
-        sleep 7200
-        exit 1
+
+    crashed_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Failed -o name)
+    if [ -n "$crashed_pods" ]; then
+      echo "ERROR: crashed pods found: $crashed_pods" 1>&2
+          for pod in $crashed_pods
+          do
+              echo "--- POD: $pod ---"
+              kubectl logs "$pod" -n spark
+          done
+          running_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Running -o name)
+          if [ -n "$running_pods" ]; then
+              echo "INFO: logs of running pods:"
+              for pod in $running_pods                do
+                  echo "--- POD: $pod ---"
+                  kubectl logs "$pod" -n spark --tail -1
+              done
+          fi
+      echo "ERROR: fink-broker has crashed" 1>&2
+      # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
+      # sleep 7200
+      exit 1
     fi
+
     count=$((count+1))
-    if [ $count -eq 10 ]; then
-        echo "ERROR: Timeout waiting for topics to be created" 1>&2
-        kubectl logs -l sparkoperator.k8s.io/launched-by-spark-operator=true  --tail -1
-        echo "PODS"
-        kubectl get pods -A
-        echo "FINK KAFKA TOPICS"
-        finkctl get topics
-        sleep 7200
-        exit 1
+    if [ $count -eq $max_attempts ]; then
+      pods=$(kubectl get pods -n spark -l $selector -o name)
+      for pod in $pods
+      do
+          echo "--- POD: $pod ---"
+          kubectl logs "$pod" -n spark --tail -1
+      done
+      echo "ERROR: fink-broker did not produce expected results after ~10 minutes" 1>&2
+      # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
+      # sleep 7200
+      exit 1
     fi
 done
 finkctl get topics

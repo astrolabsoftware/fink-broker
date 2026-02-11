@@ -8,10 +8,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
-. "$CIUXCONFIG"
-
-set -e
+set -euxo pipefail
 
 usage() {
   cat << EOD
@@ -22,6 +19,7 @@ Usage: `basename $0` [options] path host [host ...]
     -h          this message
     -k          development mode: load image in kind
     -d          do not push image to remote registry
+    -s          image suffix, default to none (i.e. science), only 'noscience' is supported
 
 Push image to remote registry and/or load it inside kind
 EOD
@@ -46,9 +44,26 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
+CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
+echo "Sourcing ciux config from $CIUXCONFIG"
+. $CIUXCONFIG
+
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
 fi
 if [ $registry = true ]; then
-  docker push "$CIUX_IMAGE_URL"
+  if [ $CIUX_BUILD = true ]; then
+    echo "Push image $CIUX_PROMOTED_IMAGE_URL to registry"
+    docker tag "$CIUX_IMAGE_URL" "$CIUX_PROMOTED_IMAGE_URL"
+    docker push "$CIUX_PROMOTED_IMAGE_URL"
+  else
+    if which skopeo; then
+      echo "skopeo is already installed"
+    else
+      echo "skopeo not available, cannot copy image"
+      exit 1
+    fi
+    echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $CIUX_IMAGE_URL"
+    skopeo copy docker://$CIUX_IMAGE_URL docker://$CIUX_PROMOTED_IMAGE_URL
+  fi
 fi
