@@ -366,8 +366,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             df["diaSource.psfFlux"],
             df["diaSource.midpointMjdTai"],
             F.array_min("prvDiaSources.midpointMjdTai"),
-            df["xm.simbad_otype"],
-            df["xm.gaiadr3_DR3Name"],
+            df["simbad_otype"],
+            df["gaiadr3_DR3Name"],
         ),
     )
     df = df.withColumn("elephant_kstest_science", df.elephant_kstest.kstest_science)
