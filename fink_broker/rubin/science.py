@@ -381,7 +381,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     columns_pre_misc = df.columns  # initialise columns
     # FIXME: this should be removed when
     # diaObject.firstDiaSourceMjdTai will be populated
-    df = df.withColumn("firstDiaSourceMjdTaiFink", F.array_min("prvDiaSources.midpointMjdTai"))
+    df = df.withColumn(
+        "firstDiaSourceMjdTaiFink", F.array_min("prvDiaSources.midpointMjdTai")
+    )
 
     misc_struct = [i for i in df.columns if i not in columns_pre_misc]
 
