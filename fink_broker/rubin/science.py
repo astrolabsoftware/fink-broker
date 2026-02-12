@@ -1,4 +1,4 @@
-# Copyright 2020-2025 AstroLab Software
+# Copyright 2020-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -139,7 +139,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 20, (new_cols, cols_out)
+    >>> assert len(new_cols) == 22, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
