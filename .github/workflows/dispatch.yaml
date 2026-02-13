@@ -8,207 +8,43 @@ jobs:
   process-test-results:
     runs-on: ubuntu-latest
     steps:
-    - name: Install yq
-      run: |
-        sudo apt-get update && sudo apt-get install -y python3-pip
-        pip3 install yq
+      - name: Initialize
+        run: mkdir -p test-artifacts
 
-    - name: Display test metadata
-      run: |
-        printf '%s\n' "🔍 Processing test results from home-ci"
-        printf '%s\n' "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        printf '%s\n' "📍 Branch: ${{ github.event.client_payload.branch }}"
-        printf '%s\n' "📍 Commit: ${{ github.event.client_payload.commit }}"
-        printf '%s\n' "📍 Success: ${{ github.event.client_payload.success }}"
-        printf '%s\n' "📍 Source: ${{ github.event.client_payload.source }}"
-        printf '%s\n' "📍 Timestamp: ${{ github.event.client_payload.timestamp }}"
-        printf '%s\n' "📍 Artifact: ${{ github.event.client_payload.artifact_name }}"
-        printf '%s\n' "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-    - name: Process test logs
-      run: |
-        printf '%s\n' "📋 Processing test execution logs..."
-
-        # Check if artifacts exist and process them
-        if [ "${{ toJson(github.event.client_payload.artifacts) }}" != "null" ]; then
-          printf '%s\n' "✅ Test artifacts found"
-
-          # Create artifacts directory
-          mkdir -p test-artifacts
-
-          # List available artifacts
-          printf '%s\n' "📦 Available artifacts:"
-          echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -r 'keys[]' | while read artifact; do
-            echo "  - $artifact"
-          done
-
-        else
-          printf '%s\n' "⚠️  No artifacts found in payload"
-        fi
-
-    - name: Process e2e test report
-      if: github.event.client_payload.artifacts
-      run: |
-        printf '%s\n' "📊 Processing e2e test report..."
-
-        # Extract YAML e2e report files
-        echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -r '
-          to_entries[] |
-          select(.key | endswith("e2e-report.yaml")) |
-          "REPORT_FILE=\(.key)\nREPORT_CONTENT=\(.value.content)"
-        ' > report_vars.env
-
-        if [ -f report_vars.env ] && [ -s report_vars.env ]; then
-          source report_vars.env
-
-          # Decode and save e2e report content
-          if [ ! -z "$REPORT_CONTENT" ] && [ "$REPORT_CONTENT" != "null" ]; then
-            echo "$REPORT_CONTENT" | base64 -d > "test-artifacts/$REPORT_FILE"
-            printf '%s\n' "✅ Saved e2e report: test-artifacts/$REPORT_FILE"
-
-            # Parse and display e2e report information
-            echo ""
-            printf '%s\n' "🧪 E2E Test Report Summary:"
-            printf '%s\n' "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-            # Extract general info using yq (if available) or basic grep/awk
-            if command -v yq >/dev/null 2>&1; then
-              printf '%s\n' "📍 Test Run Info:"
-              echo "  Start time: $(yq '.test_run.start_time' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Runner: $(yq '.test_run.runner' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  OS: $(yq '.environment.os' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Architecture: $(yq '.environment.arch' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-
-              echo ""
-              printf '%s\n' "🏁 Test Summary:"
-              echo "  End time: $(yq '.summary.end_time' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Duration: $(yq '.summary.duration_seconds' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A') seconds"
-              echo "  Overall status: $(yq '.summary.overall_status' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Success rate: $(yq '.summary.success_rate' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Total steps: $(yq '.summary.total_steps' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Passed steps: $(yq '.summary.passed_steps' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-              echo "  Failed steps: $(yq '.summary.failed_steps' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo 'N/A')"
-
-              echo ""
-              printf '%s\n' "📋 Test Steps:"
-              yq '.steps[] | "  " + .phase + ": " + .status + " (" + .timestamp + ")"' test-artifacts/$REPORT_FILE 2>/dev/null | tr -d '"' || echo "  Unable to parse steps"
-            else
-              printf '%s\n' "⚠️  yq not available, showing raw summary info"
-              grep -A 10 "summary:" test-artifacts/$REPORT_FILE || echo "  Unable to extract summary"
-            fi
-
+      - name: Install home-ci-reporter
+        run: |
+          go install github.com/k8s-school/home-ci-reporter@v0.0.2-rc1
+      - name: Extract and Decode Artifacts
+        run: |
+          PATH=$(go env GOPATH)/bin:$PATH
+          echo '${{ toJson(github.event.client_payload) }}' > payload.json
+          home-ci-reporter extract payload.json test-artifacts
+      - name: Generate Summary Metadata
+        if: always()
+        run: |
+          PATH=$(go env GOPATH)/bin:$PATH
+          home-ci-reporter summary payload.json
+      - name: Parse E2E Report
+        if: always()
+        run: |
+          PATH=$(go env GOPATH)/bin:$PATH
+          report_path="test-artifacts/e2e-report.yaml"
+          if [ -f "$report_path" ]; then
+            home-ci-reporter parse "$report_path"
           else
-            printf '%s\n' "⚠️  E2E report content is empty or null"
-          fi
-        else
-          printf '%s\n' "ℹ️  No e2e report files found in artifacts"
-        fi
-
-    - name: Decode and save test logs
-      if: github.event.client_payload.artifacts
-      run: |
-        echo "Extracting test logs..."
-
-        # Extract log files (find files with .log extension in artifacts)
-        echo '${{ toJson(github.event.client_payload.artifacts) }}' | jq -r '
-          to_entries[] |
-          select(.key | endswith(".log")) |
-          "LOG_FILE=\(.key)\nLOG_CONTENT=\(.value.content)"
-        ' > log_vars.env
-
-        if [ -f log_vars.env ] && [ -s log_vars.env ]; then
-          source log_vars.env
-
-          # Decode and save log content
-          if [ ! -z "$LOG_CONTENT" ] && [ "$LOG_CONTENT" != "null" ]; then
-            echo "$LOG_CONTENT" | base64 -d > "test-artifacts/$LOG_FILE"
-            echo "Saved log file: test-artifacts/$LOG_FILE"
-
-            # Show log summary
-            echo ""
-            echo "Log file summary:"
-            echo "  Size: $(wc -c < test-artifacts/$LOG_FILE) bytes"
-            echo "  Lines: $(wc -l < test-artifacts/$LOG_FILE) lines"
-
-          else
-            echo "ERROR: Log content is empty or null"
+            echo "⚠️ No \`e2e-report.yaml\` found." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-        else
-          echo "ERROR:No log files found in artifacts"
-          exit 1
-        fi
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-results-${{ github.event.client_payload.artifact_name }}
+          path: test-artifacts/
+          retention-days: 30
 
-    - name: Upload artifacts
-      if: github.event.client_payload.artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: external-test-results-${{ github.event.client_payload.artifact_name }}
-        path: test-artifacts/
-        retention-days: 30
-
-    - name: Create test result summary
-      run: |
-        echo "Creating test result summary..."
-
-        # Determine status emoji and message
-        if [ "${{ github.event.client_payload.success }}" == "true" ]; then
-          STATUS_EMOJI="✅"
-          STATUS_MSG="SUCCESS"
-          STATUS_COLOR="🟢"
-          EXIT_CODE=0
-        else
-          STATUS_EMOJI="❌"
-          STATUS_MSG="FAILURE"
-          STATUS_COLOR="🔴"
-          EXIT_CODE=1
-        fi
-
-        echo ""
-        echo "╭─────────────────────────────────────────╮"
-        echo "│           TEST RESULT SUMMARY           │"
-        echo "├─────────────────────────────────────────┤"
-        echo "│ Status: $STATUS_COLOR $STATUS_EMOJI $STATUS_MSG"
-        echo "│ Branch: ${{ github.event.client_payload.branch }}"
-        echo "│ Commit: ${{ github.event.client_payload.commit }}"
-        echo "│ Source: ${{ github.event.client_payload.source }}"
-        echo "╰─────────────────────────────────────────╯"
-
-        # Show test steps if available
-        if [ -d test-artifacts ]; then
-          REPORT_FILE=$(find test-artifacts -name "e2e-report.yaml" | head -1)
-          if [ -f "$REPORT_FILE" ] && command -v yq >/dev/null 2>&1; then
-            echo ""
-            echo "📋 Test Steps Summary:"
-            yq '.steps[] | "  " + .phase + ": " + .status + " (" + .timestamp + ")"' "$REPORT_FILE" 2>/dev/null | tr -d '"' || echo "  No steps data available"
+      - name: Final Result Logic
+        run: |
+          if [ "${{ github.event.client_payload.success }}" != "true" ]; then
+            exit 1
           fi
-        fi
-
-        # Create summary for GitHub Actions summary
-        {
-          echo "## $STATUS_EMOJI External Test Results - $STATUS_MSG"
-          echo ""
-          echo "**Test Details:**"
-          echo "- **Status**: $STATUS_EMOJI $STATUS_MSG"
-          echo "- **Branch**: \`${{ github.event.client_payload.branch }}\`"
-          echo "- **Commit**: \`${{ github.event.client_payload.commit }}\`"
-          echo "- **Source**: ${{ github.event.client_payload.source }}"
-          echo "- **Timestamp**: $(date -d @${{ github.event.client_payload.timestamp }} 2>/dev/null || echo "${{ github.event.client_payload.timestamp }}")"
-          echo ""
-          echo "**Artifact**: ${{ github.event.client_payload.artifact_name }}"
-
-          # Add test steps to GitHub summary if available
-          if [ -d test-artifacts ]; then
-            REPORT_FILE=$(find test-artifacts -name "e2e-report.yaml" | head -1)
-            if [ -f "$REPORT_FILE" ] && command -v yq >/dev/null 2>&1; then
-              echo ""
-              echo "### 📋 Test Steps"
-              echo ""
-              yq '.steps[] | "- **" + .phase + "**: " + .status + " _(" + .timestamp + ")_"' "$REPORT_FILE" 2>/dev/null | tr -d '"' || echo "No steps data available"
-            fi
-          fi
-        } >> $GITHUB_STEP_SUMMARY
-
-        exit $EXIT_CODE
-
-
