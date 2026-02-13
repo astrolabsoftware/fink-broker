@@ -57,7 +57,7 @@ input_survey="ztf"
 token="${TOKEN:-}"
 
 # Get options for suffix
-while getopts hcmsiS: opt; do
+while getopts hcmsi:S: opt; do
   case ${opt} in
 
     c )
