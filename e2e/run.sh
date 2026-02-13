@@ -129,6 +129,7 @@ trap dispatch EXIT
 go install github.com/k8s-school/ciux@"$ciux_version"
 
 echo "Ignite the project using ciux"
+ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 
 # Build step
 echo "Phase: Build"
