@@ -22,8 +22,6 @@ fi
 # Create log directory if it doesn't exist
 mkdir -p "$(dirname "$TEST_REPORT")"
 
-# Initialize YAML report
-home-ci-reporter init "$TEST_REPORT" "fink-broker"
 
 echo "=== Fink-Broker E2E Test Suite ==="
 echo "Start time: $START_TIME"
@@ -88,48 +86,13 @@ done
 
 export SUFFIX
 
-function dispatch()
-{
-    if [ "$SUFFIX" = "" ]; then
-      echo "Running e2e tests with science algorithms"
-      event_type="e2e-science"
-    else
-      echo "Running e2e tests without science algorithms"
-      event_type="e2e-noscience"
-    fi
-
-    url="https://api.github.com/repos/astrolabsoftware/fink-broker/dispatches"
-
-    payload="{\"build\": $build,\"e2e\": $e2e,\"push\": $push, \"cluster\": \"$cluster\", \"image\": \"$CIUX_IMAGE_URL\"}"
-    echo "Payload: $payload"
-
-    if [ -z "$token" ]; then
-      echo "No token provided, skipping GitHub dispatch"
-    else
-      echo "Dispatching event to GitHub"
-      curl -L \
-      -X POST \
-      -H "Accept: application/vnd.github+json" \
-      -H "Authorization: Bearer $token" \
-      -H "X-GitHub-Api-Version: 2022-11-28" \
-      $url \
-      -d "{\"event_type\":\"$event_type\",\"client_payload\":$payload}" || echo "ERROR Failed to dispatch event" >&2
-    fi
-
-    if [ $cleanup = true -a $e2e = true ]; then
-      echo "Delete the cluster $cluster"
-      ktbx delete --name "$cluster"
-    else
-      echo "Cluster $cluster kept for debugging"
-    fi
-}
-
-trap dispatch EXIT
-
 go install github.com/k8s-school/ciux@"$ciux_version"
 
 echo "Ignite the project using ciux"
 ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+
+# Initialize YAML report
+home-ci-reporter init "$TEST_REPORT" "fink-broker"
 
 # Build step
 echo "Phase: Build"
