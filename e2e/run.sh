@@ -10,6 +10,9 @@ DIR=$(cd "$(dirname "$0")"; pwd -P)
 
 START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+
+export ARGOCD_CONFIG_PATH=/var/lib/fink-ci/argocd.config
+
 # Test report file (YAML format for better GHA integration)
 HOME_CI_RESULT_FILE="${HOME_CI_RESULT_FILE:-}"
 if [ -z "$HOME_CI_RESULT_FILE" ]; then
