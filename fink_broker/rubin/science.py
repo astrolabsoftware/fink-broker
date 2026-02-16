@@ -66,20 +66,6 @@ CAT_PROPERTIES = {
         "types": ["float", "float", "float", "int"],
         "distmaxarcsec": 1.5,
     },
-    "vizier:B/vsx/vsx": {
-        "kind": "cds",
-        "prefix_col_out": "vsx",
-        "cols_out": ["Type"],
-        "types": ["string"],
-        "distmaxarcsec": 1.5,
-    },
-    "vizier:J/ApJS/254/33/table1": {
-        "kind": "cds",
-        "prefix_col_out": "spicy",
-        "cols_out": ["SPICY", "class"],
-        "types": ["int", "string"],
-        "distmaxarcsec": 1.2,
-    },
     "tns": {
         "kind": "tns",
         "cols_out": TNS_COLS,
@@ -106,6 +92,20 @@ CAT_PROPERTIES = {
         "types": ["string"],
         "prefix": "x",
         "distmaxarcsec": 60.0,
+    },
+    "vsx": {
+        "kind": "internal",
+        "prefix_col_out": "vsx",
+        "cols_out": ["Type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "spicy": {
+        "kind": "internal",
+        "prefix_col_out": "spicy",
+        "cols_out": ["class"],
+        "types": ["string"],
+        "distmaxarcsec": 1.2,
     },
     "mangrove": {
         "kind": "mangrove",
@@ -139,7 +139,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 22, (new_cols, cols_out)
+    >>> assert len(new_cols) == 21, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -250,7 +250,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 22, xmatch_cols
+    >>> assert len(xmatch_cols) == 21, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
