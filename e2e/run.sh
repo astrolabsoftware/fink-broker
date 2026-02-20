@@ -119,7 +119,7 @@ if [ $monitoring = true ]
 then
   monitoring_opt="-m"
 fi
-if $DIR/prereq-install.sh $monitoring_opt; then
+if $DIR/prereq-install.sh -k "v0.20.0" $monitoring_opt; then
     home-ci-reporter step "prereq_install" "passed" "Prerequisites installed successfully" --file "$TEST_REPORT"
 else
     home-ci-reporter step "prereq_install" "failed" "Prerequisites installation failed" --file "$TEST_REPORT"
