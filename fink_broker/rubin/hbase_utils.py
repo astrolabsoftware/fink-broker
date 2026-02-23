@@ -297,7 +297,8 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
 
     fp_schema = extract_avsc_schema("diaForcedSource", major_version, minor_version)
-    fp = {"diaForcedSource." + k: v["type"] for k, v in fp_schema.items()}
+    # The final schema for HBase is not nested as we explode columns
+    fp = {k: v["type"] for k, v in fp_schema.items()}
 
     sssource_schema = extract_avsc_schema("ssSource", major_version, minor_version)
     sssource = {"ssSource." + k: v["type"] for k, v in sssource_schema.items()}
