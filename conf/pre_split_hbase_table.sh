@@ -119,3 +119,24 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
         fi
 done
 
+# Tag tables
+mapfile -t key_array < <(curl -s -H "Content-Type: application/json" -X GET  https://api.lsst.fink-portal.org/api/v1/tags | jq -r 'keys | .[]')
+for ((index=0; index<${#key_array[@]}; index++)); do 
+	TABLE_NAME=rubin.tag_${key_array[index]};
+	COLFAMILY="{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+        echo -e "$SINFO Processing table $TABLE_NAME"
+        echo -e "$SINFO Options: ${COLFAMILY}"
+        if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
+                echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
+        else
+                echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
+		# Default splitting
+		output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
+		read -r SPLIT_POINTS NPARTS <<< "$output"
+                echo -e "$SINFO Number of regions: $((NPARTS + 1))"
+                COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
+
+                # Create the table
+                echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+        fi
+done

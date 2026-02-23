@@ -37,3 +37,14 @@ for TABLE_NAME in $STANDARD_TABLES; do
 	echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
 done
 
+mapfile -t key_array < <(curl -s -H "Content-Type: application/json" -X GET  https://api.lsst.fink-portal.org/api/v1/tags | jq -r 'keys | .[]')
+
+for TAGNAME in ${key_array[@]}; do 
+	TABLE_NAME=rubin.tag_${TAGNAME}
+	echo "Processing table $TABLE_NAME"
+        COMMAND="disable '${TABLE_NAME}'"
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+
+        COMMAND="drop '${TABLE_NAME}'"
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+done
