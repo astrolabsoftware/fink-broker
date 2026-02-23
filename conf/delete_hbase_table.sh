@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ STANDARD_TABLES=(
         "${TABLE_PREFIX}.tns_resolver"
 	"${TABLE_PREFIX}.sso_resolver"
 	"${TABLE_PREFIX}.statistics"
+        "${TABLE_PREFIX}.fp"
 )
 
 for TABLE_NAME in $STANDARD_TABLES; do
