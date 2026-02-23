@@ -280,10 +280,10 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
+    >>> root_level, diaobject, diasource, fp, mpcorb, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
     >>> out = {
     ...     **root_level[1], **diaobject[1],
-    ...     **mpcorb[1], **diasource[1],
+    ...     **diasource[1], **fp[1], **mpcorb[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
     >>> expected = 3 + 82 + 98 + 14 + 53 + 39 + 30 + 6
