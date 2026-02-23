@@ -1,4 +1,4 @@
-# Copyright 2020-2025 AstroLab Software
+# Copyright 2020-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,16 +24,21 @@ from fink_utils.spark.utils import concat_col
 from fink_broker.common.tester import spark_unit_tests
 
 # Import of science modules
-from fink_science.rubin.snn.processor import snn_ia_elasticc
+from fink_science.rubin.ad_features.processor import (
+    extract_features_ad_rubin,
+)
 from fink_science.rubin.cats.processor import predict_nn
+from fink_science.rubin.snn.processor import snn_ia_elasticc
 from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
-from fink_science.rubin.xmatch.utils import MANGROVE_COLS
-from fink_science.rubin.random_forest_snia.processor import rfscore_rainbow_elasticc_nometa
+from fink_science.rubin.xmatch.utils import MANGROVE_COLS, MANGROVE_TYPES
+from fink_science.rubin.xmatch.utils import TNS_COLS, TNS_TYPES
+from fink_science.rubin.random_forest_snia.processor import (
+    rfscore_rainbow_elasticc_nometa,
+)
 from fink_science.rubin.hostless_detection.processor import run_potential_hostless
-# from fink_science.rubin.slsn.processor import slsn_rubin
 
 # ---------------------------------
 # Local non-exported definitions --
@@ -61,24 +66,10 @@ CAT_PROPERTIES = {
         "types": ["float", "float", "float", "int"],
         "distmaxarcsec": 1.5,
     },
-    "vizier:B/vsx/vsx": {
-        "kind": "cds",
-        "prefix_col_out": "vsx",
-        "cols_out": ["Type"],
-        "types": ["string"],
-        "distmaxarcsec": 1.5,
-    },
-    "vizier:J/ApJS/254/33/table1": {
-        "kind": "cds",
-        "prefix_col_out": "spicy",
-        "cols_out": ["SPICY", "class"],
-        "types": ["int", "string"],
-        "distmaxarcsec": 1.2,
-    },
     "tns": {
         "kind": "tns",
-        "cols_out": ["type"],
-        "types": ["string"],
+        "cols_out": TNS_COLS,
+        "types": TNS_TYPES,
         "distmaxarcsec": 1.5,
     },
     "gcvs": {
@@ -102,10 +93,26 @@ CAT_PROPERTIES = {
         "prefix": "x",
         "distmaxarcsec": 60.0,
     },
+    "vsx": {
+        "kind": "internal",
+        "prefix_col_out": "vsx",
+        "prefix": "",
+        "cols_out": ["Type"],
+        "types": ["string"],
+        "distmaxarcsec": 1.5,
+    },
+    "spicy": {
+        "kind": "internal",
+        "prefix_col_out": "spicy",
+        "prefix": "",
+        "cols_out": ["class"],
+        "types": ["string"],
+        "distmaxarcsec": 1.2,
+    },
     "mangrove": {
         "kind": "mangrove",
-        "cols_out": ["HyperLEDA_name", "2MASS_name", "lum_dist", "ang_dist"],
-        "types": ["string", "string", "float", "float"],
+        "cols_out": MANGROVE_COLS,
+        "types": MANGROVE_TYPES,
         "distmaxarcsec": 60.0,
     },
 }
@@ -134,7 +141,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 16, (new_cols, cols_out)
+    >>> assert len(new_cols) == 21, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -172,10 +179,10 @@ def apply_all_xmatch(df, tns_raw_output):
                 ),
             )
             # Explode mangrove
-            for col_ in MANGROVE_COLS:
+            for col_, type_ in zip(MANGROVE_COLS, MANGROVE_TYPES):
                 df = df.withColumn(
                     "mangrove_{}".format(col_),
-                    df["mangrove"].getItem(col_),
+                    df["mangrove"].getItem(col_).cast(type_),
                 )
             df = df.drop("mangrove")
         elif CAT_PROPERTIES[catname]["kind"] == "internal":
@@ -237,11 +244,15 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> df = load_parquet_files(rubin_alert_sample)
     >>> df = apply_science_modules(df)
 
+    >>> for band in ["u", "g", "r", "i", "z", "y"]:
+    ...     lc_cols = df.select("lc_features.{}.*".format(band)).columns
+    ...     assert len(lc_cols) == 26, lc_cols
+
     >>> classifiers_cols = df.select("clf.*").columns
-    >>> assert len(classifiers_cols) == 4, classifiers_cols
+    >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 20, xmatch_cols
+    >>> assert len(xmatch_cols) == 21, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
@@ -270,6 +281,28 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         )
     expanded = [prefix + i for i in to_expand]
 
+    _LOG.info("New LC feature extractor: SNAD")
+    ad_args = [
+        "cmidpointMjdTai",
+        "cpsfFlux",
+        "cpsfFluxErr",
+        "cband",
+        "diaObject.diaObjectId",
+    ]
+    df = df.withColumn("lc_features", extract_features_ad_rubin(*ad_args))
+
+    # # Explode lightcurves -- from map(band, struct) to band -> struct
+    # for col_ in LSST_FILTER_LIST:
+    #     df = df.withColumn(
+    #         "{}_lc_feat".format(col_),
+    #         F.when(
+    #             df["lc_features"].isNotNull()
+    #             & df["lc_features"].getItem(col_).isNotNull(),
+    #             df["lc_features"].getItem(col_),
+    #         ).otherwise(F.lit(None)),
+    #     )
+    # df = df.drop("lc_features")
+
     # XMATCH
     columns_pre_xmatch = df.columns  # initialise columns
     df = apply_all_xmatch(df, tns_raw_output)
@@ -294,6 +327,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     df = df.withColumn("cats_broad_array_prob", predict_nn(*cats_args))
 
     mapping_cats_general = {
+        -1: -1,  # Not processed, single point alert
         0: 11,  # SN-like
         1: 12,  # Fast: KN, ulens, Novae, ...
         2: 13,  # Long: SLSN, TDE, PISN, ...
@@ -306,20 +340,16 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     df = df.withColumn(
         "cats_argmax",
-        F.expr(
-            "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
-        ),
+        F.when(
+            F.array_max("cats_broad_array_prob") > 0,
+            F.expr(
+                "array_position(cats_broad_array_prob, array_max(cats_broad_array_prob)) - 1"
+            ),
+        ).otherwise(F.lit(-1)),
     )
 
-    # FIXME: do we want scores as well?
     df = df.withColumn("cats_class", mapping_cats_general_expr[df["cats_argmax"]])
-
-    # _LOG.info("New classifier: SLSN (fake)")
-    # slsn_args = ["diaObject.diaObjectId"]
-    # slsn_args += [F.col(i) for i in expanded]
-    # slsn_args += ["diaSource.ra", "diaSource.dec"]
-    # df = df.withColumn("slsn_score", slsn_rubin(*slsn_args))
-    # df = df.withColumn("slsn_score", F.lit(0.0))
+    df = df.withColumn("cats_score", F.array_max("cats_broad_array_prob"))
 
     _LOG.info("New classifier: EarlySN Ia")
     early_ia_args = [F.col(i) for i in expanded]
@@ -328,26 +358,37 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     )
 
     _LOG.info("New classifier: Hostless")
-    df = df.withColumn('elephant_kstest',
+    df = df.withColumn(
+        "elephant_kstest",
         run_potential_hostless(
             df["cutoutScience"],
             df["cutoutTemplate"],
-            df["ssSource.ssObjectId"]
-        )
+            df["ssSource.ssObjectId"],
+            df["diaObject.nDiaSources"],
+            df["diaSource.psfFlux"],
+            df["diaSource.midpointMjdTai"],
+            F.array_min("prvDiaSources.midpointMjdTai"),
+            df["simbad_otype"],
+            df["gaiadr3_DR3Name"],
+        ),
     )
+    df = df.withColumn("elephant_kstest_science", df.elephant_kstest.kstest_science)
+    df = df.withColumn("elephant_kstest_template", df.elephant_kstest.kstest_template)
 
-    # xmatch added columns
-    df = df.drop(*[
-        "cats_broad_array_prob",
-        "cats_argmax",
-    ])
+    # drop internal columns
+    df = df.drop(*["cats_broad_array_prob", "cats_argmax", "elephant_kstest"])
     classifier_struct = [i for i in df.columns if i not in columns_pre_classifiers]
 
     # MISC
     columns_pre_misc = df.columns  # initialise columns
     # FIXME: this should be removed when
     # diaObject.firstDiaSourceMjdTai will be populated
-    df = df.withColumn("firstDiaSourceMjdTaiFink", F.array_min("cmidpointMjdTai"))
+    df = df.withColumn(
+        "firstDiaSourceMjdTaiFink",
+        F.when(
+            F.col("prvDiaSources").isNull(), F.col("diaSource.midpointMjdTai")
+        ).otherwise(F.array_min("prvDiaSources.midpointMjdTai")),
+    )
 
     misc_struct = [i for i in df.columns if i not in columns_pre_misc]
 

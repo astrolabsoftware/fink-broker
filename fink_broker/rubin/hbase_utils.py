@@ -24,11 +24,10 @@ from fink_broker.common.spark_utils import load_parquet_files
 from fink_broker.common.spark_utils import connect_to_raw_database
 from fink_broker.common.spark_utils import ang2pix
 
-# from fink_science.ztf.xmatch.utils import MANGROVE_COLS  # FIXME: common
 from fink_broker.rubin.science import CAT_PROPERTIES
-
 from fink_broker.common.tester import spark_unit_tests
 
+# from fink_science.rubin.ad_features.processor import LSST_FILTER_LIST, FEATURES_COLS
 import fink_filters.rubin.livestream as ffrl
 
 import pandas as pd
@@ -44,7 +43,7 @@ userfilters = [
 ]
 
 # In-line with the definition of tags in bin/rubin/distribute.py
-ALLOWED_TAGS = [userfilter.split(".")[-1] for userfilter in userfilters]
+ALLOWED_TAGS = ["tag_" + userfilter.split(".")[-1] for userfilter in userfilters]
 
 
 def load_fink_cols():
@@ -66,7 +65,7 @@ def load_fink_cols():
     --------
     >>> fink_source_cols, fink_object_cols = load_fink_cols()
     >>> print(len(fink_source_cols))
-    22
+    30
 
     >>> print(len(fink_object_cols))
     6
@@ -89,13 +88,29 @@ def load_fink_cols():
 
     # Classifiers
     # FIXME: how to retrieve automatically names?
-    names = ["earlySNIa_score", "snnSnVsOthers_score", "cats_class"]
-    types = ["float", "float", "int"]
+    names = [
+        "earlySNIa_score",
+        "snnSnVsOthers_score",
+        "cats_class",
+        "cats_score",
+        "elephant_kstest_science",
+        "elephant_kstest_template",
+    ]
+    types = ["float", "float", "int", "float", "float", "float"]
     for type_, name in zip(types, names):
         fink_source_cols["clf.{}".format(name)] = {
             "type": type_,
             "default": None,
         }
+
+    # FIXME: do not push lc features for the moment
+    # # LC features
+    # for band in LSST_FILTER_LIST:
+    #     for name in FEATURES_COLS:
+    #         fink_source_cols["{}_lc_feat.{}".format(band, name)] = {
+    #             "type": "float",
+    #             "default": None,
+    #         }
 
     # Others
     fink_source_cols.update({
@@ -265,13 +280,13 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     Examples
     --------
-    >>> root_level, diaobject, mpcorb, diasource, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
+    >>> root_level, diaobject, diasource, fp, mpcorb, sssource, fink_source_cols, fink_object_cols = load_all_rubin_cols(10, 0)
     >>> out = {
     ...     **root_level[1], **diaobject[1],
-    ...     **mpcorb[1], **diasource[1],
+    ...     **diasource[1], **fp[1], **mpcorb[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 53 + 98 + 39 + 22 + 6
+    >>> expected = 3 + 82 + 98 + 14 + 53 + 39 + 30 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -280,6 +295,10 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
+
+    fp_schema = extract_avsc_schema("diaForcedSource", major_version, minor_version)
+    # The final schema for HBase is not nested as we explode columns
+    fp = {k: v["type"] for k, v in fp_schema.items()}
 
     sssource_schema = extract_avsc_schema("ssSource", major_version, minor_version)
     sssource = {"ssSource." + k: v["type"] for k, v in sssource_schema.items()}
@@ -296,6 +315,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
         ["r", root_level],
         ["r", diaobject],
         ["r", diasource],
+        ["r", fp],
         ["r", mpcorb],
         ["r", sssource],
         ["f", fink_source_cols],
@@ -305,7 +325,11 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
 def cast_and_rename_field(colname, coltype, nested):
     """ """
-    to_keep = ["xm", "clf"]
+    to_keep = [
+        "xm",
+        "clf",
+        # *["{}_lc_feat".format(band) for band in LSST_FILTER_LIST],
+    ]
     if nested:
         section = colname.split(".")[0]
 
@@ -737,6 +761,7 @@ def ingest_section(
         root_level,
         diaobject,
         diasource,
+        fp,
         mpcorb,
         sssource,
         fink_source_cols,
@@ -758,10 +783,12 @@ def ingest_section(
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
+    elif section_name == "fp":
+        sections = [fp, ["r", {"salt": "string"}]]
     elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
-    elif section_name == "pixel128":
+    elif section_name == "pixel1024":
         # assuming static objects
         # Contains only the last source for all objects
         sections = [
@@ -770,14 +797,14 @@ def ingest_section(
             diaobject,
             fink_object_cols,
             fink_source_cols,
-            ["f", {"pixel128": "int"}],  # for the rowkey
+            ["f", {"pixel1024": "int"}],  # for the rowkey
         ]
     elif section_name in ALLOWED_TAGS:
         # FIXME: Does not work for SSO filters!
         sections = [root_level, diasource, fink_source_cols]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128', or a filter: {}. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel1024', 'fp', or a filter: {}. {} is not allowed.".format(
                 ALLOWED_TAGS,
                 section_name,
             )
@@ -1017,7 +1044,7 @@ def ingest_pixels(
     """
     # Name of the rowkey in the table. Should be a column name
     # or a combination of column separated by _
-    cols_row_key_name = ["pixel128", "firstDiaSourceMjdTaiFink", "diaObjectId"]
+    cols_row_key_name = ["pixel1024", "firstDiaSourceMjdTaiFink", "diaObjectId"]
     row_key_name = "_".join(cols_row_key_name)
     nside = int(cols_row_key_name[0].split("pixel")[1])
 
@@ -1055,6 +1082,158 @@ def ingest_pixels(
                 major_version=major_version,
                 minor_version=minor_version,
                 row_key_name=row_key_name,
+                cols_row_key_name=cols_row_key_name,
+                table_name=table_name,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return query
+
+
+def format_fp_for_hbase(df, npartitions):
+    """Initial formatting for HBase ingestion
+
+    Notes
+    -----
+    This select only new fp records to push, and adds salt to the row key.
+    It effectively explodes the column `prvDiaForcedSources` and select
+    only records not yet pushed.
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with fp explosed, and the salt column
+    """
+    # Step 1 -- keep records with fp
+    df_nonnull = (
+        df
+        .filter(F.col("diaObject.nDiaSources") > 1)
+        .filter(F.col("prvDiaForcedSources").isNotNull())
+        .filter(F.size("prvDiaForcedSources") > 0)
+    )
+
+    # step 2 -- set maxMidpointMjdTai
+    df_withlast = df_nonnull.withColumn(
+        "maxMidpointMjdTai",
+        F.when(
+            F.size("prvDiaSources") == 2,
+            0.0,  # Return ridiculously small number to not filter out afterwards
+        ).otherwise(
+            F.expr(
+                "aggregate(prvDiaSources, cast(-1.0 as double), (acc, x) -> greatest(acc, x.midpointMjdTai))"
+            )
+        ),
+    )
+
+    # step 3 -- filter
+    df_filtered = df_withlast.filter(~F.col("maxMidpointMjdTai").isNull()).withColumn(
+        "prvDiaForcedSources2",
+        F.expr(
+            "filter(prvDiaForcedSources, x -> x.midpointMjdTai >= maxMidpointMjdTai)"
+        ),
+    )
+
+    df_ingest = (
+        df_filtered
+        .select("prvDiaForcedSources2")
+        .select(F.explode("prvDiaForcedSources2").alias("forcedSource"))
+        .select("forcedSource.*")
+    )
+
+    # add salt
+    df_ingest = salt_from_last_digits(
+        df_ingest, colname="diaObjectId", npartitions=npartitions
+    )
+
+    return df_ingest
+
+
+def ingest_fp(
+    paths,
+    table_name,
+    catfolder,
+    major_version,
+    minor_version,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest forced photometry data into HBase
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 9)
+    minor_version: int
+        LSST alert schema minor version (e.g. 0)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["salt", "diaObjectId", "midpointMjdTai"]
+    row_key_name = "_".join(cols_row_key_name)
+
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df = format_fp_for_hbase(df, npartitions)
+
+        query = ingest_section(
+            df=df,
+            major_version=major_version,
+            minor_version=minor_version,
+            row_key_name=row_key_name,
+            table_name=table_name,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
+
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
+
+        # incremental push
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+
+            df = format_fp_for_hbase(df, npartitions)
+
+            query = ingest_section(
+                df=df,
+                major_version=major_version,
+                minor_version=minor_version,
+                row_key_name=row_key_name,
+                cols_row_key_name=cols_row_key_name,
                 table_name=table_name,
                 catfolder=catfolder,
                 streaming=streaming,
