@@ -784,7 +784,7 @@ def ingest_section(
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
     elif section_name == "fp":
-        sections = [fp]
+        sections = [fp, ["r", {"salt": "string"}]]
     elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
