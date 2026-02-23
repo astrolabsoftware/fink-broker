@@ -780,7 +780,7 @@ def ingest_section(
     elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
-    elif section_name == "pixel128":
+    elif section_name == "pixel1024":
         # assuming static objects
         # Contains only the last source for all objects
         sections = [
@@ -789,14 +789,14 @@ def ingest_section(
             diaobject,
             fink_object_cols,
             fink_source_cols,
-            ["f", {"pixel128": "int"}],  # for the rowkey
+            ["f", {"pixel1024": "int"}],  # for the rowkey
         ]
     elif section_name in ALLOWED_TAGS:
         # FIXME: Does not work for SSO filters!
         sections = [root_level, diasource, fink_source_cols]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel128', or a filter: {}. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel1024', or a filter: {}. {} is not allowed.".format(
                 ALLOWED_TAGS,
                 section_name,
             )
@@ -1036,7 +1036,7 @@ def ingest_pixels(
     """
     # Name of the rowkey in the table. Should be a column name
     # or a combination of column separated by _
-    cols_row_key_name = ["pixel128", "firstDiaSourceMjdTaiFink", "diaObjectId"]
+    cols_row_key_name = ["pixel1024", "firstDiaSourceMjdTaiFink", "diaObjectId"]
     row_key_name = "_".join(cols_row_key_name)
     nside = int(cols_row_key_name[0].split("pixel")[1])
 

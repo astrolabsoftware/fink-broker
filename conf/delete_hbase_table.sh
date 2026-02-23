@@ -21,7 +21,7 @@ STANDARD_TABLES=(
         "${TABLE_PREFIX}.diaSource_static"
         "${TABLE_PREFIX}.diaSource_sso"
         "${TABLE_PREFIX}.cutouts"
-        "${TABLE_PREFIX}.pixel128"
+        "${TABLE_PREFIX}.pixel1024"
         "${TABLE_PREFIX}.tns_resolver"
 	"${TABLE_PREFIX}.sso_resolver"
 	"${TABLE_PREFIX}.statistics"

@@ -61,7 +61,7 @@ STANDARD_TABLES=(
 	"${TABLE_PREFIX}.diaSource_static"
 	"${TABLE_PREFIX}.diaSource_sso"
 	"${TABLE_PREFIX}.cutouts"
-	"${TABLE_PREFIX}.pixel128"
+	"${TABLE_PREFIX}.pixel1024"
 	"${TABLE_PREFIX}.tns_resolver"
         "${TABLE_PREFIX}.sso_resolver"
 	"${TABLE_PREFIX}.statistics"
@@ -89,9 +89,9 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
         else
                 echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
 
-                if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel128" ]]; then
-                        # pixel128 has a different splitting
-                        output=$(pre_split_nth_digits 1000 199999 "i+=1000" \'%03d\')
+                if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel1024" ]]; then
+                        # pixel1024 has a different splitting
+                        output=$(pre_split_nth_digits 100000 19999999 "i+=100000" \'%03d\')
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
                         # diaSource_sso has 100 partitions, based on year [YY]YY
                         output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')

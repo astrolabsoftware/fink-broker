@@ -170,7 +170,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
   check_table_output "rubin.diaSource_static" 94
   check_table_output "rubin.diaSource_sso" 8
   check_table_output "rubin.cutouts" 101
-  check_table_output "rubin.pixel128" 94
+  check_table_output "rubin.pixel1024" 94
 
 fi
 
@@ -183,7 +183,7 @@ if [[ "$WITH_DB" = true ]] ; then
   # diaSource, diaObject only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --main_table
 
-  # pixel128, cutouts, forcedSources only
+  # pixel, cutouts, forcedSources only
   fink_db -s ${SURVEY} -c $conf -night ${NIGHT} --index_tables
 
   # check HBase output
@@ -193,7 +193,7 @@ if [[ "$WITH_DB" = true ]] ; then
   check_table_output "rubin.mpc_orbits" 8
 
   check_table_output "rubin.cutouts" 101
-  check_table_output "rubin.pixel128" 94
+  check_table_output "rubin.pixel1024" 94
   check_table_output "rubin.statistics" 2
   # check_table_output "rubin.forcedSources" 99
 fi

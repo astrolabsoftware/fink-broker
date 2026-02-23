@@ -73,7 +73,7 @@ def main():
         # Pixels
         ingest_pixels(
             paths=paths,
-            table_name=args.science_db_name + ".pixel128",
+            table_name=args.science_db_name + "." + columns[0],
             catfolder=args.science_db_catalogs,
             major_version=major_version,
             minor_version=minor_version,
