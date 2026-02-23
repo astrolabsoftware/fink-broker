@@ -88,8 +88,8 @@ def main():
     # TNS
     tns = (
         df
-        .filter(df["xm.tns_type"].isNotNull())
-        .groupBy("xm.tns_type")
+        .filter(df["xm.tns_fullname"].isNotNull())
+        .groupBy("xm.tns_fullname")
         .count()
         .collect()
     )
