@@ -78,6 +78,7 @@ COLFAMILIES=(
 	"{NAME => 'f', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
+	"{NAME => 'r', COMPRESSION => 'LZ4'}"
 )
 
 
