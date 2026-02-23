@@ -33,12 +33,12 @@ registry=true
 suffix=""
 
 # get the options
-while getopts dhk c ; do
+while getopts dhks: c ; do
     case $c in
 	    h) usage ; exit 0 ;;
 	    k) kind=true ;;
 	    d) registry=false ;;
-      s) suffix=$OPTARG ;;
+            s) suffix=$OPTARG ;;
 	    \?) usage ; exit 2 ;;
     esac
 done
