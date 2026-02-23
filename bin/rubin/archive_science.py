@@ -164,13 +164,13 @@ def main():
     # Pixels
     hbase_query_pixels = ingest_pixels(
         paths=paths,
-        table_name=args.science_db_name + ".pixel128",
+        table_name=args.science_db_name + ".pixel1024",
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
         npartitions=npartitions,
         streaming=not args.static_hbase,
-        checkpoint_path=checkpointpath_hbase + "/pixel128",
+        checkpoint_path=checkpointpath_hbase + "/pixel1024",
     )
     queries.append(hbase_query_pixels)
 
