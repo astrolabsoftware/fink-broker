@@ -286,7 +286,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
     ...     **mpcorb[1], **diasource[1],
     ...     **sssource[1], **fink_source_cols[1],
     ...     **fink_object_cols[1]}
-    >>> expected = 3 + 82 + 53 + 98 + 39 + 30 + 6
+    >>> expected = 3 + 82 + 98 + 14 + 53 + 39 + 30 + 6
     >>> assert len(out) == expected, (len(out), expected)
     """
     fink_source_cols, fink_object_cols = load_fink_cols()
@@ -295,6 +295,9 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
 
     diasource_schema = extract_avsc_schema("diaSource", major_version, minor_version)
     diasource = {"diaSource." + k: v["type"] for k, v in diasource_schema.items()}
+
+    fp_schema = extract_avsc_schema("diaForcedSource", major_version, minor_version)
+    fp = {"diaForcedSource." + k: v["type"] for k, v in fp_schema.items()}
 
     sssource_schema = extract_avsc_schema("ssSource", major_version, minor_version)
     sssource = {"ssSource." + k: v["type"] for k, v in sssource_schema.items()}
@@ -311,6 +314,7 @@ def load_all_rubin_cols(major_version, minor_version, include_salt=True):
         ["r", root_level],
         ["r", diaobject],
         ["r", diasource],
+        ["r", fp],
         ["r", mpcorb],
         ["r", sssource],
         ["f", fink_source_cols],
@@ -756,6 +760,7 @@ def ingest_section(
         root_level,
         diaobject,
         diasource,
+        fp,
         mpcorb,
         sssource,
         fink_source_cols,
@@ -777,6 +782,8 @@ def ingest_section(
         ]
     elif section_name == "diaObject":
         sections = [root_level, diaobject, fink_object_cols]
+    elif section_name == "fp":
+        sections = [fp]
     elif section_name == "mpc_orbits":
         # FIXME: add ssObject
         sections = [root_level, mpcorb]
@@ -796,7 +803,7 @@ def ingest_section(
         sections = [root_level, diasource, fink_source_cols]
     else:
         _LOG.error(
-            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel1024', or a filter: {}. {} is not allowed.".format(
+            "section must be one of 'diaSource_static', 'diaSource_sso', 'diaObject', 'mpc_orbits', 'pixel1024', 'fp', or a filter: {}. {} is not allowed.".format(
                 ALLOWED_TAGS,
                 section_name,
             )
@@ -1068,6 +1075,157 @@ def ingest_pixels(
             df = load_parquet_files(paths[index : index + nfiles])
 
             df = format_pixels_for_hbase(df, nside, streaming)
+
+            query = ingest_section(
+                df=df,
+                major_version=major_version,
+                minor_version=minor_version,
+                row_key_name=row_key_name,
+                cols_row_key_name=cols_row_key_name,
+                table_name=table_name,
+                catfolder=catfolder,
+                streaming=streaming,
+                checkpoint_path=checkpoint_path,
+            )
+
+    return query
+
+
+def format_fp_for_hbase(df, npartitions):
+    """Initial formatting for HBase ingestion
+
+    Notes
+    -----
+    This select only new fp records to push, and adds salt to the row key.
+    It effectively explodes the column `prvDiaForcedSources` and select
+    only records not yet pushed.
+
+    Parameters
+    ----------
+    df: Spark DataFrame
+        Alert DataFrame
+    npartitions: int
+        Number of partitions in the targeted HBase table
+
+    Returns
+    -------
+    out: Spark DataFrame
+        The initial dataframe with fp explosed, and the salt column
+    """
+    # Step 1 -- keep records with fp
+    df_nonnull = (
+        df
+        .filter(F.col("diaObject.nDiaSources") > 1)
+        .filter(F.col("prvDiaForcedSources").isNotNull())
+        .filter(F.size("prvDiaForcedSources") > 0)
+    )
+
+    # step 2 -- set maxMidpointMjdTai
+    df_withlast = df_nonnull.withColumn(
+        "maxMidpointMjdTai",
+        F.when(
+            F.size("prvDiaSources") == 2,
+            0.0,  # Return ridiculously small number to not filter out afterwards
+        ).otherwise(
+            F.expr(
+                "aggregate(prvDiaSources, cast(-1.0 as double), (acc, x) -> greatest(acc, x.midpointMjdTai))"
+            )
+        ),
+    )
+
+    # step 3 -- filter
+    df_filtered = df_withlast.filter(~F.col("maxMidpointMjdTai").isNull()).withColumn(
+        "prvDiaForcedSources2",
+        F.expr(
+            "filter(prvDiaForcedSources, x -> x.midpointMjdTai >= maxMidpointMjdTai)"
+        ),
+    )
+
+    df_ingest = (
+        df_filtered
+        .select("prvDiaForcedSources2")
+        .select(F.explode("prvDiaForcedSources2").alias("forcedSource"))
+        .select("forcedSource.*")
+    )
+
+    # add salt
+    df_ingest = salt_from_last_digits(
+        df_ingest, colname="diaObjectId", npartitions=npartitions
+    )
+
+    return df_ingest
+
+
+def ingest_fp(
+    paths,
+    table_name,
+    catfolder,
+    major_version,
+    minor_version,
+    npartitions,
+    streaming=False,
+    checkpoint_path="",
+):
+    """Ingest forced photometry data into HBase
+
+    Parameters
+    ----------
+    paths: list
+        List of paths to parquet files on HDFS
+    table_name: str
+        Name of the HBase table
+    catfolder: str
+        Folder to save catalog (saved locally for inspection)
+    major_version: int
+        LSST alert schema major version (e.g. 9)
+    minor_version: int
+        LSST alert schema minor version (e.g. 0)
+    npartitions: int
+        Number of HBase partitions in the table.
+    streaming: bool
+        If True, ingest data in real-time assuming df is a
+        streaming DataFrame. Default is False (static DataFrame).
+    checkpoint_path: str
+        Path to the checkpoint for streaming. Only relevant if `streaming=True`
+
+    Returns
+    -------
+    hbase_query: StreamingQuery
+        The Spark streaming query. None if streaming=False.
+    """
+    # Name of the rowkey in the table. Should be a column name
+    # or a combination of column separated by _
+    cols_row_key_name = ["salt", "diaObjectId", "midpointMjdTai"]
+    row_key_name = "_".join(cols_row_key_name)
+
+    if streaming:
+        df = connect_to_raw_database(paths, paths, latestfirst=False)
+        df = format_fp_for_hbase(df, npartitions)
+
+        query = ingest_section(
+            df=df,
+            major_version=major_version,
+            minor_version=minor_version,
+            row_key_name=row_key_name,
+            table_name=table_name,
+            catfolder=catfolder,
+            streaming=streaming,
+            checkpoint_path=checkpoint_path,
+        )
+    else:
+        nfiles = 100
+        nloops = int(len(paths) / nfiles) + 1
+
+        _LOG.info(
+            "{} parquet detected ({} loops to perform)".format(len(paths), nloops)
+        )
+
+        # incremental push
+        for index in range(0, len(paths), nfiles):
+            _LOG.info("Loop {}/{}".format(index + 1, nloops))
+            df = load_parquet_files(paths[index : index + nfiles])
+
+            df = format_fp_for_hbase(df, npartitions)
 
             query = ingest_section(
                 df=df,

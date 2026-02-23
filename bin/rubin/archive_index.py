@@ -80,67 +80,6 @@ def main():
             npartitions=npartitions,
             streaming=False,
         )
-    # elif columns[0] == "forcedSources":
-    #     # FIXME: for lsst schema v8, rewrite with conditions on `diaObject.nDiaSources`
-    #     # FIXME: see https://github.com/astrolabsoftware/fink-broker/issues/1016
-
-    #     # step 1
-    #     # The logic would be that we filter on F.size("prvDiaSources") > 0
-    #     # but "prvDiaSources" is null if not provided
-    #     df_nonnull = df.filter(F.col("prvDiaSources").isNotNull())
-
-    #     # step 2 -- set maxMidpointMjdTai
-    #     df_withlast = df_nonnull.withColumn(
-    #         "maxMidpointMjdTai",
-    #         F.when(
-    #             F.size("prvDiaSources") == 2,
-    #             0.0,  # Return ridiculously small number to not filter out afterwards
-    #         ).otherwise(
-    #             F.expr(
-    #                 "aggregate(prvDiaSources, cast(-1.0 as double), (acc, x) -> greatest(acc, x.midpointMjdTai))"
-    #             )
-    #         ),
-    #     )
-
-    #     # step 3 -- filter
-    #     df_filtered = df_withlast.filter(
-    #         ~F.col("maxMidpointMjdTai").isNull()
-    #     ).withColumn(
-    #         "prvDiaForcedSources_filt",
-    #         F.expr(
-    #             "filter(prvDiaForcedSources, x -> x.midpointMjdTai >= maxMidpointMjdTai)"
-    #         ),
-    #     )
-
-    #     # Flatten the DataFrame for HBase ingestion
-    #     df_flat = (
-    #         df_filtered.select("prvDiaForcedSources_filt")
-    #         .select(F.explode("prvDiaForcedSources_filt").alias("forcedSource"))
-    #         .select("forcedSource.*")
-    #     )
-
-    #     # Columns to store
-    #     cf = assign_column_family_names(
-    #         df_flat,
-    #         cols_i=df_flat.columns,
-    #         cols_d=[],
-    #     )
-
-    #     # add salt
-    #     df_flat = salt_from_last_digits(
-    #         df_flat, colname="diaObjectId", npartitions=npartitions
-    #     )
-
-    #     # Add row key
-    #     index_row_key_name = "salt_diaObjectId_midpointMjdTai"
-    #     df_flat = add_row_key(
-    #         df_flat,
-    #         row_key_name=index_row_key_name,
-    #         cols=index_row_key_name.split("_"),
-    #     )
-
-    #     # Salt not needed anymore
-    #     df_flat = df_flat.drop("salt")
 
     else:
         logger.warning("{} is not a supported index name.".format(columns[0]))
