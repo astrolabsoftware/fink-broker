@@ -22,6 +22,7 @@ Usage: `basename $0` [options] path host [host ...]
     -h          this message
     -k          development mode: load image in kind
     -d          do not push image to remote registry
+    -s          image suffix, default to none (i.e. science), only 'noscience' is supported
 
 Push image to remote registry and/or load it inside kind
 EOD
@@ -29,6 +30,7 @@ EOD
 
 kind=false
 registry=true
+suffix=""
 
 # get the options
 while getopts dhk c ; do
@@ -36,6 +38,7 @@ while getopts dhk c ; do
 	    h) usage ; exit 0 ;;
 	    k) kind=true ;;
 	    d) registry=false ;;
+      s) suffix=$OPTARG ;;
 	    \?) usage ; exit 2 ;;
     esac
 done
@@ -45,6 +48,16 @@ if [ $# -ne 0 ] ; then
     usage
     exit 2
 fi
+
+if [[ $suffix =~ ^noscience* ]]; then
+    SELECTOR="build=noscience"
+else
+    SELECTOR="build=science"
+fi
+
+CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
+echo "Sourcing ciux config from $CIUXCONFIG"
+. $CIUXCONFIG
 
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
