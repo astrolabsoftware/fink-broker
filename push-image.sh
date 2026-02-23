@@ -27,15 +27,13 @@ EOD
 
 kind=false
 registry=true
-suffix=""
 
 # get the options
-while getopts dhks: c ; do
+while getopts dhk c ; do
     case $c in
 	    h) usage ; exit 0 ;;
 	    k) kind=true ;;
 	    d) registry=false ;;
-            s) suffix=$OPTARG ;;
 	    \?) usage ; exit 2 ;;
     esac
 done
@@ -46,13 +44,7 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
-if [[ $suffix =~ ^noscience* ]]; then
-    SELECTOR="build=noscience"
-else
-    SELECTOR="build=science"
-fi
-
-CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
+CIUXCONFIG=$(ciux get configpath --selector "itest")
 echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
 
