@@ -67,16 +67,22 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     magnitudes = np.array(
         [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
     )
+    bands = np.array(
+        [row["fid"]] + [k["fid"] for k in row["prv_candidates"]]
+    )
     mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
     photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
     ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
-    t3 = f"E(B-V) = {ebv}"
+    t3 = f"E(B-V) = {ebv:.3f}"
     t4, t5 = "", ""
     low_brightness = False
     if (photoz == photoz) and (len(magnitudes) > 0):
-        peak = np.min(magnitudes)
-        lower_M, M, upper_M = abs_peak(peak, photoz, photozerr, ebv)
+        peak_g = np.min(magnitudes[bands==1], initial=99)
+        peak_r = np.min(magnitudes[bands==2], initial=99)
+        lower_M, M, upper_M = abs_peak([peak_g, peak_r],
+                                       [kern.band_wave_aa[1], kern.band_wave_aa[2]],
+                                       photoz, photozerr, ebv)
         t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
         t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
 
