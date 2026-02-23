@@ -96,6 +96,7 @@ CAT_PROPERTIES = {
     "vsx": {
         "kind": "internal",
         "prefix_col_out": "vsx",
+        "prefix": "",
         "cols_out": ["Type"],
         "types": ["string"],
         "distmaxarcsec": 1.5,
@@ -103,6 +104,7 @@ CAT_PROPERTIES = {
     "spicy": {
         "kind": "internal",
         "prefix_col_out": "spicy",
+        "prefix": "",
         "cols_out": ["class"],
         "types": ["string"],
         "distmaxarcsec": 1.2,
