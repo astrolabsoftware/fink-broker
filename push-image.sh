@@ -44,7 +44,7 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
-CIUXCONFIG=$(ciux get configpath --selector "itest")
+CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
 echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
 

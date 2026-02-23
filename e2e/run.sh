@@ -152,7 +152,7 @@ fi
 
 echo "Phase: Image Push"
 echo "Push the image to Container Registry"
-if $src_dir/push-image.sh -s "$SUFFIX"; then
+if $src_dir/push-image.sh; then
     home-ci-reporter step "image_push" "passed" "Image pushed to registry successfully" --file "$TEST_REPORT"
     push=true
 else
