@@ -13,7 +13,7 @@ jobs:
 
       - name: Install home-ci-reporter
         run: |
-          go install github.com/k8s-school/home-ci-reporter@v0.0.2-rc2
+          go install github.com/k8s-school/home-ci-reporter@v0.0.2-rc1
       - name: Extract and Decode Artifacts
         run: |
           PATH=$(go env GOPATH)/bin:$PATH
