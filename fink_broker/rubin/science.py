@@ -31,7 +31,9 @@ from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
 from fink_science.rubin.xmatch.utils import MANGROVE_COLS
-from fink_science.rubin.random_forest_snia.processor import rfscore_rainbow_elasticc_nometa
+from fink_science.rubin.random_forest_snia.processor import (
+    rfscore_rainbow_elasticc_nometa,
+)
 from fink_science.rubin.hostless_detection.processor import run_potential_hostless
 # from fink_science.rubin.slsn.processor import slsn_rubin
 
@@ -328,12 +330,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     )
 
     _LOG.info("New classifier: Hostless")
-    df = df.withColumn('elephant_kstest',
+    df = df.withColumn(
+        "elephant_kstest",
         run_potential_hostless(
-            df["cutoutScience"],
-            df["cutoutTemplate"],
-            df["ssSource.ssObjectId"]
-        )
+            df["cutoutScience"], df["cutoutTemplate"], df["ssSource.ssObjectId"]
+        ),
     )
 
     # xmatch added columns
