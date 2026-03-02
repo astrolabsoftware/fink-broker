@@ -60,16 +60,21 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     t1 = f"Fink: <https://ztf.fink-portal.org/{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"Score: {round(row.slsn_score, 3)}"
-    #
+    
     cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
         row.objectId, slack_token_env=slack_token_env
     )
+
     magnitudes = np.array(
         [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
     )
+
     bands = np.array([row["fid"]] + [k["fid"] for k in row["prv_candidates"]])
+    
     mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
+    bands = bands[mask_nones]
+
     photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
     ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
     t3 = f"E(B-V) = {ebv:.3f}"
@@ -161,6 +166,7 @@ def main():
         "candidate.ndethist",
         "candidate.jdstarthist",
         "candidate.jd",
+        "candidate.fid",
         "candidate.magpsf",
         "prv_candidates",
         "tns",
@@ -186,7 +192,6 @@ def main():
         msg_handler_slack(
             slack_data, channel, init_msg, slack_token_env=slack_token_env
         )
-
 
 if __name__ == "__main__":
     main()
