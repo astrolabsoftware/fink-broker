@@ -52,5 +52,18 @@ if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
 fi
 if [ $registry = true ]; then
-  docker push "$CIUX_IMAGE_URL"
+  if [ $NEW_IMAGE = true ]; then
+    echo "Push image $PROMOTED_IMAGE"
+    docker tag "$IMAGE" "$PROMOTED_IMAGE"
+    docker push "$PROMOTED_IMAGE"
+  else
+    if which skopeo; then
+      echo "skopeo is already installed"
+    else
+      echo "skopeo not available, cannot copy image"
+      exit 1
+    fi
+    echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
+    skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
+  fi
 fi
