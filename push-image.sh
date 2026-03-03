@@ -52,7 +52,7 @@ if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
 fi
 if [ $registry = true ]; then
-  if [ $NEW_IMAGE = true ]; then
+  if [ $CIUX_BUILD = true ]; then
     echo "Push image $PROMOTED_IMAGE"
     docker tag "$IMAGE" "$PROMOTED_IMAGE"
     docker push "$PROMOTED_IMAGE"
