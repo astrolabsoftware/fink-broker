@@ -60,7 +60,7 @@ fi
 if [ $registry = true ]; then
   if [ $CIUX_BUILD = true ]; then
     echo "Push image $CIUX_PROMOTED_IMAGE_URL to registry"
-    docker tag "$IMAGE" "$CIUX_PROMOTED_IMAGE_URL"
+    docker tag "$CIUX_IMAGE_URL" "$CIUX_PROMOTED_IMAGE_URL"
     docker push "$CIUX_PROMOTED_IMAGE_URL"
   else
     if which skopeo; then
@@ -69,7 +69,7 @@ if [ $registry = true ]; then
       echo "skopeo not available, cannot copy image"
       exit 1
     fi
-    echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $IMAGE"
-    skopeo copy docker://$IMAGE docker://$CIUX_PROMOTED_IMAGE_URL
+    echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $CIUX_IMAGE_URL"
+    skopeo copy docker://$CIUX_IMAGE_URL docker://$CIUX_PROMOTED_IMAGE_URL
   fi
 fi
