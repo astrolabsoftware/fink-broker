@@ -211,6 +211,10 @@ jobs:
           registry: gitlab-registry.in2p3.fr
           username: ${{ secrets.registry_username }}
           password: ${{ secrets.registry_token }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Push image to official registry
         run: |
           ./push-image.sh
