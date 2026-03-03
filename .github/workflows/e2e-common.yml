@@ -73,7 +73,7 @@ jobs:
     name: Run integration tests
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
-      new_image: ${{ steps.promote.outputs.NEW_IMAGE }}
+      ciux_build: ${{ steps.promote.outputs.CIUX_BUILD }}
       promoted_image: ${{ steps.promote.outputs.PROMOTED_IMAGE }}
     needs: build
     steps:
@@ -140,7 +140,7 @@ jobs:
         run: |
           . .ciux.d/ciux_itest.sh
           echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
+          echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image
     runs-on: ${{ fromJSON(inputs.runner) }}
@@ -178,7 +178,7 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     env:
-      NEW_IMAGE: ${{ needs.integration-tests.outputs.new_image }}
+      CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
       IMAGE: ${{ needs.build.outputs.image }}
       PROMOTED_IMAGE: ${{ needs.integration-tests.outputs.promoted_image }}
     name: Push fink-broker image to IN2P3 registry
@@ -192,7 +192,7 @@ jobs:
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ $NEW_IMAGE = true ]; then
+          if [ $CIUX_BUILD = true ]; then
             # GHA setup
             if [ -f artifacts/image.tar ]; then
               echo "Loading image "$IMAGE" from archive"
@@ -213,21 +213,7 @@ jobs:
           password: ${{ secrets.registry_token }}
       - name: Push image to official registry
         run: |
-          if [ $NEW_IMAGE = true ]; then
-            echo "Push image $PROMOTED_IMAGE"
-            docker tag "$IMAGE" "$PROMOTED_IMAGE"
-            docker push "$PROMOTED_IMAGE"
-          else
-            if which skopeo; then
-              echo "skopeo is already installed"
-            else
-              echo "Install skopeo"
-              sudo apt-get update -y
-              sudo apt-get install -y skopeo
-            fi
-            echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
-            skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
-          fi
+          ./push-image.sh
       - uses: act10ns/slack@v1
         with:
           webhook-url: ${{ secrets.slack_webhook_url }}

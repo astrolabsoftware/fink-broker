@@ -8,7 +8,7 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-set -e
+set -euxo pipefail
 
 usage() {
   cat << EOD
@@ -28,6 +28,8 @@ EOD
 kind=false
 registry=true
 
+CIUX_BUILD=${CIUX_BUILD:-""}
+
 # get the options
 while getopts dhk c ; do
     case $c in
@@ -44,9 +46,13 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
-CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
-echo "Sourcing ciux config from $CIUXCONFIG"
-. $CIUXCONFIG
+if [ -z "$CIUX_BUILD" ]; then
+  CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
+  echo "Sourcing ciux config from $CIUXCONFIG"
+  . $CIUXCONFIG
+else
+  echo "Using CIUX_BUILD environment variable: $CIUX_BUILD"
+fi
 
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
