@@ -59,9 +59,9 @@ if [ $kind = true ]; then
 fi
 if [ $registry = true ]; then
   if [ $CIUX_BUILD = true ]; then
-    echo "Push image $PROMOTED_IMAGE"
-    docker tag "$IMAGE" "$PROMOTED_IMAGE"
-    docker push "$PROMOTED_IMAGE"
+    echo "Push image $CIUX_PROMOTED_IMAGE_URL to registry"
+    docker tag "$IMAGE" "$CIUX_PROMOTED_IMAGE_URL"
+    docker push "$CIUX_PROMOTED_IMAGE_URL"
   else
     if which skopeo; then
       echo "skopeo is already installed"
@@ -69,7 +69,7 @@ if [ $registry = true ]; then
       echo "skopeo not available, cannot copy image"
       exit 1
     fi
-    echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
-    skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
+    echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $IMAGE"
+    skopeo copy docker://$IMAGE docker://$CIUX_PROMOTED_IMAGE_URL
   fi
 fi

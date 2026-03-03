@@ -139,7 +139,7 @@ jobs:
         id: promote
         run: |
           . .ciux.d/ciux_itest.sh
-          echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "CIUX_PROMOTED_IMAGE_URL=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image
@@ -180,7 +180,7 @@ jobs:
     env:
       CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
       IMAGE: ${{ needs.build.outputs.image }}
-      PROMOTED_IMAGE: ${{ needs.integration-tests.outputs.promoted_image }}
+      CIUX_PROMOTED_IMAGE_URL: ${{ needs.integration-tests.outputs.ciux_promoted_image_url }}
     name: Push fink-broker image to IN2P3 registry
     runs-on: ${{ fromJSON(inputs.runner) }}
     needs: [build, integration-tests]
