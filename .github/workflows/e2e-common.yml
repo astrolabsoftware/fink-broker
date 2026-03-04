@@ -179,7 +179,7 @@ jobs:
   push:
     env:
       CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
-      IMAGE: ${{ needs.build.outputs.ciux_image_url }}
+      CIUX_IMAGE_URL: ${{ needs.build.outputs.ciux_image_url }}
       CIUX_PROMOTED_IMAGE_URL: ${{ needs.integration-tests.outputs.ciux_promoted_image_url }}
     name: Push fink-broker image to IN2P3 registry
     runs-on: ${{ fromJSON(inputs.runner) }}
