@@ -19,6 +19,13 @@ jobs:
           PATH=$(go env GOPATH)/bin:$PATH
           echo '${{ toJson(github.event.client_payload) }}' > payload.json
           home-ci-reporter extract payload.json test-artifacts
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-results-${{ github.event.client_payload.artifact_name }}
+          path: test-artifacts/
+          retention-days: 30
       - name: Generate Summary Metadata
         if: always()
         run: |
@@ -35,14 +42,6 @@ jobs:
             echo "⚠️ No \`e2e-report.yaml\` found." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-      - name: Upload Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: external-results-${{ github.event.client_payload.artifact_name }}
-          path: test-artifacts/
-          retention-days: 30
-
       - name: Final Result Logic
         run: |
           if [ "${{ github.event.client_payload.success }}" != "true" ]; then
