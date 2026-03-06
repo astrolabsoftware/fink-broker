@@ -26,19 +26,16 @@ jobs:
           find test-artifacts -type f -ls
           echo "======================="
       - name: Upload Artifacts
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: external-results-${{ github.event.client_payload.artifact_name }}
           path: test-artifacts/
           retention-days: 30
       - name: Generate Summary Metadata
-        if: always()
         run: |
           PATH=$(go env GOPATH)/bin:$PATH
           home-ci-reporter summary payload.json
       - name: Parse E2E Report
-        if: always()
         run: |
           PATH=$(go env GOPATH)/bin:$PATH
           report_path="test-artifacts/e2e-report.yaml"
