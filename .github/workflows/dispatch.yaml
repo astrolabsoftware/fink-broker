@@ -36,7 +36,7 @@ jobs:
         if: always()
         run: |
           PATH=$(go env GOPATH)/bin:$PATH
-          home-ci-reporter summary payload.json
+          home-ci-reporter summary payload.json -vvv
       - name: Parse E2E Report
         if: always()
         run: |
@@ -48,7 +48,7 @@ jobs:
           find test-artifacts -name "*.yaml" -o -name "*.yml" 2>/dev/null || echo "No YAML files found"
           echo "=================================="
           if [ -f "$report_path" ]; then
-            home-ci-reporter parse "$report_path"
+            home-ci-reporter parse "$report_path" -vvv
           else
             echo "⚠️ No \`e2e-report.yaml\` found." >> $GITHUB_STEP_SUMMARY
             exit 1
