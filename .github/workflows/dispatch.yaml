@@ -53,6 +53,7 @@ jobs:
             echo "⚠️ No \`e2e-report.yaml\` found." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+          echo "DEBUG: Summary metadata generated. $GITHUB_STEP_SUMMARY"
       - name: Final Result Logic
         run: |
           if [ "${{ github.event.client_payload.success }}" != "true" ]; then
