@@ -28,8 +28,6 @@ EOD
 kind=false
 registry=true
 
-CIUX_BUILD=${CIUX_BUILD:-""}
-
 # get the options
 while getopts dhk c ; do
     case $c in
@@ -46,13 +44,9 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
-if [ -z "$CIUX_BUILD" ]; then
-  CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
-  echo "Sourcing ciux config from $CIUXCONFIG"
-  . $CIUXCONFIG
-else
-  echo "Using CIUX_BUILD environment variable: $CIUX_BUILD"
-fi
+CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
+echo "Sourcing ciux config from $CIUXCONFIG"
+. $CIUXCONFIG
 
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
