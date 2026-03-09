@@ -8,49 +8,55 @@ jobs:
   process-test-results:
     runs-on: ubuntu-latest
     steps:
-      - name: Initialize
-        run: mkdir -p test-artifacts
-
-      - name: Install home-ci-reporter
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.24.3'
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install home-ci-reporter with ciux
         run: |
-          go install github.com/k8s-school/home-ci-reporter@v0.0.2-rc7
+          CIUX_VERSION="v0.0.7-rc2"
+          go install github.com/k8s-school/ciux@"$CIUX_VERSION"
+          ciux ignite -l gha_dispatch .
       - name: Extract and Decode Artifacts
         run: |
-          PATH=$(go env GOPATH)/bin:$PATH
+          mkdir -p artifacts
           echo '${{ toJson(github.event.client_payload) }}' > payload.json
           echo "=== Payload content ==="
           cat payload.json
           echo "======================="
-          home-ci-reporter extract payload.json test-artifacts
+          home-ci-reporter extract payload.json artifacts
           echo "=== Files extracted ==="
-          find test-artifacts -type f -ls
+          find artifacts -type f -ls
           echo "======================="
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: external-results-${{ github.event.client_payload.artifact_name }}
-          path: test-artifacts/
+          path: artifacts/
           retention-days: 30
       - name: Generate Summary Metadata
         run: |
-          PATH=$(go env GOPATH)/bin:$PATH
           home-ci-reporter summary payload.json -vvv
       - name: Parse E2E Report
         run: |
-          PATH=$(go env GOPATH)/bin:$PATH
-          report_path="test-artifacts/e2e-report.yaml"
+          report_path="artifacts/e2e-report.yaml"
           echo "=== Contents of test-artifacts ==="
-          ls -la test-artifacts/ || echo "test-artifacts directory does not exist"
+          ls -la artifacts/ || echo "artifacts directory does not exist"
           echo "=== Searching for any YAML files ==="
-          find test-artifacts -name "*.yaml" -o -name "*.yml" 2>/dev/null || echo "No YAML files found"
+          find artifacts -name "*.yaml" -o -name "*.yml" 2>/dev/null || echo "No YAML files found"
           echo "=================================="
           if [ -f "$report_path" ]; then
+            cat "$report_path"
             home-ci-reporter parse "$report_path" -vvv
           else
             echo "⚠️ No \`e2e-report.yaml\` found." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "DEBUG: Summary metadata generated. $GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
       - name: Final Result Logic
         run: |
           if [ "${{ github.event.client_payload.success }}" != "true" ]; then
