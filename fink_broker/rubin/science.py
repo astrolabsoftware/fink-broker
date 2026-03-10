@@ -366,10 +366,16 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             df["ssSource.ssObjectId"],
             df["diaObject.nDiaSources"],
             df["diaSource.psfFlux"],
+            df["diaSource.templateFlux"],
+            df["diaSource.templateFluxErr"],
             df["diaSource.midpointMjdTai"],
             F.array_min("prvDiaSources.midpointMjdTai"),
             df["simbad_otype"],
             df["gaiadr3_DR3Name"],
+            df["mangrove_2MASS_name"],
+            df["mangrove_HyperLEDA_name"],
+            df["legacydr8_zphot"],
+            df["spicy_class"],
         ),
     )
     df = df.withColumn("elephant_kstest_science", df.elephant_kstest.kstest_science)
