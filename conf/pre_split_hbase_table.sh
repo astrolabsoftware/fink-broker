@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,10 +61,11 @@ STANDARD_TABLES=(
 	"${TABLE_PREFIX}.diaSource_static"
 	"${TABLE_PREFIX}.diaSource_sso"
 	"${TABLE_PREFIX}.cutouts"
-	"${TABLE_PREFIX}.pixel128"
+	"${TABLE_PREFIX}.pixel1024"
 	"${TABLE_PREFIX}.tns_resolver"
         "${TABLE_PREFIX}.sso_resolver"
 	"${TABLE_PREFIX}.statistics"
+        "${TABLE_PREFIX}.fp"
 )
 
 COLFAMILIES=(
@@ -76,6 +77,8 @@ COLFAMILIES=(
         "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
 	"{NAME => 'f', COMPRESSION => 'LZ4'}"
         "{NAME => 'r', COMPRESSION => 'LZ4'}"
+        "{NAME => 'r', COMPRESSION => 'LZ4'}"
+	"{NAME => 'r', COMPRESSION => 'LZ4'}"
 )
 
 
@@ -89,9 +92,9 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
         else
                 echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
 
-                if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel128" ]]; then
-                        # pixel128 has a different splitting
-                        output=$(pre_split_nth_digits 1000 199999 "i+=1000" \'%03d\')
+                if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel1024" ]]; then
+                        # pixel1024 has a different splitting
+                        output=$(pre_split_nth_digits 100000 19999999 "i+=100000" \'%03d\')
 		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
                         # diaSource_sso has 100 partitions, based on year [YY]YY
                         output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
@@ -117,3 +120,24 @@ for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
         fi
 done
 
+# Tag tables
+mapfile -t key_array < <(curl -s -H "Content-Type: application/json" -X GET  https://api.lsst.fink-portal.org/api/v1/tags | jq -r 'keys | .[]')
+for ((index=0; index<${#key_array[@]}; index++)); do 
+	TABLE_NAME=rubin.tag_${key_array[index]};
+	COLFAMILY="{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+        echo -e "$SINFO Processing table $TABLE_NAME"
+        echo -e "$SINFO Options: ${COLFAMILY}"
+        if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
+                echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
+        else
+                echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
+		# Default splitting
+		output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
+		read -r SPLIT_POINTS NPARTS <<< "$output"
+                echo -e "$SINFO Number of regions: $((NPARTS + 1))"
+                COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
+
+                # Create the table
+                echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+        fi
+done
