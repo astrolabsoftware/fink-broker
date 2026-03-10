@@ -123,12 +123,14 @@ def main():
     )
     args = parser.parse_args(None)
 
-    spark = SparkSession.builder.appName("sso_residuals").getOrCreate()
-    spark.sparkContext.setLogLevel("WARN")
-
     # Get current year and month
     year = datetime.datetime.now().year
     month = "{:02}".format(datetime.datetime.now().month)
+
+    spark = SparkSession.builder.appName(
+        "sso_bulk_{}{}".format(year, month)
+    ).getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
 
     # Load SSO LC data
     df_lc = spark.read.format("parquet").load(
