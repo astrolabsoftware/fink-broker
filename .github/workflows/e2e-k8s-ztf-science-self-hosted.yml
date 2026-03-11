@@ -12,7 +12,7 @@ jobs:
   call-workflow-passing-data:
     uses: ./.github/workflows/e2e-common.yml
     with:
-      suffix: "noscience"
+      suffix: "science"
       runner: "['self-hosted']"
     secrets:
       registry_username: ${{ secrets.REGISTRY_USERNAME }}
