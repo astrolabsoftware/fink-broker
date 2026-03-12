@@ -87,7 +87,7 @@ do
           running_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Running -o name)
           if [ -n "$running_pods" ]; then
               echo "INFO: logs of running pods:"
-              for pod in $running_pods                do
+              for pod in $running_pods; do
                   echo "--- POD: $pod ---"
                   kubectl logs "$pod" -n spark --tail -1
               done
