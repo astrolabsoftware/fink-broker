@@ -33,6 +33,7 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
+  SHARED_IMAGE_PATH: "/tmp/fink-ci-${{ github.run_id }}-image.tar"
 jobs:
   build:
     name: Build image
@@ -61,7 +62,7 @@ jobs:
           if [ $CIUX_BUILD = true ]; then
             if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
               # For self-hosted: save image to shared location to persist between jobs
-              SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
               echo "Saving image $CIUX_IMAGE_URL to $SHARED_IMAGE_PATH"
               docker save "$CIUX_IMAGE_URL" -o "$SHARED_IMAGE_PATH"
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
@@ -73,15 +74,14 @@ jobs:
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
             fi
+            echo "skip_artifacts=${{ inputs.skip_artifacts }}" >> "$GITHUB_OUTPUT"
           else
             echo "Using existing image $CIUX_IMAGE_URL"
-            if [ "${{ inputs.skip_artifacts }}" = "false" ]; then
-              touch artifacts/empty
-            fi
+            echo "skip_artifacts=true" >> "$GITHUB_OUTPUT"
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/upload-artifact@v4
-        if: ${{ !inputs.skip_artifacts }}
+        if: ${{ !steps.export.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
@@ -128,6 +128,7 @@ jobs:
         run: |
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
+
       - name: Download image
         uses: actions/download-artifact@v4
         if: ${{ !inputs.skip_artifacts }}
@@ -138,7 +139,7 @@ jobs:
         run: |
           if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
             # For self-hosted: load from shared location
-            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
             if [ -f "$SHARED_IMAGE_PATH" ]; then
               echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
               docker load -i "$SHARED_IMAGE_PATH"
@@ -169,6 +170,11 @@ jobs:
       - name: Check results
         run: |
           ./e2e/check-results.sh
+      - name: Delete cluster
+        if: always()
+        run: |
+          cluster_name=$(ciux get clustername $PWD)
+          kind delete cluster --name "$cluster_name"
       - name: Promote fink-broker image
         id: promote
         run: |
@@ -194,7 +200,7 @@ jobs:
         run: |
           if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
             # For self-hosted: load from shared location
-            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
             if [ -f "$SHARED_IMAGE_PATH" ]; then
               echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
               docker load -i "$SHARED_IMAGE_PATH"
@@ -241,7 +247,7 @@ jobs:
           if [ $CIUX_BUILD = true ]; then
             if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
               # For self-hosted: load from shared location
-              SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
               if [ -f "$SHARED_IMAGE_PATH" ]; then
                 echo "Loading image $CIUX_IMAGE_URL from $SHARED_IMAGE_PATH"
                 docker load -i "$SHARED_IMAGE_PATH"
@@ -281,7 +287,7 @@ jobs:
       - name: Cleanup shared image file
         run: |
           if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
             if [ -f "$SHARED_IMAGE_PATH" ]; then
               echo "Removing shared image file $SHARED_IMAGE_PATH"
               rm -f "$SHARED_IMAGE_PATH"
