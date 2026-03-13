@@ -55,6 +55,7 @@ jobs:
           ./build.sh -s "${{ env.SUFFIX }}"
       - name: Export fink-broker image
         id: export
+        if: ${{ !inputs.skip_artifacts }}
         run: |
           mkdir -p artifacts
           # Cannot use CIUXCONFIG because it may not have been created yet
