@@ -55,19 +55,31 @@ jobs:
           ./build.sh -s "${{ env.SUFFIX }}"
       - name: Export fink-broker image
         id: export
-        if: ${{ !inputs.skip_artifacts }}
         run: |
-          mkdir -p artifacts
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
+            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+              # For self-hosted: save image to shared location to persist between jobs
+              SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+              echo "Saving image $CIUX_IMAGE_URL to $SHARED_IMAGE_PATH"
+              docker save "$CIUX_IMAGE_URL" -o "$SHARED_IMAGE_PATH"
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+              echo "SHARED_IMAGE_PATH=$SHARED_IMAGE_PATH" >> "$GITHUB_OUTPUT"
+            else
+              # For GitHub runners: use artifacts
+              mkdir -p artifacts
               echo "Export $CIUX_IMAGE_URL to Github artifact store"
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "Using existing image $CIUX_IMAGE_URL"
-            touch artifacts/empty
+            if [ "${{ inputs.skip_artifacts }}" = "false" ]; then
+              touch artifacts/empty
+            fi
+            echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: ${{ !inputs.skip_artifacts }}
         with:
@@ -124,7 +136,21 @@ jobs:
           path: artifacts
       - name: Load container image inside kind
         run: |
-          if [ -f artifacts/image.tar ]; then
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            # For self-hosted: load from shared location
+            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
+              docker load -i "$SHARED_IMAGE_PATH"
+              cluster_name=$(ciux get clustername $PWD)
+              kind load docker-image "${{ needs.build.outputs.ciux_image_url }}" --name "$cluster_name"
+              node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+              docker exec -- $node crictl image
+            else
+              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              exit 1
+            fi
+          elif [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
             cluster_name=$(ciux get clustername $PWD)
             kind load image-archive artifacts/image.tar --name "$cluster_name"
@@ -166,7 +192,17 @@ jobs:
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ -f artifacts/image.tar ]; then
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            # For self-hosted: load from shared location
+            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
+              docker load -i "$SHARED_IMAGE_PATH"
+            else
+              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              exit 1
+            fi
+          elif [ -f artifacts/image.tar ]; then
             echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from archive"
             docker load --input artifacts/image.tar
           else
@@ -203,19 +239,23 @@ jobs:
       - name: Load image in local registry
         run: |
           if [ $CIUX_BUILD = true ]; then
-            # GHA setup
-            if [ -f artifacts/image.tar ]; then
-              echo "Loading image $CIUX_IMAGE_URL from archive"
-              docker load --input artifacts/image.tar
-            # Self-hosted runners, new image is stored in the local registry
-            else
-              echo "Checking if image $CIUX_IMAGE_URL exists in local registry"
-              if docker image inspect "$CIUX_IMAGE_URL" > /dev/null 2>&1; then
-                echo "Using existing image $CIUX_IMAGE_URL from local registry"
+            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+              # For self-hosted: load from shared location
+              SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+              if [ -f "$SHARED_IMAGE_PATH" ]; then
+                echo "Loading image $CIUX_IMAGE_URL from $SHARED_IMAGE_PATH"
+                docker load -i "$SHARED_IMAGE_PATH"
               else
-                echo "Error: image $CIUX_IMAGE_URL not found in local registry"
+                echo "Error: shared image file $SHARED_IMAGE_PATH not found"
                 exit 1
               fi
+            elif [ -f artifacts/image.tar ]; then
+              # GHA setup
+              echo "Loading image $CIUX_IMAGE_URL from archive"
+              docker load --input artifacts/image.tar
+            else
+              echo "Error: no image source available"
+              exit 1
             fi
           else
             echo "Using existing image $CIUX_IMAGE_URL"
@@ -237,5 +277,15 @@ jobs:
         with:
           webhook-url: ${{ secrets.slack_webhook_url }}
           status: ${{ job.status }}
+        if: always()
+      - name: Cleanup shared image file
+        run: |
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            SHARED_IMAGE_PATH="/tmp/fink-ci-${{ github.run_id }}-image.tar"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Removing shared image file $SHARED_IMAGE_PATH"
+              rm -f "$SHARED_IMAGE_PATH"
+            fi
+          fi
         if: always()
 
