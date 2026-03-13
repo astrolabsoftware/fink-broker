@@ -40,6 +40,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
       ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
+      skip_artifacts: ${{ steps.export.outputs.skip_artifacts }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,7 +132,7 @@ jobs:
 
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !inputs.skip_artifacts }}
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
@@ -192,7 +193,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !inputs.skip_artifacts }}
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
@@ -238,7 +239,7 @@ jobs:
     steps:
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !inputs.skip_artifacts }}
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
