@@ -72,7 +72,7 @@ selector="spark-app-name"
 err_msg=""
 while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
 do
-    echo "INFO: Waiting for expected topics: $expected_topics"
+    echo "INFO: Waiting for expected topics: $expected_topics, attempt: $((count+1))/$max_attempts"
     sleep 5
     echo "INFO: List pods in spark namespace:"
     kubectl get pods -n spark
@@ -82,18 +82,18 @@ do
       echo "ERROR: crashed pods found: $crashed_pods" 1>&2
           for pod in $crashed_pods
           do
-              echo "--- POD: $pod ---"
+              echo "--- Logs for crashed Pod: $pod ---"
               kubectl logs "$pod" -n spark
           done
           running_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Running -o name)
           if [ -n "$running_pods" ]; then
               echo "INFO: logs of running pods:"
               for pod in $running_pods; do
-                  echo "--- POD: $pod ---"
+                  echo "--- Logs for running Pod: $pod ---"
                   kubectl logs "$pod" -n spark --tail -1
               done
           fi
-      err_msg = "ERROR: fink-broker has crashed" 1>&2
+      err_msg="ERROR: fink-broker has crashed" 1>&2
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
       # sleep 7200
       break
@@ -104,10 +104,10 @@ do
       pods=$(kubectl get pods -n spark -l $selector -o name)
       for pod in $pods
       do
-          echo "--- POD: $pod ---"
+          echo "--- Logs for Pod: $pod ---"
           kubectl logs "$pod" -n spark --tail -1
       done
-      err_msg = "ERROR: fink-broker did not produce expected results after ~10 minutes" 1>&2
+      err_msg="ERROR: fink-broker did not produce expected results after ~10 minutes" 1>&2
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
       # sleep 7200
       break
@@ -115,8 +115,14 @@ do
 done
 finkctl get topics
 
+if [ -n "$err_msg" ]; then
+  echo "$err_msg"
+  exit 1
+fi
+
 if $monitoring;
 then
+    echo "Checking prometheus exporter is enabled in fink-broker"
     if kubectl exec -it -n spark fink-broker-stream2raw-driver -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
     then
         echo "Prometheus exporter is enabled"
@@ -140,9 +146,5 @@ then
 
 fi
 
-if [ -n "$err_msg" ]; then
-  echo "$err_msg"
-  exit 1
-fi
 
 echo "INFO: Fink-broker is running and all topics are created"
