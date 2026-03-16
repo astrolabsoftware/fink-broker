@@ -114,7 +114,9 @@ def load_fink_cols():
         "pred.main_label_classifier": {"type": "int", "default": None},
         "misc.firstDiaSourceMjdTaiFink": {"type": "double", "default": None},
     }
-
+    fink_source_cols.update({
+        "elephant_kstest": {"type": "map<string, float>", "default": {}}
+    })
     return fink_source_cols, fink_object_cols
 
 
