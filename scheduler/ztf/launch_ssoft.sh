@@ -27,4 +27,4 @@ fink_ssoft -s ztf --link-data > ${FINK_HOME}/broker_logs/ssoft_link_ephems_$CURR
 fink_ssoft -s ztf --run-ssoft -model HG -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
 fink_ssoft -s ztf --run-ssoft -model HG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
 fink_ssoft -s ztf --run-ssoft -model SHG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
-#fink_ssoft -s ztf --run-ssoft -model SSHG1G2
+fink_ssoft -s ztf --construct-bulk > ${FINK_HOME}/broker_logs/ssobulk_$CURRDATE.log 2>&1
