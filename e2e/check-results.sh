@@ -65,7 +65,7 @@ else
 fi
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime
-# display logs of failed pods if any, and of running pods if no topics after 10 attempts (5 minutes)
+# display logs of failed pods if any, and of running pods if no topics after 10 attempts (~10 minutes)
 count=0
 max_attempts=10
 selector="spark-app-name"
@@ -107,7 +107,7 @@ do
           echo "--- Logs for Pod: $pod ---"
           kubectl logs "$pod" -n spark --tail -1
       done
-      err_msg="ERROR: fink-broker did not produce expected results after ~10 minutes" 1>&2
+      err_msg="ERROR: fink-broker did not produce expected results after ~10 minutes"
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
       # sleep 7200
       break
@@ -116,7 +116,7 @@ done
 finkctl get topics
 
 if [ -n "$err_msg" ]; then
-  echo "$err_msg"
+  echo "$err_msg" 1>&2
   exit 1
 fi
 

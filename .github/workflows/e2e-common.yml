@@ -29,7 +29,6 @@ env:
   CIUX_VERSION: v0.0.7-rc1
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
-  STORAGE: ${{ inputs.storage }}
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
@@ -82,7 +81,7 @@ jobs:
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/upload-artifact@v4
-        if: ${{ !steps.export.outputs.skip_artifacts }}
+        if: ${{ steps.export.outputs.skip_artifacts != 'true' }}
         with:
           name: docker-artifact
           path: artifacts
@@ -132,7 +131,7 @@ jobs:
 
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !needs.build.outputs.skip_artifacts }}
+        if: ${{ needs.build.outputs.skip_artifacts != 'true' }}
         with:
           name: docker-artifact
           path: artifacts
