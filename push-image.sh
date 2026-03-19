@@ -8,18 +8,16 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-set -euxo pipefail
 
 usage() {
   cat << EOD
 
-Usage: `basename $0` [options] path host [host ...]
+Usage: `basename $0` [options]
 
   Available options:
     -h          this message
     -k          development mode: load image in kind
     -d          do not push image to remote registry
-    -s          image suffix, default to none (i.e. science), only 'noscience' is supported
 
 Push image to remote registry and/or load it inside kind
 EOD
@@ -61,13 +59,13 @@ if [ $registry = true ]; then
     docker tag "$CIUX_IMAGE_URL" "$CIUX_PROMOTED_IMAGE_URL"
     docker push "$CIUX_PROMOTED_IMAGE_URL"
   else
-    if which skopeo; then
+    if command -v skopeo >/dev/null 2>&1; then
       echo "skopeo is already installed"
     else
       echo "skopeo not available, cannot copy image"
       exit 1
     fi
     echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $CIUX_IMAGE_URL"
-    skopeo copy docker://$CIUX_IMAGE_URL docker://$CIUX_PROMOTED_IMAGE_URL
+    skopeo copy "docker://$CIUX_IMAGE_URL" "docker://$CIUX_PROMOTED_IMAGE_URL"
   fi
 fi
