@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "v0.20.0"
+      skip_artifacts:
+        description: 'Skip artifact upload/download (for self-hosted runners)'
+        required: false
+        type: boolean
+        default: false
     secrets:
       registry_username:
         required: true
@@ -24,16 +29,17 @@ env:
   CIUX_VERSION: v0.0.7-rc1
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
-  STORAGE: ${{ inputs.storage }}
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
+  SHARED_IMAGE_PATH: "/tmp/fink-ci-image-${{ github.run_id }}.tar"
 jobs:
   build:
     name: Build image
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
-      image: ${{ steps.export.outputs.IMAGE }}
+      ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
+      skip_artifacts: ${{ steps.export.outputs.skip_artifacts }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,18 +57,32 @@ jobs:
       - name: Export fink-broker image
         id: export
         run: |
-          mkdir -p artifacts
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
+            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+              rm /tmp/
+              # For self-hosted: save image to shared location to persist between jobs
+              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+              echo "Saving image $CIUX_IMAGE_URL to $SHARED_IMAGE_PATH"
+              docker save "$CIUX_IMAGE_URL" -o "$SHARED_IMAGE_PATH"
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+              echo "SHARED_IMAGE_PATH=$SHARED_IMAGE_PATH" >> "$GITHUB_OUTPUT"
+            else
+              # For GitHub runners: use artifacts
+              mkdir -p artifacts
               echo "Export $CIUX_IMAGE_URL to Github artifact store"
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+            fi
+            echo "skip_artifacts=${{ inputs.skip_artifacts }}" >> "$GITHUB_OUTPUT"
           else
             echo "Using existing image $CIUX_IMAGE_URL"
-            touch artifacts/empty
+            echo "skip_artifacts=true" >> "$GITHUB_OUTPUT"
+            echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "IMAGE=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
+        if: ${{ steps.export.outputs.skip_artifacts != 'true' }}
         with:
           name: docker-artifact
           path: artifacts
@@ -73,8 +93,8 @@ jobs:
     name: Run integration tests
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
-      new_image: ${{ steps.promote.outputs.NEW_IMAGE }}
-      promoted_image: ${{ steps.promote.outputs.PROMOTED_IMAGE }}
+      ciux_build: ${{ steps.promote.outputs.CIUX_BUILD }}
+      ciux_promoted_image_url: ${{ steps.promote.outputs.CIUX_PROMOTED_IMAGE_URL }}
     needs: build
     steps:
       - name: Checkout code
@@ -109,14 +129,31 @@ jobs:
         run: |
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
+
       - name: Download image
         uses: actions/download-artifact@v4
+        if: ${{ needs.build.outputs.skip_artifacts != 'true' }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load container image inside kind
         run: |
-          if [ -f artifacts/image.tar ]; then
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            # For self-hosted: load from shared location
+            rm /tmp/fink-ci-image-*.tar
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
+              docker load -i "$SHARED_IMAGE_PATH"
+              cluster_name=$(ciux get clustername $PWD)
+              kind load docker-image "${{ needs.build.outputs.ciux_image_url }}" --name "$cluster_name"
+              node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+              docker exec -- $node crictl image
+            else
+              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              exit 1
+            fi
+          elif [ -f artifacts/image.tar ]; then
             echo "Loading image from archive"
             cluster_name=$(ciux get clustername $PWD)
             kind load image-archive artifacts/image.tar --name "$cluster_name"
@@ -135,12 +172,17 @@ jobs:
       - name: Check results
         run: |
           ./e2e/check-results.sh
+      - name: Delete cluster
+        if: always()
+        run: |
+          cluster_name=$(ciux get clustername $PWD)
+          kind delete cluster --name "$cluster_name"
       - name: Promote fink-broker image
         id: promote
         run: |
           . .ciux.d/ciux_itest.sh
-          echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
+          echo "CIUX_PROMOTED_IMAGE_URL=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image
     runs-on: ${{ fromJSON(inputs.runner) }}
@@ -152,22 +194,33 @@ jobs:
         uses: actions/checkout@v3
       - name: Download image
         uses: actions/download-artifact@v4
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ -f artifacts/image.tar ]; then
-            echo "Loading image ${{ needs.build.outputs.image }} from archive"
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            # For self-hosted: load from shared location
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
+              docker load -i "$SHARED_IMAGE_PATH"
+            else
+              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              exit 1
+            fi
+          elif [ -f artifacts/image.tar ]; then
+            echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from archive"
             docker load --input artifacts/image.tar
           else
-            echo "Using existing image ${{ needs.build.outputs.image }}"
+            echo "Using existing image ${{ needs.build.outputs.ciux_image_url }}"
           fi
       - name: Scan fink-broker image
         uses: anchore/scan-action@v6
         id: scan
         with:
-          image: "${{ needs.build.outputs.image }}"
+          image: "${{ needs.build.outputs.ciux_image_url }}"
           fail-build: false
       - name: Display SARIF report
         run: |
@@ -178,32 +231,42 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     env:
-      NEW_IMAGE: ${{ needs.integration-tests.outputs.new_image }}
-      IMAGE: ${{ needs.build.outputs.image }}
-      PROMOTED_IMAGE: ${{ needs.integration-tests.outputs.promoted_image }}
+      CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
+      CIUX_IMAGE_URL: ${{ needs.build.outputs.ciux_image_url }}
+      CIUX_PROMOTED_IMAGE_URL: ${{ needs.integration-tests.outputs.ciux_promoted_image_url }}
     name: Push fink-broker image to IN2P3 registry
     runs-on: ${{ fromJSON(inputs.runner) }}
     needs: [build, integration-tests]
     steps:
       - name: Download image
         uses: actions/download-artifact@v4
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ $NEW_IMAGE = true ]; then
-            # GHA setup
-            if [ -f artifacts/image.tar ]; then
-              echo "Loading image "$IMAGE" from archive"
+          if [ $CIUX_BUILD = true ]; then
+            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+              # For self-hosted: load from shared location
+              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+              if [ -f "$SHARED_IMAGE_PATH" ]; then
+                echo "Loading image $CIUX_IMAGE_URL from $SHARED_IMAGE_PATH"
+                docker load -i "$SHARED_IMAGE_PATH"
+              else
+                echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+                exit 1
+              fi
+            elif [ -f artifacts/image.tar ]; then
+              # GHA setup
+              echo "Loading image $CIUX_IMAGE_URL from archive"
               docker load --input artifacts/image.tar
-            # Self-hosted runners, new image is stored in the local registry
             else
-              echo "Error: no image found"
+              echo "Error: no image source available"
               exit 1
             fi
           else
-            echo "Using existing image $IMAGE"
+            echo "Using existing image $CIUX_IMAGE_URL"
           fi
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -211,26 +274,31 @@ jobs:
           registry: gitlab-registry.in2p3.fr
           username: ${{ secrets.registry_username }}
           password: ${{ secrets.registry_token }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Push image to official registry
         run: |
-          if [ $NEW_IMAGE = true ]; then
-            echo "Push image $PROMOTED_IMAGE"
-            docker tag "$IMAGE" "$PROMOTED_IMAGE"
-            docker push "$PROMOTED_IMAGE"
-          else
-            if which skopeo; then
-              echo "skopeo is already installed"
-            else
-              echo "Install skopeo"
-              sudo apt-get update -y
-              sudo apt-get install -y skopeo
-            fi
-            echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
-            skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
-          fi
+          ./push-image.sh
       - uses: act10ns/slack@v1
         with:
           webhook-url: ${{ secrets.slack_webhook_url }}
           status: ${{ job.status }}
+        if: always()
+      - name: Cleanup shared image file
+        run: |
+          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+            if [ -f "$SHARED_IMAGE_PATH" ]; then
+              echo "Removing shared image file $SHARED_IMAGE_PATH"
+              rm -f "$SHARED_IMAGE_PATH"
+            fi
+          fi
         if: always()
 
