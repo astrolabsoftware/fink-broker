@@ -41,9 +41,16 @@ fi
 ktbx install kind $kind_version_opt
 ktbx install kubectl
 ktbx install helm
-ink "Create kind cluster"
-cluster_name=$(ciux get clustername $DIR/..)
-ktbx create -s --name $cluster_name
+
+# Check if a kubernetes context is already set for a non-kind cluster, otherwise create a kind cluster
+context=$(kubectl config current-context 2>/dev/null) || context=""
+if [ -z "$context" ] || [[ $context == kind-* ]]; then
+    ink "Creating kind cluster"
+    cluster_name=$(ciux get clustername $DIR/..)
+    ktbx create -s --name $cluster_name
+else
+    ink "kubectl context found: $context"
+fi
 ink "Install OLM"
 ktbx install olm
 ink "Install ArgoCD operator"
