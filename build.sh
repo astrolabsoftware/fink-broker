@@ -77,9 +77,6 @@ fi
 
 ciux ignite --selector "$SELECTOR" $DIR --suffix "$suffix"
 
-
-# TODO improve and use
-# . $DIR/.ciux.d/ciuxconfig.sh
 CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
 echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
