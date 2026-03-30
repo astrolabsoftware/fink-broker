@@ -223,7 +223,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${DISTRIBUTE_ONLY} ]] && [[ ! ${INGEST_ONLY} ]];
                     -s rubin \
                     -c ${conf} \
                     -driver-memory 4g -executor-memory 2g \
-                    -spark-cores-max 16 -spark-executor-cores 1 \
+                    -spark-cores-max 8 -spark-executor-cores 1 \
                     -night ${NIGHT} \
                     -exit_after ${LEASETIME} > ${FINK_HOME}/broker_logs/raw2science_${NIGHT}.log 2>&1 &
                 break
@@ -260,7 +260,7 @@ if [[ ! ${POLL_ONLY} ]] && [[ ! ${ENRICH_ONLY} ]] && [[ ! ${INGEST_ONLY} ]]; the
                     -conf_distribution ${FINK_HOME}/conf/rubin/fink.conf.distribution \
                     -night ${NIGHT} \
                     -driver-memory 4g -executor-memory 2g \
-                    -spark-cores-max 4 -spark-executor-cores 1 \
+                    -spark-cores-max 8 -spark-executor-cores 1 \
                     -exit_after ${LEASETIME} ${NO_KAFKA_INGEST} ${NO_HBASE_INGEST} > ${FINK_HOME}/broker_logs/distribute_${NIGHT}.log 2>&1 &
                 break
             fi
