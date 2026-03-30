@@ -32,7 +32,7 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
-  SHARED_IMAGE_PATH: "/tmp/fink-ci-image-${{ github.run_id }}.tar"
+  SHARED_IMAGE_PATH: "/tmp/fink-ci-image.tar"
 jobs:
   build:
     name: Build image
@@ -61,9 +61,10 @@ jobs:
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
             if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-              rm /tmp/
               # For self-hosted: save image to shared location to persist between jobs
               SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+              echo "Removing existing shared image file $SHARED_IMAGE_PATH"
+              rm -f "$SHARED_IMAGE_PATH"
               echo "Saving image $CIUX_IMAGE_URL to $SHARED_IMAGE_PATH"
               docker save "$CIUX_IMAGE_URL" -o "$SHARED_IMAGE_PATH"
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
@@ -140,7 +141,6 @@ jobs:
         run: |
           if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
             # For self-hosted: load from shared location
-            rm /tmp/fink-ci-image-*.tar
             SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
             if [ -f "$SHARED_IMAGE_PATH" ]; then
               echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
