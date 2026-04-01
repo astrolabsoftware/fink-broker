@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Install fink-broker stack (kafka+minio)
-# Based on https://min.io/docs/minio/kubernetes/upstream/index.html
-
 # @author  Fabrice Jammes
 
 set -euxo pipefail
@@ -14,7 +12,6 @@ monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
 
-# Check if running in github actions
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
 usage() {
@@ -27,7 +24,6 @@ Available options:
 EOD
 }
 
-# Get the options
 while getopts hmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
@@ -39,33 +35,32 @@ while getopts hmS:s: c ; do
 done
 shift "$((OPTIND-1))"
 
-# Refresh ciux config if not in github actions
-# Used for interactive development
-if [ $GITHUB_ACTIONS == false ]; then
-  ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+if [ "$GITHUB_ACTIONS" == "false" ]; then
+    ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 fi
 
-. $DIR/../.ciux.d/ciux_itest.sh
+. "$DIR/../.ciux.d/ciux_itest.sh"
 
 NS=argocd
 e2e_enabled="true"
 
-argocd login --core
+# --- CONFIGURATION WITHOUT TUNNEL ---
+# Force the use of local K8s context.
+# No need for 'argocd login' with password.
+export ARGOCD_OPTS="--core --namespace $NS"
 kubectl config set-context --current --namespace="$NS"
 
-if [ $storage == "s3" ]
-then
-  hdfs_enabled="false"
-  s3_enabled="true"
-  online_data_prefix=""
-elif [ $storage == "hdfs" ]
-then
-  hdfs_enabled="true"
-  s3_enabled="false"
-  online_data_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
+if [ "$storage" == "s3" ]; then
+    hdfs_enabled="false"
+    s3_enabled="true"
+    online_data_prefix=""
+elif [ "$storage" == "hdfs" ]; then
+    hdfs_enabled="true"
+    s3_enabled="false"
+    online_data_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
 fi
 
-# Create fink app
+# Create fink app (Note: --core is implicit via ARGOCD_OPTS)
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
@@ -74,19 +69,16 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     -p hdfs.enabled="$hdfs_enabled" \
     -p spec.source.targetRevision.default="$FINK_CD_WORKBRANCH" \
     -p spec.source.targetRevision.finkbroker="$FINK_BROKER_WORKBRANCH" \
-    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH"
+    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
+    --upsert # Added to avoid error if app already exists
 
 # Sync fink app-of-apps
 argocd app sync fink
 
 # Set fink-broker parameters
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
-then
-  valueFile=values-ci-noscience.yaml
-else
-  valueFile=values-ci-science.yaml
-fi
+[[ "$CIUX_IMAGE_URL" =~ "-noscience" ]] && valueFile=values-ci-noscience.yaml || valueFile=values-ci-science.yaml
+
 argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
     --values "$valueFile" \
     -p e2e.enabled="$e2e_enabled" \
@@ -99,36 +91,35 @@ argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
 
 argocd app set fink-alert-simulator -p image.tag="$FINK_ALERT_SIMULATOR_VERSION"
 
-# Synk operators dependency for fink
+# --- OPERATORS SYNC (Fix for previous RPC issue) ---
+# Using --core eliminates 'connection refused' error on 127.0.0.1
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
-argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
+argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator --timeout 600
 
-# Synk storage dependency for fink
+# Sync storage
 argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-
-# Hack to fix kafka startup problem (non deterministic)
-# TODO investigate to remove this hack
-argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
 sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
+argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
 
-if [ $e2e_enabled == "true" ]
-then
-  echo "Retrieve kafka secrets for e2e tests"
-  while ! kubectl get secret fink-producer --namespace kafka
-  do
-    echo "Waiting for secret/fink-producer in ns kafka"
-    sleep 10
-  done
-  kubectl config set-context --current --namespace="spark"
-  finkctl createsecrets
-  kubectl config set-context --current --namespace="argocd"
+if [ "$e2e_enabled" == "true" ]; then
+    echo "Retrieve kafka secrets for e2e tests"
+    # Use kubectl directly for waiting (more reliable than shell polling)
+    kubectl wait --namespace kafka --for=condition=Ready --timeout=300s pod -l app.kubernetes.io/name=kafka || true
+    
+    until kubectl get secret fink-producer --namespace kafka; do
+        echo "Waiting for secret/fink-producer in ns kafka"
+        sleep 5
+    done
+    
+    # Switch context for finkctl
+    kubectl config set-context --current --namespace="spark"
+    finkctl createsecrets
+    kubectl config set-context --current --namespace="$NS"
 fi
 
-# Sync fink-alert-simulator and fink-broker
+# Final sync
 argocd app sync -l app.kubernetes.io/part-of="fink"
-argocd app wait --operation -l app.kubernetes.io/part-of="fink"
+argocd app wait --operation -l app.kubernetes.io/part-of="fink" --timeout 600
 sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of="fink"
-
-
+argocd app wait --health -l app.kubernetes.io/part-of="fink" --timeout 600
