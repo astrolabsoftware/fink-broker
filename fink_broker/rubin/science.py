@@ -376,6 +376,11 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
             df["mangrove_HyperLEDA_name"],
             df["legacydr8_zphot"],
             df["spicy_class"],
+            df["diaSource.ra"],
+            df["diaSource.dec"],
+            df["prvDiaSources.ra"],
+            df["prvDiaSources.dec"],
+            df["prvDiaSources.midpointMjdTai"],
         ),
     )
     df = df.withColumn("elephant_kstest_science", df.elephant_kstest.kstest_science)
