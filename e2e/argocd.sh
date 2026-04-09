@@ -28,6 +28,7 @@ EOD
 }
 
 # Get the options
+# -s has no effect in GIHUB_ACTION mode
 while getopts hmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
