@@ -33,14 +33,14 @@ Usage: `basename $0` [options]
 
   Available options:
     -h          this message
-    -s          image suffix, default to none, only 'noscience' is supported
+    -s          image suffix, default to 'noscience'. Valid values: 'noscience', 'science'
     -i 		Specify the survey. Default: ztf
 
 Build image containing fink-broker for k8s
 EOD
 }
 
-suffix=""
+suffix="noscience"
 tmp_registry=""
 input_survey="ztf"
 
@@ -56,6 +56,13 @@ while getopts hr:i:s: c ; do
 done
 shift `expr $OPTIND - 1`
 
+# Validate suffix value
+if [ -n "$suffix" ] && [ "$suffix" != "noscience" ] && [ "$suffix" != "science" ]; then
+    echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
+
 ignite_msg="Run following command to prepare integration tests:"
 ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
 
@@ -69,7 +76,7 @@ then
     exit 0
 fi
 
-if [[ $suffix =~ ^noscience* ]]; then
+if [[ "$suffix" == "noscience" ]]; then
     SELECTOR="build=noscience"
 else
     SELECTOR="build=science"
@@ -81,7 +88,7 @@ CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
 echo "Sourcing ciux config from $CIUXCONFIG"
 . $CIUXCONFIG
 
-if [[ $suffix =~ ^noscience* ]]; then
+if [[ "$suffix" == "noscience" ]]; then
     base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_NOSCIENCE_ZTF_IMAGE"
 else
     base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_SCIENCE_ZTF_IMAGE"

@@ -22,12 +22,13 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
-  -s <suffix>   Suffix to use for the image (default: noscience)
+  -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
   -S <storage>  Storage to use (hdfs or minio)
 EOD
 }
 
 # Get the options
+# -s has no effect in GIHUB_ACTION mode
 while getopts hmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
@@ -38,6 +39,13 @@ while getopts hmS:s: c ; do
     esac
 done
 shift "$((OPTIND-1))"
+
+# Validate suffix value
+if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
+    echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
 
 # Refresh ciux config if not in github actions
 # Used for interactive development
