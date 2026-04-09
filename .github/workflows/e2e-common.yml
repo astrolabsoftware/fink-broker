@@ -167,10 +167,10 @@ jobs:
           # detached: true
       - name: Run argoCD
         run: |
-          ./e2e/argocd.sh -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         run: |
-          ./e2e/check-results.sh
+          ./e2e/check-results.sh -s "${{ env.SUFFIX }}"
       - name: Delete cluster
         if: always()
         run: |
