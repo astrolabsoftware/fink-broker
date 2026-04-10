@@ -76,14 +76,13 @@ jobs:
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
             fi
-            echo "skip_artifacts=${{ inputs.skip_artifacts }}" >> "$GITHUB_OUTPUT"
           else
             echo "Using existing image $CIUX_IMAGE_URL"
-            echo "skip_artifacts=true" >> "$GITHUB_OUTPUT"
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
+          echo "skip_artifacts=${{ inputs.skip_artifacts }}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: ${{ steps.export.outputs.skip_artifacts != 'true' }}
+        if: ${{ !steps.export.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
@@ -133,7 +132,7 @@ jobs:
 
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ needs.build.outputs.skip_artifacts != 'true' }}
+        if: ${{ !needs.build.outputs.skip_artifacts }}
         with:
           name: docker-artifact
           path: artifacts
@@ -168,10 +167,10 @@ jobs:
           # detached: true
       - name: Run argoCD
         run: |
-          ./e2e/argocd.sh -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         run: |
-          ./e2e/check-results.sh
+          ./e2e/check-results.sh -s "${{ env.SUFFIX }}"
       - name: Delete cluster
         if: always()
         run: |

@@ -32,8 +32,8 @@ echo "Test report: $TEST_REPORT"
 echo "=================================="
 
 usage () {
-  echo "Usage: $0 [-c] [-h] [-m] [-s]"
-  echo "  -s: Use the science algorithms during the tests"
+  echo "Usage: $0 [-c] [-h] [-m] [-s <suffix>]"
+  echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -c: Cleanup the cluster after the tests"
   echo "  -i: Specify input survey. Default: ztf"
   echo "  -m: Install monitoring stack"
@@ -60,7 +60,7 @@ input_survey="ztf"
 token="${TOKEN:-}"
 
 # Get options for suffix
-while getopts hcmsi:S: opt; do
+while getopts hcms:i:S: opt; do
   case ${opt} in
 
     c )
@@ -74,7 +74,7 @@ while getopts hcmsi:S: opt; do
       monitoring=true
       ;;
     s )
-      SUFFIX=""
+      SUFFIX="$OPTARG"
       ;;
     i )
       input_survey="$OPTARG"
@@ -86,6 +86,13 @@ while getopts hcmsi:S: opt; do
       ;;
   esac
 done
+
+# Validate suffix value
+if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
+    echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
 
 export SUFFIX
 

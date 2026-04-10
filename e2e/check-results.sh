@@ -27,9 +27,9 @@ monitoring=false
 SUFFIX="noscience"
 
 usage () {
-  echo "Usage: $0 [-h] [-m]"
+  echo "Usage: $0 [-h] [-m] [-s <suffix>]"
   echo "  -m: Check monitoring is enabled"
-  echo "  -s: If not equal to 'noscience' use the science algorithms during the tests (default: noscience)"
+  echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -h: Display this help"
   echo ""
   echo " Check that the expected topics are created"
@@ -53,6 +53,13 @@ while getopts hms: opt; do
       ;;
   esac
 done
+
+# Validate suffix value
+if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
+    echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
 
 # TODO improve management of expected topics
 # for example in finkctl.yaml
