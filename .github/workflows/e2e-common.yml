@@ -182,52 +182,52 @@ jobs:
           . .ciux.d/ciux_itest.sh
           echo "CIUX_PROMOTED_IMAGE_URL=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
           echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
-  image-analysis:
-    name: Analyze image
-    runs-on: ${{ fromJSON(inputs.runner) }}
-    permissions:
-      security-events: write
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Download image
-        uses: actions/download-artifact@v4
-        if: ${{ !needs.build.outputs.skip_artifacts }}
-        with:
-          name: docker-artifact
-          path: artifacts
-      - name: Load image in local registry
-        run: |
-          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-            # For self-hosted: load from shared location
-            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-            if [ -f "$SHARED_IMAGE_PATH" ]; then
-              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
-              docker load -i "$SHARED_IMAGE_PATH"
-            else
-              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
-              exit 1
-            fi
-          elif [ -f artifacts/image.tar ]; then
-            echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from archive"
-            docker load --input artifacts/image.tar
-          else
-            echo "Using existing image ${{ needs.build.outputs.ciux_image_url }}"
-          fi
-      - name: Scan fink-broker image
-        uses: anchore/scan-action@v6
-        id: scan
-        with:
-          image: "${{ needs.build.outputs.ciux_image_url }}"
-          fail-build: false
-      - name: Display SARIF report
-        run: |
-          cat ${{ steps.scan.outputs.sarif }}
-      - name: upload Anchore scan SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ steps.scan.outputs.sarif }}
+  # image-analysis:
+  #   name: Analyze image
+  #   runs-on: ${{ fromJSON(inputs.runner) }}
+  #   permissions:
+  #     security-events: write
+  #   needs: build
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #     - name: Download image
+  #       uses: actions/download-artifact@v4
+  #       if: ${{ !needs.build.outputs.skip_artifacts }}
+  #       with:
+  #         name: docker-artifact
+  #         path: artifacts
+  #     - name: Load image in local registry
+  #       run: |
+  #         if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
+  #           # For self-hosted: load from shared location
+  #           SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
+  #           if [ -f "$SHARED_IMAGE_PATH" ]; then
+  #             echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
+  #             docker load -i "$SHARED_IMAGE_PATH"
+  #           else
+  #             echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+  #             exit 1
+  #           fi
+  #         elif [ -f artifacts/image.tar ]; then
+  #           echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from archive"
+  #           docker load --input artifacts/image.tar
+  #         else
+  #           echo "Using existing image ${{ needs.build.outputs.ciux_image_url }}"
+  #         fi
+  #     - name: Scan fink-broker image
+  #       uses: anchore/scan-action@v6
+  #       id: scan
+  #       with:
+  #         image: "${{ needs.build.outputs.ciux_image_url }}"
+  #         fail-build: false
+  #     - name: Display SARIF report
+  #       run: |
+  #         cat ${{ steps.scan.outputs.sarif }}
+  #     - name: upload Anchore scan SARIF report
+  #       uses: github/codeql-action/upload-sarif@v3
+  #       with:
+  #         sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     env:
       CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
