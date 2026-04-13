@@ -130,31 +130,39 @@ jobs:
           path: artifacts
       - name: Load container image inside kind
         run: |
-          if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
-            # For self-hosted: verify image is available in local Docker registry
-            IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
-            if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
-              echo "Image $IMAGE_URL found in local Docker registry"
-              docker images --filter reference="$IMAGE_URL"
-              cluster_name=$(ciux get clustername $PWD)
-              kind load docker-image "$IMAGE_URL" --name "$cluster_name"
-              node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-              docker exec -- $node crictl image
+          # Get CIUX_BUILD status and image URL
+          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
+          IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+
+          if [ $CIUX_BUILD = true ]; then
+            # Image was built locally - handle based on runner type
+            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+              # For self-hosted: verify image is available in local Docker registry
+              if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
+                echo "Image $IMAGE_URL found in local Docker registry"
+                docker images --filter reference="$IMAGE_URL"
+              else
+                echo "Error: image $IMAGE_URL not found in local Docker registry"
+                echo "Available images:"
+                docker images
+                exit 1
+              fi
+            elif [ -f artifacts/image.tar ]; then
+              echo "Loading image from archive"
+              docker load --input artifacts/image.tar
             else
-              echo "Error: image $IMAGE_URL not found in local Docker registry"
-              echo "Available images:"
-              docker images
+              echo "Error: no image source available, artifacts/image.tar not found"
               exit 1
             fi
-          elif [ -f artifacts/image.tar ]; then
-            echo "Loading image from archive"
-            cluster_name=$(ciux get clustername $PWD)
-            kind load image-archive artifacts/image.tar --name "$cluster_name"
-            node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-            docker exec -- $node crictl image
           else
-            echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
+            echo "Using existing remote image $IMAGE_URL"
           fi
+
+          # Load image into kind cluster
+          cluster_name=$(ciux get clustername $PWD)
+          kind load docker-image "$IMAGE_URL" --name "$cluster_name"
+          node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+          docker exec -- $node crictl image
           # - name: Setup tmate session
           # uses: mxschmitt/action-tmate@v3
           # with:
@@ -185,6 +193,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Download image
         uses: actions/download-artifact@v4
         if: ${{ !env.IS_SELF_HOSTED }}
@@ -193,23 +206,32 @@ jobs:
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
-            # For self-hosted: verify image is available in local Docker registry
-            IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
-            if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
-              echo "Image $IMAGE_URL found in local Docker registry"
-              docker images --filter reference="$IMAGE_URL"
+          # Get CIUX_BUILD status and image URL
+          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
+          IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+
+          if [ $CIUX_BUILD = true ]; then
+            # Image was built locally - handle based on runner type
+            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+              # For self-hosted: verify image is available in local Docker registry
+              if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
+                echo "Image $IMAGE_URL found in local Docker registry"
+                docker images --filter reference="$IMAGE_URL"
+              else
+                echo "Error: image $IMAGE_URL not found in local Docker registry"
+                echo "Available images:"
+                docker images
+                exit 1
+              fi
+            elif [ -f artifacts/image.tar ]; then
+              echo "Loading image $IMAGE_URL from archive"
+              docker load --input artifacts/image.tar
             else
-              echo "Error: image $IMAGE_URL not found in local Docker registry"
-              echo "Available images:"
-              docker images
+              echo "Error: no image source available, artifacts/image.tar not found"
               exit 1
             fi
-          elif [ -f artifacts/image.tar ]; then
-            echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from archive"
-            docker load --input artifacts/image.tar
           else
-            echo "Using existing image ${{ needs.build.outputs.ciux_image_url }}"
+            echo "Using existing remote image $IMAGE_URL"
           fi
       - name: Scan fink-broker image
         uses: anchore/scan-action@v6
@@ -258,11 +280,11 @@ jobs:
               echo "Loading image $CIUX_IMAGE_URL from archive"
               docker load --input artifacts/image.tar
             else
-              echo "Error: no image source available"
+              echo "Error: no image source available, artifacts/image.tar not found"
               exit 1
             fi
           else
-            echo "Using existing image $CIUX_IMAGE_URL"
+            echo "Using existing remote image $CIUX_IMAGE_URL"
           fi
       - name: Login to DockerHub
         uses: docker/login-action@v2
