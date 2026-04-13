@@ -34,6 +34,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
       ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
+      ciux_build: ${{ steps.export.outputs.CIUX_BUILD }}
       skip_artifacts: ${{ env.IS_SELF_HOSTED }}
     steps:
       - name: Checkout code
@@ -72,6 +73,7 @@ jobs:
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
           echo "skip_artifacts=${{ env.IS_SELF_HOSTED }}" >> "$GITHUB_OUTPUT"
+          echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: ${{ !env.IS_SELF_HOSTED }}
         with:
@@ -130,9 +132,8 @@ jobs:
           path: artifacts
       - name: Load container image inside kind
         run: |
-          # Get CIUX_BUILD status and image URL
-          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+          CIUX_BUILD="${{ needs.build.outputs.ciux_build }}"
 
           if [ $CIUX_BUILD = true ]; then
             # Image was built locally - handle based on runner type
@@ -193,11 +194,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '1.21.4'
-      - name: Install ciux
-        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Download image
         uses: actions/download-artifact@v4
         if: ${{ !env.IS_SELF_HOSTED }}
@@ -206,9 +202,8 @@ jobs:
           path: artifacts
       - name: Load image in local registry
         run: |
-          # Get CIUX_BUILD status and image URL
-          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+          CIUX_BUILD="${{ needs.build.outputs.ciux_build }}"
 
           if [ $CIUX_BUILD = true ]; then
             # Image was built locally - handle based on runner type
@@ -248,7 +243,7 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     env:
-      CIUX_BUILD: ${{ needs.integration-tests.outputs.ciux_build }}
+      CIUX_BUILD: ${{ needs.build.outputs.ciux_build }}
       CIUX_IMAGE_URL: ${{ needs.build.outputs.ciux_image_url }}
       CIUX_PROMOTED_IMAGE_URL: ${{ needs.integration-tests.outputs.ciux_promoted_image_url }}
     name: Push fink-broker image to IN2P3 registry
