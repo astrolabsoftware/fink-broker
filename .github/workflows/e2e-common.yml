@@ -291,7 +291,7 @@ jobs:
     name: Cleanup old Docker images
     runs-on: ${{ fromJSON(inputs.runner) }}
     needs: [build, integration-tests, image-analysis, push]
-    if: ${{ success() && env.IS_SELF_HOSTED == 'true' }}
+    if: ${{ success() && contains(fromJSON(inputs.runner), 'self-hosted') }}
     steps:
       - name: Cleanup old fink-broker images
         run: |
