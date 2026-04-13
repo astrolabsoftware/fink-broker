@@ -27,7 +27,6 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
-  IS_SELF_HOSTED: ${{ contains(fromJSON(inputs.runner), 'self-hosted') }}
 jobs:
   build:
     name: Build image
@@ -55,7 +54,7 @@ jobs:
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
-            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
               # For self-hosted: image stays in local Docker registry for reuse
               echo "Image $CIUX_IMAGE_URL built and available in local Docker registry"
               docker images --filter reference="$CIUX_IMAGE_URL"
@@ -135,7 +134,7 @@ jobs:
 
           if [ $CIUX_BUILD = true ]; then
             # Image was built locally - handle based on runner type
-            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
               # For self-hosted: verify image is available in local Docker registry
               if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
                 echo "Image $IMAGE_URL found in local Docker registry"
@@ -205,7 +204,7 @@ jobs:
 
           if [ $CIUX_BUILD = true ]; then
             # Image was built locally - handle based on runner type
-            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
               # For self-hosted: verify image is available in local Docker registry
               if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
                 echo "Image $IMAGE_URL found in local Docker registry"
@@ -257,7 +256,7 @@ jobs:
       - name: Load image in local registry
         run: |
           if [ $CIUX_BUILD = true ]; then
-            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
               # For self-hosted: verify image is available in local Docker registry
               if docker images --filter reference="$CIUX_IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$CIUX_IMAGE_URL"; then
                 echo "Image $CIUX_IMAGE_URL found in local Docker registry"
