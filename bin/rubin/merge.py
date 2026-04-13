@@ -60,27 +60,14 @@ def main():
     #     F.broadcast(df_trck.select(["candid", "tracklet"])), on="candid", how="outer"
     # )
 
-    if "local" in spark.conf.get("spark.master"):
-        # only for tests
-        df_science.withColumn(
-            "timestamp",
-            convert_to_datetime(df_science["diaSource.midpointMjdTai"], F.lit("mjd")),
-        ).withColumn("year", F.lit(args.night[0:4])).withColumn(
-            "month", F.lit(args.night[4:6])
-        ).withColumn("day", F.lit(args.night[6:8])).coalesce(npart_after).write.mode(
-            "append"
-        ).partitionBy("year", "month", "day").parquet(output_science)
-    else:
-        df_science.withColumn(
-            "timestamp",
-            convert_to_datetime(df_science["diaSource.midpointMjdTai"], F.lit("mjd")),
-        ).withColumn("year", F.year("timestamp")).withColumn(
-            "month", F.lpad(F.month("timestamp").cast("string"), 2, "0")
-        ).withColumn(
-            "day", F.lpad(F.dayofmonth("timestamp").cast("string"), 2, "0")
-        ).coalesce(npart_after).write.mode("append").partitionBy(
-            "year", "month", "day"
-        ).parquet(output_science)
+    df_science.withColumn(
+        "timestamp",
+        convert_to_datetime(df_science["diaSource.midpointMjdTai"], F.lit("mjd")),
+    ).withColumn("year", F.lit(args.night[0:4])).withColumn(
+        "month", F.lit(args.night[4:6])
+    ).withColumn("day", F.lit(args.night[6:8])).coalesce(npart_after).write.mode(
+        "append"
+    ).partitionBy("year", "month", "day").parquet(output_science)
 
 
 if __name__ == "__main__":
