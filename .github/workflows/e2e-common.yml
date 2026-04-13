@@ -35,7 +35,7 @@ jobs:
     outputs:
       ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
       ciux_build: ${{ steps.export.outputs.CIUX_BUILD }}
-      skip_artifacts: ${{ env.IS_SELF_HOSTED }}
+      skip_artifacts: ${{ contains(fromJSON(inputs.runner), 'self-hosted') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -72,10 +72,10 @@ jobs:
             echo "Using existing image $CIUX_IMAGE_URL"
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "skip_artifacts=${{ env.IS_SELF_HOSTED }}" >> "$GITHUB_OUTPUT"
+          echo "skip_artifacts=${{ contains(fromJSON(inputs.runner), 'self-hosted') }}" >> "$GITHUB_OUTPUT"
           echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: ${{ !env.IS_SELF_HOSTED }}
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         with:
           name: docker-artifact
           path: artifacts
@@ -95,7 +95,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Maximize build space
-        if: ${{ !env.IS_SELF_HOSTED }}
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         run: |
           echo "Removing unwanted software... "
           df -h
@@ -126,7 +126,7 @@ jobs:
 
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !env.IS_SELF_HOSTED }}
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         with:
           name: docker-artifact
           path: artifacts
@@ -196,7 +196,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !env.IS_SELF_HOSTED }}
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         with:
           name: docker-artifact
           path: artifacts
@@ -252,7 +252,7 @@ jobs:
     steps:
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !env.IS_SELF_HOSTED }}
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         with:
           name: docker-artifact
           path: artifacts
