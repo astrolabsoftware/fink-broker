@@ -35,7 +35,6 @@ jobs:
     outputs:
       ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
       ciux_build: ${{ steps.export.outputs.CIUX_BUILD }}
-      skip_artifacts: ${{ contains(fromJSON(inputs.runner), 'self-hosted') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -72,7 +71,6 @@ jobs:
             echo "Using existing image $CIUX_IMAGE_URL"
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "skip_artifacts=${{ contains(fromJSON(inputs.runner), 'self-hosted') }}" >> "$GITHUB_OUTPUT"
           echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
