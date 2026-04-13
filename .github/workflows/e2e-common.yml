@@ -13,11 +13,6 @@ on:
         required: false
         type: string
         default: "v0.20.0"
-      skip_artifacts:
-        description: 'Skip artifact upload/download (for self-hosted runners)'
-        required: false
-        type: boolean
-        default: false
     secrets:
       registry_username:
         required: true
@@ -32,14 +27,14 @@ env:
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
-  SHARED_IMAGE_PATH: "/tmp/fink-ci-image.tar"
+  IS_SELF_HOSTED: ${{ contains(fromJSON(inputs.runner), 'self-hosted') }}
 jobs:
   build:
     name: Build image
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
       ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
-      skip_artifacts: ${{ steps.export.outputs.skip_artifacts }}
+      skip_artifacts: ${{ env.IS_SELF_HOSTED }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,15 +55,11 @@ jobs:
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
-            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-              # For self-hosted: save image to shared location to persist between jobs
-              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-              echo "Removing existing shared image file $SHARED_IMAGE_PATH"
-              rm -f "$SHARED_IMAGE_PATH"
-              echo "Saving image $CIUX_IMAGE_URL to $SHARED_IMAGE_PATH"
-              docker save "$CIUX_IMAGE_URL" -o "$SHARED_IMAGE_PATH"
+            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+              # For self-hosted: image stays in local Docker registry for reuse
+              echo "Image $CIUX_IMAGE_URL built and available in local Docker registry"
+              docker images --filter reference="$CIUX_IMAGE_URL"
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
-              echo "SHARED_IMAGE_PATH=$SHARED_IMAGE_PATH" >> "$GITHUB_OUTPUT"
             else
               # For GitHub runners: use artifacts
               mkdir -p artifacts
@@ -80,9 +71,9 @@ jobs:
             echo "Using existing image $CIUX_IMAGE_URL"
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "skip_artifacts=${{ inputs.skip_artifacts }}" >> "$GITHUB_OUTPUT"
+          echo "skip_artifacts=${{ env.IS_SELF_HOSTED }}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: ${{ !steps.export.outputs.skip_artifacts }}
+        if: ${{ !env.IS_SELF_HOSTED }}
         with:
           name: docker-artifact
           path: artifacts
@@ -102,6 +93,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Maximize build space
+        if: ${{ !env.IS_SELF_HOSTED }}
         run: |
           echo "Removing unwanted software... "
           df -h
@@ -132,24 +124,26 @@ jobs:
 
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !needs.build.outputs.skip_artifacts }}
+        if: ${{ !env.IS_SELF_HOSTED }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load container image inside kind
         run: |
-          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-            # For self-hosted: load from shared location
-            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-            if [ -f "$SHARED_IMAGE_PATH" ]; then
-              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
-              docker load -i "$SHARED_IMAGE_PATH"
+          if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            # For self-hosted: verify image is available in local Docker registry
+            IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+            if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
+              echo "Image $IMAGE_URL found in local Docker registry"
+              docker images --filter reference="$IMAGE_URL"
               cluster_name=$(ciux get clustername $PWD)
-              kind load docker-image "${{ needs.build.outputs.ciux_image_url }}" --name "$cluster_name"
+              kind load docker-image "$IMAGE_URL" --name "$cluster_name"
               node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
               docker exec -- $node crictl image
             else
-              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              echo "Error: image $IMAGE_URL not found in local Docker registry"
+              echo "Available images:"
+              docker images
               exit 1
             fi
           elif [ -f artifacts/image.tar ]; then
@@ -193,20 +187,22 @@ jobs:
         uses: actions/checkout@v3
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !needs.build.outputs.skip_artifacts }}
+        if: ${{ !env.IS_SELF_HOSTED }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
         run: |
-          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-            # For self-hosted: load from shared location
-            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-            if [ -f "$SHARED_IMAGE_PATH" ]; then
-              echo "Loading image ${{ needs.build.outputs.ciux_image_url }} from $SHARED_IMAGE_PATH"
-              docker load -i "$SHARED_IMAGE_PATH"
+          if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+            # For self-hosted: verify image is available in local Docker registry
+            IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+            if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
+              echo "Image $IMAGE_URL found in local Docker registry"
+              docker images --filter reference="$IMAGE_URL"
             else
-              echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+              echo "Error: image $IMAGE_URL not found in local Docker registry"
+              echo "Available images:"
+              docker images
               exit 1
             fi
           elif [ -f artifacts/image.tar ]; then
@@ -239,21 +235,22 @@ jobs:
     steps:
       - name: Download image
         uses: actions/download-artifact@v4
-        if: ${{ !needs.build.outputs.skip_artifacts }}
+        if: ${{ !env.IS_SELF_HOSTED }}
         with:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
         run: |
           if [ $CIUX_BUILD = true ]; then
-            if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-              # For self-hosted: load from shared location
-              SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-              if [ -f "$SHARED_IMAGE_PATH" ]; then
-                echo "Loading image $CIUX_IMAGE_URL from $SHARED_IMAGE_PATH"
-                docker load -i "$SHARED_IMAGE_PATH"
+            if [ "${{ env.IS_SELF_HOSTED }}" = "true" ]; then
+              # For self-hosted: verify image is available in local Docker registry
+              if docker images --filter reference="$CIUX_IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$CIUX_IMAGE_URL"; then
+                echo "Image $CIUX_IMAGE_URL found in local Docker registry"
+                docker images --filter reference="$CIUX_IMAGE_URL"
               else
-                echo "Error: shared image file $SHARED_IMAGE_PATH not found"
+                echo "Error: image $CIUX_IMAGE_URL not found in local Docker registry"
+                echo "Available images:"
+                docker images
                 exit 1
               fi
             elif [ -f artifacts/image.tar ]; then
@@ -290,14 +287,38 @@ jobs:
           webhook-url: ${{ secrets.slack_webhook_url }}
           status: ${{ job.status }}
         if: always()
-      - name: Cleanup shared image file
+  cleanup:
+    name: Cleanup old Docker images
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    needs: [build, integration-tests, image-analysis, push]
+    if: ${{ success() && env.IS_SELF_HOSTED == 'true' }}
+    steps:
+      - name: Cleanup old fink-broker images
         run: |
-          if [ "${{ inputs.skip_artifacts }}" = "true" ]; then
-            SHARED_IMAGE_PATH="${{ env.SHARED_IMAGE_PATH }}"
-            if [ -f "$SHARED_IMAGE_PATH" ]; then
-              echo "Removing shared image file $SHARED_IMAGE_PATH"
-              rm -f "$SHARED_IMAGE_PATH"
+          echo "Cleaning up fink-broker images older than 5 days"
+
+          # Get current date in seconds since epoch
+          current_date=$(date +%s)
+          five_days_ago=$((current_date - 5*24*60*60))
+
+          # Find and remove fink-broker images older than 5 days
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.ID}}" | grep fink-broker | while read repo tag created id rest; do
+            # Parse the created date
+            created_seconds=$(date -d "$created" +%s 2>/dev/null || echo 0)
+
+            if [ $created_seconds -lt $five_days_ago ] && [ $created_seconds -gt 0 ]; then
+              echo "Removing old image: $repo:$tag (created: $created)"
+              docker rmi "$id" 2>/dev/null || echo "Failed to remove image $id (may be in use)"
+            else
+              echo "Keeping recent image: $repo:$tag (created: $created)"
             fi
-          fi
-        if: always()
+          done
+
+          # Clean up dangling images
+          echo "Cleaning up dangling images"
+          docker image prune -f
+
+          # Show remaining images for verification
+          echo "Remaining fink-broker images:"
+          docker images | grep fink-broker || echo "No fink-broker images found"
 
