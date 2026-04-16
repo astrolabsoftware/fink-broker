@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2019-2026 AstroLab Software
-# Author: Julien Peloton
+# Author: Julien Peloton, Massinissa MACHTER
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@
 4. Serialize into Avro
 5. Publish to Kafka Topics
 """
-
 from pyspark.sql.types import BooleanType
+import pyspark.sql.functions as F
 
 import pkgutil
 import argparse
@@ -43,6 +43,7 @@ from fink_utils.spark.utils import (
     expand_function_from_string,
     FinkUDF,
 )
+
 import fink_filters.rubin.livestream as ffrl
 from fink_broker.rubin.hbase_utils import ingest_section
 
@@ -114,37 +115,81 @@ def main():
         logger.warn(msg)
         spark.stop()
 
-    for userfilter in userfilters:
-        filter_func, colnames = expand_function_from_string(df, userfilter)
+    # Apply or not the filtering
+    if args.noscience:
+        topics = []
 
-        tag = userfilter.split(".")[-1]
-        fink_filter = FinkUDF(
-            filter_func,
-            BooleanType(),
-            tag,
-        )
-
-        # Apply or not the filtering
-        if args.noscience:
+        for userfilter in userfilters: 
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
             )
-            df_filtered = df
-        else:
+            topicname = args.substream_prefix + userfilter.split(".")[-1] + "_lsst"
+            topics.append(F.lit(topicname))
+        
+        df_with_topics = df.withColumn("topics", F.array(*topics))
+
+        df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
+    else : 
+        topic_exprs = []
+        for userfilter in userfilters: 
             logger.debug("Apply user-defined filter %s", userfilter)
-            df_filtered = df.filter(fink_filter.for_spark(*colnames))
+            
+            # build filter function expr dynamically
+            filter_func, colnames = expand_function_from_string(df, userfilter)
+            tag = userfilter.split(".")[-1] 
+            fink_filter = FinkUDF(
+                filter_func,
+                BooleanType(),
+                tag,
+            )
+            expr = fink_filter.for_spark(*colnames)
+            
+            topicname = args.substream_prefix + tag + "_lsst"
 
-        if not args.no_hbase_ingest:
-            # HBase ingestion
-            major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
+            topic_exprs.append(
+                F.when(expr, F.lit(topicname))
+            )
 
-            # Key is time_oid to perform date range search
-            cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
-            row_key_name = "_".join(cols_row_key_name)
+        # array_compact for delete NULL values in array
+        df_with_topics = df.withColumn("topics", F.array_compact(F.array(*topic_exprs)))
+
+        df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
+        
+
+    # All filters distributed to multiple kafka topics with 1 writeStream
+    if not args.no_kafka_ingest:
+        kafka_query = push_to_kafka(
+            df_filtered,
+            cnames,
+            checkpointpath_kafka + "/{}filters_lsst".format(args.substream_prefix),
+            args.tinterval,
+            kafka_cfg,
+            npart=10,
+        )
+    else:
+        logger.warning("Skipping Kafka ingestion")
+        kafka_query = FakeQuery()
+    
+    # Hbase ingestion (Hbase not support dynamic routing via column "table" + OneWriteStream)   
+    if not args.no_hbase_ingest:
+        # HBase ingestion
+        major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
+        # Key is time_oid to perform date range search
+        cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
+        row_key_name = "_".join(cols_row_key_name)
+
+        hbase_queries = []
+        
+        # Adding `df_filtred.persiste()` here might be preferable, right?
+        for userfilter in userfilters:
+            tag = userfilter.split(".")[-1]
             table_name = "{}.tag_{}".format(args.science_db_name, tag)
+            topicname = args.substream_prefix + tag + "_lsst"
+            
+            df_filtered_tag = df_filtered.filter(F.col("topic") == topicname)
 
             hbase_query = ingest_section(
-                df_filtered,
+                df_filtered_tag,
                 major_version,
                 minor_version,
                 row_key_name,
@@ -154,26 +199,12 @@ def main():
                 streaming=True,
                 checkpoint_path=checkpointpath_hbase + "/" + tag,
             )
-        else:
-            logger.warning("Skipping HBase ingestion")
-            hbase_query = FakeQuery()
+            hbase_queries.append(hbase_query)
+    else:
+        logger.warning("Skipping HBase ingestion")
+        hbase_queries = [FakeQuery()]
 
-        if not args.no_kafka_ingest:
-            # Kafka distribution
-            topicname = args.substream_prefix + tag + "_lsst"
 
-            kafka_query = push_to_kafka(
-                df_filtered,
-                topicname,
-                cnames,
-                checkpointpath_kafka,
-                args.tinterval,
-                kafka_cfg,
-                npart=10,
-            )
-        else:
-            logger.warning("Skipping Kafka ingestion")
-            kafka_query = FakeQuery()
 
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
@@ -181,7 +212,8 @@ def main():
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         kafka_query.stop()
-        hbase_query.stop()
+        for hbase_query in hbase_queries :
+            hbase_query.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         logger.debug("Wait for the end of queries")
