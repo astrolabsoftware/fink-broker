@@ -21,7 +21,7 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.7-rc1
+  CIUX_VERSION: v0.0.7-rc4
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   MONITORING_OPT: "-m"
@@ -127,36 +127,11 @@ jobs:
         with:
           name: docker-artifact
           path: artifacts
-      - name: Load container image inside kind
+      - name: Load container image
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
+      - name: Load image into kind cluster
         run: |
           IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
-          CIUX_BUILD="${{ needs.build.outputs.ciux_build }}"
-
-          if [ $CIUX_BUILD = true ]; then
-            # Image was built locally - handle based on runner type
-            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
-              # For self-hosted: verify image is available in local Docker registry
-              if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
-                echo "Image $IMAGE_URL found in local Docker registry"
-                docker images --filter reference="$IMAGE_URL"
-              else
-                echo "Error: image $IMAGE_URL not found in local Docker registry"
-                echo "Available images:"
-                docker images
-                exit 1
-              fi
-            elif [ -f artifacts/image.tar ]; then
-              echo "Loading image from archive"
-              docker load --input artifacts/image.tar
-            else
-              echo "Error: no image source available, artifacts/image.tar not found"
-              exit 1
-            fi
-          else
-            echo "Using existing remote image $IMAGE_URL"
-          fi
-
-          # Load image into kind cluster
           cluster_name=$(ciux get clustername $PWD)
           kind load docker-image "$IMAGE_URL" --name "$cluster_name"
           node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
@@ -198,33 +173,7 @@ jobs:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
-        run: |
-          IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
-          CIUX_BUILD="${{ needs.build.outputs.ciux_build }}"
-
-          if [ $CIUX_BUILD = true ]; then
-            # Image was built locally - handle based on runner type
-            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
-              # For self-hosted: verify image is available in local Docker registry
-              if docker images --filter reference="$IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$IMAGE_URL"; then
-                echo "Image $IMAGE_URL found in local Docker registry"
-                docker images --filter reference="$IMAGE_URL"
-              else
-                echo "Error: image $IMAGE_URL not found in local Docker registry"
-                echo "Available images:"
-                docker images
-                exit 1
-              fi
-            elif [ -f artifacts/image.tar ]; then
-              echo "Loading image $IMAGE_URL from archive"
-              docker load --input artifacts/image.tar
-            else
-              echo "Error: no image source available, artifacts/image.tar not found"
-              exit 1
-            fi
-          else
-            echo "Using existing remote image $IMAGE_URL"
-          fi
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
       - name: Scan fink-broker image
         uses: anchore/scan-action@v6
         id: scan
@@ -254,30 +203,7 @@ jobs:
           name: docker-artifact
           path: artifacts
       - name: Load image in local registry
-        run: |
-          if [ $CIUX_BUILD = true ]; then
-            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
-              # For self-hosted: verify image is available in local Docker registry
-              if docker images --filter reference="$CIUX_IMAGE_URL" --format "{{.Repository}}:{{.Tag}}" | grep -q "$CIUX_IMAGE_URL"; then
-                echo "Image $CIUX_IMAGE_URL found in local Docker registry"
-                docker images --filter reference="$CIUX_IMAGE_URL"
-              else
-                echo "Error: image $CIUX_IMAGE_URL not found in local Docker registry"
-                echo "Available images:"
-                docker images
-                exit 1
-              fi
-            elif [ -f artifacts/image.tar ]; then
-              # GHA setup
-              echo "Loading image $CIUX_IMAGE_URL from archive"
-              docker load --input artifacts/image.tar
-            else
-              echo "Error: no image source available, artifacts/image.tar not found"
-              exit 1
-            fi
-          else
-            echo "Using existing remote image $CIUX_IMAGE_URL"
-          fi
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "$CIUX_IMAGE_URL" --build-status "$CIUX_BUILD"
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -307,32 +233,11 @@ jobs:
     needs: [build, integration-tests, image-analysis, push]
     if: ${{ success() && contains(fromJSON(inputs.runner), 'self-hosted') }}
     steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Cleanup old fink-broker images
-        run: |
-          echo "Cleaning up fink-broker images older than 5 days"
-
-          # Get current date in seconds since epoch
-          current_date=$(date +%s)
-          five_days_ago=$((current_date - 5*24*60*60))
-
-          # Find and remove fink-broker images older than 5 days
-          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.ID}}" | grep fink-broker | while read repo tag created id rest; do
-            # Parse the created date
-            created_seconds=$(date -d "$created" +%s 2>/dev/null || echo 0)
-
-            if [ $created_seconds -lt $five_days_ago ] && [ $created_seconds -gt 0 ]; then
-              echo "Removing old image: $repo:$tag (created: $created)"
-              docker rmi "$id" 2>/dev/null || echo "Failed to remove image $id (may be in use)"
-            else
-              echo "Keeping recent image: $repo:$tag (created: $created)"
-            fi
-          done
-
-          # Clean up dangling images
-          echo "Cleaning up dangling images"
-          docker image prune -f
-
-          # Show remaining images for verification
-          echo "Remaining fink-broker images:"
-          docker images | grep fink-broker || echo "No fink-broker images found"
+        run: ciux image cleanup --pattern "fink-broker" --max-age 5d
 
