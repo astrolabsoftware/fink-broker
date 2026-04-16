@@ -21,6 +21,7 @@
 4. Serialize into Avro
 5. Publish to Kafka Topics
 """
+
 from pyspark.sql.types import BooleanType
 import pyspark.sql.functions as F
 
@@ -119,42 +120,39 @@ def main():
     if args.noscience:
         topics = []
 
-        for userfilter in userfilters: 
+        for userfilter in userfilters:
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
             )
             topicname = args.substream_prefix + userfilter.split(".")[-1] + "_lsst"
             topics.append(F.lit(topicname))
-        
+
         df_with_topics = df.withColumn("topics", F.array(*topics))
 
         df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
-    else : 
+    else:
         topic_exprs = []
-        for userfilter in userfilters: 
+        for userfilter in userfilters:
             logger.debug("Apply user-defined filter %s", userfilter)
-            
+
             # build filter function expr dynamically
             filter_func, colnames = expand_function_from_string(df, userfilter)
-            tag = userfilter.split(".")[-1] 
+            tag = userfilter.split(".")[-1]
             fink_filter = FinkUDF(
                 filter_func,
                 BooleanType(),
                 tag,
             )
             expr = fink_filter.for_spark(*colnames)
-            
+
             topicname = args.substream_prefix + tag + "_lsst"
 
-            topic_exprs.append(
-                F.when(expr, F.lit(topicname))
-            )
+            topic_exprs.append(F.when(expr, F.lit(topicname)))
 
         # array_compact for delete NULL values in array
         df_with_topics = df.withColumn("topics", F.array_compact(F.array(*topic_exprs)))
 
         df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
-        
 
     # All filters distributed to multiple kafka topics with 1 writeStream
     if not args.no_kafka_ingest:
@@ -169,8 +167,8 @@ def main():
     else:
         logger.warning("Skipping Kafka ingestion")
         kafka_query = FakeQuery()
-    
-    # Hbase ingestion (Hbase not support dynamic routing via column "table" + OneWriteStream)   
+
+    # Hbase ingestion (Hbase not support dynamic routing via column "table" + OneWriteStream)
     if not args.no_hbase_ingest:
         # HBase ingestion
         major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
@@ -179,13 +177,13 @@ def main():
         row_key_name = "_".join(cols_row_key_name)
 
         hbase_queries = []
-        
+
         # Adding `df_filtred.persiste()` here might be preferable, right?
         for userfilter in userfilters:
             tag = userfilter.split(".")[-1]
             table_name = "{}.tag_{}".format(args.science_db_name, tag)
             topicname = args.substream_prefix + tag + "_lsst"
-            
+
             df_filtered_tag = df_filtered.filter(F.col("topic") == topicname)
 
             hbase_query = ingest_section(
@@ -204,15 +202,13 @@ def main():
         logger.warning("Skipping HBase ingestion")
         hbase_queries = [FakeQuery()]
 
-
-
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
         remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         kafka_query.stop()
-        for hbase_query in hbase_queries :
+        for hbase_query in hbase_queries:
             hbase_query.stop()
         logger.info("Exiting the distribute service normally...")
     else:

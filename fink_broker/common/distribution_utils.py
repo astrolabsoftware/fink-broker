@@ -70,8 +70,7 @@ def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
     # Create a StructType column in the df for distribution.
     # The contents and schema of the df can change over time
     df_struct = df.select(
-        struct(*[c for c in df.columns if c != "topic"]).alias("struct"),
-        "topic"
+        struct(*[c for c in df.columns if c != "topic"]).alias("struct"), "topic"
     )
 
     # Convert into avro and save the schema
@@ -82,7 +81,9 @@ def get_kafka_df(df: DataFrame, key: str, elasticc: bool = False) -> DataFrame:
             "/home/julien.peloton/elasticc/alert_schema/elasticc.v0_9.brokerClassification.avsc",
             "r",
         ).read()
-        df_kafka = df_struct.select(to_avro_native("struct", jsonschema).alias("value"), "topic")
+        df_kafka = df_struct.select(
+            to_avro_native("struct", jsonschema).alias("value"), "topic"
+        )
     else:
         df_kafka = df_struct.select(to_avro("struct").alias("value"), "topic")
 
@@ -116,7 +117,7 @@ def push_to_kafka(
     -------
     out: Streaming DataFrame
     """
-    df_in = df_in.selectExpr(cnames + ["topic"] )
+    df_in = df_in.selectExpr(cnames + ["topic"])
 
     # get schema from the streaming dataframe to
     # avoid non-nullable bug #852
@@ -130,16 +131,14 @@ def push_to_kafka(
         )
 
     disquery = (
-        df_kafka.writeStream
-        .format("kafka")
+        df_kafka.writeStream.format("kafka")
         .options(**kafka_cfg)
-        .option("checkpointLocation", checkpointpath_kafka )
+        .option("checkpointLocation", checkpointpath_kafka)
         .trigger(processingTime="{} seconds".format(tinterval))
         .start()
     )
 
     return disquery
-
 
 
 if __name__ == "__main__":

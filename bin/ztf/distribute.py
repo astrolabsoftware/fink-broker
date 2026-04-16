@@ -164,11 +164,9 @@ def main():
         logger.warn(msg)
         spark.stop()
 
-    
     if args.noscience:
-
         topics = []
-        for userfilter in userfilters: 
+        for userfilter in userfilters:
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
             )
@@ -181,7 +179,7 @@ def main():
 
     else:
         topic_exprs = []
-        for userfilter in userfilters: 
+        for userfilter in userfilters:
             logger.debug("Apply user-defined filter %s", userfilter)
 
             # build filter function dynamically
@@ -189,15 +187,13 @@ def main():
 
             topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
-            topic_exprs.append(
-                F.when(filter_func(*colnames), F.lit(topicname))
-            )
+            topic_exprs.append(F.when(filter_func(*colnames), F.lit(topicname)))
         # array_compact for delete NULL in array
         df_with_topics = df.withColumn("topics", F.array_compact(F.array(*topic_exprs)))
 
         df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
 
-    # push to kafka (df_filtred) with One writeStream, using the column topic (not .option("topic",...) 
+    # push to kafka (df_filtred) with One writeStream, using the column topic (not .option("topic",...)
     disquery1 = push_to_kafka(
         df_filtered,
         cnames,
@@ -225,7 +221,7 @@ def main():
         logger.debug("Perform multi-messenger operations")
         from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
 
-        time_spent_in_wait, _  = distribute_launch_fink_mm(spark, args)
+        time_spent_in_wait, _ = distribute_launch_fink_mm(spark, args)
 
     if args.exit_after is not None:
         remaining_time = args.exit_after - time_spent_in_wait
