@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2019-2025 AstroLab Software
-# Author: Abhishek Chauhan, Julien Peloton
+# Author: Abhishek Chauhan, Julien Peloton, Massinissa MACHTER
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ from fink_broker.common.spark_utils import (
 from fink_broker.common.distribution_utils import push_to_kafka
 from fink_broker.common.logging_utils import init_logger
 from fink_utils.spark.utils import concat_col
-from fink_utils.spark.utils import apply_user_defined_filter
+from fink_utils.spark.utils import expand_function_from_string
 import fink_filters.ztf.livestream as ffzl
 
 
@@ -164,37 +164,56 @@ def main():
         logger.warn(msg)
         spark.stop()
 
-    for userfilter in userfilters:
-        if args.noscience:
+    
+    if args.noscience:
+
+        topics = []
+        for userfilter in userfilters: 
             logger.debug(
                 "Do not apply user-defined filter %s in no-science mode", userfilter
             )
-            df_tmp = df
-        else:
+
+            topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
+            topics.append(F.lit(topicname))
+        df_with_topics = df.withColumn("topics", F.array(*topics))
+
+        df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
+
+    else:
+        topic_exprs = []
+        for userfilter in userfilters: 
             logger.debug("Apply user-defined filter %s", userfilter)
-            df_tmp = apply_user_defined_filter(df, userfilter, _LOG)
 
-        # The topic name is the filter name
-        topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
+            # build filter function dynamically
+            filter_func, colnames = expand_function_from_string(df, userfilter)
 
-        # FIXME: shouldn't we collect in a list the disquery?
-        disquery = push_to_kafka(
-            df_tmp,
-            topicname,
-            cnames,
-            checkpointpath_kafka,
-            args.tinterval,
-            kafka_cfg,
-            npart=None,
-        )
+            topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
+
+            topic_exprs.append(
+                F.when(filter_func(*colnames), F.lit(topicname))
+            )
+        # array_compact for delete NULL in array
+        df_with_topics = df.withColumn("topics", F.array_compact(F.array(*topic_exprs)))
+
+        df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
+
+    # push to kafka (df_filtred) with One writeStream, using the column topic (not .option("topic",...) 
+    disquery1 = push_to_kafka(
+        df_filtered,
+        cnames,
+        checkpointpath_kafka + "/{}filters_ztf".format(args.substream_prefix),
+        args.tinterval,
+        kafka_cfg,
+        npart=None,
+    )
 
     # Special filter to count alerts
     topicname = "fink_ztf_{}".format(args.night)
-    disquery = push_to_kafka(
+    df = df.withColumn("topic", F.lit(topicname))
+    disquery2 = push_to_kafka(
         df,
-        topicname,
         ["objectId"],
-        checkpointpath_kafka,
+        checkpointpath_kafka + "/" + topicname,
         args.tinterval,
         kafka_cfg,
     )
@@ -206,17 +225,15 @@ def main():
         logger.debug("Perform multi-messenger operations")
         from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
 
-        time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
+        time_spent_in_wait, _  = distribute_launch_fink_mm(spark, args)
 
     if args.exit_after is not None:
         remaining_time = args.exit_after - time_spent_in_wait
         remaining_time = remaining_time if remaining_time > 0 else 0
         logger.debug("Keep the Streaming for %s seconds", remaining_time)
         time.sleep(remaining_time)
-        disquery.stop()
-        if stream_distrib_list:
-            for stream in stream_distrib_list:
-                stream.stop()
+        disquery1.stop()
+        disquery2.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         logger.debug("Wait for the end of queries")
