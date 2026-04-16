@@ -51,6 +51,7 @@ jobs:
       - name: Export fink-broker image
         id: export
         run: |
+          mkdir -p artifacts
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
@@ -61,13 +62,14 @@ jobs:
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
             else
               # For GitHub runners: use artifacts
-              mkdir -p artifacts
               echo "Export $CIUX_IMAGE_URL to Github artifact store"
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
               echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "Using existing image $CIUX_IMAGE_URL"
+            # Create a dummy artifact to satisfy the upload step in downstream jobs
+            touch artifacts/image.tar
             echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
           echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
