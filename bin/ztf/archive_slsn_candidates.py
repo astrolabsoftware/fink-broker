@@ -18,7 +18,6 @@
 import argparse
 import joblib
 import numpy as np
-import pandas as pd
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
@@ -40,25 +39,24 @@ from fink_science.ztf.superluminous.slsn_classifier import (
 
 import fink_science.ztf.superluminous.kernel as kern
 
+
 def ntrend_changes(cflux, csigflux, cfid):
-    """
-    Returns the number of time the light curve abruptly changed overall trend.
+    """Returns the number of time the light curve abruptly changed overall trend.
+
     (e.g. light curve was rising and abruptly goes down)
     """
-
     n = []
-    for band in np.unique(cfid): 
+    for band in np.unique(cfid):
         mask = (cfid == band) & ~np.isnan(cflux)
         x = cflux[mask]
         err = np.array(csigflux[mask], dtype=float)
-        
 
-        k=3
+        k = 3
         dx = np.diff(x)
-        sig = np.sqrt(err[:-1]**2 + err[1:]**2)
+        sig = np.sqrt(err[:-1] ** 2 + err[1:] ** 2)
         valid = np.abs(dx) > k * sig
         n_turns = np.sum(np.diff(np.sign(dx[valid])) != 0)
-        
+
         n.append(n_turns)
 
     return np.mean(n)
@@ -86,7 +84,7 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     t1 = f"Fink: <https://ztf.fink-portal.org/{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"Score: {round(row.slsn_score, 3)}"
-    
+
     cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
         row.objectId, slack_token_env=slack_token_env
     )
@@ -96,7 +94,6 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     )
 
     bands = np.array([row["fid"]] + [k["fid"] for k in row["prv_candidates"]])
-    
     mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
     bands = bands[mask_nones]
@@ -142,7 +139,6 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
 
 def main():
     """Extract probabilities from the SLSN model, and send results to Slack."""
-
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
 
@@ -160,7 +156,7 @@ def main():
         args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
     )
     df = load_parquet_files(path)
-    
+
     # Add classification
     cols = [
         "cdsxmatch",
@@ -178,7 +174,7 @@ def main():
         "tracklet",
     ]
     df = df.withColumn("classification", extract_fink_classification(*cols))
-    
+
     clf = joblib.load(kern.classifier_path)
     optimal_threshold = clf.optimal_threshold
 
@@ -202,17 +198,43 @@ def main():
 
     pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values("slsn_score", ascending=False)
-    
-    unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
 
+    unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
 
     # Aggregate photometry and apply cuts to remove common contamination
     # Should be integrated in the model in the future
-    #==================================
-    unique['cfid'] = unique.apply(lambda x: np.array([x["candidate"]["fid"]] + [k["fid"] for k in x["prv_candidates"]], dtype=float), axis=1)
-    unique['cjd'] = unique.apply(lambda x: np.array([x["candidate"]["jd"]] + [k["jd"] for k in x["prv_candidates"]], dtype=float), axis=1)
-    unique['cmagpsf'] = unique.apply(lambda x: np.array([x["candidate"]["magpsf"]] + [k["magpsf"] for k in x["prv_candidates"]], dtype=float), axis=1)
-    unique['csigmapsf'] = unique.apply(lambda x: np.array([x["candidate"]["sigmapsf"]] + [k["sigmapsf"] for k in x["prv_candidates"]], dtype=float), axis=1)
+    # ==================================
+
+    unique["cfid"] = unique.apply(
+        lambda x: np.array(
+            [x["candidate"]["fid"]] + [k["fid"] for k in x["prv_candidates"]],
+            dtype=float,
+        ),
+        axis=1,
+    )
+
+    unique["cjd"] = unique.apply(
+        lambda x: np.array(
+            [x["candidate"]["jd"]] + [k["jd"] for k in x["prv_candidates"]], dtype=float
+        ),
+        axis=1,
+    )
+
+    unique["cmagpsf"] = unique.apply(
+        lambda x: np.array(
+            [x["candidate"]["magpsf"]] + [k["magpsf"] for k in x["prv_candidates"]],
+            dtype=float,
+        ),
+        axis=1,
+    )
+
+    unique["csigmapsf"] = unique.apply(
+        lambda x: np.array(
+            [x["candidate"]["sigmapsf"]] + [k["sigmapsf"] for k in x["prv_candidates"]],
+            dtype=float,
+        ),
+        axis=1,
+    )
 
     conversion = unique[["cmagpsf", "csigmapsf"]].apply(
         lambda x: np.transpose([
@@ -223,18 +245,20 @@ def main():
 
     unique["cflux"] = conversion.apply(lambda x: x[0])
     unique["csigflux"] = conversion.apply(lambda x: x[1])
-    unique['ntrends'] = unique.apply(lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1)
+    unique["ntrends"] = unique.apply(
+        lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1
+    )
 
-    # Check that the phtometry doesn't vary abruptly too often
-    n_trends_cut = unique['ntrends']<= 2
+    # Check that the phtometry doesn"t vary abruptly too often
+    n_trends_cut = unique["ntrends"] <= 2
 
-    # Check that the object isn't too old (likely AGN or bad photometry, and if not should have been catch way before)
-    duration_cut = unique['cjd'].apply(np.ptp) < 500
+    # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
+    duration_cut = unique["cjd"].apply(np.ptp) < 500
 
     # Apply cuts
-    unique_filtered = unique[n_trends_cut &  duration_cut]
-    #==================================
-    
+    unique_filtered = unique[n_trends_cut & duration_cut]
+    # ==================================
+
     summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
         "slsn_score", ascending=False
     )
@@ -253,6 +277,7 @@ def main():
         msg_handler_slack(
             slack_data, channel, init_msg, slack_token_env=slack_token_env
         )
+
 
 if __name__ == "__main__":
     main()
