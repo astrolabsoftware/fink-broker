@@ -221,7 +221,7 @@ def main():
         logger.debug("Perform multi-messenger operations")
         from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
 
-        time_spent_in_wait, _ = distribute_launch_fink_mm(spark, args)
+        time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 
     if args.exit_after is not None:
         remaining_time = args.exit_after - time_spent_in_wait
@@ -230,6 +230,10 @@ def main():
         time.sleep(remaining_time)
         disquery1.stop()
         disquery2.stop()
+        if stream_distrib_list:
+            for stream in stream_distrib_list:
+                if stream.isActive:
+                    stream.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         logger.debug("Wait for the end of queries")
