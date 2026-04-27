@@ -37,11 +37,13 @@ from fink_science.ztf.superluminous.slsn_classifier import (
     abs_peak,
 )
 
+from fink_science.ztf.superluminous.processor import get_and_format
+
 import fink_science.ztf.superluminous.kernel as kern
 
 
-def ntrend_changes(cflux, csigflux, cfid):
-    """Returns the number of time the light curve abruptly changed overall trend.
+def ntrend_changes(cflux, csigflux, cfid, k=3):
+    """Returns the mean (per band) number of time the light curve abruptly changed overall trend.
 
     (e.g. light curve was rising and abruptly goes down)
     """
@@ -51,7 +53,6 @@ def ntrend_changes(cflux, csigflux, cfid):
         x = cflux[mask]
         err = np.array(csigflux[mask], dtype=float)
 
-        k = 3
         dx = np.diff(x)
         sig = np.sqrt(err[:-1] ** 2 + err[1:] ** 2)
         valid = np.abs(dx) > k * sig
@@ -201,59 +202,30 @@ def main():
 
     unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
 
-    # Aggregate photometry and apply cuts to remove common contamination
-    # Should be integrated in the model in the future
+    # Apply some addiotionnal cuts based on the full light curves.
+    # These cuts should later be integrated directly to the model.
     # ==================================
 
-    unique["cfid"] = unique.apply(
-        lambda x: np.array(
-            [x["candidate"]["fid"]] + [k["fid"] for k in x["prv_candidates"]],
-            dtype=float,
-        ),
-        axis=1,
-    )
+    unique_lcs = get_and_format(list(unique["objectId"]))
 
-    unique["cjd"] = unique.apply(
-        lambda x: np.array(
-            [x["candidate"]["jd"]] + [k["jd"] for k in x["prv_candidates"]], dtype=float
-        ),
-        axis=1,
-    )
-
-    unique["cmagpsf"] = unique.apply(
-        lambda x: np.array(
-            [x["candidate"]["magpsf"]] + [k["magpsf"] for k in x["prv_candidates"]],
-            dtype=float,
-        ),
-        axis=1,
-    )
-
-    unique["csigmapsf"] = unique.apply(
-        lambda x: np.array(
-            [x["candidate"]["sigmapsf"]] + [k["sigmapsf"] for k in x["prv_candidates"]],
-            dtype=float,
-        ),
-        axis=1,
-    )
-
-    conversion = unique[["cmagpsf", "csigmapsf"]].apply(
+    conversion = unique_lcs[["cmagpsf", "csigmapsf"]].apply(
         lambda x: np.transpose([
             mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])
         ]),
         axis=1,
     )
 
-    unique["cflux"] = conversion.apply(lambda x: x[0])
-    unique["csigflux"] = conversion.apply(lambda x: x[1])
-    unique["ntrends"] = unique.apply(
+    unique_lcs["cflux"] = conversion.apply(lambda x: x[0])
+    unique_lcs["csigflux"] = conversion.apply(lambda x: x[1])
+    unique_lcs["ntrends"] = unique_lcs.apply(
         lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1
     )
 
     # Check that the phtometry doesn"t vary abruptly too often
-    n_trends_cut = unique["ntrends"] <= 2
+    n_trends_cut = unique_lcs["ntrends"] <= 2
 
     # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
-    duration_cut = unique["cjd"].apply(np.ptp) < 500
+    duration_cut = unique_lcs["cjd"].apply(np.ptp) < 500
 
     # Apply cuts
     unique_filtered = unique[n_trends_cut & duration_cut]
