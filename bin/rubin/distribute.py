@@ -162,7 +162,7 @@ def main():
             checkpointpath_kafka + "/{}filters_lsst".format(args.substream_prefix),
             args.tinterval,
             kafka_cfg,
-            npart=None,
+            npart=10,
         )
     else:
         logger.warning("Skipping Kafka ingestion")
