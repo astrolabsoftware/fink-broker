@@ -33,6 +33,10 @@ jobs:
         env
     - uses: actions/checkout@v4
 
+    - name: Link GITHUB_WORKSPACE to Fink Workspace
+      run: |
+        ln -s ${{ github.workspace }} /workspace/fink-broker
+
     - name: Download simulator
       run: |
         pwd
@@ -40,20 +44,8 @@ jobs:
     - name: Download schemas
       run: |
         git clone --depth 1 --branch v0.0.3 https://github.com/astrolabsoftware/fink-alert-schemas.git
-
         # for the test suite
         cp -r fink-alert-schemas/datasim .
-    - name: Set up env
-      run: |
-        export FINK_HOME=$GITHUB_WORKSPACE
-        export FINK_ALERT_SIMULATOR=${FINK_HOME}/fink-alert-simulator/rootfs/fink
-        echo "FINK_HOME=$FINK_HOME" >> $GITHUB_ENV
-        echo "FINK_ALERT_SIMULATOR=$FINK_ALERT_SIMULATOR" >> $GITHUB_ENV
-        echo "FINK_SCHEMA=${FINK_HOME}/fink-alert-schemas" >> $GITHUB_ENV
-        echo "PYTHONPATH=${FINK_HOME}:${FINK_ALERT_SIMULATOR}:${PYTHONPATH}" >> $GITHUB_ENV
-        # TODO test if needed
-        echo "KAFKA_OPTS=-Djava.net.preferIPv4Stack=True" >> $GITHUB_ENV
-        echo "${FINK_HOME}/bin:${FINK_ALERT_SIMULATOR}/bin" >> $GITHUB_PATH
     - name: Check env
       run: |
         echo "PATH: $PATH"
