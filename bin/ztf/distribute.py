@@ -200,7 +200,7 @@ def main():
         checkpointpath_kafka + "/{}filters_ztf".format(args.substream_prefix),
         args.tinterval,
         kafka_cfg,
-        npart=None,
+        npart=10,
     )
 
     # Special filter to count alerts
