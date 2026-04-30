@@ -222,10 +222,10 @@ def main():
     )
 
     # Check that the phtometry doesn"t vary abruptly too often
-    n_trends_cut = unique_lcs["ntrends"] <= 2
+    n_trends_cut = np.array(unique_lcs["ntrends"] <= 2)
 
     # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
-    duration_cut = unique_lcs["cjd"].apply(np.ptp) < 500
+    duration_cut = np.array(unique_lcs["cjd"].apply(np.ptp) < 500)
 
     # Apply cuts
     unique_filtered = unique[n_trends_cut & duration_cut]
