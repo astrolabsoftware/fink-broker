@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2025 AstroLab Software
+# Copyright 2025-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ import numpy as np
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
+from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
 from fink_utils.photometry.conversion import mag2fluxcal_snana
 
@@ -202,7 +203,7 @@ def main():
 
     unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
 
-    # Apply some addiotionnal cuts based on the full light curves.
+    # Apply some additional cuts based on the full light curves.
     # These cuts should later be integrated directly to the model.
     # ==================================
 
@@ -236,7 +237,9 @@ def main():
     )
     summary = summary.reset_index(drop=True)
 
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique_filtered(pdf.objectId))} unique objects).\n\n{summary}"
+    unique_oids = np.unique_filtered(pdf.objectId)
+
+    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(unique_oids)} unique objects).\n\n{summary}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
@@ -248,6 +251,30 @@ def main():
 
         msg_handler_slack(
             slack_data, channel, init_msg, slack_token_env=slack_token_env
+        )
+
+    # Send to HBase
+    # Need to recompute a Spark DF because there are cuts applied later on Pandas DF
+    if len(unique_oids) > 0:
+        df_hbase = df.filter(df["objectId"].isin(unique_oids))
+
+        # Drop images
+        df_hbase = (
+            df_hbase
+            .drop("cutoutScience")
+            .drop("cutoutTemplate")
+            .drop("cutoutDifference")
+        )
+
+        # Row key
+        row_key_name = "jd_objectId"
+
+        # push data to HBase
+        push_full_df_to_hbase(
+            df_hbase,
+            row_key_name=row_key_name,
+            table_name=args.science_db_name + ".slsn",
+            catalog_name=args.science_db_catalogs,
         )
 
 
