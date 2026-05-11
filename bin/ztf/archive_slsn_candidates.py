@@ -238,7 +238,9 @@ def main():
     )
     summary = summary.reset_index(drop=True)
 
-    init_msg = f"Number of unique candidates for the night {len(unique_oids)}.\n\n{summary}"
+    init_msg = (
+        f"Number of unique candidates for the night {len(unique_oids)}.\n\n{summary}"
+    )
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
