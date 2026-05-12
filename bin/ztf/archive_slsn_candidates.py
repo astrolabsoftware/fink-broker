@@ -230,6 +230,7 @@ def main():
 
     # Apply cuts
     unique_filtered = unique[n_trends_cut & duration_cut]
+    unique_oids = unique_filtered.objectId
     # ==================================
 
     summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
@@ -237,9 +238,9 @@ def main():
     )
     summary = summary.reset_index(drop=True)
 
-    unique_oids = np.unique_filtered(pdf.objectId)
-
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(unique_oids)} unique objects).\n\n{summary}"
+    init_msg = (
+        f"Number of unique candidates for the night {len(unique_oids)}.\n\n{summary}"
+    )
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
