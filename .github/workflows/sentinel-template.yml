@@ -36,7 +36,7 @@ jobs:
     - name: Link GITHUB_WORKSPACE to Fink Workspace
       run: |
         mkdir -p /workspace
-        ln -s ${{ github.workspace }} /workspace/fink-broker
+        ln -s $GITHUB_WORKSPACE /workspace/fink-broker
 
     - name: Download simulator
       run: |
