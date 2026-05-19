@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2025 AstroLab Software
+# Copyright 2025-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,9 @@ import numpy as np
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
+from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
+
+from fink_utils.photometry.conversion import mag2fluxcal_snana
 
 from fink_filters.ztf.classification import extract_fink_classification
 from fink_filters.ztf.filter_anomaly_notification.filter_utils import msg_handler_slack
@@ -35,7 +38,30 @@ from fink_science.ztf.superluminous.slsn_classifier import (
     abs_peak,
 )
 
+from fink_science.ztf.superluminous.processor import get_and_format
+
 import fink_science.ztf.superluminous.kernel as kern
+
+
+def ntrend_changes(cflux, csigflux, cfid, k=3):
+    """Returns the mean (per band) number of time the light curve abruptly changed overall trend.
+
+    (e.g. light curve was rising and abruptly goes down)
+    """
+    n = []
+    for band in np.unique(cfid):
+        mask = (cfid == band) & ~np.isnan(cflux)
+        x = cflux[mask]
+        err = np.array(csigflux[mask], dtype=float)
+
+        dx = np.diff(x)
+        sig = np.sqrt(err[:-1] ** 2 + err[1:] ** 2)
+        valid = np.abs(dx) > k * sig
+        n_turns = np.sum(np.diff(np.sign(dx[valid])) != 0)
+
+        n.append(n_turns)
+
+    return np.mean(n)
 
 
 def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> None:
@@ -70,7 +96,6 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     )
 
     bands = np.array([row["fid"]] + [k["fid"] for k in row["prv_candidates"]])
-
     mask_nones = [type(k) is float for k in magnitudes]
     magnitudes = magnitudes[mask_nones]
     bands = bands[mask_nones]
@@ -127,7 +152,7 @@ def main():
 
     # debug statements
     inspect_application(logger)
-
+    ""
     # Connect to the aggregated science database
     path = "{}/science/year={}/month={}/day={}".format(
         args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
@@ -168,18 +193,54 @@ def main():
         "candidate.jd",
         "candidate.fid",
         "candidate.magpsf",
+        "candidate.sigmapsf",
         "prv_candidates",
         "tns",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
     pdf = pdf.sort_values("slsn_score", ascending=False)
+
     unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
-    summary = (unique[["objectId", "slsn_score"]]).sort_values(
+
+    # Apply some additional cuts based on the full light curves.
+    # These cuts should later be integrated directly to the model.
+    # ==================================
+
+    unique_lcs = get_and_format(list(unique["objectId"]))
+
+    conversion = unique_lcs[["cmagpsf", "csigmapsf"]].apply(
+        lambda x: np.transpose([
+            mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])
+        ]),
+        axis=1,
+    )
+
+    unique_lcs["cflux"] = conversion.apply(lambda x: x[0])
+    unique_lcs["csigflux"] = conversion.apply(lambda x: x[1])
+    unique_lcs["ntrends"] = unique_lcs.apply(
+        lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1
+    )
+
+    # Check that the phtometry doesn"t vary abruptly too often
+    n_trends_cut = np.array(unique_lcs["ntrends"] <= 2)
+
+    # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
+    duration_cut = np.array(unique_lcs["cjd"].apply(np.ptp) < 500)
+
+    # Apply cuts
+    unique_filtered = unique[n_trends_cut & duration_cut]
+    unique_oids = unique_filtered.objectId
+    # ==================================
+
+    summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
         "slsn_score", ascending=False
     )
     summary = summary.reset_index(drop=True)
-    init_msg = f"Number of candidates for the night {args.night}: {len(pdf)} ({len(np.unique(pdf.objectId))} unique objects).\n\n{summary}"
+
+    init_msg = (
+        f"Number of unique candidates for the night {len(unique_oids)}.\n\n{summary}"
+    )
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
@@ -191,6 +252,30 @@ def main():
 
         msg_handler_slack(
             slack_data, channel, init_msg, slack_token_env=slack_token_env
+        )
+
+    # Send to HBase
+    # Need to recompute a Spark DF because there are cuts applied later on Pandas DF
+    if len(unique_oids) > 0:
+        df_hbase = df.filter(df["objectId"].isin(unique_oids))
+
+        # Drop images
+        df_hbase = (
+            df_hbase
+            .drop("cutoutScience")
+            .drop("cutoutTemplate")
+            .drop("cutoutDifference")
+        )
+
+        # Row key
+        row_key_name = "jd_objectId"
+
+        # push data to HBase
+        push_full_df_to_hbase(
+            df_hbase,
+            row_key_name=row_key_name,
+            table_name=args.science_db_name + ".slsn",
+            catalog_name=args.science_db_catalogs,
         )
 
 
