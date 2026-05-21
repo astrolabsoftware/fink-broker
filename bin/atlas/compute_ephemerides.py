@@ -22,7 +22,7 @@ from fink_broker.common.spark_utils import init_sparksession
 from fink_utils.sso.ephem import extract_ztf_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
-SSO_FILE = "sso_atlas_lc_aggregated_v3_{}.parquet"
+SSO_FILE = "atlas-sscat.v3.0_x_ztf.202512_{}_with_ephems.parquet"
 
 
 def read_and_add_ephem(df, npart, limit, logger):
@@ -56,7 +56,13 @@ def read_and_add_ephem(df, npart, limit, logger):
     df = df.withColumn(
         col_,
         extract_ztf_ephemerides_from_miriade(
-            "name", "cjd_obs", "obscode", F.lit(0.0), F.expr("uuid()"), F.lit("ephemcc")
+            "name",
+            "cjd_obs",
+            "obscode",
+            F.lit(0.0),
+            F.expr("uuid()"),
+            F.lit("ephemcc"),
+            F.lit("ephemcc-photom.xml"),
         ),
     )
     df_expanded = expand_columns(df, col_to_expand=col_)
@@ -78,7 +84,7 @@ def main():
     parser.add_argument(
         "-path",
         type=str,
-        default="sso_aggregated_ATLAS_v3_only_ztf_objects_T05",
+        default="atlas-sscat.v3.0_x_ztf.202512_T05.parquet",
         help="""
         Path to ATLAS or ATLAS x ZTF data on HDFS.
         """,
