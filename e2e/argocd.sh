@@ -31,7 +31,7 @@ while getopts hmS:s: c ; do
         h) usage ; exit 0 ;;
         m) monitoring="true" ;;
         S) storage="$OPTARG" ;;
-        s) SUFFIX="$OPTARG" ;;
+        s) SUFFIX="${OPTARG:-noscience}" ;;
         \?) usage ; exit 2 ;;
     esac
 done
