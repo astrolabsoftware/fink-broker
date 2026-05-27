@@ -61,23 +61,20 @@ e2e_enabled="true"
 export ARGOCD_OPTS="--core --namespace $NS"
 kubectl config set-context --current --namespace="$NS"
 
-if [ "$storage" == "s3" ]; then
-    hdfs_enabled="false"
-    s3_enabled="true"
-    online_data_prefix=""
-elif [ "$storage" == "hdfs" ]; then
-    hdfs_enabled="true"
-    s3_enabled="false"
-    online_data_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
-fi
+echo "Use fink-broker image: $CIUX_IMAGE_URL"
+ci_values_file="values-ci-${SUFFIX}.yaml"
 
-# Create fink app (Note: --core is implicit via ARGOCD_OPTS)
+# Create fink app-of-apps with all configuration (Note: --core is implicit via ARGOCD_OPTS)
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    -p s3.enabled="$s3_enabled" \
-    -p hdfs.enabled="$hdfs_enabled" \
+    --values "$ci_values_file" \
+    -p storage="$storage" \
+    -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
+    -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
+    -p finkBroker.monitoring.enabled="$monitoring" \
+    -p finkAlertSimulator.image.tag="$FINK_ALERT_SIMULATOR_VERSION" \
     -p spec.source.targetRevision.default="$FINK_CD_WORKBRANCH" \
     -p spec.source.targetRevision.finkbroker="$FINK_BROKER_WORKBRANCH" \
     -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
@@ -85,22 +82,6 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
 
 # Sync fink app-of-apps
 argocd app sync fink
-
-# Set fink-broker parameters
-echo "Use fink-broker image: $CIUX_IMAGE_URL"
-[[ "$CIUX_IMAGE_URL" =~ "-noscience" ]] && valueFile=values-ci-noscience.yaml || valueFile=values-ci-science.yaml
-
-argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
-    --values "$valueFile" \
-    -p e2e.enabled="$e2e_enabled" \
-    -p monitoring.enabled="$monitoring" \
-    -p image.tag="$CIUX_IMAGE_TAG" \
-    -p log_level="DEBUG" \
-    -p night="20200101" \
-    -p online_data_prefix="$online_data_prefix" \
-    -p storage="$storage"
-
-argocd app set fink-alert-simulator -p image.tag="$FINK_ALERT_SIMULATOR_VERSION"
 
 # --- OPERATORS SYNC (Fix for previous RPC issue) ---
 # Using --core eliminates 'connection refused' error on 127.0.0.1
