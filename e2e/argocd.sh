@@ -8,6 +8,7 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 SUFFIX="noscience"
 
+cc="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
@@ -19,6 +20,7 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
+  -c            Deploy with CC-IN2P3 setup (uses values-cc.yaml)
   -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
   -S <storage>  Storage to use (hdfs or minio)
 EOD
@@ -26,9 +28,10 @@ EOD
 
 # Get the options
 # -s has no effect in GIHUB_ACTION mode
-while getopts hmS:s: c ; do
+while getopts hcmS:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
+        c) cc="true" ;;
         m) monitoring="true" ;;
         S) storage="$OPTARG" ;;
         s) SUFFIX="${OPTARG:-science}" ;;
@@ -53,7 +56,14 @@ fi
 . "$DIR/../.ciux.d/ciux_itest.sh"
 
 NS=argocd
-e2e_enabled="true"
+
+if [ "$cc" == "true" ]; then
+    ci_values_file="values-cc.yaml"
+    e2e_enabled="false"
+else
+    ci_values_file="values-ci-${SUFFIX}.yaml"
+    e2e_enabled="true"
+fi
 
 # --- CONFIGURATION WITHOUT TUNNEL ---
 # Force the use of local K8s context.
@@ -62,7 +72,6 @@ export ARGOCD_OPTS="--core --namespace $NS"
 kubectl config set-context --current --namespace="$NS"
 
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
-ci_values_file="values-ci-${SUFFIX}.yaml"
 
 # Create fink app-of-apps with all configuration (Note: --core is implicit via ARGOCD_OPTS)
 argocd app create fink --dest-server https://kubernetes.default.svc \
