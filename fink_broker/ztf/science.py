@@ -161,6 +161,7 @@ def apply_all_xmatch(df, tns_raw_output):
             df[ra],
             df[dec],
             F.lit("gcvs"),
+            F.lit(1.5),
         ),
     )
 
