@@ -263,7 +263,7 @@ def main():
 
         init_msg = f"Number of unique candidates for the night {args.night}: {len(unique_oids)}.\n\n{summary}"
     else:
-        init_msg = "No candidates found for the night {args.night}"
+        init_msg = f"No candidates found for the night {args.night}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
