@@ -257,7 +257,7 @@ def main():
     # Send to HBase
     # Need to recompute a Spark DF because there are cuts applied later on Pandas DF
     if len(unique_oids) > 0:
-        df_hbase = df.filter(df["objectId"].isin(unique_oids))
+        df_hbase = df.filter(df["objectId"].isin(unique_oids.to_list()))
 
         # Drop images
         df_hbase = (
