@@ -88,6 +88,7 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
             F.lit(15.0),
             F.expr("uuid()"),
             F.lit("ephemcc"),
+            F.lit("ephemcc-photom.xml"),
         ),
     )
     df_expanded = expand_columns(df_new, col_to_expand=col_)
