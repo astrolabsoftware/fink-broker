@@ -54,7 +54,10 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     -------
     out: Spark DataFrame
     """
-    if month is None:
+    if (year is None) and (month is None):
+        logger.info("Aggregating ALL data")
+        df_new = aggregate_ztf_sso_data(prefix_path=prefix_path)
+    elif (year is not None) and (month is None):
         logger.info("Aggregating data from {}".format(year))
         current_year = datetime.datetime.now().year
         df_new = aggregate_ztf_sso_data(
@@ -62,7 +65,7 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
             stop_previous_month=(year == current_year),
             prefix_path=prefix_path,
         )
-    else:
+    elif (year is not None) and (month is not None):
         logger.info("Aggregating data from {}{}".format(year, month))
         df_new = aggregate_ztf_sso_data(year=year, month=month, prefix_path=prefix_path)
 
@@ -74,10 +77,6 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     df_new = df_new.repartition(npart).cache()
     logger.info("{} objects".format(df_new.count()))
 
-    if month is None:
-        logger.info("Aggregating ephemerides from {}".format(year))
-    else:
-        logger.info("Aggregating ephemerides from {}{}".format(year, month))
     col_ = "ephem"
     df_new = df_new.withColumn(
         col_,
