@@ -153,7 +153,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
         is_data = path_exist(path)
 
     if is_ephem:
-        logger.warnCing("{} found on HDFS. Skipping the computation".format(filename))
+        logger.warning("{} found on HDFS. Skipping the computation".format(filename))
 
     if not is_data:
         logger.warning("No data found for {}. Skipping...".format(path))
@@ -209,44 +209,13 @@ def main():
 
     if args.mode == "all":
         years = range(2019, datetime.datetime.now().year + 1)
-        is_starting = True
-        for year in years:
-            logger.info("Processing data from {}".format(year))
+        logger.info("Processing data from {} to {}".format(years[0], years[-1]))
 
-            # Skip computation if necessary
-            is_ephem, is_data = make_checks(args.prefix_path, year=year, logger=logger)
-            if is_ephem:
-                is_starting = False
-                continue
-            if not is_data:
-                continue
+        df_new = aggregate_and_add_ephem(
+            None, None, nparts, args.prefix_path, args.limit, logger
+        )
 
-            if is_starting:
-                logger.info("Initialising data from {}".format(year))
-                # initialisation
-                df = aggregate_and_add_ephem(
-                    year, None, nparts, args.prefix_path, args.limit, logger
-                )
-
-                df.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
-                is_starting = False
-                continue
-
-            df_new = aggregate_and_add_ephem(
-                year, None, nparts, args.prefix_path, args.limit, logger
-            )
-
-            logger.info("Loading previous data...")
-            df_prev = spark.read.format("parquet").load(SSO_FILE.format(year - 1, ""))
-
-            logger.info("Joining previous and new data...")
-            assert sorted(df_prev.columns) == sorted(df_new.columns), (
-                df_prev.columns,
-                df_new.columns,
-            )
-            df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
-
-            df_join.write.mode("overwrite").parquet(SSO_FILE.format(year, ""))
+        df_new.write.mode("overwrite").parquet(SSO_FILE.format(years[-1], ""))
     elif args.mode == "last_month":
         # get last month coordinates
         lm = retrieve_last_date_of_previous_month(datetime.datetime.now())
