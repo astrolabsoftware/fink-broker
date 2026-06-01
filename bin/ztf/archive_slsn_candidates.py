@@ -139,6 +139,58 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
         )
 
 
+def apply_cuts(unique):
+    """Apply some additional cuts based on the full light curves.
+
+    Notes
+    -----
+    These cuts should later be integrated directly to the model.
+
+    Parameters
+    ----------
+    unique: pd.DataFrame
+        DataFrame containing data for SLSN (unique objectIds)
+
+    Returns
+    -------
+    unique_oids: pd.Series
+        Series of objectIds
+    summary: pd.DataFrame
+        DataFrame with objectId and score to be printed on Slack
+    """
+    unique_lcs = get_and_format(list(unique["objectId"]))
+
+    conversion = unique_lcs[["cmagpsf", "csigmapsf"]].apply(
+        lambda x: np.transpose([
+            mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])
+        ]),
+        axis=1,
+    )
+
+    unique_lcs["cflux"] = conversion.apply(lambda x: x[0])
+    unique_lcs["csigflux"] = conversion.apply(lambda x: x[1])
+    unique_lcs["ntrends"] = unique_lcs.apply(
+        lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1
+    )
+
+    # Check that the phtometry doesn"t vary abruptly too often
+    n_trends_cut = np.array(unique_lcs["ntrends"] <= 2)
+
+    # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
+    duration_cut = np.array(unique_lcs["cjd"].apply(np.ptp) < 500)
+
+    # Apply cuts
+    unique_filtered = unique[n_trends_cut & duration_cut]
+    unique_oids = unique_filtered.objectId
+
+    summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
+        "slsn_score", ascending=False
+    )
+    summary = summary.reset_index(drop=True)
+
+    return unique_oids, summary
+
+
 def main():
     """Extract probabilities from the SLSN model, and send results to Slack."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -199,48 +251,19 @@ def main():
     ]
 
     pdf = df_filt.select(cols_).toPandas()
-    pdf = pdf.sort_values("slsn_score", ascending=False)
 
-    unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
+    if not pdf.empty:
+        pdf = pdf.sort_values("slsn_score", ascending=False)
 
-    # Apply some additional cuts based on the full light curves.
-    # These cuts should later be integrated directly to the model.
-    # ==================================
+        unique = pdf.loc[pdf.groupby("objectId")["ndethist"].idxmax()]
 
-    unique_lcs = get_and_format(list(unique["objectId"]))
+        # Apply some additional cuts based on the full light curves.
+        # These cuts should later be integrated directly to the model.
+        unique_oids, summary = apply_cuts(unique)
 
-    conversion = unique_lcs[["cmagpsf", "csigmapsf"]].apply(
-        lambda x: np.transpose([
-            mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])
-        ]),
-        axis=1,
-    )
-
-    unique_lcs["cflux"] = conversion.apply(lambda x: x[0])
-    unique_lcs["csigflux"] = conversion.apply(lambda x: x[1])
-    unique_lcs["ntrends"] = unique_lcs.apply(
-        lambda x: ntrend_changes(x["cflux"], x["csigflux"], x["cfid"]), axis=1
-    )
-
-    # Check that the phtometry doesn"t vary abruptly too often
-    n_trends_cut = np.array(unique_lcs["ntrends"] <= 2)
-
-    # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
-    duration_cut = np.array(unique_lcs["cjd"].apply(np.ptp) < 500)
-
-    # Apply cuts
-    unique_filtered = unique[n_trends_cut & duration_cut]
-    unique_oids = unique_filtered.objectId
-    # ==================================
-
-    summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
-        "slsn_score", ascending=False
-    )
-    summary = summary.reset_index(drop=True)
-
-    init_msg = (
-        f"Number of unique candidates for the night {len(unique_oids)}.\n\n{summary}"
-    )
+        init_msg = f"Number of unique candidates for the night {args.night}: {len(unique_oids)}.\n\n{summary}"
+    else:
+        init_msg = f"No candidates found for the night {args.night}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
     channels = ["#bot_slsn", "#slsn-candidates", "#slsn-candidates"]
@@ -256,8 +279,8 @@ def main():
 
     # Send to HBase
     # Need to recompute a Spark DF because there are cuts applied later on Pandas DF
-    if len(unique_oids) > 0:
-        df_hbase = df.filter(df["objectId"].isin(unique_oids))
+    if not pdf.empty:
+        df_hbase = df.filter(df["objectId"].isin(unique_oids.to_list()))
 
         # Drop images
         df_hbase = (
