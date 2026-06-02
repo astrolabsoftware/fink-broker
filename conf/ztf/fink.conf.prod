@@ -51,8 +51,8 @@ ${FINK_HOME}/libs/hbase-spark-protocol-shaded-hbase2.3.0_spark3.4.1_scala2.12.0_
 # where micro-batches will be generated as soon as the previous
 # micro-batch has completed processing.
 # Note that this timing is also used for updating the dashboard.
-FINK_TRIGGER_UPDATE=10
-MAX_OFFSETS_PER_TRIGGER=5000
+FINK_TRIGGER_UPDATE=300
+MAX_OFFSETS_PER_TRIGGER=10000
 
 # Alert schema
 # Full path to schema to decode the alerts
