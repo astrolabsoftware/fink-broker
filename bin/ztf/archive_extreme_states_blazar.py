@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2025 AstroLab Software
+# Copyright 2025-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ def send_to_telegram(pdf, channel):
             )
 
             text = """
-*Object ID*: [{}](https://fink-portal.org/{})
+*Object ID*: [{}](https://ztf.fink-portal.org/{})
             """.format(
                 alert["objectId"],
                 alert["objectId"],
