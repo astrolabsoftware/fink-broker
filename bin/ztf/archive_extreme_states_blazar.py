@@ -15,82 +15,39 @@
 # limitations under the License.
 """Run the blazar filters, and push data to HBase and Telegram."""
 
-from pyspark.sql import functions as F
+import pyspark.sql.functions as F
 
 import logging
 import argparse
-import os
 
-import numpy as np
-from astropy.time import Time
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.ztf.hbase_utils import push_full_df_to_hbase
 
-from fink_filters.ztf.filter_blazar_low_state.filter import low_state_filter
-from fink_filters.ztf.filter_blazar_new_low_state.filter import new_low_state_filter
 
 from fink_science.ztf.standardized_flux.processor import standardized_flux
 
 from fink_utils.spark.utils import concat_col
-from fink_utils.tg_bot.utils import send_simple_text_tg
-from fink_utils.tg_bot.utils import get_curve
-from fink_utils.tg_bot.utils import msg_handler_tg
+from fink_utils.spark.utils import apply_user_defined_filter
 
 _LOG = logging.getLogger(__name__)
 
 
-def send_to_telegram(pdf, channel):
-    """Send candidates to TG channel
+def get_std_flux(df):
+    """Get standardized flux
 
     Parameters
     ----------
-    pdf: pd.DataFrame
-        Pandas DataFrame with Fink data
-    channel: str
-        TG channel name to send candidates to. Must exist.
+    df: Spark DataFrame
+        Input alert DataFrame
+
+    Returns
+    -------
+    out: Spark DataFrame
+        Input DataFrame with a new nested column `container`.
     """
-    # Loop over matches & send to Telegram
-    if ("FINK_TG_TOKEN" in os.environ) and os.environ["FINK_TG_TOKEN"] != "":
-        payloads = []
-        for _, alert in pdf.iterrows():
-            threshold = alert["flux"][-1] / alert["m2"]
-            curve_png = get_curve(
-                jd=alert["cjd"],
-                magpsf=alert["flux"],
-                sigmapsf=alert["sigma"],
-                diffmaglim=np.array([None] * len(alert["flux"])),
-                fid=alert["cfid"],
-                objectId=alert["objectId"],
-                origin="fields",
-                ylabel="Standardized flux",
-                title="{} - {}".format(
-                    alert["objectId"], Time(alert["cjd"][-1], format="jd").iso
-                ),
-                invert_yaxis=False,
-                hline={"y": threshold, "y_label": "Fq"},
-            )
-
-            text = """
-*Object ID*: [{}](https://ztf.fink-portal.org/{})
-            """.format(
-                alert["objectId"],
-                alert["objectId"],
-            )
-
-            payloads.append((text, None, curve_png))
-
-        if len(payloads) > 0:
-            # Send to tg
-            msg_handler_tg(payloads, channel_id=channel, init_msg="")
-    else:
-        print("Telegram token FINK_TG_TOKEN is not set")
-
-
-def get_std_flux(df):
-    """ """
     # Retrieve time-series information
     to_expand = [
         "jd",
@@ -148,47 +105,29 @@ def main():
     # Drop partitioning columns
     df = df.drop("year").drop("month").drop("day")
 
-    # Filter for low states in general (incl. new ones)
-    df_new_low_state = df.filter(
-        new_low_state_filter("blazar_stats.m0", "blazar_stats.m1", "blazar_stats.m2")
-    )
-
-    # Recompute std flux for plots
-    df_new_low_state = get_std_flux(df_new_low_state)
-
-    # Telegram -- send only new low states
-    args_filter = [
-        "objectId",
-        "cjd",
-        F.col("container").getItem("flux").alias("flux"),
-        F.col("container").getItem("sigma").alias("sigma"),
-        "cfid",
-        "blazar_stats.m2",
-    ]
-    pdf = df_new_low_state.select(args_filter).toPandas()
-    pdf["flux"] = pdf["flux"].apply(lambda x: np.array(x))
-    pdf["sigma"] = pdf["sigma"].apply(lambda x: np.array(x))
-    pdf["cjd"] = pdf["cjd"].apply(lambda x: np.array(x))
-    pdf["cfid"] = pdf["cfid"].apply(lambda x: np.array(x))
-
-    if not pdf.empty:
-        _LOG.info("{} source(s) passing in low state")
-        send_to_telegram(pdf, channel="@fink_blazar_new_low_states")
-    else:
-        send_simple_text_tg(
-            "No matches for {}".format(args.night),
-            channel_id="@fink_blazar_new_low_states",
-        )
-
     # HBase -- Filter for low states in general (incl. new ones)
     # Drop images
     df = df.drop("cutoutScience").drop("cutoutTemplate").drop("cutoutDifference")
-    df_low_state = df.filter(
-        low_state_filter("blazar_stats.m1", "blazar_stats.m2")
-    ).cache()
 
+    # Extract columns from the blazar module
+    df = df.withColumn(
+        "instantness_low", F.col("blazar_stats").getItem("instantness_low")
+    )
+    df = df.withColumn(
+        "robustness_low", F.col("blazar_stats").getItem("robustness_low")
+    )
+    df = df.withColumn(
+        "instantness_high", F.col("blazar_stats").getItem("instantness_high")
+    )
+    df = df.withColumn(
+        "robustness_high", F.col("blazar_stats").getItem("robustness_high")
+    )
+
+    # Low states
+    f_low = "fink_filters.ztf.filter_blazar_low_state.filter.blazar_low_state"
+    df_low_state = apply_user_defined_filter(df, f_low).cache()
     n_low_state = df_low_state.count()
-    _LOG.info("{} new entries".format(n_low_state))
+    _LOG.info("{} new entries for low state".format(n_low_state))
 
     if n_low_state > 0:
         # Row key
@@ -199,6 +138,24 @@ def main():
             df_low_state,
             row_key_name=row_key_name,
             table_name=args.science_db_name + ".low_state_blazars",
+            catalog_name=args.science_db_catalogs,
+        )
+
+    # High states
+    f_high = "fink_filters.ztf.filter_blazar_high_state.filter.blazar_high_state"
+    df_high_state = apply_user_defined_filter(df, f_high).cache()
+    n_high_state = df_high_state.count()
+    _LOG.info("{} new entries for high state".format(n_high_state))
+
+    if n_high_state > 0:
+        # Row key
+        row_key_name = "jd_objectId"
+
+        # push data to HBase
+        push_full_df_to_hbase(
+            df_high_state,
+            row_key_name=row_key_name,
+            table_name=args.science_db_name + ".high_state_blazars",
             catalog_name=args.science_db_catalogs,
         )
 
