@@ -1,0 +1,670 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eprocSchema xmlns="file:/usr/local/src/eproc-4.4/XMLSchema/eproc4-v2.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="file:/usr/local/src/eproc-4.4/XMLSchema/eproc4-v2.xsd file:/usr/local/src/eproc-4.4/XMLSchema/eproc4-v2.xsd">
+
+    <comment>Eproc ephemerides</comment>
+
+    <info>
+        <user>eproc</user>
+        <email>vossp.lte@obspm.fr</email>
+        <reference>eprocPhotomOutputs</reference>
+    </info>
+    <output>
+        <param id="1">
+            <name>date</name>
+            <class>date</class>
+            <label>Date</label>
+            <format>jd</format>
+            <precision>6</precision>
+        </param>
+        <param id="2">
+            <name>iau_code</name>
+            <class>text</class>
+            <label>IAU_code</label>
+            <format>A3</format>
+        </param>
+        <param id="3">
+            <name>lighttime</name>
+            <class>scalar</class>
+            <label>LightTime</label>
+            <unit>day</unit>
+            <format>realES</format>
+            <width>12</width>
+            <precision>6</precision>
+        </param>
+        <param id="4">
+            <name>phase</name>
+            <class>angle</class>
+            <label>Phase</label>
+            <unit>deg</unit>
+            <format>dec</format>
+            <precision>7</precision>
+        </param>
+        <param id="5">
+            <name>elong</name>
+            <class>scalar</class>
+            <label>Elong.</label>
+            <unit>deg</unit>
+            <format>real</format>
+            <width>8</width>
+            <precision>2</precision>
+        </param>
+        <param id="6">
+            <name>RA</name>
+            <class>angle</class>
+            <label>RA</label>
+            <unit>deg</unit>
+            <format>dec</format>
+            <precision>7</precision>
+        </param>
+        <param id="7">
+            <name>DEC</name>
+            <class>angle</class>
+            <label>DEC</label>
+            <unit>sdeg</unit>
+            <format>dec</format>
+            <precision>7</precision>
+        </param>
+        <param id="8">
+            <name>dobs</name>
+            <class>scalar</class>
+            <label>Dobs</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>14</width>
+            <precision>9</precision>
+        </param>
+        <param id="9">
+            <name>RA_h</name>
+            <class>angle</class>
+            <label>RA_h</label>
+            <unit>deg</unit>
+            <format>dec</format>
+            <precision>7</precision>
+        </param>
+        <param id="10">
+            <name>DEC_h</name>
+            <class>angle</class>
+            <label>DEC_h</label>
+            <unit>sdeg</unit>
+            <format>dec</format>
+            <precision>7</precision>
+        </param>
+        <param id="11">
+            <name>dhelio</name>
+            <class>scalar</class>
+            <label>Dhelio</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>14</width>
+            <precision>9</precision>
+        </param>
+        <param id="12">
+            <name>px_ec</name>
+            <class>scalar</class>
+            <label>px_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="13">
+            <name>py_ec</name>
+            <class>scalar</class>
+            <label>py_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="14">
+            <name>pz_ec</name>
+            <class>scalar</class>
+            <label>pz_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="15">
+            <name>px_h_ec</name>
+            <class>scalar</class>
+            <label>px_h_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="16">
+            <name>py_h_ec</name>
+            <class>scalar</class>
+            <label>py_h_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="17">
+            <name>pz_h_ec</name>
+            <class>scalar</class>
+            <label>pz_h_ec</label>
+            <unit>au</unit>
+            <format>real</format>
+            <width>17</width>
+            <precision>13</precision>
+        </param>
+        <param id="18">
+            <name>Generic/Bessell.U</name>
+            <class>scalar</class>
+            <label>Bessell:U</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="19">
+            <name>Generic/Bessell.B</name>
+            <class>scalar</class>
+            <label>Bessell:B</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="20">
+            <name>Generic/Bessell.V</name>
+            <class>scalar</class>
+            <label>Bessell:V</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="21">
+            <name>Generic/Bessell.R</name>
+            <class>scalar</class>
+            <label>Bessell:R</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="22">
+            <name>Generic/Bessell.I</name>
+            <class>scalar</class>
+            <label>Bessell:I</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="23">
+            <name>Generic/Cousins.R</name>
+            <class>scalar</class>
+            <label>Cousins:R</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="24">
+            <name>Generic/Cousins.I</name>
+            <class>scalar</class>
+            <label>Cousins:I</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="25">
+            <name>Generic/Johnson.U</name>
+            <class>scalar</class>
+            <label>Johnson:U</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="26">
+            <name>Generic/Johnson.B</name>
+            <class>scalar</class>
+            <label>Johnson:B</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="27">
+            <name>Generic/Johnson.V</name>
+            <class>scalar</class>
+            <label>Johnson:V</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="28">
+            <name>Generic/Johnson.R</name>
+            <class>scalar</class>
+            <label>Johnson:R</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="29">
+            <name>Generic/Johnson.I</name>
+            <class>scalar</class>
+            <label>Johnson:I</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="30">
+            <name>SLOAN/SDSS.u</name>
+            <class>scalar</class>
+            <label>SDSS:u</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="31">
+            <name>SLOAN/SDSS.g</name>
+            <class>scalar</class>
+            <label>SDSS:g</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="32">
+            <name>SLOAN/SDSS.r</name>
+            <class>scalar</class>
+            <label>SDSS:r</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="33">
+            <name>SLOAN/SDSS.i</name>
+            <class>scalar</class>
+            <label>SDSS:i</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="34">
+            <name>SLOAN/SDSS.z</name>
+            <class>scalar</class>
+            <label>SDSS:z</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="35">
+            <name>SkyMapper/SkyMapper.u</name>
+            <class>scalar</class>
+            <label>SM:u</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="36">
+            <name>SkyMapper/SkyMapper.v</name>
+            <class>scalar</class>
+            <label>SM:v</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="37">
+            <name>SkyMapper/SkyMapper.g</name>
+            <class>scalar</class>
+            <label>SM:g</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="38">
+            <name>SkyMapper/SkyMapper.r</name>
+            <class>scalar</class>
+            <label>SM:r</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="39">
+            <name>SkyMapper/SkyMapper.i</name>
+            <class>scalar</class>
+            <label>SM:i</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="40">
+            <name>SkyMapper/SkyMapper.z</name>
+            <class>scalar</class>
+            <label>SM:z</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="41">
+            <name>LSST/LSST.u</name>
+            <class>scalar</class>
+            <label>LSST:u</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="42">
+            <name>LSST/LSST.g</name>
+            <class>scalar</class>
+            <label>LSST:g</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="43">
+            <name>LSST/LSST.r</name>
+            <class>scalar</class>
+            <label>LSST:r</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="44">
+            <name>LSST/LSST.i</name>
+            <class>scalar</class>
+            <label>LSST:i</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="45">
+            <name>LSST/LSST.z</name>
+            <class>scalar</class>
+            <label>LSST:z</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="46">
+            <name>LSST/LSST.y</name>
+            <class>scalar</class>
+            <label>LSST:y</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="47">
+            <name>2MASS/2MASS.J</name>
+            <class>scalar</class>
+            <label>2MASS:J</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="48">
+            <name>2MASS/2MASS.H</name>
+            <class>scalar</class>
+            <label>2MASS:H</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="49">
+            <name>2MASS/2MASS.Ks</name>
+            <class>scalar</class>
+            <label>2MASS:Ks</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="50">
+            <name>Paranal/VISTA.Z</name>
+            <class>scalar</class>
+            <label>VISTA:Z</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="51">
+            <name>Paranal/VISTA.Y</name>
+            <class>scalar</class>
+            <label>VISTA:Y</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="52">
+            <name>Paranal/VISTA.J</name>
+            <class>scalar</class>
+            <label>VISTA:J</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="53">
+            <name>Paranal/VISTA.H</name>
+            <class>scalar</class>
+            <label>VISTA:H</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="54">
+            <name>Paranal/VISTA.Ks</name>
+            <class>scalar</class>
+            <label>VISTA:Ks</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="55">
+            <name>GAIA/GAIA3.Gbp</name>
+            <class>scalar</class>
+            <label>Gaia:BP</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="56">
+            <name>GAIA/GAIA3.G</name>
+            <class>scalar</class>
+            <label>Gaia:G</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="57">
+            <name>GAIA/GAIA3.Grp</name>
+            <class>scalar</class>
+            <label>Gaia:RP</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="58">
+            <name>Kepler/Kepler.K</name>
+            <class>scalar</class>
+            <label>Kepler:K</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="59">
+            <name>Misc/Atlas.cyan</name>
+            <class>scalar</class>
+            <label>ATLAS:c</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="60">
+            <name>Misc/Atlas.orange</name>
+            <class>scalar</class>
+            <label>ATLAS:o</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="61">
+            <name>Palomar/ZTF.g</name>
+            <class>scalar</class>
+            <label>ZTF:g</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="62">
+            <name>Palomar/ZTF.r</name>
+            <class>scalar</class>
+            <label>ZTF:r</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="63">
+            <name>Palomar/ZTF.i</name>
+            <class>scalar</class>
+            <label>ZTF:i</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="64">
+            <name>Euclid/VIS.vis</name>
+            <class>scalar</class>
+            <label>Euclid:VIS</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="65">
+            <name>Euclid/NISP.Y</name>
+            <class>scalar</class>
+            <label>Euclid:Y</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="66">
+            <name>Euclid/NISP.J</name>
+            <class>scalar</class>
+            <label>Euclid:J</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="67">
+            <name>Euclid/NISP.H</name>
+            <class>scalar</class>
+            <label>Euclid:H</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="68">
+            <name>PAN-STARRS/PS1.g</name>
+            <class>scalar</class>
+            <label>PS:g</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="69">
+            <name>PAN-STARRS/PS1.r</name>
+            <class>scalar</class>
+            <label>PS:r</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="70">
+            <name>PAN-STARRS/PS1.i</name>
+            <class>scalar</class>
+            <label>PS:i</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="71">
+            <name>PAN-STARRS/PS1.z</name>
+            <class>scalar</class>
+            <label>PS:z</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="72">
+            <name>PAN-STARRS/PS1.y</name>
+            <class>scalar</class>
+            <label>PS:y</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="73">
+            <name>PAN-STARRS/PS1.w</name>
+            <class>scalar</class>
+            <label>PS:w</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+        <param id="74">
+            <name>PAN-STARRS/PS1.open</name>
+            <class>scalar</class>
+            <label>PS:open</label>
+            <unit>mag</unit>
+            <format>real</format>
+            <width>7</width>
+            <precision>2</precision>
+        </param>
+    </output>
+
+</eprocSchema>

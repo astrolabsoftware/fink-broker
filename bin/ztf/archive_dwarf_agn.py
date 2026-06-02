@@ -69,7 +69,7 @@ def main():
 
         slack_data = []
         for _, row in pdf.iterrows():
-            t1 = f"{row.manga}: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+            t1 = f"{row.manga}: <https://ztf.fink-portal.org/{row.objectId}|{row.objectId}>"
 
             # if you need lightcurve, etc.
             cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(
