@@ -55,7 +55,7 @@ def send_to_telegram(pdf, channel, night):
             )
 
             text = """
-*Object ID*: [{}](https://fink-portal.org/{})
+*Object ID*: [{}](https://ztf.fink-portal.org/{})
 *Name*: {}
 *RA/Dec coordinates*: {} {}
 *Mag difference*: {:.2f} ({:.2f} days in between measurements)
