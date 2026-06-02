@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      # Warning: use of 'latest' tag is discouraged in production because it can lead to non-reproducible runs,
-      # it is used here for simplicity
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.52.0-85-g9ada7fd
+      # Container image is pinned to a specific tag for reproducible runs.
+      # Bump this tag explicitly when updating Sentinel dependencies.
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.54.4
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
