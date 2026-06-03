@@ -117,7 +117,7 @@ def main():
         logger.warn(msg)
         spark.stop()
 
-    # Apply or not the filtering
+    # Kafka ingestion
     if args.noscience:
         topics = []
 
@@ -131,6 +131,9 @@ def main():
         df_with_topics = df.withColumn("topics", F.array(*topics))
 
         df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
+    elif args.no_kafka_ingest:
+        logger.warning("Skipping all Kafka ingestion")
+        kafka_query = FakeQuery()
     else:
         topic_exprs = []
         for userfilter in userfilters:
@@ -155,8 +158,7 @@ def main():
 
         df_filtered = df_with_topics.withColumn("topic", F.explode("topics"))
 
-    # All filters distributed to multiple kafka topics with 1 writeStream
-    if not args.no_kafka_ingest:
+        # All filters distributed to multiple kafka topics with 1 writeStream
         kafka_query = push_to_kafka(
             df_filtered,
             cnames,
@@ -165,9 +167,6 @@ def main():
             kafka_cfg,
             npart=10,
         )
-    else:
-        logger.warning("Skipping all Kafka ingestion")
-        kafka_query = FakeQuery()
 
     # Hbase ingestion
     if not args.no_hbase_ingest:
@@ -179,10 +178,13 @@ def main():
 
         hbase_queries = []
 
-        # Loop over filters as HBase not support dynamic routing via column "table" + OneWriteStream)
+        # Loop over filters as the Spark-HBase connector does not
+        # support dynamic routing via column "table" + OneWriteStream
         for userfilter in userfilters:
             module = userfilter.rsplit(".", maxsplit=1)[0]
             hbase_support = importlib.import_module(module).HBASE_SUPPORT
+
+            # Push only to tables with HBase support
             if hbase_support:
                 tag = userfilter.split(".")[-1]
                 table_name = "{}.tag_{}".format(args.science_db_name, tag)
