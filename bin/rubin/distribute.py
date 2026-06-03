@@ -166,41 +166,48 @@ def main():
             npart=10,
         )
     else:
-        logger.warning("Skipping Kafka ingestion")
+        logger.warning("Skipping all Kafka ingestion")
         kafka_query = FakeQuery()
 
-    # Hbase ingestion (Hbase not support dynamic routing via column "table" + OneWriteStream)
+    # Hbase ingestion
     if not args.no_hbase_ingest:
-        # HBase ingestion
         major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
+
         # Key is time_oid to perform date range search
         cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
         row_key_name = "_".join(cols_row_key_name)
 
         hbase_queries = []
 
-        # Adding `df_filtred.persiste()` here might be preferable, right?
+        # Loop over filters as HBase not support dynamic routing via column "table" + OneWriteStream)
         for userfilter in userfilters:
-            tag = userfilter.split(".")[-1]
-            table_name = "{}.tag_{}".format(args.science_db_name, tag)
-            topicname = args.substream_prefix + tag + "_lsst"
+            module = userfilter.rsplit(".", maxsplit=1)[0]
+            hbase_support = importlib.import_module(module).HBASE_SUPPORT
+            if hbase_support:
+                tag = userfilter.split(".")[-1]
+                table_name = "{}.tag_{}".format(args.science_db_name, tag)
+                topicname = args.substream_prefix + tag + "_lsst"
 
-            df_filtered_tag = df_filtered.filter(F.col("topic") == topicname)
+                df_filtered_tag = df_filtered.filter(F.col("topic") == topicname)
 
-            hbase_query = ingest_section(
-                df_filtered_tag,
-                major_version,
-                minor_version,
-                row_key_name,
-                table_name=table_name,
-                catfolder=args.science_db_catalogs,
-                cols_row_key_name=cols_row_key_name,
-                streaming=True,
-                checkpoint_path=checkpointpath_hbase + "/" + tag,
-            )
-            hbase_queries.append(hbase_query)
+                hbase_query = ingest_section(
+                    df_filtered_tag,
+                    major_version,
+                    minor_version,
+                    row_key_name,
+                    table_name=table_name,
+                    catfolder=args.science_db_catalogs,
+                    cols_row_key_name=cols_row_key_name,
+                    streaming=True,
+                    checkpoint_path=checkpointpath_hbase + "/" + tag,
+                )
+                hbase_queries.append(hbase_query)
+            else:
+                logger.warning(
+                    "Skipping HBase ingestion for filter {}".format(userfilter)
+                )
     else:
-        logger.warning("Skipping HBase ingestion")
+        logger.warning("Skipping all HBase ingestion")
         hbase_queries = [FakeQuery()]
 
     if args.exit_after is not None:
