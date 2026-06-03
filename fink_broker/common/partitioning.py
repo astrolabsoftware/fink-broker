@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import TimestampType
 from pyspark.sql import SparkSession
 
@@ -23,7 +23,7 @@ from astropy.time import Time
 from fink_broker.common.tester import spark_unit_tests
 
 
-@pandas_udf(TimestampType(), PandasUDFType.SCALAR)
+@pandas_udf(TimestampType())
 def convert_to_millitime(jd: pd.Series, format=None, now=None):
     """Convert date into unix milliseconds (long)
 
@@ -66,7 +66,7 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
     return pd.Series(times)
 
 
-@pandas_udf(TimestampType(), PandasUDFType.SCALAR)
+@pandas_udf(TimestampType())
 def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     """Convert date into datetime (timestamp)
 
