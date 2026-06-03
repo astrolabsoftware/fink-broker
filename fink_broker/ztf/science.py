@@ -45,8 +45,8 @@ from fink_science.ztf.xmatch.processor import crossmatch_mangrove
 from fink_science.ztf.fast_transient_rate.processor import magnitude_rate
 from fink_science.ztf.fast_transient_rate import rate_module_output_schema
 
-from fink_science.ztf.blazar_low_state.processor import quiescent_state
 from fink_science.ztf.standardized_flux.processor import standardized_flux
+from fink_science.ztf.blazar_extreme_state.processor import extreme_state
 
 # ---------------------------------
 # Local non-exported definitions --
@@ -244,6 +244,8 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         "isdiffpos",
         "distnr",
         "diffmaglim",
+        "ra",
+        "dec",
     ]
 
     # Append temp columns with historical + current measurements
@@ -387,9 +389,16 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     ]
     df = df.withColumn("container", standardized_flux(*standardisation_args))
 
-    _LOG.info("New processor: blazars low state detection")
-    blazar_args = ["candid", "objectId", F.col("container").getItem("flux"), "cjd"]
-    df = df.withColumn("blazar_stats", quiescent_state(*blazar_args))
+    _LOG.info("New processor: blazars extreme state detection")
+    blazar_args = [
+        "candid",
+        "objectId",
+        F.col("container").getItem("flux"),
+        "cjd",
+        "cra",
+        "cdec",
+    ]
+    df = df.withColumn("blazar_stats", extreme_state(*blazar_args))
 
     # Clean temporary container
     df = df.drop("container")

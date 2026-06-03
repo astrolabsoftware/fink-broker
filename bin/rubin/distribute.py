@@ -29,6 +29,7 @@ import pkgutil
 import argparse
 import logging
 import time
+import importlib
 
 from fink_broker.common.distribution_utils import push_to_kafka, FakeQuery
 from fink_broker.common.logging_utils import init_logger
