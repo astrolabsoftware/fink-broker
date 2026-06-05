@@ -71,7 +71,7 @@ def main():
     # Add ingestion timestamp
     df = df.withColumn(
         "brokerStartProcessTimestamp",
-        convert_to_millitime(df["diaSource.midpointMjdTai"], F.lit("mjd"), F.lit(True)),
+        convert_to_millitime(df["diaSource.midpointMjdTai"], "mjd", True),
     )
 
     # Add library versions
@@ -100,7 +100,7 @@ def main():
     logger.debug("Add ingestion timestamp")
     df = df.withColumn(
         "brokerEndProcessTimestamp",
-        convert_to_millitime(df["diaSource.midpointMjdTai"], F.lit("mjd"), F.lit(True)),
+        convert_to_millitime(df["diaSource.midpointMjdTai"], "mjd", True),
     )
 
     logger.debug("Append new rows in the tmp science data lake")
