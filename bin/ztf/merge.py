@@ -60,7 +60,7 @@ def main():
     # run test data with any candidate.jd under the same
     # fake night.
     df_raw.withColumn(
-        "timestamp", convert_to_datetime(df_raw["candidate.jd"])
+        "timestamp", convert_to_datetime(df_raw["candidate.jd"], F.lit("jd"))
     ).withColumn("year", F.lit(args.night[0:4])).withColumn(
         "month", F.lit(args.night[4:6])
     ).withColumn("day", F.lit(args.night[6:8])).coalesce(
@@ -83,7 +83,7 @@ def main():
     )
 
     df_science.withColumn(
-        "timestamp", convert_to_datetime(df_science["candidate.jd"])
+        "timestamp", convert_to_datetime(df_science["candidate.jd"], F.lit("jd"))
     ).withColumn("year", F.lit(args.night[0:4])).withColumn(
         "month", F.lit(args.night[4:6])
     ).withColumn("day", F.lit(args.night[6:8])).coalesce(npart_after).write.mode(
