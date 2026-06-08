@@ -22,7 +22,7 @@ jobs:
     container:
       # Container image is pinned to a specific tag for reproducible runs.
       # Bump this tag explicitly when updating Sentinel dependencies.
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.54.7-rc3
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:v2.54.7-rc4
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
