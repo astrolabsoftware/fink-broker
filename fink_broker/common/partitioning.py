@@ -50,6 +50,7 @@ def convert_to_millitime(jd: Column, format: str = "jd", now: bool = False) -> C
     >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd'], 'jd', True))
     >>> pdf = df.select('millis').toPandas()
     """
+
     @pandas_udf(TimestampType())
     def _impl(jd: pd.Series) -> pd.Series:
         if now:
@@ -57,6 +58,7 @@ def convert_to_millitime(jd: Column, format: str = "jd", now: bool = False) -> C
         else:
             times = Time(jd.to_numpy(), format=format).to_datetime()
         return pd.Series(times)
+
     return _impl(jd)
 
 
@@ -95,9 +97,11 @@ def convert_to_datetime(jd: Column, format: str = "jd") -> Column:
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
     >>> pdf = df.select('datetime').toPandas()
     """
+
     @pandas_udf(TimestampType())
     def _impl(jd: pd.Series) -> pd.Series:
         return pd.Series(Time(jd.to_numpy(), format=format).to_datetime())
+
     return _impl(jd)
 
 

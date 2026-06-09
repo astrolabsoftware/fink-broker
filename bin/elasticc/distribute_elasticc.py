@@ -66,7 +66,7 @@ def format_df_to_elasticc(df):
     # Add non existing columns
     df = df.withColumn(
         "elasticcPublishTimestamp",
-        convert_to_millitime(df["diaSource.midPointTai"], F.lit("mjd")),
+        convert_to_millitime(df["diaSource.midPointTai"], "mjd"),
     )
     df = df.withColumn("brokerName", F.lit("Fink"))
     df = df.withColumn("brokerVersion", F.lit("{}".format(fbvsn)))
