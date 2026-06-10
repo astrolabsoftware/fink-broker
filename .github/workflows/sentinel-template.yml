@@ -12,7 +12,7 @@ on:
         description: 'Survey name (ztf or rubin)'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.survey }}
   cancel-in-progress: true
 
 jobs:
