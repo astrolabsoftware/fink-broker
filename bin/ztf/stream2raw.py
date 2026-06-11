@@ -128,7 +128,7 @@ def main():
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
             "brokerIngestTimestamp",
-            convert_to_millitime(df_decoded["candidate.jd"], F.lit("jd"), F.lit(True)),
+            convert_to_millitime(df_decoded["candidate.jd"], "jd", True),
         )
 
         # write unpartitioned data
@@ -142,12 +142,12 @@ def main():
 
     elif "diaSource" in df_decoded.columns:
         timecol = "diaSource.midPointTai"
-        converter = lambda x: convert_to_datetime(x, F.lit("mjd"))
+        converter = lambda x: convert_to_datetime(x, "mjd")
 
         # Add ingestion timestamp
         df_decoded = df_decoded.withColumn(
             "brokerIngestTimestamp",
-            convert_to_millitime(df_decoded[timecol], F.lit("mjd"), F.lit(True)),
+            convert_to_millitime(df_decoded[timecol], "mjd", True),
         )
 
         df_partitionedby = (

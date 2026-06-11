@@ -12,9 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import TimestampType
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Column
 
 import numpy as np
 import pandas as pd
@@ -23,23 +23,22 @@ from astropy.time import Time
 from fink_broker.common.tester import spark_unit_tests
 
 
-@pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def convert_to_millitime(jd: pd.Series, format=None, now=None):
+def convert_to_millitime(jd: Column, format: str = "jd", now: bool = False) -> Column:
     """Convert date into unix milliseconds (long)
 
     Parameters
     ----------
-    jd: double
-        Julian date
+    jd: Column
+        Julian date column
     format: str, optional
         Astropy time format, e.g. jd, mjd, ... Default is jd.
-    now: boolean, optional
-        If True, return the current time. Default is False
+    now: bool, optional
+        If True, return the current time. Default is False.
 
     Returns
     -------
-    out: pd.Series
-        Unix milliseconds in UTC
+    out: Column
+        Spark Column of UTC timestamps (TimestampType)
 
     Examples
     --------
@@ -48,26 +47,22 @@ def convert_to_millitime(jd: pd.Series, format=None, now=None):
     >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd']))
     >>> pdf = df.select('millis').toPandas()
 
-    >>> import pyspark.sql.functions as F
-    >>> df = df.withColumn('millis', convert_to_millitime(
-    ...     df['candidate.jd'], F.lit('jd'), F.lit(True)))
+    >>> df = df.withColumn('millis', convert_to_millitime(df['candidate.jd'], 'jd', True))
     >>> pdf = df.select('millis').toPandas()
     """
-    if format is None:
-        formatval = "jd"
-    else:
-        formatval = format.to_numpy()[0]
 
-    if now is not None:
-        times = [Time.now().to_datetime()] * len(jd)
-    else:
-        times = Time(jd.to_numpy(), format=formatval).to_datetime()
+    @pandas_udf(TimestampType())
+    def _impl(jd: pd.Series) -> pd.Series:
+        if now:
+            times = [Time.now().to_datetime()] * len(jd)
+        else:
+            times = Time(jd.to_numpy(), format=format).to_datetime()
+        return pd.Series(times)
 
-    return pd.Series(times)
+    return _impl(jd)
 
 
-@pandas_udf(TimestampType(), PandasUDFType.SCALAR)
-def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
+def convert_to_datetime(jd: Column, format: str = "jd") -> Column:
     """Convert date into datetime (timestamp)
 
     Be careful if you are using this outside Fink. First, you need to check
@@ -83,18 +78,17 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     spark.conf.set("spark.sql.session.timeZone", 'UTC')
     ```
 
-
     Parameters
     ----------
-    jd: double
-        Julian date
-    format: str
-        Astropy time format, e.g. jd, mjd, ...
+    jd: Column
+        Julian date column
+    format: str, optional
+        Astropy time format, e.g. jd, mjd, ... Default is jd.
 
     Returns
     -------
-    out: datetime
-        Datetime object in UTC
+    out: Column
+        Datetime column in UTC
 
     Examples
     --------
@@ -103,12 +97,12 @@ def convert_to_datetime(jd: pd.Series, format=None) -> pd.Series:
     >>> df = df.withColumn('datetime', convert_to_datetime(df['candidate.jd']))
     >>> pdf = df.select('datetime').toPandas()
     """
-    if format is None:
-        formatval = "jd"
-    else:
-        formatval = format.to_numpy()[0]
 
-    return pd.Series(Time(jd.to_numpy(), format=formatval).to_datetime())
+    @pandas_udf(TimestampType())
+    def _impl(jd: pd.Series) -> pd.Series:
+        return pd.Series(Time(jd.to_numpy(), format=format).to_datetime())
+
+    return _impl(jd)
 
 
 def compute_num_part(df, partition_size=128.0):

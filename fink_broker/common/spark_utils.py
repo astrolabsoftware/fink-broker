@@ -21,7 +21,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
 
-from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import StringType, LongType
 
 
@@ -529,7 +529,7 @@ def ra2phi(ra: float) -> float:
     return np.pi / 180.0 * ra
 
 
-@pandas_udf(LongType(), PandasUDFType.SCALAR)
+@pandas_udf(LongType())
 def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """Compute pixel number at given nside
 
@@ -567,7 +567,7 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     )
 
 
-@pandas_udf(StringType(), PandasUDFType.SCALAR)
+@pandas_udf(StringType())
 def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """Return a col string with the pixel numbers corresponding to the nsides
 

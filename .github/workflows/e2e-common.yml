@@ -159,11 +159,24 @@ jobs:
           node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
           docker exec -- $node crictl image
       - name: Run argoCD
+        id: run_argocd
         run: |
           ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
+        id: check_results
         run: |
           ./e2e/check-results.sh -s "${{ env.SUFFIX }}"
+      - name: Collect diagnostics
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        run: |
+          ./e2e/diag.sh /tmp/k8s-diag
+      - name: Upload diagnostics artifacts
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-diag-${{ matrix.storage }}
+          path: /tmp/k8s-diag
+          retention-days: 7
       - name: Delete cluster
         if: always()
         run: |

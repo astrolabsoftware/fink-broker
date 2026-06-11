@@ -17,7 +17,6 @@
 
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 import os
 import numpy as np
@@ -119,7 +118,6 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         "candidate.dec",
     ])
 
-    @pandas_udf(df_filt_tracklet.schema, PandasUDFType.GROUPED_MAP)
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
         """Extract tracklet ID from a Spark DataFrame
 
@@ -329,7 +327,7 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
         .cache()
         .dropDuplicates(["jd", "xpos", "ypos"])
         .groupBy("jd")
-        .apply(extract_tracklet_number)
+        .applyInPandas(extract_tracklet_number, schema=df_filt_tracklet.schema)
         .select(["candid", "tracklet"])
         .filter(F.col("tracklet") != "")
     )
