@@ -38,7 +38,7 @@ def convert_to_millitime(jd: Column, format: str = "jd", now: bool = False) -> C
     Returns
     -------
     out: Column
-        Unix milliseconds in UTC
+        UTC timestamps (TimestampType)
 
     Examples
     --------
