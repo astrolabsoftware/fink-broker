@@ -29,7 +29,7 @@ kubectl get pods -A --no-headers | tee "$DIAG_DIR/pods-all.txt"
 
 # Pods not in a healthy terminal or running state
 abnormal_pods=$(kubectl get pods -A --no-headers | \
-    grep -v -E '\s+(Running|Completed|Succeeded|Terminating)\s+' | \
+    grep -v -E '[[:space:]]+(Running|Completed|Succeeded|Terminating)[[:space:]]+' | \
     awk '{print $1"/"$2}') || true
 
 if [ -z "$abnormal_pods" ]; then
