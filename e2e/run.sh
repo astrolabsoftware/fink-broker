@@ -45,7 +45,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.7-rc1
+ciux_version=v0.0.7-rc4
 
 src_dir=$DIR/..
 cleanup=false
