@@ -133,6 +133,7 @@ jobs:
         if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
       - name: Load image into kind cluster
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: |
           IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
           cluster_name=$(ciux get clustername $PWD)
