@@ -25,9 +25,9 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 
 from fink_filters.ztf.classification import extract_fink_classification
 
-from fink_tns.utils import read_past_ids, retrieve_groupid
-from fink_tns.report import extract_discovery_photometry, build_report
-from fink_tns.report import save_logs_and_return_json_report, send_json_report
+from fink_tns.ztf.utils import read_past_ids, retrieve_groupid
+from fink_tns.ztf.report import extract_discovery_photometry, build_report
+from fink_tns.ztf.report import save_logs_and_return_json_report, send_json_report
 
 
 def main():
