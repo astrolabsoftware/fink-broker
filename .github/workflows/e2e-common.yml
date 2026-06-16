@@ -174,6 +174,9 @@ jobs:
         with:
           name: docker-artifact
           path: artifacts
+      - name: Install ciux
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Load image in local registry
         if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
@@ -207,9 +210,11 @@ jobs:
         with:
           name: docker-artifact
           path: artifacts
+      - name: Install ciux
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
+        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
       - name: Load image in local registry
         if: ${{ needs.build.outputs.ciux_build == 'true' }}
-
         run: ciux image load --runner "${{ inputs.runner }}" --image-url "$CIUX_IMAGE_URL" --build-status "$CIUX_BUILD"
       - name: Login to DockerHub
         uses: docker/login-action@v2
