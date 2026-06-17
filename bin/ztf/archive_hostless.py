@@ -126,8 +126,7 @@ def main():
     )
 
     pdf = (
-        df
-        .filter(cond_science_low & cond_science_high)
+        df.filter(cond_science_low & cond_science_high)
         .filter(cond_template_low & cond_template_high)
         .filter(cond_max_detections)
         .select(cols_)

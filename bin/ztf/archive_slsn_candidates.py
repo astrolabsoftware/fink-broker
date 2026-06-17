@@ -161,9 +161,9 @@ def apply_cuts(unique):
     unique_lcs = get_and_format(list(unique["objectId"]))
 
     conversion = unique_lcs[["cmagpsf", "csigmapsf"]].apply(
-        lambda x: np.transpose([
-            mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])
-        ]),
+        lambda x: np.transpose(
+            [mag2fluxcal_snana(*i) for i in zip(x["cmagpsf"], x["csigmapsf"])]
+        ),
         axis=1,
     )
 
@@ -284,8 +284,7 @@ def main():
 
         # Drop images
         df_hbase = (
-            df_hbase
-            .drop("cutoutScience")
+            df_hbase.drop("cutoutScience")
             .drop("cutoutTemplate")
             .drop("cutoutDifference")
         )

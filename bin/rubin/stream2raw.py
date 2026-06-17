@@ -338,23 +338,25 @@ if __name__ == "__main__":
     }
 
     if args.lsst_kafka_username != "ci":
-        kafka_config.update({
-            # These next two properties tell the Kafka client about the specific
-            # authentication and authorization protocols that should be used when
-            # connecting.
-            "security.protocol": "SASL_PLAINTEXT",
-            "sasl.mechanisms": "SCRAM-SHA-512",
-            # The sasl.username and sasl.password are passed through over
-            # SCRAM-SHA-512 auth to connect to the cluster. The username is not
-            # sensitive, but the password is (of course) a secret value which
-            # should never be committed to source code.
-            "sasl.username": args.lsst_kafka_username,
-            "sasl.password": args.lsst_kafka_password,
-            # Finally, we pass in the deserializer that we created above,
-            # configuring the consumer so that it automatically does all the Schema
-            # Registry and Avro deserialization work.
-            "value.deserializer": deserializer,
-        })
+        kafka_config.update(
+            {
+                # These next two properties tell the Kafka client about the specific
+                # authentication and authorization protocols that should be used when
+                # connecting.
+                "security.protocol": "SASL_PLAINTEXT",
+                "sasl.mechanisms": "SCRAM-SHA-512",
+                # The sasl.username and sasl.password are passed through over
+                # SCRAM-SHA-512 auth to connect to the cluster. The username is not
+                # sensitive, but the password is (of course) a secret value which
+                # should never be committed to source code.
+                "sasl.username": args.lsst_kafka_username,
+                "sasl.password": args.lsst_kafka_password,
+                # Finally, we pass in the deserializer that we created above,
+                # configuring the consumer so that it automatically does all the Schema
+                # Registry and Avro deserialization work.
+                "value.deserializer": deserializer,
+            }
+        )
     else:
         config.update({"avro_schema": args.avro_schema})
 
@@ -369,9 +371,9 @@ if __name__ == "__main__":
     )
 
     # check topic exists
-    kadmin = AdminClient({
-        k: v for k, v in kafka_config.items() if k != "value.deserializer"
-    })
+    kadmin = AdminClient(
+        {k: v for k, v in kafka_config.items() if k != "value.deserializer"}
+    )
     available_topics = kadmin.list_topics().topics
     while args.topic not in available_topics:
         _LOG.warning(
