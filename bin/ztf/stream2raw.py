@@ -97,16 +97,18 @@ def main():
         "kafka-cluster-kafka-bootstrap.kafka"
     ):
         # Only for test suite (sentinel or k8s)
-        df_decoded = df.select([
-            from_avro(df["value"], alert_schema_json).alias("decoded")
-        ])
+        df_decoded = df.select(
+            [from_avro(df["value"], alert_schema_json).alias("decoded")]
+        )
     elif args.producer == "elasticc":
         schema = fastavro.schema.load_schema(args.schema)
         alert_schema_json = fastavro.schema.to_parsing_canonical_form(schema)
-        df_decoded = df.select([
-            from_avro(df["value"], alert_schema_json).alias("decoded"),
-            df["topic"],
-        ])
+        df_decoded = df.select(
+            [
+                from_avro(df["value"], alert_schema_json).alias("decoded"),
+                df["topic"],
+            ]
+        )
     elif args.producer == "ztf":
         # Decode on-the-fly using fastavro
         f = F.udf(lambda x: next(fastavro.reader(io.BytesIO(x))), alert_schema)
@@ -133,8 +135,7 @@ def main():
 
         # write unpartitioned data
         countquery_tmp = (
-            df_decoded.writeStream
-            .outputMode("append")
+            df_decoded.writeStream.outputMode("append")
             .format("parquet")
             .option("checkpointLocation", checkpointpath_raw)
             .option("path", os.path.join(rawdatapath, f"{args.night}"))
@@ -151,16 +152,14 @@ def main():
         )
 
         df_partitionedby = (
-            df_decoded
-            .withColumn("timestamp", converter(df_decoded[timecol]))
+            df_decoded.withColumn("timestamp", converter(df_decoded[timecol]))
             .withColumn("year", F.date_format("timestamp", "yyyy"))
             .withColumn("month", F.date_format("timestamp", "MM"))
             .withColumn("day", F.date_format("timestamp", "dd"))
         )
 
         countquery_tmp = (
-            df_partitionedby.writeStream
-            .outputMode("append")
+            df_partitionedby.writeStream.outputMode("append")
             .format("parquet")
             .option("checkpointLocation", checkpointpath_raw)
             .option("path", rawdatapath)

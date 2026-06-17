@@ -113,11 +113,13 @@ def load_fink_cols():
     #         }
 
     # Others
-    fink_source_cols.update({
-        "fink_broker_version": {"type": "string", "default": None},
-        "fink_science_version": {"type": "string", "default": None},
-        "lsst_schema_version": {"type": "string", "default": None},
-    })
+    fink_source_cols.update(
+        {
+            "fink_broker_version": {"type": "string", "default": None},
+            "fink_science_version": {"type": "string", "default": None},
+            "lsst_schema_version": {"type": "string", "default": None},
+        }
+    )
 
     # Predictions
     fink_object_cols = {
@@ -678,8 +680,7 @@ def ingest_object_data(
             Window.unboundedPreceding, Window.unboundedFollowing
         )
         df_dedup = (
-            df
-            .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+            df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
             .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
             .drop("maxMjd")
         )
@@ -994,8 +995,7 @@ def format_pixels_for_hbase(df, nside, streaming):
             Window.unboundedPreceding, Window.unboundedFollowing
         )
         df_dedup = (
-            df
-            .withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
+            df.withColumn("maxMjd", F.max("diaSource.midpointMjdTai").over(w))
             .where(F.col("diaSource.midpointMjdTai") == F.col("maxMjd"))
             .drop("maxMjd")
         )
@@ -1115,8 +1115,7 @@ def format_fp_for_hbase(df, npartitions):
     """
     # Step 1 -- keep records with fp
     df_nonnull = (
-        df
-        .filter(F.col("diaObject.nDiaSources") > 1)
+        df.filter(F.col("diaObject.nDiaSources") > 1)
         .filter(F.col("prvDiaForcedSources").isNotNull())
         .filter(F.size("prvDiaForcedSources") > 0)
     )
@@ -1143,8 +1142,7 @@ def format_fp_for_hbase(df, npartitions):
     )
 
     df_ingest = (
-        df_filtered
-        .select("prvDiaForcedSources2")
+        df_filtered.select("prvDiaForcedSources2")
         .select(F.explode("prvDiaForcedSources2").alias("forcedSource"))
         .select("forcedSource.*")
     )
