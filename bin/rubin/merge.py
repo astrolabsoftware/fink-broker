@@ -62,7 +62,7 @@ def main():
 
     df_science.withColumn(
         "timestamp",
-        convert_to_datetime(df_science["diaSource.midpointMjdTai"], F.lit("mjd")),
+        convert_to_datetime(df_science["diaSource.midpointMjdTai"], "mjd"),
     ).withColumn("year", F.lit(args.night[0:4])).withColumn(
         "month", F.lit(args.night[4:6])
     ).withColumn("day", F.lit(args.night[6:8])).coalesce(npart_after).write.mode(
