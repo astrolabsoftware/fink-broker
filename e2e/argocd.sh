@@ -89,19 +89,23 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
     --upsert # Added to avoid error if app already exists
 
-# Sync fink app-of-apps
-argocd app sync fink
+# Trigger the wave-ordered rollout of the app-of-apps.
+# Operator (wave 0) and storage (wave 1) Applications are auto-synced, and
+# sync-waves guarantee each operator is healthy (its CRDs established) before
+# the matching storage custom resources (Kafka/HDFS/MinIO) are applied.
+# Run async: the broker (wave 2) is synced manually further down, once the
+# Kafka secret exists.
+argocd app sync fink --async
 
-# --- OPERATORS SYNC (Fix for previous RPC issue) ---
-# Using --core eliminates 'connection refused' error on 127.0.0.1
-argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
-argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator --timeout 600
+# Wait for the storage Applications to be created by the app-of-apps. By the
+# time they exist, sync-waves guarantee the operators are already healthy.
+until [ -n "$(argocd app list -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage -o name 2>/dev/null)" ]; do
+    echo "Waiting for storage Applications to be created by the app-of-apps..."
+    sleep 5
+done
 
-# Sync storage
-argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
+# Wait for storage to be healthy before creating the e2e Kafka secret.
+argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --health --timeout 600
 
 if [ "$e2e_enabled" == "true" ]; then
     echo "Retrieve kafka secrets for e2e tests"
@@ -119,8 +123,7 @@ if [ "$e2e_enabled" == "true" ]; then
     kubectl config set-context --current --namespace="$NS"
 fi
 
-# Final sync
+# Deploy the broker/simulator layer (wave 2) now that the Kafka secret exists,
+# and wait for the whole stack to converge.
 argocd app sync -l app.kubernetes.io/part-of="fink"
-argocd app wait --operation -l app.kubernetes.io/part-of="fink" --timeout 600
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of="fink" --timeout 600
+argocd app wait -l app.kubernetes.io/part-of="fink" --health --timeout 900
