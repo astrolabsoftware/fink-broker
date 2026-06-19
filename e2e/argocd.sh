@@ -105,7 +105,13 @@ until [ -n "$(argocd app list -l app.kubernetes.io/part-of=fink,app.kubernetes.i
 done
 
 # Wait for storage to be healthy before creating the e2e Kafka secret.
-argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --health --timeout 600
+# Two-phase wait: let the sync operation finish, give the workloads ~10s to
+# actually start (and crash if they're going to), then wait for real health.
+# A single --health wait can pass on a transient Healthy state before a pod
+# starts crash-looping.
+argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
+sleep 10
+argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
 
 if [ "$e2e_enabled" == "true" ]; then
     echo "Retrieve kafka secrets for e2e tests"
@@ -125,5 +131,10 @@ fi
 
 # Deploy the broker/simulator layer (wave 2) now that the Kafka secret exists,
 # and wait for the whole stack to converge.
+# Two-phase wait (operation -> settle -> health): Spark drivers may crash and
+# restart during startup before stabilising, so don't trust a transient
+# Healthy right after the sync operation completes.
 argocd app sync -l app.kubernetes.io/part-of="fink"
-argocd app wait -l app.kubernetes.io/part-of="fink" --health --timeout 900
+argocd app wait --operation -l app.kubernetes.io/part-of="fink" --timeout 600
+sleep 10
+argocd app wait --health -l app.kubernetes.io/part-of="fink" --timeout 600
