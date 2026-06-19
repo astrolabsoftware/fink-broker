@@ -12,6 +12,7 @@ cc="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
+night=""
 
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
@@ -21,18 +22,20 @@ Usage: $(basename "$0") [options]
 Available options:
   -h            This message
   -c            Deploy with CC-IN2P3 setup (uses values-cc.yaml)
+  -n <night>    ZTF night YYYYMMDD. With -c, defaults to the previous night
   -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
-  -S <storage>  Storage to use (hdfs or minio)
+  -S <storage>  Storage to use (hdfs or s3)
 EOD
 }
 
 # Get the options
 # -s has no effect in GIHUB_ACTION mode
-while getopts hcmS:s: c ; do
+while getopts hcmn:S:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
         c) cc="true" ;;
         m) monitoring="true" ;;
+        n) night="$OPTARG" ;;
         S) storage="$OPTARG" ;;
         s) SUFFIX="${OPTARG:-science}" ;;
         \?) usage ; exit 2 ;;
@@ -43,6 +46,13 @@ shift "$((OPTIND-1))"
 # Validate suffix value
 if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
     echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
+
+# Validate night value (YYYYMMDD) when provided
+if [ -n "$night" ] && ! [[ "$night" =~ ^[0-9]{8}$ ]]; then
+    echo "Error: night must be in YYYYMMDD format"
     usage
     exit 1
 fi
@@ -58,11 +68,25 @@ fi
 NS=argocd
 
 if [ "$cc" == "true" ]; then
-    ci_values_file="values-cc.yaml"
+    values_file="values-cc.yaml"
     e2e_enabled="false"
+    # Default to the previous night: the most recent complete ZTF observing
+    # night (today's topic is still being filled). ZTF public topics are only
+    # retained ~7 days, so a stale hard-coded night would already be gone.
+    if [ -z "$night" ]; then
+        night=$(date -u -d 'yesterday' +%Y%m%d)
+        echo "No night specified, defaulting to previous night: $night"
+    fi
 else
-    ci_values_file="values-ci-${SUFFIX}.yaml"
+    values_file="values-ci-${SUFFIX}.yaml"
     e2e_enabled="true"
+fi
+
+# Override the night only when set. The e2e values files pin their own night
+# for the simulated stream, so leave them untouched unless -n was given.
+night_args=()
+if [ -n "$night" ]; then
+    night_args+=(-p "finkBroker.night=$night")
 fi
 
 # --- CONFIGURATION WITHOUT TUNNEL ---
@@ -78,8 +102,9 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    --values "$ci_values_file" \
+    --values "$values_file" \
     -p storage="$storage" \
+    ${night_args[@]+"${night_args[@]}"} \
     -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
     -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
     -p finkBroker.monitoring.enabled="$monitoring" \
@@ -89,29 +114,26 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
     --upsert # Added to avoid error if app already exists
 
-# Trigger the wave-ordered rollout of the app-of-apps.
-# Operator (wave 0) and storage (wave 1) Applications are auto-synced, and
-# sync-waves guarantee each operator is healthy (its CRDs established) before
-# the matching storage custom resources (Kafka/HDFS/MinIO) are applied.
-# Run async: the broker (wave 2) is synced manually further down, once the
-# Kafka secret exists.
+# Robust wait: let the sync operation finish, give workloads ~10s to start
+# (and crash if they will), then wait for real health. A lone --health wait
+# can pass on a transient Healthy before a Spark driver starts crash-looping.
+wait_app() {
+    argocd app wait --operation "$@" --timeout 600
+    sleep 10
+    argocd app wait --health "$@" --timeout 600
+}
+
+# Roll out operators (wave 0) + storage (wave 1) via sync-waves. Async so the
+# Kafka secret can be created before the broker (wave 2) is synced below.
 argocd app sync fink --async
 
-# Wait for the storage Applications to be created by the app-of-apps. By the
-# time they exist, sync-waves guarantee the operators are already healthy.
-until [ -n "$(argocd app list -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage -o name 2>/dev/null)" ]; do
-    echo "Waiting for storage Applications to be created by the app-of-apps..."
+# Storage Applications are created asynchronously, once the operators (and
+# their CRDs) are healthy. Wait for them to exist, then for storage health.
+until argocd app get kafka >/dev/null 2>&1; do
+    echo "Waiting for storage Applications to be created..."
     sleep 5
 done
-
-# Wait for storage to be healthy before creating the e2e Kafka secret.
-# Two-phase wait: let the sync operation finish, give the workloads ~10s to
-# actually start (and crash if they're going to), then wait for real health.
-# A single --health wait can pass on a transient Healthy state before a pod
-# starts crash-looping.
-argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage --timeout 600
+wait_app -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
 if [ "$e2e_enabled" == "true" ]; then
     echo "Retrieve kafka secrets for e2e tests"
@@ -129,12 +151,6 @@ if [ "$e2e_enabled" == "true" ]; then
     kubectl config set-context --current --namespace="$NS"
 fi
 
-# Deploy the broker/simulator layer (wave 2) now that the Kafka secret exists,
-# and wait for the whole stack to converge.
-# Two-phase wait (operation -> settle -> health): Spark drivers may crash and
-# restart during startup before stabilising, so don't trust a transient
-# Healthy right after the sync operation completes.
-argocd app sync -l app.kubernetes.io/part-of="fink"
-argocd app wait --operation -l app.kubernetes.io/part-of="fink" --timeout 600
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of="fink" --timeout 600
+# Deploy the broker/simulator layer (wave 2) now the Kafka secret exists.
+argocd app sync -l app.kubernetes.io/part-of=fink
+wait_app -l app.kubernetes.io/part-of=fink
