@@ -12,6 +12,7 @@ cc="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
+night=""
 
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
@@ -21,18 +22,20 @@ Usage: $(basename "$0") [options]
 Available options:
   -h            This message
   -c            Deploy with CC-IN2P3 setup (uses values-cc.yaml)
+  -n <night>    ZTF night YYYYMMDD. With -c, defaults to the previous night
   -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
-  -S <storage>  Storage to use (hdfs or minio)
+  -S <storage>  Storage to use (hdfs or s3)
 EOD
 }
 
 # Get the options
 # -s has no effect in GIHUB_ACTION mode
-while getopts hcmS:s: c ; do
+while getopts hcmn:S:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
         c) cc="true" ;;
         m) monitoring="true" ;;
+        n) night="$OPTARG" ;;
         S) storage="$OPTARG" ;;
         s) SUFFIX="${OPTARG:-science}" ;;
         \?) usage ; exit 2 ;;
@@ -43,6 +46,13 @@ shift "$((OPTIND-1))"
 # Validate suffix value
 if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
     echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
+
+# Validate night value (YYYYMMDD) when provided
+if [ -n "$night" ] && ! [[ "$night" =~ ^[0-9]{8}$ ]]; then
+    echo "Error: night must be in YYYYMMDD format"
     usage
     exit 1
 fi
@@ -58,11 +68,25 @@ fi
 NS=argocd
 
 if [ "$cc" == "true" ]; then
-    ci_values_file="values-cc.yaml"
+    values_file="values-cc.yaml"
     e2e_enabled="false"
+    # Default to the previous night: the most recent complete ZTF observing
+    # night (today's topic is still being filled). ZTF public topics are only
+    # retained ~7 days, so a stale hard-coded night would already be gone.
+    if [ -z "$night" ]; then
+        night=$(date -u -d 'yesterday' +%Y%m%d)
+        echo "No night specified, defaulting to previous night: $night"
+    fi
 else
-    ci_values_file="values-ci-${SUFFIX}.yaml"
+    values_file="values-ci-${SUFFIX}.yaml"
     e2e_enabled="true"
+fi
+
+# Override the night only when set. The e2e values files pin their own night
+# for the simulated stream, so leave them untouched unless -n was given.
+night_args=()
+if [ -n "$night" ]; then
+    night_args+=(-p "finkBroker.night=$night")
 fi
 
 # --- CONFIGURATION WITHOUT TUNNEL ---
@@ -78,8 +102,9 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    --values "$ci_values_file" \
+    --values "$values_file" \
     -p storage="$storage" \
+    ${night_args[@]+"${night_args[@]}"} \
     -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
     -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
     -p finkBroker.monitoring.enabled="$monitoring" \
