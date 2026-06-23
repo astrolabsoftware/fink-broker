@@ -135,21 +135,25 @@ until argocd app get kafka >/dev/null 2>&1; do
 done
 wait_app -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
-if [ "$e2e_enabled" == "true" ]; then
-    echo "Retrieve kafka secrets for e2e tests"
-    # Use kubectl directly for waiting (more reliable than shell polling)
-    kubectl wait --namespace kafka --for=condition=Ready --timeout=300s pod -l app.kubernetes.io/name=kafka || true
-    
-    until kubectl get secret fink-producer --namespace kafka; do
-        echo "Waiting for secret/fink-producer in ns kafka"
-        sleep 5
-    done
-    
-    # Switch context for finkctl
-    kubectl config set-context --current --namespace="spark"
-    finkctl createsecrets
-    kubectl config set-context --current --namespace="$NS"
-fi
+# Create the Kafka SASL/JAAS secrets in the spark namespace. This is required
+# unconditionally whenever a local Kafka is deployed (components.kafka=true),
+# because the distribution SparkApplication mounts the fink-kafka-jaas secret.
+# Previously this lived inside the e2e_enabled block, so in CC mode (-c, where
+# e2e is disabled) the secret was never created and distribute executors were
+# stuck in ContainerCreating with "secret fink-kafka-jaas not found".
+echo "Retrieve kafka secrets"
+# Use kubectl directly for waiting (more reliable than shell polling)
+kubectl wait --namespace kafka --for=condition=Ready --timeout=300s pod -l app.kubernetes.io/name=kafka || true
+
+until kubectl get secret fink-producer --namespace kafka; do
+    echo "Waiting for secret/fink-producer in ns kafka"
+    sleep 5
+done
+
+# Switch context for finkctl
+kubectl config set-context --current --namespace="spark"
+finkctl createsecrets
+kubectl config set-context --current --namespace="$NS"
 
 # Deploy the broker/simulator layer (wave 2) now the Kafka secret exists.
 argocd app sync -l app.kubernetes.io/part-of=fink
