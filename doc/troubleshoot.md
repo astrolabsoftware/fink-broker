@@ -33,9 +33,9 @@ argocd app sync fink-broker
 
 ```shell
 cd fink-broker
-helm install --debug fink ./chart -f ./chart/values-ci-noscience.yaml --dry-run
+helm install --debug fink ./chart --dry-run
 # Or
-helm template --debug spark -f ./chart/values-ci-noscience.yaml --dry-run=client  -n spark ./chart
+helm template --debug spark --dry-run=client -n spark ./chart
 ```
 
 ## ArgoCD
