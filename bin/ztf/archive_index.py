@@ -186,7 +186,8 @@ def main():
 
         # explode
         df_ex = (
-            df.withColumn(
+            df
+            .withColumn(
                 "tmp", F.arrays_zip("magpsf", "sigmapsf", "diffmaglim", "jd", "fid")
             )
             .withColumn("tmp", F.explode("tmp"))
@@ -229,7 +230,8 @@ def main():
 
         # explode
         df_ex = (
-            df.withColumn(
+            df
+            .withColumn(
                 "tmp",
                 F.arrays_zip(
                     "magpsf",

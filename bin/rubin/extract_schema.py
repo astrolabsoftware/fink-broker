@@ -65,7 +65,8 @@ def main():
 
     # Fink versions
     fink_versions = (
-        df.select(["fink_broker_version", "fink_science_version"])
+        df
+        .select(["fink_broker_version", "fink_science_version"])
         .limit(1)
         .collect()[0]
         .asDict()

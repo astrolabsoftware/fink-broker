@@ -52,7 +52,8 @@ def load_hbase_data(catalog: str, rowkey: str) -> DataFrame:
     spark = SparkSession.builder.getOrCreate()
 
     df = (
-        spark.read.option("catalog", catalog)
+        spark.read
+        .option("catalog", catalog)
         .format("org.apache.hadoop.hbase.spark")
         .option("hbase.spark.use.hbasecontext", False)
         .option("hbase.spark.pushdown.columnfilter", True)
@@ -461,7 +462,8 @@ def push_to_hbase(
     if streaming:
         # FIXME: what should be the processing time?
         query = (
-            df.writeStream.foreachBatch(push_to_hbase_partial(hbcatalog_index, nregion))
+            df.writeStream
+            .foreachBatch(push_to_hbase_partial(hbcatalog_index, nregion))
             .option("checkpointLocation", checkpoint_path)
             .trigger(processingTime="60 seconds")
             .start()
