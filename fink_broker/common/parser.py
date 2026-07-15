@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.common.tester import regular_unit_tests
+from fink_broker.common.night_utils import get_night, resolve_night_placeholders
 import argparse
 
 
@@ -254,8 +255,23 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         type=str,
         default="",
         help="""
-        YYYYMMDD night
+        YYYYMMDD night. Explicit override (pinned night: backfill, rerun of a
+        failed night, or CI). When empty, the night is deduced from the current
+        UTC time using -night_offset_hours.
         [NIGHT]
+        """,
+    )
+    parser.add_argument(
+        "-night_offset_hours",
+        type=int,
+        default=0,
+        help="""
+        Hours subtracted from UTC now before extracting the deduced night (i.e.
+        when -night is empty). Encodes both the topic rollover (sub-day shift)
+        and the night selection: 0 -> current night (live, midnight rollover),
+        12 -> current night with a noon-UTC rollover, 24 -> previous complete
+        night (n-1). Ignored when -night is set.
+        [NIGHT_OFFSET_HOURS]
         """,
     )
     parser.add_argument(
@@ -347,6 +363,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     args = parser.parse_args(None)
+
+    # Resolve the observing night once, centrally: an explicit -night wins
+    # (pinned night); otherwise it is deduced from the current UTC time
+    # following the offset/rollover policy. The Kafka topic and output prefix
+    # may carry a '{night}' placeholder resolved here, so the date is computed
+    # at runtime instead of being frozen at Helm-templating time.
+    args.night = get_night(args.night, args.night_offset_hours)
+    args.topic = resolve_night_placeholders(args.topic, args.night)
+    args.online_data_prefix = resolve_night_placeholders(
+        args.online_data_prefix, args.night
+    )
+
     return args
 
 
