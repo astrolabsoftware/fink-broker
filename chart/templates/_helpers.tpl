@@ -89,6 +89,56 @@ restartPolicy:
   onSubmissionFailureRetryInterval: 20
 {{- end }}
 
+{{/*
+Night-resolution arguments, which differ intrinsically by run.mode.
+
+- oneoff (default): pin the night explicitly (backfill, rerun, CI). The night
+  is frozen at deploy time and injected via -night.
+- scheduled: deduce the night at runtime from UTC now (see get_night). No
+  -night is passed, so the job computes it from -night_offset_hours.
+
+exit_after is deliberately NOT handled here: it is orthogonal to the night
+mode (both a scheduled run and a backfill must terminate) and is passed
+unconditionally via fink.commonargs.
+*/}}
+{{- define "fink.nightargs" -}}
+{{- if eq .Values.run.mode "scheduled" -}}
+- '-night_offset_hours'
+- '{{ .Values.scheduled.nightOffsetHours }}'
+{{- else -}}
+- '-night'
+- '{{ .Values.night }}'
+{{- end -}}
+{{- end }}
+
+{{/*
+Wrap a SparkApplication spec as either a one-off SparkApplication or a
+ScheduledSparkApplication, depending on run.mode. Call with a dict:
+  {"ctx": ., "name": "<suffix>", "spec": "<named spec template>"}.
+*/}}
+{{- define "fink.sparkapp" -}}
+{{- $ctx := .ctx -}}
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+{{- if eq $ctx.Values.run.mode "scheduled" }}
+kind: ScheduledSparkApplication
+metadata:
+  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
+spec:
+  schedule: {{ $ctx.Values.scheduled.schedule | quote }}
+  concurrencyPolicy: {{ $ctx.Values.scheduled.concurrencyPolicy }}
+  successfulRunHistoryLimit: {{ $ctx.Values.scheduled.successfulRunHistoryLimit }}
+  failedRunHistoryLimit: {{ $ctx.Values.scheduled.failedRunHistoryLimit }}
+  template:
+    {{- include .spec $ctx | nindent 4 }}
+{{- else }}
+kind: SparkApplication
+metadata:
+  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
+spec:
+  {{- include .spec $ctx | nindent 2 }}
+{{- end }}
+{{- end }}
+
 {{/* Generate common argument for fink-broker command line */}}
 {{- define "fink.commonargs" -}}
 - '-log_level'
@@ -103,6 +153,8 @@ restartPolicy:
 - '{{ .Values.producer }}'
 - '-tinterval'
 - '{{ .Values.fink_trigger_update }}'
+- '-exit_after'
+- '{{ .Values.exitAfter }}'
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
 {{- end -}}
