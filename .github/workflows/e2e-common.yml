@@ -147,7 +147,7 @@ jobs:
       - name: Run argoCD
         id: run_argocd
         run: |
-          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          ./e2e/argocd.sh -i "ci-${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         id: check_results
         run: |
