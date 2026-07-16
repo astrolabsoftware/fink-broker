@@ -21,7 +21,11 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.7-rc4
+  CIUX_VERSION: v0.0.7-rc5
+  # Self-hosted runners keep their workspace across runs, and actions/checkout
+  # only cleans the main repository: without this, ciux reuses the dependency
+  # clones left by a previous run, pinning them to a stale revision.
+  CIUX_REFRESH_DEPS: "true"
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   MONITORING_OPT: "-m"
@@ -147,7 +151,9 @@ jobs:
       - name: Run argoCD
         id: run_argocd
         run: |
-          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          # The ciux image suffix is empty for the science variant, but the infra
+          # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
+          ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         id: check_results
         run: |

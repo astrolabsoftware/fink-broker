@@ -45,7 +45,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.7-rc4
+ciux_version=v0.0.7-rc5
 
 src_dir=$DIR/..
 cleanup=false
@@ -140,7 +140,7 @@ fi
 
 echo "Phase: ArgoCD Deployment"
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-if $DIR/argocd.sh -s "$SUFFIX" -S "$storage" $monitoring_opt; then
+if $DIR/argocd.sh -i "ci-$SUFFIX" -S "$storage" $monitoring_opt; then
     home-ci-reporter step "argocd_deploy" "passed" "ArgoCD deployment completed successfully" --file "$TEST_REPORT"
 else
     home-ci-reporter step "argocd_deploy" "failed" "ArgoCD deployment failed" --file "$TEST_REPORT"
