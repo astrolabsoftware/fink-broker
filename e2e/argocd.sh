@@ -6,9 +6,9 @@
 set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
-SUFFIX="noscience"
 
-cc="false"
+infra="ci-noscience"
+scheduled="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
@@ -21,31 +21,46 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
-  -c            Deploy with CC-IN2P3 setup (uses values-cc.yaml)
-  -n <night>    ZTF night YYYYMMDD. With -c, defaults to the previous night
-  -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
-  -S <storage>  Storage to use (hdfs or s3)
+  -i <infra>    Target infrastructure: deploy with values-<infra>.yaml
+                (e.g. 'cc', 'ci-noscience', 'ci-science'). Default: ci-noscience.
+                'ci-*' infras enable the e2e alert simulator; others are
+                production-like (e2e disabled). The fink-broker image variant
+                (science/noscience) is derived from the infra name.
+  -s            Scheduled mode: layer values-scheduled.yaml on top, deploying
+                ScheduledSparkApplications that deduce the observing night at
+                runtime. Without -s, one-shot SparkApplications with a pinned
+                night are deployed. Mutually exclusive with -n.
+  -n <night>    One-shot mode only: pin the ZTF night (YYYYMMDD). Defaults to
+                the previous night on production infras. Cannot be combined
+                with -s (scheduled deduces the night at runtime).
+  -m            Enable monitoring.
+  -S <storage>  Storage to use (hdfs or s3). Default: hdfs
+
+Examples:
+  $(basename "$0") -i cc          # CC-IN2P3, one-shot on the previous night
+  $(basename "$0") -i cc -s       # CC-IN2P3, scheduled daily run
 EOD
 }
 
 # Get the options
-# -s has no effect in GIHUB_ACTION mode
-while getopts hcmn:S:s: c ; do
+while getopts hi:mn:sS: c ; do
     case $c in
         h) usage ; exit 0 ;;
-        c) cc="true" ;;
+        i) infra="$OPTARG" ;;
         m) monitoring="true" ;;
         n) night="$OPTARG" ;;
+        s) scheduled="true" ;;
         S) storage="$OPTARG" ;;
-        s) SUFFIX="${OPTARG:-science}" ;;
         \?) usage ; exit 2 ;;
     esac
 done
 shift "$((OPTIND-1))"
 
-# Validate suffix value
-if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
-    echo "Error: suffix must be 'noscience' or 'science'"
+# Scheduled mode deduces the observing night at runtime, so pinning one with -n
+# is contradictory.
+if [ "$scheduled" == "true" ] && [ -n "$night" ]; then
+    echo "Error: -s (scheduled) and -n <night> are mutually exclusive:"
+    echo "       scheduled mode deduces the observing night at runtime."
     usage
     exit 1
 fi
@@ -57,6 +72,13 @@ if [ -n "$night" ] && ! [[ "$night" =~ ^[0-9]{8}$ ]]; then
     exit 1
 fi
 
+# Derive the fink-broker image variant (science/noscience) from the infra name;
+# used by ciux to select the image below.
+case "$infra" in
+    *noscience*) SUFFIX="noscience" ;;
+    *)           SUFFIX="science" ;;
+esac
+
 # Refresh ciux config if not in github actions
 # Used for interactive development
 if [ "$GITHUB_ACTIONS" == "false" ]; then
@@ -67,26 +89,33 @@ fi
 
 NS=argocd
 
-if [ "$cc" == "true" ]; then
-    values_file="values-cc.yaml"
-    e2e_enabled="false"
-    # Default to the previous night: the most recent complete ZTF observing
-    # night (today's topic is still being filled). ZTF public topics are only
-    # retained ~7 days, so a stale hard-coded night would already be gone.
-    if [ -z "$night" ]; then
+# 'ci-*' infras run the e2e alert simulator; other (production) infras don't.
+case "$infra" in
+    ci-*) e2e_enabled="true" ;;
+    *)    e2e_enabled="false" ;;
+esac
+
+# Layer the per-infra values, then the scheduled overlay when requested. Both
+# files live in the fink-cd app-of-apps chart (apps/), resolved relative to it.
+values_args=(--values "values-${infra}.yaml")
+if [ "$scheduled" == "true" ]; then
+    values_args+=(--values "values-scheduled.yaml")
+fi
+
+# Night handling (one-shot only). Scheduled mode passes no night: the job
+# deduces it at runtime. In one-shot mode on a production infra, default to the
+# previous night (the most recent complete ZTF observing night; today's topic
+# is still filling, and ZTF public topics are only retained ~7 days). CI infras
+# keep the night pinned by their values file unless -n overrides it.
+night_args=()
+if [ "$scheduled" == "false" ]; then
+    if [ -z "$night" ] && [ "$e2e_enabled" == "false" ]; then
         night=$(date -u -d 'yesterday' +%Y%m%d)
         echo "No night specified, defaulting to previous night: $night"
     fi
-else
-    values_file="values-ci-${SUFFIX}.yaml"
-    e2e_enabled="true"
-fi
-
-# Override the night only when set. The e2e values files pin their own night
-# for the simulated stream, so leave them untouched unless -n was given.
-night_args=()
-if [ -n "$night" ]; then
-    night_args+=(-p "finkBroker.night=$night")
+    if [ -n "$night" ]; then
+        night_args+=(-p "finkBroker.night=$night")
+    fi
 fi
 
 # --- CONFIGURATION WITHOUT TUNNEL ---
@@ -102,7 +131,7 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    --values "$values_file" \
+    "${values_args[@]}" \
     -p storage="$storage" \
     ${night_args[@]+"${night_args[@]}"} \
     -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
@@ -138,8 +167,8 @@ wait_app -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 # Create the Kafka SASL/JAAS secrets in the spark namespace. This is required
 # unconditionally whenever a local Kafka is deployed (components.kafka=true),
 # because the distribution SparkApplication mounts the fink-kafka-jaas secret.
-# Previously this lived inside the e2e_enabled block, so in CC mode (-c, where
-# e2e is disabled) the secret was never created and distribute executors were
+# Previously this lived inside the e2e_enabled block, so in production mode
+# (e.g. -i cc, where e2e is disabled) the secret was never created and distribute executors were
 # stuck in ContainerCreating with "secret fink-kafka-jaas not found".
 echo "Retrieve kafka secrets"
 # Use kubectl directly for waiting (more reliable than shell polling)
