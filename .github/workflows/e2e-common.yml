@@ -147,7 +147,9 @@ jobs:
       - name: Run argoCD
         id: run_argocd
         run: |
-          ./e2e/argocd.sh -i "ci-${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          # The ciux image suffix is empty for the science variant, but the infra
+          # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
+          ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         id: check_results
         run: |
