@@ -157,8 +157,12 @@ wait_app() {
 argocd app sync fink --async
 
 # Storage Applications are created asynchronously, once the operators (and
-# their CRDs) are healthy. Wait for them to exist, then for storage health.
-until argocd app get kafka >/dev/null 2>&1; do
+# their CRDs) are healthy. `argocd app wait -l` returns immediately when its
+# selector matches nothing, so guard it: wait until at least one storage app
+# exists, then wait for storage health. Probe the label (not a hardcoded app
+# name like `kafka`, which is optional via components.kafka), so the guard
+# holds whichever storage apps are enabled.
+until [ "$(argocd app list -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage -o name | wc -l)" -gt 0 ]; do
     echo "Waiting for storage Applications to be created..."
     sleep 5
 done
