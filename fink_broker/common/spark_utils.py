@@ -14,6 +14,7 @@
 # limitations under the License.
 import time
 import logging
+import socket
 from typing import Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -384,6 +385,129 @@ def increase_wait_time(wait_sec: int) -> int:
     if wait_sec < 60:
         wait_sec *= 1.2
     return wait_sec
+
+
+def wait_for_kafka(servers: str, timeout: int = 300) -> None:
+    """Wait for a Kafka bootstrap server to accept connections
+
+    A job is deployed together with the services it depends on, so it can start
+    before Kafka is up. Block here rather than fail on the first attempt.
+
+    Only TCP reachability is probed. The SASL credentials live in the Spark
+    configuration (`java.security.auth.login.config`, read by the executors),
+    so no authenticated client is available at this point and a protocol-level
+    check would report a failure on a perfectly healthy cluster.
+
+    Parameters
+    ----------
+    servers : str
+        Kafka bootstrap servers, as a comma-separated list of HOST:PORT. As for
+        any bootstrap list, one reachable server is enough.
+    timeout : int, optional
+        Give up after that many seconds. Default is 300.
+
+    Raises
+    ------
+    TimeoutError
+        If no server is reachable within `timeout` seconds.
+    """
+    brokers = []
+    for server in servers.split(","):
+        server = server.strip()
+        if not server:
+            continue
+        host, separator, port = server.rpartition(":")
+        if not separator:
+            raise ValueError("Malformed Kafka bootstrap server: {}".format(server))
+        brokers.append((host, int(port)))
+
+    if not brokers:
+        raise ValueError("No Kafka bootstrap server to wait for")
+
+    deadline = time.time() + timeout
+    wait_sec = 5
+    while True:
+        for host, port in brokers:
+            try:
+                with socket.create_connection((host, port), timeout=5):
+                    _LOG.info("Kafka server %s:%s is reachable", host, port)
+                    return
+            except OSError as exc:  # noqa: PERF203
+                _LOG.debug("Kafka server %s:%s unreachable, %s", host, port, exc)
+
+        if time.time() >= deadline:
+            raise TimeoutError(
+                "No Kafka bootstrap server reachable among {} after {} s".format(
+                    servers, timeout
+                )
+            )
+
+        _LOG.info("Waiting for a Kafka bootstrap server among %s", servers)
+        time.sleep(wait_sec)
+        wait_sec = increase_wait_time(wait_sec)
+
+
+def wait_for_filesystem(path: str, timeout: int = 300) -> None:
+    """Wait for the shared filesystem backing `path` to answer
+
+    HDFS and S3 are both covered: the URI scheme selects the Hadoop
+    implementation, and the S3A settings are read from the Spark configuration.
+
+    A missing path is a valid answer, as the data is written later on by the
+    upstream job. Only an error while reaching the service is retried.
+
+    Parameters
+    ----------
+    path : str
+        Path or prefix on the shared filesystem, e.g. `s3a://bucket` or
+        `hdfs://namenode:8020/user`. An empty path is a no-op.
+    timeout : int, optional
+        Give up after that many seconds. Default is 300.
+
+    Raises
+    ------
+    TimeoutError
+        If the filesystem cannot be reached within `timeout` seconds.
+    """
+    if not path:
+        return
+
+    spark = SparkSession.builder.getOrCreate()
+
+    jvm = spark._jvm
+    jsc = spark._jsc
+
+    # S3A retries on its own with an exponential backoff (up to 20 attempts by
+    # default), which would swallow the whole timeout in a single call. Probe
+    # with a short-tempered copy of the configuration, so that this loop -- and
+    # not the AWS SDK -- drives the retries. The job keeps the robust defaults.
+    conf = jvm.org.apache.hadoop.conf.Configuration(jsc.hadoopConfiguration())
+    conf.setInt("fs.s3a.attempts.maximum", 2)
+    conf.setInt("fs.s3a.retry.limit", 2)
+    conf.setInt("fs.s3a.connection.establish.timeout", 5000)
+    conf.setInt("fs.s3a.connection.timeout", 10000)
+
+    uri = jvm.java.net.URI(path)
+
+    deadline = time.time() + timeout
+    wait_sec = 5
+    while True:
+        try:
+            fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
+            fs.exists(jvm.org.apache.hadoop.fs.Path(uri))
+        except Exception as exc:  # noqa: PERF203
+            _LOG.info("Waiting for filesystem %s, %s", path, exc)
+        else:
+            _LOG.info("Filesystem %s is available", path)
+            return
+
+        if time.time() >= deadline:
+            raise TimeoutError(
+                "Filesystem {} unreachable after {} s".format(path, timeout)
+            )
+
+        time.sleep(wait_sec)
+        wait_sec = increase_wait_time(wait_sec)
 
 
 def path_exist(path: str) -> bool:
