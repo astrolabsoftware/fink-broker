@@ -33,6 +33,8 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import (
     init_sparksession,
     connect_to_raw_database,
+    wait_for_filesystem,
+    wait_for_kafka,
 )
 from fink_broker.common.distribution_utils import push_to_kafka
 from fink_broker.common.logging_utils import init_logger
@@ -62,6 +64,11 @@ def main():
         shuffle_partitions=10,
         log_level=args.spark_log_level,
     )
+
+    # This job is deployed alongside the services it depends on, so they may
+    # not be up yet. Wait for them instead of failing on the first access.
+    wait_for_kafka(args.distribution_servers)
+    wait_for_filesystem(args.online_data_prefix)
 
     # data path
     scitmpdatapath = args.online_data_prefix + "/science/{}".format(args.night)
