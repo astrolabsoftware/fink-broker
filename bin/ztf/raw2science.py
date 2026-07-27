@@ -34,6 +34,7 @@ from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import connect_to_raw_database
+from fink_broker.common.spark_utils import wait_for_filesystem
 from fink_broker.common.partitioning import convert_to_millitime
 
 
@@ -50,6 +51,10 @@ def main():
         tz=None,
         log_level=args.spark_log_level,
     )
+
+    # This job is deployed alongside the services it depends on, so they may
+    # not be up yet. Wait for them instead of failing on the first access.
+    wait_for_filesystem(args.online_data_prefix)
 
     # data path
     rawdatapath = os.path.join(args.online_data_prefix, "raw")

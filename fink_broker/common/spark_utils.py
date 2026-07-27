@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+import ipaddress
 import logging
-from typing import Tuple
+import re
+import socket
+from typing import List, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -384,6 +387,233 @@ def increase_wait_time(wait_sec: int) -> int:
     if wait_sec < 60:
         wait_sec *= 1.2
     return wait_sec
+
+
+# A DNS label: alphanumerics and dashes, never starting nor ending with a dash.
+_HOSTNAME_LABEL = r"(?!-)[A-Za-z0-9-]{1,63}(?<!-)"
+_HOSTNAME_RE = re.compile(r"^{label}(\.{label})*\.?$".format(label=_HOSTNAME_LABEL))
+
+
+def _is_valid_host(host: str) -> bool:
+    """Tell whether `host` is a usable hostname or IP literal
+
+    Parameters
+    ----------
+    host : str
+        Host part of a bootstrap server entry, brackets already stripped.
+
+    Returns
+    -------
+    bool
+        True if `host` is an IPv4/IPv6 literal, or a hostname of at most 253
+        characters made of valid DNS labels.
+    """
+    if not host or len(host) > 253:
+        return False
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return bool(_HOSTNAME_RE.match(host))
+
+    return True
+
+
+def parse_kafka_servers(servers: str) -> List[Tuple[str, int]]:
+    """Parse and validate a Kafka bootstrap server list
+
+    The list reaches the job as a command-line argument, so it is validated
+    here rather than handed straight to the network layer: only a syntactically
+    valid host and a port in the legal range come out of this function.
+
+    Parameters
+    ----------
+    servers : str
+        Comma-separated list of HOST:PORT. A bracketed IPv6 literal
+        (`[::1]:9092`) is accepted, and blanks around an entry are ignored.
+
+    Returns
+    -------
+    List[Tuple[str, int]]
+        The validated (host, port) pairs, in the order they were given.
+
+    Raises
+    ------
+    ValueError
+        If the list holds no entry, or if an entry is not a valid HOST:PORT.
+
+    Examples
+    --------
+    >>> parse_kafka_servers("kafka-0.kafka:9092,kafka-1.kafka:9093")
+    [('kafka-0.kafka', 9092), ('kafka-1.kafka', 9093)]
+    """
+    brokers = []
+    for server in servers.split(","):
+        server = server.strip()
+        if not server:
+            continue
+
+        host, separator, port = server.rpartition(":")
+        if not separator:
+            raise ValueError("Malformed Kafka bootstrap server: {}".format(server))
+
+        if host.startswith("[") and host.endswith("]"):
+            host = host[1:-1]
+
+        if not _is_valid_host(host):
+            raise ValueError(
+                "Invalid host in Kafka bootstrap server: {}".format(server)
+            )
+
+        try:
+            port_number = int(port)
+        except ValueError:
+            raise ValueError(
+                "Invalid port in Kafka bootstrap server: {}".format(server)
+            ) from None
+
+        if not 1 <= port_number <= 65535:
+            raise ValueError(
+                "Out of range port in Kafka bootstrap server: {}".format(server)
+            )
+
+        brokers.append((host, port_number))
+
+    if not brokers:
+        raise ValueError("No Kafka bootstrap server to wait for")
+
+    return brokers
+
+
+def wait_for_kafka(servers: str, timeout: int = 300) -> None:
+    """Wait for a Kafka bootstrap server to accept connections
+
+    A job is deployed together with the services it depends on, so it can start
+    before Kafka is up. Block here rather than fail on the first attempt.
+
+    Only TCP reachability is probed. The SASL credentials live in the Spark
+    configuration (`java.security.auth.login.config`, read by the executors),
+    so no authenticated client is available at this point and a protocol-level
+    check would report a failure on a perfectly healthy cluster.
+
+    Parameters
+    ----------
+    servers : str
+        Kafka bootstrap servers, as a comma-separated list of HOST:PORT,
+        validated by `parse_kafka_servers` before any connection is attempted.
+        As for any bootstrap list, one reachable server is enough.
+    timeout : int, optional
+        Give up after that many seconds. Default is 300.
+
+    Raises
+    ------
+    ValueError
+        If `servers` is not a valid bootstrap server list.
+    TimeoutError
+        If no server is reachable within `timeout` seconds.
+    """
+    brokers = parse_kafka_servers(servers)
+
+    deadline = time.time() + timeout
+    wait_sec = 5
+    while True:
+        for host, port in brokers:
+            try:
+                with socket.create_connection((host, port), timeout=5):
+                    _LOG.info("Kafka server %s:%s is reachable", host, port)
+                    return
+            except OSError as exc:  # noqa: PERF203
+                _LOG.debug("Kafka server %s:%s unreachable, %s", host, port, exc)
+
+        if time.time() >= deadline:
+            raise TimeoutError(
+                "No Kafka bootstrap server reachable among {} after {} s".format(
+                    servers, timeout
+                )
+            )
+
+        _LOG.info("Waiting for a Kafka bootstrap server among %s", servers)
+        time.sleep(wait_sec)
+        wait_sec = increase_wait_time(wait_sec)
+
+
+def wait_for_filesystem(path: str, timeout: int = 300) -> None:
+    """Wait for the shared filesystem backing `path` to answer
+
+    HDFS and S3 are both covered: the URI scheme selects the Hadoop
+    implementation, and the S3A settings are read from the Spark configuration.
+
+    A missing path is a valid answer, as the data is written later on by the
+    upstream job. Only an error while reaching the service is retried.
+
+    Parameters
+    ----------
+    path : str
+        Path or prefix on the shared filesystem, e.g. `s3a://bucket` or
+        `hdfs://namenode:8020/user`. An empty path is a no-op.
+    timeout : int, optional
+        Give up after that many seconds. Default is 300.
+
+    Raises
+    ------
+    TimeoutError
+        If the filesystem cannot be reached within `timeout` seconds.
+    """
+    if not path:
+        return
+
+    spark = SparkSession.builder.getOrCreate()
+
+    jvm = spark._jvm
+    jsc = spark._jsc
+
+    # S3A retries on its own with an exponential backoff (up to 20 attempts by
+    # default), which would swallow the whole timeout in a single call. Probe
+    # with a short-tempered copy of the configuration, so that this loop -- and
+    # not the AWS SDK -- drives the retries. The job keeps the robust defaults.
+    conf = jvm.org.apache.hadoop.conf.Configuration(jsc.hadoopConfiguration())
+    conf.setInt("fs.s3a.attempts.maximum", 2)
+    conf.setInt("fs.s3a.retry.limit", 2)
+    conf.setInt("fs.s3a.connection.establish.timeout", 5000)
+    conf.setInt("fs.s3a.connection.timeout", 10000)
+
+    uri = jvm.java.net.URI(path)
+
+    # A bucket URI carries no path component (s3a://bucket), and Hadoop
+    # rejects a Path built from it. Probe the root of the filesystem instead,
+    # which is what we are really waiting for.
+    probe = jvm.org.apache.hadoop.fs.Path(uri.getPath() or "/")
+
+    # On S3A, exists() never reaches the store: the root is always reported as
+    # an existing directory, and the bucket probe at mount time is disabled by
+    # default (fs.s3a.bucket.probe=0 since Hadoop 3.3.1). The wait would then
+    # return as soon as the endpoint answers, while the bucket is still being
+    # created by the MinIO tenant -- and the job would fail on the first read
+    # with NoSuchBucket. Listing the root does reach the store.
+    is_s3 = uri.getScheme() in ("s3a", "s3")
+
+    deadline = time.time() + timeout
+    wait_sec = 5
+    while True:
+        try:
+            fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
+            if is_s3:
+                fs.listStatus(probe)
+            else:
+                fs.exists(probe)
+        except Exception as exc:  # noqa: PERF203
+            _LOG.info("Waiting for filesystem %s, %s", path, exc)
+        else:
+            _LOG.info("Filesystem %s is available", path)
+            return
+
+        if time.time() >= deadline:
+            raise TimeoutError(
+                "Filesystem {} unreachable after {} s".format(path, timeout)
+            )
+
+        time.sleep(wait_sec)
+        wait_sec = increase_wait_time(wait_sec)
 
 
 def path_exist(path: str) -> bool:

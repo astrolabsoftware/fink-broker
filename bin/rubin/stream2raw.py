@@ -30,7 +30,7 @@ import argparse
 
 from multiprocessing import Process, Queue
 
-from confluent_kafka import DeserializingConsumer
+from confluent_kafka import DeserializingConsumer, KafkaException
 from confluent_kafka.admin import AdminClient
 from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroDeserializer
@@ -88,12 +88,28 @@ def run(q, kafka_config, config):
     #    c.commit(offsets=config["partitions"])
 
     if config["hdfs_namenode"] != "":
-        fs = HadoopFileSystem(
-            config["hdfs_namenode"],
-            config["hdfs_port"],
-            user=config["hdfs_username"],
-            replication=2,
-        )
+        # HDFS is deployed alongside this job and may not be up yet: retry
+        # instead of failing on the first connection attempt.
+        deadline = time.time() + 300
+        while True:
+            try:
+                fs = HadoopFileSystem(
+                    config["hdfs_namenode"],
+                    config["hdfs_port"],
+                    user=config["hdfs_username"],
+                    replication=2,
+                )
+            except OSError as exc:  # noqa: PERF203
+                if time.time() >= deadline:
+                    raise
+                _LOG.info(
+                    "Waiting for HDFS namenode {}: {}".format(
+                        config["hdfs_namenode"], exc
+                    )
+                )
+                time.sleep(10)
+            else:
+                break
     else:
         # For local tests
         fs = None
@@ -371,17 +387,27 @@ if __name__ == "__main__":
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
 
-    # check topic exists
+    # check topic exists. Kafka is deployed alongside this job and may not be
+    # up yet, so a failed call is retried instead of being fatal. The topic
+    # list is refreshed at every attempt, as the topic may appear later on.
     kadmin = AdminClient(
         {k: v for k, v in kafka_config.items() if k != "value.deserializer"}
     )
-    available_topics = kadmin.list_topics().topics
-    while args.topic not in available_topics:
-        _LOG.warning(
-            "{} is not in the list of available topics: {}. Sleeping 1 minute...".format(
-                args.topic, available_topics
+    while True:
+        try:
+            available_topics = kadmin.list_topics(timeout=10).topics
+        except KafkaException as exc:
+            _LOG.warning(
+                "Kafka is not available yet: {}. Sleeping 1 minute...".format(exc)
             )
-        )
+        else:
+            if args.topic in available_topics:
+                break
+            _LOG.warning(
+                "{} is not in the list of available topics: {}. Sleeping 1 minute...".format(
+                    args.topic, available_topics
+                )
+            )
         time.sleep(60)
 
     if args.check_offsets:
