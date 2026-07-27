@@ -13,6 +13,7 @@ monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
 night=""
+revision=""
 
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
@@ -33,22 +34,31 @@ Available options:
   -n <night>    One-shot mode only: pin the ZTF night (YYYYMMDD). Defaults to
                 the previous night on production infras. Cannot be combined
                 with -s (scheduled deduces the night at runtime).
+  -r <ref>      Git revision (tag or commit sha) deployed for fink-cd,
+                fink-broker and fink-alert-simulator. Default: the work
+                branches resolved by ciux (the current branch when it exists
+                in the dependency, else its default branch).
+                All Applications are auto-synced, so a branch makes the
+                running stack follow its HEAD: pin an immutable tag for
+                production. The ref must exist in the three repositories.
   -m            Enable monitoring.
   -S <storage>  Storage to use (hdfs or s3). Default: hdfs
 
 Examples:
   $(basename "$0") -i cc          # CC-IN2P3, one-shot on the previous night
   $(basename "$0") -i cc -s       # CC-IN2P3, scheduled daily run
+  $(basename "$0") -i cc -s -r v3.3.0   # ... pinned on a release tag
 EOD
 }
 
 # Get the options
-while getopts hi:mn:sS: c ; do
+while getopts hi:mn:r:sS: c ; do
     case $c in
         h) usage ; exit 0 ;;
         i) infra="$OPTARG" ;;
         m) monitoring="true" ;;
         n) night="$OPTARG" ;;
+        r) revision="$OPTARG" ;;
         s) scheduled="true" ;;
         S) storage="$OPTARG" ;;
         \?) usage ; exit 2 ;;
@@ -86,6 +96,31 @@ if [ "$GITHUB_ACTIONS" == "false" ]; then
 fi
 
 . "$DIR/../.ciux.d/ciux_itest.sh"
+
+# Revisions deployed for the three source repositories. ciux resolves a work
+# branch per repository (used by CI and interactive development); -r overrides
+# all of them with a single ref. Every Application is auto-synced, so a branch
+# means "follow its HEAD": production runs must pin an immutable tag.
+fink_cd_rev="$FINK_CD_WORKBRANCH"
+fink_broker_rev="$FINK_BROKER_WORKBRANCH"
+fink_alert_simulator_rev="$FINK_ALERT_SIMULATOR_WORKBRANCH"
+if [ -n "$revision" ]; then
+    # Fail loudly here rather than let Argo CD loop on an unresolvable
+    # revision: a partially tagged release is the expected mistake. Commit
+    # shas are not advertised by ls-remote, so they skip this check.
+    if ! [[ "$revision" =~ ^[0-9a-f]{7,40}$ ]]; then
+        for repo in fink-cd fink-broker fink-alert-simulator; do
+            if ! git ls-remote --exit-code "https://github.com/astrolabsoftware/$repo.git" \
+                    "refs/tags/$revision" "refs/heads/$revision" > /dev/null 2>&1; then
+                echo "Error: revision '$revision' not found in astrolabsoftware/$repo"
+                exit 1
+            fi
+        done
+    fi
+    fink_cd_rev="$revision"
+    fink_broker_rev="$revision"
+    fink_alert_simulator_rev="$revision"
+fi
 
 NS=argocd
 
@@ -130,7 +165,7 @@ echo "Use fink-broker image: $CIUX_IMAGE_URL"
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
-    --path apps --revision "$FINK_CD_WORKBRANCH" \
+    --path apps --revision "$fink_cd_rev" \
     "${values_args[@]}" \
     -p storage="$storage" \
     ${night_args[@]+"${night_args[@]}"} \
@@ -138,9 +173,9 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
     -p finkBroker.monitoring.enabled="$monitoring" \
     -p finkAlertSimulator.image.tag="$FINK_ALERT_SIMULATOR_VERSION" \
-    -p spec.source.targetRevision.default="$FINK_CD_WORKBRANCH" \
-    -p spec.source.targetRevision.finkbroker="$FINK_BROKER_WORKBRANCH" \
-    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
+    -p spec.source.targetRevision.default="$fink_cd_rev" \
+    -p spec.source.targetRevision.finkbroker="$fink_broker_rev" \
+    -p spec.source.targetRevision.finkalertsimulator="$fink_alert_simulator_rev" \
     --upsert # Added to avoid error if app already exists
 
 # Robust wait: let the sync operation finish, give workloads ~10s to start
@@ -152,27 +187,15 @@ wait_app() {
     argocd app wait --health "$@" --timeout 600
 }
 
-# Roll out operators (wave 0) + storage (wave 1) via sync-waves. Async so the
-# Kafka secret can be created before the broker (wave 2) is synced below.
-argocd app sync fink --async
-
-# Storage Applications are created asynchronously, once the operators (and
-# their CRDs) are healthy. `argocd app wait -l` returns immediately when its
-# selector matches nothing, so guard it: wait until at least one storage app
-# exists, then wait for storage health. Probe the label (not a hardcoded app
-# name like `kafka`, which is optional via components.kafka), so the guard
-# holds whichever storage apps are enabled.
-until [ "$(argocd app list -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage -o name | wc -l)" -gt 0 ]; do
-    echo "Waiting for storage Applications to be created..."
-    sleep 5
-done
-wait_app -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-
-# The Kafka SASL/JAAS secret mounted by the distribution SparkApplication is
-# now a declarative resource of the kafka chart (fink-cd), synced in wave 1
-# above, so it exists by the time the broker is synced. It used to be created
-# imperatively here with `finkctl createsecrets`.
-
-# Deploy the broker/simulator layer (wave 2) now the Kafka secret exists.
-argocd app sync -l app.kubernetes.io/part-of=fink
+# Roll out the whole stack: operators (wave 0) -> storage (wave 1) ->
+# broker/simulator (wave 2). Every child Application is auto-synced, so Argo CD
+# gates each wave on the health of the previous one; a synchronous sync of the
+# app-of-apps is enough to order the rollout. The Kafka SASL/JAAS secret
+# mounted by the distribution SparkApplication is a declarative resource of the
+# kafka chart (wave 1), so it exists before the broker starts -- it used to be
+# created imperatively here with `finkctl createsecrets`, which is why the
+# broker layer was synced separately. The sync covers the three waves end to
+# end (image pulls included on a cold cluster), hence a timeout well above the
+# per-app ones above.
+argocd app sync fink --timeout 1800
 wait_app -l app.kubernetes.io/part-of=fink
