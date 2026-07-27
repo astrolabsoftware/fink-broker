@@ -489,12 +489,17 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
 
     uri = jvm.java.net.URI(path)
 
+    # A bucket URI carries no path component (s3a://bucket), and Hadoop
+    # rejects a Path built from it. Probe the root of the filesystem instead,
+    # which is what we are really waiting for.
+    probe = jvm.org.apache.hadoop.fs.Path(uri.getPath() or "/")
+
     deadline = time.time() + timeout
     wait_sec = 5
     while True:
         try:
             fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
-            fs.exists(jvm.org.apache.hadoop.fs.Path(uri))
+            fs.exists(probe)
         except Exception as exc:  # noqa: PERF203
             _LOG.info("Waiting for filesystem %s, %s", path, exc)
         else:
