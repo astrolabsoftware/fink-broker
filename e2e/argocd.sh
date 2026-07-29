@@ -130,6 +130,15 @@ case "$infra" in
     *)    e2e_enabled="false" ;;
 esac
 
+# SCRAM password for the fink-producer KafkaUser. Throwaway CI clusters keep a
+# fixed default, so a run is reproducible and the distribution topic easy to
+# consume by hand; production infras get a generated one that never leaves the
+# cluster (see provision_jaas_secrets below).
+case "$infra" in
+    ci-*) jaas_password="CHANGEME" ;;
+    *)    jaas_password="" ;;
+esac
+
 # Layer the per-infra values, then the scheduled overlay when requested. Both
 # files live in the fink-cd app-of-apps chart (apps/), resolved relative to it.
 values_args=(--values "values-${infra}.yaml")
@@ -153,11 +162,92 @@ if [ "$scheduled" == "false" ]; then
     fi
 fi
 
+# Provision the Kafka SASL/SCRAM credentials the kafka chart expects: the
+# password secret read by the KafkaUser, and the JAAS config mounted by the
+# distribution SparkApplication. Every infra goes through this single path, so
+# CI exercises exactly what production runs -- and no password lives in git or
+# in the Argo CD Application manifest.
+#
+# Idempotent, so it runs before every deployment: a password is picked on the
+# first run only, later runs reuse the one already stored in the cluster. That
+# is what keeps the two secrets consistent -- a partial state (one secret
+# missing, a namespace wiped by a sync) is repaired from the surviving value
+# instead of rotating the credential behind Strimzi's back.
+provision_jaas_secrets() {
+    local kafka_ns="kafka"
+    local spark_ns="spark"
+    local username="fink-producer"
+    local password
+    local ns
+
+    # No xtrace in here: the password must not leak into the logs.
+    set +x
+
+    password=$(kubectl -n "$kafka_ns" get secret fink-producer-password \
+        -o 'jsonpath={.data.password}' 2>/dev/null | base64 -d || true)
+    if [ -n "$password" ]; then
+        echo "Reusing the SCRAM password stored in $kafka_ns/fink-producer-password"
+    elif [ -n "$jaas_password" ]; then
+        echo "Using the default SCRAM password for $username"
+        password="$jaas_password"
+    else
+        echo "Generating a new SCRAM password for $username"
+        password=$(openssl rand -base64 24)
+    fi
+
+    # Both namespaces are owned by Argo CD (Namespace/spark in the app-of-apps,
+    # kafka via CreateNamespace=true), which adopts them on the first sync;
+    # creating them here only makes the secrets landable beforehand. Create
+    # them only when missing: `apply`-ing a bare namespace over one Argo CD
+    # already manages would strip the labels and tracking annotations it owns.
+    for ns in "$kafka_ns" "$spark_ns"; do
+        kubectl get namespace "$ns" > /dev/null 2>&1 || kubectl create namespace "$ns"
+    done
+
+    # Fed through stdin rather than `kubectl create secret --from-literal`: the
+    # password would otherwise show up in the process table.
+    kubectl apply -f - << EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fink-producer-password
+  namespace: $kafka_ns
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: fink
+type: Opaque
+stringData:
+  password: "$password"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fink-kafka-jaas
+  namespace: $spark_ns
+  labels:
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: fink
+type: Opaque
+stringData:
+  kafka-jaas.conf: |
+    // Configuration for secure kafka authentication
+    KafkaClient {
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="$username"
+        password="$password";
+    };
+EOF
+
+    set -x
+}
+
 # --- CONFIGURATION WITHOUT TUNNEL ---
 # Force the use of local K8s context.
 # No need for 'argocd login' with password.
 export ARGOCD_OPTS="--core --namespace $NS"
 kubectl config set-context --current --namespace="$NS"
+
+provision_jaas_secrets
 
 echo "Use fink-broker image: $CIUX_IMAGE_URL"
 
@@ -190,11 +280,10 @@ wait_app() {
 # Roll out the whole stack: operators (wave 0) -> storage (wave 1) ->
 # broker/simulator (wave 2). Every child Application is auto-synced, so Argo CD
 # gates each wave on the health of the previous one; a synchronous sync of the
-# app-of-apps is enough to order the rollout. The Kafka SASL/JAAS secret
-# mounted by the distribution SparkApplication is a declarative resource of the
-# kafka chart (wave 1), so it exists before the broker starts -- it used to be
-# created imperatively here with `finkctl createsecrets`, which is why the
-# broker layer was synced separately. The sync covers the three waves end to
+# app-of-apps is enough to order the rollout. The Kafka SASL/JAAS secrets are
+# already in place (provision_jaas_secrets, above), so the broker layer no
+# longer needs a separate sync the way it did with `finkctl createsecrets`.
+# The sync covers the three waves end to
 # end (image pulls included on a cold cluster), hence a timeout well above the
 # per-app ones above.
 argocd app sync fink --timeout 1800
