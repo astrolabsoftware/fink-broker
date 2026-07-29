@@ -53,24 +53,25 @@ project.
 [ciux install guide](https://github.com/k8s-school/ciux#installation) and the
 ignition step in [e2e.md](e2e.md).
 
-### Kafka credentials (one-shot)
+### Kafka credentials
 
-`values-cc.yaml` sets `kafka.jaas.create=false`, so the CC deployment never runs
-on the `CHANGEME` default of `apps/values.yaml` — the `external` listener is a
-nodeport with `scram-sha-512`. The two secrets must be created once on the
-cluster; they then persist across deployments:
+No SCRAM password lives in git: `e2e/argocd.sh` provisions the two secrets it
+derives — `kafka/fink-producer-password`, read by the `KafkaUser`, and
+`spark/fink-kafka-jaas`, mounted by the distribution `SparkApplication` — before
+creating the app-of-apps. The step is idempotent and runs on every deployment:
+on CC the password is generated on the first run and reused afterwards (CI
+infras get a fixed throwaway one, so both environments exercise the same path).
+
+Read it back with:
 
 ```bash
-PW=$(openssl rand -base64 24)
-kubectl -n kafka create secret generic fink-producer-password \
-  --from-literal=password="$PW"
-printf '// Configuration for secure kafka authentication\nKafkaClient {\n    org.apache.kafka.common.security.scram.ScramLoginModule required\n    username="fink-producer"\n    password="%s";\n};\n' "$PW" > /tmp/kafka-jaas.conf
-kubectl -n spark create secret generic fink-kafka-jaas \
-  --from-file=kafka-jaas.conf=/tmp/kafka-jaas.conf && rm /tmp/kafka-jaas.conf
+kubectl -n kafka get secret fink-producer-password \
+  -o jsonpath='{.data.password}' | base64 -d
 ```
 
-If they are missing, the `KafkaUser` stays `NotReady` and the distribution
-executors stay in `ContainerCreating` — a loud failure, by design.
+Deploying without `e2e/argocd.sh` means creating both secrets by hand. If they
+are missing, the `KafkaUser` stays `NotReady` and the distribution executors
+stay in `ContainerCreating` — a loud failure, by design.
 
 ## Pin a release
 
