@@ -494,12 +494,23 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
     # which is what we are really waiting for.
     probe = jvm.org.apache.hadoop.fs.Path(uri.getPath() or "/")
 
+    # On S3A, exists() never reaches the store: the root is always reported as
+    # an existing directory, and the bucket probe at mount time is disabled by
+    # default (fs.s3a.bucket.probe=0 since Hadoop 3.3.1). The wait would then
+    # return as soon as the endpoint answers, while the bucket is still being
+    # created by the MinIO tenant -- and the job would fail on the first read
+    # with NoSuchBucket. Listing the root does reach the store.
+    is_s3 = uri.getScheme() in ("s3a", "s3")
+
     deadline = time.time() + timeout
     wait_sec = 5
     while True:
         try:
             fs = jvm.org.apache.hadoop.fs.FileSystem.get(uri, conf)
-            fs.exists(probe)
+            if is_s3:
+                fs.listStatus(probe)
+            else:
+                fs.exists(probe)
         except Exception as exc:  # noqa: PERF203
             _LOG.info("Waiting for filesystem %s, %s", path, exc)
         else:
