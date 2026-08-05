@@ -143,6 +143,7 @@ def run(q, kafka_config, config):
 
             if (count % config["hdfs_batch_size"] == 0) and (len(msgs) > 0):
                 # Dump on disk
+                _LOG.info("Dump on disk full block: {} alerts...".format(len(msgs)))
                 write_alert(
                     msgs,
                     config["table_schema_path"],
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-lsst_schema_server",
         type=str,
-        default="https://usdf-alert-schemas-dev.slac.stanford.edu",
+        default="https://rubin-alert-schemas.slac.stanford.edu/schema-registry",
         help="Kafka URL for schema",
     )
     parser.add_argument(
@@ -314,7 +315,7 @@ if __name__ == "__main__":
         # This is the URL to use to connect to the Kafka cluster.
         "bootstrap.servers": args.lsst_kafka_server,
         # The Consumer Group ID, as described above.
-        "group.id": args.lsst_kafka_username + "_group_",
+        "group.id": args.lsst_kafka_username + "_groupid_",
         "auto.offset.reset": "earliest",
         "fetch.min.bytes": 10 * 1024 * 1024,
         "max.poll.interval.ms": 300000,

@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-schema_url",
         type=str,
-        default="https://usdf-alert-schemas-dev.slac.stanford.edu",
+        default="https://rubin-alert-schemas.slac.stanford.edu/schema-registry",
         help="URL for LSST schema",
     )
     parser.add_argument(
