@@ -5,7 +5,6 @@
 [![Sentinel](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml)
 [![PEP8](https://github.com/astrolabsoftware/fink-broker/workflows/PEP8/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3APEP8)
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
-[![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
 ## What is Fink?
 
@@ -35,10 +34,12 @@ All are open source, and we thank all contributors!
 ## Useful links
 
 - Website: https://fink-broker.org
-- Documentation website: https://fink-broker.readthedocs.io
+- ZTF documentation: https://doc.ztf.fink-broker.org/
+- LSST documentation: https://doc.lsst.fink-broker.org/
 - Science Portal: https://fink-portal.org
 - Publications: https://fink-broker.org/papers
-- Release notes: https://fink-broker.readthedocs.io/en/latest/release-notes
+- ZTF release notes: https://doc.ztf.fink-broker.org/release-notes/
+- LSST release notes: https://doc.lsst.fink-broker.org/release-notes/
 - Developer notes (need authentication): https://gitlab.in2p3.fr/fink
 
 ## Outside academia
