@@ -334,9 +334,9 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
         3: 21,  # Periodic: RRLyrae, EB, LPV, ...
         4: 22,  # Non-periodic: AGN
     }
-    mapping_cats_general_expr = F.create_map([
-        F.lit(x) for x in chain(*mapping_cats_general.items())
-    ])
+    mapping_cats_general_expr = F.create_map(
+        [F.lit(x) for x in chain(*mapping_cats_general.items())]
+    )
 
     df = df.withColumn(
         "cats_argmax",
