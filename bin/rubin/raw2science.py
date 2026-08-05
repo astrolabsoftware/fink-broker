@@ -105,7 +105,8 @@ def main():
 
     logger.debug("Append new rows in the tmp science data lake")
     countquery = (
-        df.writeStream.outputMode("append")
+        df.writeStream
+        .outputMode("append")
         .format("parquet")
         .option("checkpointLocation", checkpointpath_sci_tmp)
         .option("path", scitmpdatapath)

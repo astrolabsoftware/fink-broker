@@ -107,18 +107,16 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     df_filt = apply_tracklet_cuts(df)
 
     # Initialise `tracklet` column
-    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select(
-        [
-            "candid",
-            "candidate.jd",
-            "candidate.xpos",
-            "candidate.ypos",
-            "candidate.nid",
-            "tracklet",
-            "candidate.ra",
-            "candidate.dec",
-        ]
-    )
+    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select([
+        "candid",
+        "candidate.jd",
+        "candidate.xpos",
+        "candidate.ypos",
+        "candidate.nid",
+        "tracklet",
+        "candidate.ra",
+        "candidate.dec",
+    ])
 
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
         """Extract tracklet ID from a Spark DataFrame
@@ -325,7 +323,8 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     # extract tracklet information - beware there could be duplicated rows
     # so we use dropDuplicates to avoid these.
     df_trck = (
-        df_filt_tracklet.cache()
+        df_filt_tracklet
+        .cache()
         .dropDuplicates(["jd", "xpos", "ypos"])
         .groupBy("jd")
         .applyInPandas(extract_tracklet_number, schema=df_filt_tracklet.schema)
