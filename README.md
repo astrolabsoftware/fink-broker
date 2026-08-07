@@ -10,6 +10,7 @@
 
 Fink is an alert broker, that is a layer between astronomical alert issuers and the scientific community analysing the alert data. It exposes services to help the scientists to efficiently analyse the alert data from telescopes and surveys. Among several, it collects and stores alert data, enriches them with information from other surveys and catalogues or user-defined added values such as machine-learning classification scores, and redistributes the most promising events for further analyses, including follow-up observations.
 
+
 Fink's main scientific objective is to optimize the scientific impact of the [Rubin Observatory](https://www.lsst.org/) alert data stream. We do not limit ourselves to a specific area, but instead our ambition is to study the transient and variable sky as a whole, from Solar system objects to galactic and extragalactic science. In practice thanks to the [Zwicky Transient Facility](https://www.ztf.caltech.edu/) alert stream, we are active since 2019 on Solar system objects, young stellar objects, microlensing, supernovae, kilonovae, gamma-ray bursts, active galactic nuclei, and even anomaly detection. On the technological side, Fink aims at providing a robust infrastructure and state-of-the-art streaming services to Rubin scientists, to seamlessly enable user-defined science cases in a big data context.
 
 ## How Fink works?
