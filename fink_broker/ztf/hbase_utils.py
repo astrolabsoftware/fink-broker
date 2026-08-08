@@ -19,7 +19,7 @@ from pyspark.sql.utils import AnalysisException
 import pyspark.sql.functions as F
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS
-from fink_science.ztf.blazar_low_state.processor import (
+from fink_science.ztf.blazar_extreme_state.processor import (
     BLAZAR_LOW_COLS,
     BLAZAR_HIGH_COLS,
     CDF_COL,
@@ -468,8 +468,7 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
 
             # rename root.level into root_level
             name = (
-                F
-                .col(colname)
+                F.col(colname)
                 .alias(colname.replace(".", "_"))
                 .cast(coltype_and_default["type"])
             )
