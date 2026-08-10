@@ -15,7 +15,6 @@
 """Extract all SSO lightcurves with residuals from the sHG1G2 model."""
 
 from pyspark.sql.functions import pandas_udf, PandasUDFType
-from pyspark.sql import SparkSession
 from pyspark.sql.types import ArrayType, FloatType
 
 import pandas as pd
@@ -25,6 +24,7 @@ import argparse
 from line_profiler import profile
 
 from fink_utils.sso.spins import func_shg1g2
+from fink_broker.common.spark_utils import init_sparksession
 
 import logging
 
@@ -61,26 +61,28 @@ def extract_residuals(
     out: pd.Series of list
         Magnitude residuals
     """
-    pdf = pd.DataFrame({
-        "residuals": [[] for i in range(len(raobs))],
-        "fid": fid.to_numpy(),
-        "ra": raobs.to_numpy(),
-        "dec": decobs.to_numpy(),
-        "phase": phase.to_numpy(),
-        "magpsf": magpsf.to_numpy(),
-        "dobs": dobs.to_numpy(),
-        "dhelio": dhelio.to_numpy(),
-        "R": R.to_numpy(),
-        "alpha0": alpha0.to_numpy(),
-        "delta0": delta0.to_numpy(),
-        "H_1": H_1.to_numpy(),
-        "H_2": H_2.to_numpy(),
-        "G1_1": G1_1.to_numpy(),
-        "G1_2": G1_2.to_numpy(),
-        "G2_1": G2_1.to_numpy(),
-        "G2_2": G2_2.to_numpy(),
-        "fit": fit.to_numpy(),
-    })
+    pdf = pd.DataFrame(
+        {
+            "residuals": [[] for _ in range(len(raobs))],
+            "fid": fid.to_numpy(),
+            "ra": raobs.to_numpy(),
+            "dec": decobs.to_numpy(),
+            "phase": phase.to_numpy(),
+            "magpsf": magpsf.to_numpy(),
+            "dobs": dobs.to_numpy(),
+            "dhelio": dhelio.to_numpy(),
+            "R": R.to_numpy(),
+            "alpha0": alpha0.to_numpy(),
+            "delta0": delta0.to_numpy(),
+            "H_1": H_1.to_numpy(),
+            "H_2": H_2.to_numpy(),
+            "G1_1": G1_1.to_numpy(),
+            "G1_2": G1_2.to_numpy(),
+            "G2_1": G2_1.to_numpy(),
+            "G2_2": G2_2.to_numpy(),
+            "fit": fit.to_numpy(),
+        }
+    )
     for index, row in pdf.iterrows():
         if row["fit"] != 0:
             # Fit failed
@@ -92,11 +94,9 @@ def extract_residuals(
         for filt in np.unique(row["fid"]):
             cond = row["fid"] == filt
             model = func_shg1g2(
-                [
-                    np.deg2rad(row["phase"][cond]),
-                    np.deg2rad(row["ra"][cond]),
-                    np.deg2rad(row["dec"][cond]),
-                ],
+                np.deg2rad(row["phase"][cond]),
+                np.deg2rad(row["ra"][cond]),
+                np.deg2rad(row["dec"][cond]),
                 row["H_{}".format(filt)],
                 row["G1_{}".format(filt)],
                 row["G2_{}".format(filt)],
@@ -127,10 +127,13 @@ def main():
     year = datetime.datetime.now().year
     month = "{:02}".format(datetime.datetime.now().month)
 
-    spark = SparkSession.builder.appName(
-        "sso_bulk_{}{}".format(year, month)
-    ).getOrCreate()
-    spark.sparkContext.setLogLevel("WARN")
+    # Initialise Spark session
+    spark = init_sparksession(
+        name="sso_bulk_{}".format(
+            year,
+        ),
+        shuffle_partitions=2,
+    )
 
     # Load SSO LC data
     df_lc = spark.read.format("parquet").load(
