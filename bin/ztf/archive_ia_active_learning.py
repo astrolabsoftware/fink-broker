@@ -52,7 +52,7 @@ def append_slack_messages(slack_data: list, row: dict) -> None:
         Pandas DataFrame row as dictionary. Contains
         Fink data.
     """
-    t1 = f"ID: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+    t1 = f"ID: <https://ztf.fink-portal.org/{row.objectId}|{row.objectId}>"
     t2 = f"""
 EQU: {row.ra},   {row.dec}"""
 

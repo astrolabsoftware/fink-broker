@@ -21,10 +21,9 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.7-rc1
+  CIUX_VERSION: v0.0.7-rc4
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
-  STORAGE: ${{ inputs.storage }}
   MONITORING_OPT: "-m"
   # Override the self-hosted runner value
   POD_NAMESPACE: default
@@ -33,7 +32,8 @@ jobs:
     name: Build image
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
-      image: ${{ steps.export.outputs.IMAGE }}
+      ciux_image_url: ${{ steps.export.outputs.CIUX_IMAGE_URL }}
+      ciux_build: ${{ steps.export.outputs.CIUX_BUILD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,7 +43,9 @@ jobs:
         with:
           go-version: '1.21.4'
       - name: Install ciux
-        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+        run: |
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Build fink-broker image for k8s
         run: |
           mkdir -p $HOME/.ciux
@@ -55,14 +57,24 @@ jobs:
           # Cannot use CIUXCONFIG because it may not have been created yet
           $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
+            if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
+              # For self-hosted: image stays in local Docker registry for reuse
+              echo "Image $CIUX_IMAGE_URL built and available in local Docker registry"
+              docker images --filter reference="$CIUX_IMAGE_URL"
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+            else
+              # For GitHub runners: use artifacts
               echo "Export $CIUX_IMAGE_URL to Github artifact store"
               docker save "$CIUX_IMAGE_URL" > artifacts/image.tar
+              echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "Using existing image $CIUX_IMAGE_URL"
-            touch artifacts/empty
+            echo "CIUX_IMAGE_URL=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
           fi
-          echo "IMAGE=$CIUX_IMAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         with:
           name: docker-artifact
           path: artifacts
@@ -73,8 +85,8 @@ jobs:
     name: Run integration tests
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
-      new_image: ${{ steps.promote.outputs.NEW_IMAGE }}
-      promoted_image: ${{ steps.promote.outputs.PROMOTED_IMAGE }}
+      ciux_build: ${{ steps.promote.outputs.CIUX_BUILD }}
+      ciux_promoted_image_url: ${{ steps.promote.outputs.CIUX_PROMOTED_IMAGE_URL }}
     needs: build
     steps:
       - name: Checkout code
@@ -82,6 +94,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Maximize build space
+        if: ${{ !contains(fromJSON(inputs.runner), 'self-hosted') }}
         run: |
           echo "Removing unwanted software... "
           df -h
@@ -99,7 +112,9 @@ jobs:
         with:
           go-version: '1.21.4'
       - name: Install ciux
-        run: go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+        run: |
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Ciux project ignition
         run: |
           ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}"
@@ -109,38 +124,56 @@ jobs:
         run: |
           # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
+
       - name: Download image
         uses: actions/download-artifact@v4
+        if: |
+          ${{ !contains(fromJSON(inputs.runner), 'self-hosted') &&
+          needs.build.outputs.ciux_build == 'true' }}
         with:
           name: docker-artifact
           path: artifacts
-      - name: Load container image inside kind
+      - name: Load container image
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
+      - name: Load image into kind cluster
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: |
-          if [ -f artifacts/image.tar ]; then
-            echo "Loading image from archive"
-            cluster_name=$(ciux get clustername $PWD)
-            kind load image-archive artifacts/image.tar --name "$cluster_name"
-            node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-            docker exec -- $node crictl image
-          else
-            echo "Using pre-existing image from registry (See  "Ciux project ignition" section)"
-          fi
-          # - name: Setup tmate session
-          # uses: mxschmitt/action-tmate@v3
-          # with:
-          # detached: true
+          IMAGE_URL="${{ needs.build.outputs.ciux_image_url }}"
+          cluster_name=$(ciux get clustername $PWD)
+          kind load docker-image "$IMAGE_URL" --name "$cluster_name"
+          node=$(kubectl get nodes --selector=node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+          docker exec -- $node crictl image
       - name: Run argoCD
+        id: run_argocd
         run: |
-          ./e2e/argocd.sh -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
+        id: check_results
         run: |
-          ./e2e/check-results.sh
+          ./e2e/check-results.sh -s "${{ env.SUFFIX }}"
+      - name: Collect diagnostics
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        run: |
+          ./e2e/diag.sh /tmp/k8s-diag
+      - name: Upload diagnostics artifacts
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-diag-${{ matrix.storage }}
+          path: /tmp/k8s-diag
+          retention-days: 7
+      - name: Delete cluster
+        if: always()
+        run: |
+          cluster_name=$(ciux get clustername $PWD)
+          kind delete cluster --name "$cluster_name"
       - name: Promote fink-broker image
         id: promote
         run: |
           . .ciux.d/ciux_itest.sh
-          echo "PROMOTED_IMAGE=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
-          echo "NEW_IMAGE=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
+          echo "CIUX_PROMOTED_IMAGE_URL=$CIUX_PROMOTED_IMAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "CIUX_BUILD=$CIUX_BUILD" >> "$GITHUB_OUTPUT"
   image-analysis:
     name: Analyze image
     runs-on: ${{ fromJSON(inputs.runner) }}
@@ -152,22 +185,25 @@ jobs:
         uses: actions/checkout@v3
       - name: Download image
         uses: actions/download-artifact@v4
+        if: |
+          ${{ !contains(fromJSON(inputs.runner), 'self-hosted') &&
+          needs.build.outputs.ciux_build == 'true' }}
         with:
           name: docker-artifact
           path: artifacts
-      - name: Load image in local registry
+      - name: Install ciux
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: |
-          if [ -f artifacts/image.tar ]; then
-            echo "Loading image ${{ needs.build.outputs.image }} from archive"
-            docker load --input artifacts/image.tar
-          else
-            echo "Using existing image ${{ needs.build.outputs.image }}"
-          fi
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Load image in local registry
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "${{ needs.build.outputs.ciux_image_url }}" --build-status "${{ needs.build.outputs.ciux_build }}"
       - name: Scan fink-broker image
         uses: anchore/scan-action@v6
         id: scan
         with:
-          image: "${{ needs.build.outputs.image }}"
+          image: "${{ needs.build.outputs.ciux_image_url }}"
           fail-build: false
       - name: Display SARIF report
         run: |
@@ -178,59 +214,67 @@ jobs:
           sarif_file: ${{ steps.scan.outputs.sarif }}
   push:
     env:
-      NEW_IMAGE: ${{ needs.integration-tests.outputs.new_image }}
-      IMAGE: ${{ needs.build.outputs.image }}
-      PROMOTED_IMAGE: ${{ needs.integration-tests.outputs.promoted_image }}
+      CIUX_BUILD: ${{ needs.build.outputs.ciux_build }}
+      CIUX_IMAGE_URL: ${{ needs.build.outputs.ciux_image_url }}
+      CIUX_PROMOTED_IMAGE_URL: ${{ needs.integration-tests.outputs.ciux_promoted_image_url }}
     name: Push fink-broker image to IN2P3 registry
     runs-on: ${{ fromJSON(inputs.runner) }}
     needs: [build, integration-tests]
     steps:
       - name: Download image
         uses: actions/download-artifact@v4
+        if: |
+          ${{ !contains(fromJSON(inputs.runner), 'self-hosted') &&
+          needs.build.outputs.ciux_build == 'true' }}
         with:
           name: docker-artifact
           path: artifacts
-      - name: Load image in local registry
+      - name: Install ciux
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
         run: |
-          if [ $NEW_IMAGE = true ]; then
-            # GHA setup
-            if [ -f artifacts/image.tar ]; then
-              echo "Loading image "$IMAGE" from archive"
-              docker load --input artifacts/image.tar
-            # Self-hosted runners, new image is stored in the local registry
-            else
-              echo "Error: no image found"
-              exit 1
-            fi
-          else
-            echo "Using existing image $IMAGE"
-          fi
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Load image in local registry
+        if: ${{ needs.build.outputs.ciux_build == 'true' }}
+        run: ciux image load --runner "${{ inputs.runner }}" --image-url "$CIUX_IMAGE_URL" --build-status "$CIUX_BUILD"
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           registry: gitlab-registry.in2p3.fr
           username: ${{ secrets.registry_username }}
           password: ${{ secrets.registry_token }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: |
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Push image to official registry
         run: |
-          if [ $NEW_IMAGE = true ]; then
-            echo "Push image $PROMOTED_IMAGE"
-            docker tag "$IMAGE" "$PROMOTED_IMAGE"
-            docker push "$PROMOTED_IMAGE"
-          else
-            if which skopeo; then
-              echo "skopeo is already installed"
-            else
-              echo "Install skopeo"
-              sudo apt-get update -y
-              sudo apt-get install -y skopeo
-            fi
-            echo "Add image tag $PROMOTED_IMAGE to $IMAGE"
-            skopeo copy docker://$IMAGE docker://$PROMOTED_IMAGE
-          fi
+          ./push-image.sh
       - uses: act10ns/slack@v1
         with:
           webhook-url: ${{ secrets.slack_webhook_url }}
           status: ${{ job.status }}
         if: always()
+  cleanup:
+    name: Cleanup old Docker images
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    needs: [build, integration-tests, image-analysis, push]
+    if: ${{ success() && contains(fromJSON(inputs.runner), 'self-hosted') }}
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.4'
+      - name: Install ciux
+        run: |
+          go install github.com/k8s-school/ciux@"${{ env.CIUX_VERSION }}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Cleanup old fink-broker images
+        run: ciux image cleanup --pattern "fink-broker" --max-age 5d
 

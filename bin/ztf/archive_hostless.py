@@ -112,6 +112,7 @@ def main():
         "kstest_static",
         "finkclass",
         "tnsclass",
+        "slsn_score",
         F.col("cutoutScience.stampData").alias("cutoutScience"),
         F.col("cutoutTemplate.stampData").alias("cutoutTemplate"),
     ]
@@ -126,8 +127,7 @@ def main():
     )
 
     pdf = (
-        df
-        .filter(cond_science_low & cond_science_high)
+        df.filter(cond_science_low & cond_science_high)
         .filter(cond_template_low & cond_template_high)
         .filter(cond_max_detections)
         .select(cols_)
@@ -151,15 +151,17 @@ def main():
             cutout_template = get_cutout(cutout=alert["cutoutTemplate"])
 
             text = """
-*Object ID*: [{}](https://fink-portal.org/{})
+*Object ID*: [{}](https://ztf.fink-portal.org/{})
 *Scores:*\n- Science: {:.2f}\n- Template: {:.2f}
 *Fink class*: {}
+*SLSN score*: {}
             """.format(
                 alert["objectId"],
                 alert["objectId"],
                 alert["kstest_static"][0],
                 alert["kstest_static"][1],
                 alert["finkclass"],
+                alert["slsn_score"],
             )
 
             payloads.append((text, curve_png, [cutout_science, cutout_template]))

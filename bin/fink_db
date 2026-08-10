@@ -284,8 +284,8 @@ if [[ ${INDEX_TABLES} == true ]]; then
       echo -e "${SSTEP} 10/16: Send Known TDE candidates"
       fink start archive_known_tde -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_known_tde_${SURVEY}_${NIGHT}.log 2>&1
 
-      echo -e "${SSTEP} 11/16: Push low state blazar candidates"
-      fink start archive_low_state_blazar -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_low_state_blazar_${SURVEY}_${NIGHT}.log 2>&1
+      echo -e "${SSTEP} 11/16: Push extreme state blazar candidates"
+      fink start archive_extreme_states_blazar -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_extreme_states_blazar_${SURVEY}_${NIGHT}.log 2>&1
 
       echo -e " ${SSTEP} 12/16: Update statistics"
       fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1

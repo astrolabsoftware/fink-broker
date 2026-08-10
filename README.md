@@ -5,7 +5,6 @@
 [![Sentinel](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions/workflows/test.yml)
 [![PEP8](https://github.com/astrolabsoftware/fink-broker/workflows/PEP8/badge.svg)](https://github.com/astrolabsoftware/fink-broker/actions?query=workflow%3APEP8)
 [![codecov](https://codecov.io/gh/astrolabsoftware/fink-broker/branch/master/graph/badge.svg)](https://codecov.io/gh/astrolabsoftware/fink-broker)
-[![Documentation Status](https://readthedocs.org/projects/fink-broker/badge/?version=latest)](https://fink-broker.readthedocs.io/en/latest/?badge=latest)
 
 ## What is Fink?
 
@@ -35,16 +34,17 @@ All are open source, and we thank all contributors!
 ## Useful links
 
 - Website: https://fink-broker.org
-- Documentation website: https://fink-broker.readthedocs.io
+- ZTF documentation: https://doc.ztf.fink-broker.org/
+- LSST documentation: https://doc.lsst.fink-broker.org/
 - Science Portal: https://fink-portal.org
 - Publications: https://fink-broker.org/papers
-- Release notes: https://fink-broker.readthedocs.io/en/latest/release-notes
-- Developer notes (need authorisation): https://gitlab.in2p3.fr/fink
+- ZTF release notes: https://doc.ztf.fink-broker.org/release-notes/
+- LSST release notes: https://doc.lsst.fink-broker.org/release-notes/
+- Developer notes (need authentication): https://gitlab.in2p3.fr/fink
 
 ## Outside academia
 
 Fink has participated to a number of events with the private sector, in particular:
-
 * 06/24: Fink was featured at the [Kubecon Europe 2024](https://kccnceu2024.sched.com/event/1YeOZ/fink-on-kubernetes-efficient-management-of-massive-alert-streams-for-astronomical-objects-identific-fabrice-jammes-julien-peloton-cnrs-etienne-fayen-universite-paris-saclay?linkback=grid-full).
 * 05/20: Fink has been selected to the Google Summer of Code 2020 (CERN-HSF org)! Congratulations to [saucam](https://github.com/saucam) who will work on the project this year. _Focus on graph database with JanusGraph_
 * 10/19: Fink was featured at the [Spark+AI Summit Europe 2019](https://www.databricks.com/session_eu19/accelerating-astronomical-discoveries-with-apache-spark).

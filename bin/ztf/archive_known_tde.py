@@ -57,8 +57,7 @@ def main():
 
     args_func = ["candidate.isdiffpos", "candidate.ra", "candidate.dec"]
     pdf = (
-        df
-        .withColumn("tde", known_tde(*args_func))
+        df.withColumn("tde", known_tde(*args_func))
         .filter(F.col("tde") != "Unknown")
         .select(["objectId", "tde"] + args_func)
         .toPandas()
@@ -69,7 +68,7 @@ def main():
 
         slack_data = []
         for _, row in pdf.iterrows():
-            t1 = f"{row.tde}: <https://fink-portal.org/{row.objectId}|{row.objectId}>"
+            t1 = f"{row.tde}: <https://ztf.fink-portal.org/{row.objectId}|{row.objectId}>"
 
             # if you need lightcurve, etc.
             cutout, curve, cutout_perml, curve_perml = get_data_permalink_slack(

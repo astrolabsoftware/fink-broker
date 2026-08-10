@@ -28,6 +28,7 @@ import pkgutil
 import argparse
 import logging
 import time
+import importlib
 
 from fink_broker.common.distribution_utils import push_to_kafka, FakeQuery
 from fink_broker.common.logging_utils import init_logger
@@ -134,14 +135,17 @@ def main():
             logger.debug("Apply user-defined filter %s", userfilter)
             df_filtered = df.filter(fink_filter.for_spark(*colnames))
 
-        if not args.no_hbase_ingest:
+        # HBase support requires fink-filters>=7.34
+        module = userfilter.rsplit(".", maxsplit=1)[0]
+        hbase_support = importlib.import_module(module).HBASE_SUPPORT
+        if not args.no_hbase_ingest and hbase_support:
             # HBase ingestion
             major_version, minor_version = get_schema_from_parquet(scitmpdatapath)
 
             # Key is time_oid to perform date range search
             cols_row_key_name = ["midpointMjdTai", "diaObjectId"]
             row_key_name = "_".join(cols_row_key_name)
-            table_name = "{}.{}".format(args.science_db_name, tag)
+            table_name = "{}.tag_{}".format(args.science_db_name, tag)
 
             hbase_query = ingest_section(
                 df_filtered,
@@ -155,12 +159,12 @@ def main():
                 checkpoint_path=checkpointpath_hbase + "/" + tag,
             )
         else:
-            logger.warning("Skipping HBase ingestion")
+            logger.warning("Skipping HBase ingestion for filter {}".format(userfilter))
             hbase_query = FakeQuery()
 
         if not args.no_kafka_ingest:
             # Kafka distribution
-            topicname = args.substream_prefix + tag + "_rubin"
+            topicname = args.substream_prefix + tag + "_lsst"
 
             kafka_query = push_to_kafka(
                 df_filtered,
@@ -172,7 +176,7 @@ def main():
                 npart=10,
             )
         else:
-            logger.warning("Skipping Kafka ingestion")
+            logger.warning("Skipping Kafka ingestion for filter {}".format(userfilter))
             kafka_query = FakeQuery()
 
     if args.exit_after is not None:

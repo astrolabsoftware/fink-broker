@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2019-2025 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,11 @@ STANDARD_TABLES=(
         "${TABLE_PREFIX}.diaSource_static"
         "${TABLE_PREFIX}.diaSource_sso"
         "${TABLE_PREFIX}.cutouts"
-        "${TABLE_PREFIX}.pixel128"
+        "${TABLE_PREFIX}.pixel1024"
         "${TABLE_PREFIX}.tns_resolver"
 	"${TABLE_PREFIX}.sso_resolver"
 	"${TABLE_PREFIX}.statistics"
+        "${TABLE_PREFIX}.fp"
 )
 
 for TABLE_NAME in $STANDARD_TABLES; do
@@ -36,3 +37,14 @@ for TABLE_NAME in $STANDARD_TABLES; do
 	echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
 done
 
+mapfile -t key_array < <(curl -s -H "Content-Type: application/json" -X GET  https://api.lsst.fink-portal.org/api/v1/tags | jq -r 'keys | .[]')
+
+for TAGNAME in ${key_array[@]}; do 
+	TABLE_NAME=rubin.tag_${TAGNAME}
+	echo "Processing table $TABLE_NAME"
+        COMMAND="disable '${TABLE_NAME}'"
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+
+        COMMAND="drop '${TABLE_NAME}'"
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+done

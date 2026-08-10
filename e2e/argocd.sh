@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # Install fink-broker stack (kafka+minio)
-# Based on https://min.io/docs/minio/kubernetes/upstream/index.html
-
 # @author  Fabrice Jammes
 
 set -euxo pipefail
@@ -10,11 +8,12 @@ set -euxo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 SUFFIX="noscience"
 
+cc="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
+night=""
 
-# Check if running in github actions
 GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
 usage() {
@@ -22,113 +21,140 @@ usage() {
 Usage: $(basename "$0") [options]
 Available options:
   -h            This message
-  -s <suffix>   Suffix to use for the image (default: noscience)
-  -S <storage>  Storage to use (hdfs or minio)
+  -c            Deploy with CC-IN2P3 setup (uses values-cc.yaml)
+  -n <night>    ZTF night YYYYMMDD. With -c, defaults to the previous night
+  -s <suffix>   Specify suffix ('noscience' or 'science'). Default: noscience
+  -S <storage>  Storage to use (hdfs or s3)
 EOD
 }
 
 # Get the options
-while getopts hmS:s: c ; do
+# -s has no effect in GIHUB_ACTION mode
+while getopts hcmn:S:s: c ; do
     case $c in
         h) usage ; exit 0 ;;
+        c) cc="true" ;;
         m) monitoring="true" ;;
+        n) night="$OPTARG" ;;
         S) storage="$OPTARG" ;;
-        s) SUFFIX="$OPTARG" ;;
+        s) SUFFIX="${OPTARG:-science}" ;;
         \?) usage ; exit 2 ;;
     esac
 done
 shift "$((OPTIND-1))"
 
+# Validate suffix value
+if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" ]; then
+    echo "Error: suffix must be 'noscience' or 'science'"
+    usage
+    exit 1
+fi
+
+# Validate night value (YYYYMMDD) when provided
+if [ -n "$night" ] && ! [[ "$night" =~ ^[0-9]{8}$ ]]; then
+    echo "Error: night must be in YYYYMMDD format"
+    usage
+    exit 1
+fi
+
 # Refresh ciux config if not in github actions
 # Used for interactive development
-if [ $GITHUB_ACTIONS == false ]; then
-  ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+if [ "$GITHUB_ACTIONS" == "false" ]; then
+    ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
 fi
 
-. $DIR/../.ciux.d/ciux_itest.sh
+. "$DIR/../.ciux.d/ciux_itest.sh"
 
 NS=argocd
-e2e_enabled="true"
 
-argocd login --core
-kubectl config set-context --current --namespace="$NS"
-
-if [ $storage == "s3" ]
-then
-  hdfs_enabled="false"
-  s3_enabled="true"
-  online_data_prefix=""
-elif [ $storage == "hdfs" ]
-then
-  hdfs_enabled="true"
-  s3_enabled="false"
-  online_data_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
+if [ "$cc" == "true" ]; then
+    values_file="values-cc.yaml"
+    e2e_enabled="false"
+    # Default to the previous night: the most recent complete ZTF observing
+    # night (today's topic is still being filled). ZTF public topics are only
+    # retained ~7 days, so a stale hard-coded night would already be gone.
+    if [ -z "$night" ]; then
+        night=$(date -u -d 'yesterday' +%Y%m%d)
+        echo "No night specified, defaulting to previous night: $night"
+    fi
+else
+    values_file="values-ci-${SUFFIX}.yaml"
+    e2e_enabled="true"
 fi
 
-# Create fink app
+# Override the night only when set. The e2e values files pin their own night
+# for the simulated stream, so leave them untouched unless -n was given.
+night_args=()
+if [ -n "$night" ]; then
+    night_args+=(-p "finkBroker.night=$night")
+fi
+
+# --- CONFIGURATION WITHOUT TUNNEL ---
+# Force the use of local K8s context.
+# No need for 'argocd login' with password.
+export ARGOCD_OPTS="--core --namespace $NS"
+kubectl config set-context --current --namespace="$NS"
+
+echo "Use fink-broker image: $CIUX_IMAGE_URL"
+
+# Create fink app-of-apps with all configuration (Note: --core is implicit via ARGOCD_OPTS)
 argocd app create fink --dest-server https://kubernetes.default.svc \
     --dest-namespace "$NS" \
     --repo https://github.com/astrolabsoftware/fink-cd.git \
     --path apps --revision "$FINK_CD_WORKBRANCH" \
-    -p s3.enabled="$s3_enabled" \
-    -p hdfs.enabled="$hdfs_enabled" \
+    --values "$values_file" \
+    -p storage="$storage" \
+    ${night_args[@]+"${night_args[@]}"} \
+    -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
+    -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
+    -p finkBroker.monitoring.enabled="$monitoring" \
+    -p finkAlertSimulator.image.tag="$FINK_ALERT_SIMULATOR_VERSION" \
     -p spec.source.targetRevision.default="$FINK_CD_WORKBRANCH" \
     -p spec.source.targetRevision.finkbroker="$FINK_BROKER_WORKBRANCH" \
-    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH"
+    -p spec.source.targetRevision.finkalertsimulator="$FINK_ALERT_SIMULATOR_WORKBRANCH" \
+    --upsert # Added to avoid error if app already exists
 
-# Sync fink app-of-apps
-argocd app sync fink
-
-# Set fink-broker parameters
-echo "Use fink-broker image: $CIUX_IMAGE_URL"
-if [[ "$CIUX_IMAGE_URL" =~ "-noscience" ]];
-then
-  valueFile=values-ci-noscience.yaml
-else
-  valueFile=values-ci-science.yaml
-fi
-argocd app set fink-broker -p image.repository="$CIUX_IMAGE_REGISTRY" \
-    --values "$valueFile" \
-    -p e2e.enabled="$e2e_enabled" \
-    -p monitoring.enabled="$monitoring" \
-    -p image.tag="$CIUX_IMAGE_TAG" \
-    -p log_level="DEBUG" \
-    -p night="20200101" \
-    -p online_data_prefix="$online_data_prefix" \
-    -p storage="$storage"
-
-argocd app set fink-alert-simulator -p image.tag="$FINK_ALERT_SIMULATOR_VERSION"
-
-# Synk operators dependency for fink
-argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
-argocd app wait -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=operator
-
-# Synk storage dependency for fink
-argocd app sync -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-
-# Hack to fix kafka startup problem (non deterministic)
-# TODO investigate to remove this hack
-argocd app wait --operation -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
-
-if [ $e2e_enabled == "true" ]
-then
-  echo "Retrieve kafka secrets for e2e tests"
-  while ! kubectl get secret fink-producer --namespace kafka
-  do
-    echo "Waiting for secret/fink-producer in ns kafka"
+# Robust wait: let the sync operation finish, give workloads ~10s to start
+# (and crash if they will), then wait for real health. A lone --health wait
+# can pass on a transient Healthy before a Spark driver starts crash-looping.
+wait_app() {
+    argocd app wait --operation "$@" --timeout 600
     sleep 10
-  done
-  kubectl config set-context --current --namespace="spark"
-  finkctl createsecrets
-  kubectl config set-context --current --namespace="argocd"
-fi
+    argocd app wait --health "$@" --timeout 600
+}
 
-# Sync fink-alert-simulator and fink-broker
-argocd app sync -l app.kubernetes.io/part-of="fink"
-argocd app wait --operation -l app.kubernetes.io/part-of="fink"
-sleep 10
-argocd app wait --health -l app.kubernetes.io/part-of="fink"
+# Roll out operators (wave 0) + storage (wave 1) via sync-waves. Async so the
+# Kafka secret can be created before the broker (wave 2) is synced below.
+argocd app sync fink --async
 
+# Storage Applications are created asynchronously, once the operators (and
+# their CRDs) are healthy. Wait for them to exist, then for storage health.
+until argocd app get kafka >/dev/null 2>&1; do
+    echo "Waiting for storage Applications to be created..."
+    sleep 5
+done
+wait_app -l app.kubernetes.io/part-of=fink,app.kubernetes.io/component=storage
 
+# Create the Kafka SASL/JAAS secrets in the spark namespace. This is required
+# unconditionally whenever a local Kafka is deployed (components.kafka=true),
+# because the distribution SparkApplication mounts the fink-kafka-jaas secret.
+# Previously this lived inside the e2e_enabled block, so in CC mode (-c, where
+# e2e is disabled) the secret was never created and distribute executors were
+# stuck in ContainerCreating with "secret fink-kafka-jaas not found".
+echo "Retrieve kafka secrets"
+# Use kubectl directly for waiting (more reliable than shell polling)
+kubectl wait --namespace kafka --for=condition=Ready --timeout=300s pod -l app.kubernetes.io/name=kafka || true
+
+until kubectl get secret fink-producer --namespace kafka; do
+    echo "Waiting for secret/fink-producer in ns kafka"
+    sleep 5
+done
+
+# Switch context for finkctl
+kubectl config set-context --current --namespace="spark"
+finkctl createsecrets
+kubectl config set-context --current --namespace="$NS"
+
+# Deploy the broker/simulator layer (wave 2) now the Kafka secret exists.
+argocd app sync -l app.kubernetes.io/part-of=fink
+wait_app -l app.kubernetes.io/part-of=fink

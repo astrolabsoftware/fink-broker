@@ -129,8 +129,7 @@ def push_to_kafka(
         )
 
     disquery = (
-        df_kafka.writeStream
-        .format("kafka")
+        df_kafka.writeStream.format("kafka")
         .options(**kafka_cfg)
         .option("topic", topicname)
         .option("checkpointLocation", checkpointpath_kafka + "/" + topicname)

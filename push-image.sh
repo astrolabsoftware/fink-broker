@@ -8,15 +8,11 @@ set -euxo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 
-export CIUXCONFIG=$HOME/.ciux/ciux.build.sh
-. "$CIUXCONFIG"
-
-set -e
 
 usage() {
   cat << EOD
 
-Usage: `basename $0` [options] path host [host ...]
+Usage: `basename $0` [options]
 
   Available options:
     -h          this message
@@ -29,6 +25,8 @@ EOD
 
 kind=false
 registry=true
+
+CIUX_BUILD=${CIUX_BUILD:-""}
 
 # get the options
 while getopts dhk c ; do
@@ -46,9 +44,28 @@ if [ $# -ne 0 ] ; then
     exit 2
 fi
 
+if [ -z "$CIUX_BUILD" ]; then
+  CIUXCONFIG=$(ciux get configpath --selector "itest" $DIR)
+  echo "Sourcing ciux config from $CIUXCONFIG"
+  . $CIUXCONFIG
+fi
+
 if [ $kind = true ]; then
   kind load docker-image "$CIUX_IMAGE_URL"
 fi
 if [ $registry = true ]; then
-  docker push "$CIUX_IMAGE_URL"
+  if [ $CIUX_BUILD = true ]; then
+    echo "Push image $CIUX_PROMOTED_IMAGE_URL to registry"
+    docker tag "$CIUX_IMAGE_URL" "$CIUX_PROMOTED_IMAGE_URL"
+    docker push "$CIUX_PROMOTED_IMAGE_URL"
+  else
+    if command -v skopeo >/dev/null 2>&1; then
+      echo "skopeo is already installed"
+    else
+      echo "skopeo not available, cannot copy image"
+      exit 1
+    fi
+    echo "Add image tag $CIUX_PROMOTED_IMAGE_URL to $CIUX_IMAGE_URL"
+    skopeo copy "docker://$CIUX_IMAGE_URL" "docker://$CIUX_PROMOTED_IMAGE_URL"
+  fi
 fi

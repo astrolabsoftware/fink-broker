@@ -27,6 +27,7 @@ from fink_broker.rubin.hbase_utils import ingest_source_data
 from fink_broker.rubin.hbase_utils import ingest_object_data
 from fink_broker.rubin.hbase_utils import ingest_cutout_metadata
 from fink_broker.rubin.hbase_utils import ingest_pixels
+from fink_broker.rubin.hbase_utils import ingest_fp
 from fink_broker.rubin.spark_utils import get_schema_from_parquet
 from fink_broker.common.spark_utils import list_hdfs_files
 
@@ -164,15 +165,28 @@ def main():
     # Pixels
     hbase_query_pixels = ingest_pixels(
         paths=paths,
-        table_name=args.science_db_name + ".pixel128",
+        table_name=args.science_db_name + ".pixel1024",
         catfolder=args.science_db_catalogs,
         major_version=major_version,
         minor_version=minor_version,
         npartitions=npartitions,
         streaming=not args.static_hbase,
-        checkpoint_path=checkpointpath_hbase + "/pixel128",
+        checkpoint_path=checkpointpath_hbase + "/pixel1024",
     )
     queries.append(hbase_query_pixels)
+
+    # Forced photometry
+    hbase_query_fp = ingest_fp(
+        paths=paths,
+        table_name=args.science_db_name + ".fp",
+        catfolder=args.science_db_catalogs,
+        major_version=major_version,
+        minor_version=minor_version,
+        npartitions=npartitions,
+        streaming=not args.static_hbase,
+        checkpoint_path=checkpointpath_hbase + "/fp",
+    )
+    queries.append(hbase_query_fp)
 
     if args.static_hbase:
         # Log statistics

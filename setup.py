@@ -37,7 +37,7 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
     ],
     project_urls={
-        'Documentation': "https://fink-broker.readthedocs.io/en/latest/",
-        'Source': 'https://github.com/astrolabsoftware/fink-broker'
+        "Documentation": "https://fink-broker.readthedocs.io/en/latest/",
+        "Source": "https://github.com/astrolabsoftware/fink-broker",
     },
 )

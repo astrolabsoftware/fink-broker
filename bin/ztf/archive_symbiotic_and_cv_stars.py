@@ -55,7 +55,7 @@ def send_to_telegram(pdf, channel, night):
             )
 
             text = """
-*Object ID*: [{}](https://fink-portal.org/{})
+*Object ID*: [{}](https://ztf.fink-portal.org/{})
 *Name*: {}
 *RA/Dec coordinates*: {} {}
 *Mag difference*: {:.2f} ({:.2f} days in between measurements)
@@ -108,17 +108,18 @@ def main():
     # For the Symbiotic stars bot we should filter all alerts
     # with delta mag between the last 2 points bigger than 0.5 (any filter).
     pdf = (
-        df
-        .filter(df["mag_rate"] * df["delta_time"] <= -0.5)
+        df.filter(df["mag_rate"] * df["delta_time"] <= -0.5)
         .filter(~df["from_upper"])
-        .select([
-            "candidate.ra",
-            "candidate.dec",
-            "symbiotic",
-            "objectId",
-            "delta_time",
-            (df["mag_rate"] * df["delta_time"]).alias("dmag"),
-        ])
+        .select(
+            [
+                "candidate.ra",
+                "candidate.dec",
+                "symbiotic",
+                "objectId",
+                "delta_time",
+                (df["mag_rate"] * df["delta_time"]).alias("dmag"),
+            ]
+        )
         .toPandas()
     )
 
