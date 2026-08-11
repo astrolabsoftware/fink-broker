@@ -21,17 +21,21 @@ from fink_broker.common.logging_utils import get_fink_logger, inspect_applicatio
 from fink_broker.common.spark_utils import init_sparksession
 
 from fink_utils.hdfs.utils import path_exist
-from fink_utils.sso.ssoft import aggregate_ztf_sso_data
+from fink_utils.sso.ssoft import aggregate_rubin_sso_data
 from fink_utils.sso.ssoft import join_aggregated_sso_data
 from fink_utils.sso.utils import retrieve_last_date_of_previous_month
 from fink_utils.sso.ephem import extract_ephemerides_from_miriade
 from fink_utils.sso.ephem import expand_columns
 
-SSO_FILE = "sso_ztf_lc_aggregated_{}{}.parquet"
+SSO_FILE = "sso_rubin_lc_aggregated_{}{}.parquet"
 
 
 def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
-    """Wrapper to get new ZTF data and ephemerides
+    """Wrapper to get new Rubin data and ephemerides
+
+    Notes
+    -----
+    We might need to enable weekly aggregation.
 
     Parameters
     ----------
@@ -44,7 +48,7 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
         Number of Spark partitions. Rule of thumb: 4 times
         the number of cores.
     prefix_path: str
-        Prefix path to Fink/ZTF data
+        Prefix path to Fink/Rubin data
     limit: int
         If set, limit the number of object to process.
         Otherwise, put to None.
@@ -56,18 +60,20 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     """
     if (year is None) and (month is None):
         logger.info("Aggregating ALL data")
-        df_new = aggregate_ztf_sso_data(prefix_path=prefix_path)
+        df_new = aggregate_rubin_sso_data(prefix_path=prefix_path)
     elif (year is not None) and (month is None):
         logger.info("Aggregating data from {}".format(year))
         current_year = datetime.datetime.now().year
-        df_new = aggregate_ztf_sso_data(
+        df_new = aggregate_rubin_sso_data(
             year=year,
             stop_previous_month=(year == current_year),
             prefix_path=prefix_path,
         )
     elif (year is not None) and (month is not None):
         logger.info("Aggregating data from {}{}".format(year, month))
-        df_new = aggregate_ztf_sso_data(year=year, month=month, prefix_path=prefix_path)
+        df_new = aggregate_rubin_sso_data(
+            year=year, month=month, prefix_path=prefix_path
+        )
 
     if limit is not None:
         assert isinstance(limit, int), (limit, type(limit))
@@ -81,10 +87,10 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     df_new = df_new.withColumn(
         col_,
         extract_ephemerides_from_miriade(
-            "ssnamenr",
-            "cjd",
-            F.lit("I41"),
-            F.lit(15.0),
+            "designation",
+            "cjdUtc",
+            F.lit("X05"),
+            F.lit(0.0),
             F.expr("uuid()"),
             F.lit("ephemcc"),
             F.lit("ephemcc-photom.xml"),
@@ -105,7 +111,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
     Parameters
     ----------
     prefix_path: str
-        Prefix path to Fink/ZTF data
+        Prefix path to Fink/Rubin data
     year: int, optional
         Year in format YYYY. If None, assume
         `monthly` is set. Default is None.
@@ -137,7 +143,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
         filename = SSO_FILE.format(curr.year, "{:02d}".format(curr.month))
         is_ephem = path_exist(filename)
 
-        # ZTF data takes N-1 month
+        # Rubin data takes N-1 month
         lm = retrieve_last_date_of_previous_month(curr)
         path = "{}/year={}/month={}".format(
             prefix_path, lm.year, "{:02d}".format(lm.month)
@@ -147,7 +153,7 @@ def make_checks(prefix_path, year=None, monthly=None, logger=None):
         filename = SSO_FILE.format(year, "")
         is_ephem = path_exist(filename)
 
-        # ZTF data takes current year
+        # Rubin data takes current year
         path = "{}/year={}".format(prefix_path, year)
         is_data = path_exist(path)
 
@@ -207,7 +213,8 @@ def main():
     inspect_application(logger)
 
     if args.mode == "all":
-        years = range(2019, datetime.datetime.now().year + 1)
+        # Rubin SSO pipeline works from 2026
+        years = range(2026, datetime.datetime.now().year + 1)
         logger.info("Processing data from {} to {}".format(years[0], years[-1]))
 
         df_new = aggregate_and_add_ephem(
@@ -249,7 +256,7 @@ def main():
                 df_prev.columns,
                 df_new.columns,
             )
-            df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
+            df_join = join_aggregated_sso_data(df_prev, df_new, on="designation")
 
             curr = datetime.datetime.now()
             current_month = "{:02d}".format(curr.month)
