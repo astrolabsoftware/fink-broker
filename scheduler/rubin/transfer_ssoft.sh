@@ -25,4 +25,5 @@ FOLDER=/data/fink/ssoft/
 YEAR=`date +"%Y"`
 MONTH=`date +"%m"`
 /opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG1G2_${YEAR}.${MONTH}.parquet
 EOF
