@@ -204,12 +204,21 @@ fi
 if [[ $NMIN != "" ]]; then
   echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 else
-  NMIN=50 # default value
+  # default value
+  if [[ ${SURVEY} == "ztf" ]]; then
+    NMIN=50
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    NMIN=10
+  fi
   echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 fi
 
 if [[ $SSOFT_OUTFOLDER == "" ]]; then
-  SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+  if [[ ${SURVEY} == "ztf" ]]; then
+    SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    SSOFT_OUTFOLDER="/data/fink/ssoft"
+  fi
 fi
 echo -e "${SINFO} Saving the SSOFT at ${SSOFT_OUTFOLDER}"
 
