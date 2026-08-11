@@ -22,11 +22,11 @@ import datetime
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.spark_utils import init_sparksession
 
-from fink_science.ztf.ssoft.processor import build_the_ssoft
+from fink_science.rubin.ssoft.processor import build_the_ssoft
 from fink_utils.hdfs.utils import path_exist
 
 
-# Defined in `fink_ssoft -s ztf --link-data`
+# Defined in `fink_ssoft -s rubin --link-data`
 SSO_FILE = "sso_rubin_lc_aggregated.parquet"
 
 
