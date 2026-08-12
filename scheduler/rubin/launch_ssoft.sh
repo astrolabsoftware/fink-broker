@@ -24,6 +24,7 @@ CURRDATE=`date +"%Y%m"`
 
 fink_ssoft -s rubin --update-data > ${FINK_HOME}/broker_logs/ssoft_update_ephems_$CURRDATE.log 2>&1
 fink_ssoft -s rubin --link-data > ${FINK_HOME}/broker_logs/ssoft_link_ephems_$CURRDATE.log 2>&1
-fink_ssoft -s rubin --run-ssoft -model HG -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
-fink_ssoft -s rubin --run-ssoft -model HG1G2 -version ${CURRDATE} > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model HG -version ${CURRDATE} -nmin 2 > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model HG1G2 -version ${CURRDATE} -nmin 3 > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model SHG1G2 -version ${CURRDATE} -nmin 5 > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
 fink_ssoft -s ztf --construct-bulk > ${FINK_HOME}/broker_logs/ssobulk_$CURRDATE.log 2>&1
