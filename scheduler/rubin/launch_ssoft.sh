@@ -1,0 +1,30 @@
+#!/bin/bash
+# Copyright 2019-2026 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+set -e
+
+source ~/.bash_profile
+
+# re-download latest information
+# export ROCKS_CACHE_DIR="no-cache"
+
+CURRDATE=`date +"%Y%m"`
+
+fink_ssoft -s rubin --update-data > ${FINK_HOME}/broker_logs/ssoft_update_ephems_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --link-data > ${FINK_HOME}/broker_logs/ssoft_link_ephems_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model HG -version ${CURRDATE} -nmin 2 > ${FINK_HOME}/broker_logs/ssoft_HG_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model HG1G2 -version ${CURRDATE} -nmin 3 > ${FINK_HOME}/broker_logs/ssoft_HG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s rubin --run-ssoft -model SHG1G2 -version ${CURRDATE} -nmin 5 > ${FINK_HOME}/broker_logs/ssoft_SHG1G2_$CURRDATE.log 2>&1
+fink_ssoft -s ztf --construct-bulk > ${FINK_HOME}/broker_logs/ssobulk_$CURRDATE.log 2>&1

@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the Solar System Object Fink Table (SSOFT)."""
+"""Construct the Rubin Solar System Object Fink Table (SSOFT)."""
 
 import os
 import argparse
@@ -22,12 +22,12 @@ import datetime
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.spark_utils import init_sparksession
 
-from fink_science.ztf.ssoft.processor import build_the_ssoft
+from fink_science.rubin.ssoft.processor import build_the_ssoft
 from fink_utils.hdfs.utils import path_exist
 
 
-# Defined in `fink_ssoft -s ztf --link-data`
-SSO_FILE = "sso_ztf_lc_aggregated.parquet"
+# Defined in `fink_ssoft -s rubin --link-data`
+SSO_FILE = "sso_rubin_lc_aggregated.parquet"
 
 
 def main():
@@ -63,16 +63,16 @@ def main():
     parser.add_argument(
         "-nmin",
         type=int,
-        default=50,
+        default=10,
         help="""
         Minimum number of points in the lightcurve of an
-        object to be considered for the SSOFT. Default is 50
+        object to be considered for the SSOFT. Default is 10
         """,
     )
     parser.add_argument(
         "-outfolder",
         type=str,
-        default="/spark_mongo_tmp/julien.peloton/ssoft",
+        default="/data/fink/ssoft",
         help="""
         Output folder to store the SSOFT. It must be
         on a regular filesystem (not HDFS).
