@@ -149,12 +149,25 @@ fi
 
 echo "Phase: Test Results Check"
 echo "Check the results of the tests."
-if $DIR/check-results.sh -s "$SUFFIX" $monitoring_opt; then
+if $DIR/check-results.sh --basic -s "$SUFFIX" $monitoring_opt; then
     home-ci-reporter step "test_check" "passed" "Test results check completed successfully" --file "$TEST_REPORT"
     e2e=true
 else
     home-ci-reporter step "test_check" "failed" "Test results check failed" --file "$TEST_REPORT"
     exit 1
+fi
+
+# Reported apart from the check above, so a failure says which of the two it
+# was. HDFS only: `get balance` reads the datasets from inside the namenode pod.
+if [ "$storage" = "hdfs" ]; then
+    echo "Phase: Balance Check"
+    echo "Account for the alerts which went through the broker."
+    if $DIR/check-results.sh --advanced; then
+        home-ci-reporter step "balance_check" "passed" "Balance check completed successfully" --file "$TEST_REPORT"
+    else
+        home-ci-reporter step "balance_check" "failed" "Balance check failed" --file "$TEST_REPORT"
+        exit 1
+    fi
 fi
 
 echo "Phase: Image Push"

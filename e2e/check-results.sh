@@ -25,32 +25,40 @@ set -euo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 monitoring=false
 SUFFIX="noscience"
+mode="basic"
+night=""
+prefix="/user/185"
+report_timeout=600
 
 usage () {
-  echo "Usage: $0 [-h] [-m] [-s <suffix>]"
-  echo "  -m: Check monitoring is enabled"
+  echo "Usage: $0 [-h] [--basic|--advanced|--report] [-m] [-s <suffix>] [-n <night>] [-p <prefix>]"
+  echo "  --basic:    Check that the expected topics are created (default)"
+  echo "  --advanced: Check the balance reported by 'finkctl get balance'"
+  echo "  --report:   Check the balance printed by the report CronJob itself"
+  echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
+  echo "  -n: Observing night to check (YYYYMMDD, --advanced only)."
+  echo "      Default: every night found, checked on the TOTAL row"
+  echo "  -p: HDFS path prefix holding the datasets (--advanced only). Default: /user/185"
   echo "  -h: Display this help"
   echo ""
-  echo " Check that the expected topics are created"
+  echo " Two levels of checking, run as separate CI steps so a failure names"
+  echo " itself: --basic asserts the broker produced its topics, --advanced"
+  echo " asserts the alerts can be accounted for from end to end."
   exit 1
 }
 
-# Get options for suffix
-while getopts hms: opt; do
-  case ${opt} in
-    h )
-      usage
-      exit 0
-      ;;
-    m )
-      monitoring=true
-      ;;
-    s) SUFFIX="$OPTARG" ;;
-    \? )
-      usage
-      exit 1
-      ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --basic) mode="basic" ; shift ;;
+    --advanced) mode="advanced" ; shift ;;
+    --report) mode="report" ; shift ;;
+    -m) monitoring=true ; shift ;;
+    -s) SUFFIX="$2" ; shift 2 ;;
+    -n) night="$2" ; shift 2 ;;
+    -p) prefix="$2" ; shift 2 ;;
+    -h) usage ; exit 0 ;;
+    *) echo "Unknown option: $1" 1>&2 ; usage ; exit 1 ;;
   esac
 done
 
@@ -59,6 +67,131 @@ if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" 
     echo "Error: suffix must be 'noscience' or 'science'"
     usage
     exit 1
+fi
+
+# Assert a balance report accounts for alerts at both ends of the broker.
+# $1: file holding the report, $2: night to look at, empty for the TOTAL row.
+#
+# Rows printed by printReport:
+#   <night>  IN(kafka) RAW(f) RAW SCI(f) SCI DISTRIB
+#   TOTAL    IN(kafka)                       DISTRIB
+#
+# Without an explicit night the TOTAL row is read: the night the run pinned
+# lives in the fink-cd values, and duplicating it here would rot silently.
+assert_balance () {
+  local file="$1" want_night="$2" row consumed distributed consumed_col distributed_col
+
+  if [ -n "$want_night" ]; then
+    row=$(grep -E "^[[:space:]]+${want_night}[[:space:]]" "$file" || true)
+    consumed_col=2
+    distributed_col=7
+  else
+    row=$(grep -E "^[[:space:]]+TOTAL[[:space:]]" "$file" || true)
+    consumed_col=2
+    distributed_col=3
+  fi
+  if [ -z "$row" ]; then
+    echo "ERROR: no balance row${want_night:+ for night $want_night} in the report" 1>&2
+    return 1
+  fi
+
+  consumed=$(echo "$row" | awk -v c="$consumed_col" '{print $c}')
+  distributed=$(echo "$row" | awk -v c="$distributed_col" '{print $c}')
+
+  local name value
+  for name in consumed distributed; do
+    eval "value=\$$name"
+    if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+      echo "ERROR: $name is not a count: '$value'" 1>&2
+      echo "       row: $row" 1>&2
+      return 1
+    fi
+    if [ "$value" -le 0 ]; then
+      echo "ERROR: $name is $value, expected alerts to have gone through" 1>&2
+      echo "       row: $row" 1>&2
+      return 1
+    fi
+  done
+
+  echo "INFO: balance is consistent: $consumed alerts consumed, $distributed distributed"
+  return 0
+}
+
+# --report: same assertion, but on what the report CronJob itself printed.
+#
+# --advanced runs finkctl from the runner, with the runner's kubeconfig. It
+# says nothing about the CronJob the chart deploys: its image, its
+# ServiceAccount, the Roles letting it exec into the hdfs and kafka pods, or
+# the arguments Helm renders for it. Those only break in a cluster, and this
+# is where they are exercised.
+#
+# CI sets report.schedule to every minute, so a Job appears within the minute.
+# Early Jobs may legitimately find nothing -- the streaming jobs are still
+# warming up -- so a Job whose report does not add up is not a failure on its
+# own: wait for a later one, and fail on the timeout.
+if [ "$mode" = "report" ]; then
+  cronjob="fink-broker-report"
+  deadline=$(( SECONDS + report_timeout ))
+
+  echo "INFO: Waiting for a run of cronjob/$cronjob to account for the alerts"
+  while [ $SECONDS -lt $deadline ]; do
+    for job in $(kubectl get jobs -n spark \
+        -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.metadata.name}{'\n'}{end}" \
+        2>/dev/null | grep "^${cronjob}-" | sort -r); do
+      out="/tmp/${job}.out"
+      kubectl logs -n spark "job/${job}" > "$out" 2>&1 || continue
+      if assert_balance "$out" "" > /dev/null 2>&1; then
+        echo "INFO: report produced by job/${job}"
+        cat "$out"
+        assert_balance "$out" ""
+        exit 0
+      fi
+    done
+    sleep 10
+  done
+
+  echo "ERROR: no run of cronjob/$cronjob accounted for the alerts within ${report_timeout}s" 1>&2
+  kubectl get cronjob,jobs -n spark 1>&2 || true
+  for job in $(kubectl get jobs -n spark -o name 2>/dev/null | grep "$cronjob"); do
+    echo "--- logs of $job ---" 1>&2
+    kubectl logs -n spark "$job" --tail -1 1>&2 || true
+  done
+  exit 1
+fi
+
+# --advanced: account for the alerts that went through the broker.
+#
+# The parsing and the arithmetic behind `get balance` are covered by unit tests
+# in the finkctl repository. What cannot be tested there is the part touching a
+# live cluster: locating the HDFS and Kafka pods, being allowed to exec into
+# them, and the output format of the tools it drives. That is what this checks.
+#
+# Counts are not asserted against fixed values -- the alert simulator does not
+# produce a deterministic number of alerts. Only that both ends of the broker
+# moved, which is enough to catch a broken pod lookup, a denied exec or a
+# changed output format.
+#
+# HDFS only: balance reads the datasets from inside the namenode pod, so it has
+# nothing to read when the run stores its data in S3.
+if [ "$mode" = "advanced" ]; then
+  night_args=()
+  if [ -n "$night" ]; then
+    night_args+=(--night "$night")
+  fi
+
+  out="/tmp/finkctl-balance.out"
+  echo "INFO: Running finkctl get balance${night:+ for night $night}"
+  if ! finkctl get balance --prefix "$prefix" "${night_args[@]}" > "$out" 2>&1; then
+    echo "ERROR: finkctl get balance failed" 1>&2
+    cat "$out" 1>&2
+    exit 1
+  fi
+  cat "$out"
+
+  if ! assert_balance "$out" "$night"; then
+    exit 1
+  fi
+  exit 0
 fi
 
 # TODO improve management of expected topics
