@@ -61,6 +61,34 @@ monitoring:
   enabled: false
 
 #
+# Daily diagnostic reporting what entered and what left the broker for each
+# observing night: alerts consumed from the survey Kafka cluster, size of the
+# raw and science datasets, messages pushed to each distribution topic. The
+# report is written to the pod stdout (kubectl logs).
+#
+# Only makes sense with run.mode=scheduled and storage=hdfs: it reads the
+# datasets through the namenode, and attributes distributed messages to a
+# night using the run window deduced from scheduled.schedule.
+#
+report:
+  enabled: false
+  # Fires once the streaming jobs of the previous run have stopped: they start
+  # at scheduled.schedule and last exitAfter (12:00 UTC + 18h -> ~06:00 UTC).
+  schedule: "0 7 * * *"
+  # A CronJob retains a number of jobs, not a duration: with a daily schedule,
+  # 7 successful runs is a week of reports readable with kubectl logs.
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  image:
+    repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
+    name: finkctl
+    # Built and published from the finkctl repository (build.sh, push-image.sh)
+    tag: "v3.1.3-rc4"
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    name: fink-report
+
+#
 # Parameters used to run the stream2raw task
 #
 stream2raw:

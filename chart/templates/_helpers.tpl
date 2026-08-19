@@ -159,3 +159,23 @@ spec:
 - '--noscience'
 {{- end -}}
 {{- end }}
+
+{{/*
+Path part of online_data_prefix, e.g.
+"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report reads the
+datasets from inside the namenode pod, where only the path is meaningful.
+*/}}
+{{- define "fink.hdfsPath" -}}
+{{- $path := regexReplaceAll "^[a-zA-Z0-9]+://[^/]+" .Values.online_data_prefix "" -}}
+{{- regexReplaceAll "/{2,}" $path "/" | trimSuffix "/" -}}
+{{- end }}
+
+{{/*
+Time of day at which a scheduled run starts, deduced from scheduled.schedule
+and formatted as HH:MM. The report uses it to bracket the window during which
+a run produced its messages.
+*/}}
+{{- define "fink.runTime" -}}
+{{- $fields := splitList " " .Values.scheduled.schedule -}}
+{{- printf "%02d:%02d" (atoi (index $fields 1)) (atoi (index $fields 0)) -}}
+{{- end }}
