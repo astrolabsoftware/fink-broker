@@ -26,20 +26,19 @@ scheduled:
   # 0 -> current night (live), 24 -> previous complete night (n-1). To settle
   # against the ZTF topic rollover convention.
   nightOffsetHours: 24
+  # Time of day (HH:MM, UTC) at which a run stops, on the day it started. A
+  # scheduled run needs an absolute deadline rather than a duration: it is
+  # recomputed identically by every restartPolicy attempt, so a restarted run
+  # aims at the same instant instead of granting itself a fresh window, and a
+  # run starting late exits in error instead of overflowing into the next
+  # tick. Replaces exitAfter in this mode -- the job rejects both at once.
+  exitAt: "23:59"
 
-# Stop each streaming run after this many seconds. Applies to both run modes
-# (a scheduled run must terminate before the next tick; a backfill must
-# terminate once the night is replayed). Sized to a night; matches the job
-# default (64800 = 18h). Override per environment (e.g. values-cc.yaml).
+# Stop each streaming run after this many seconds. Only used in
+# run.mode=oneoff, where a backfill must terminate once the night is replayed;
+# a scheduled run uses the absolute scheduled.exitAt instead. Sized to a night;
+# matches the job default (64800 = 18h).
 exitAfter: 64800
-
-# Stop each streaming run at this time of day (HH:MM, UTC) on the day it
-# started, instead of after a duration. The deadline is absolute, so a run
-# restarted by restartPolicy aims at the same instant rather than granting
-# itself a fresh window, and a run starting late stops early instead of
-# overflowing into the next scheduled tick. Takes precedence over exitAfter.
-# Empty keeps the exitAfter duration policy.
-exitAt: ""
 
 image:
   pullPolicy: IfNotPresent

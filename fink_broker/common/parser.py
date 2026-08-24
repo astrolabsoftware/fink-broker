@@ -145,7 +145,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_TRIGGER_UPDATE]
         """,
     )
-    parser.add_argument(
+    # A duration and an absolute instant are two ways of answering the same
+    # question, and combining them only hides which one actually stopped the
+    # service. Let argparse reject the ambiguity outright.
+    exit_policy = parser.add_mutually_exclusive_group()
+    exit_policy.add_argument(
         "-exit_after",
         type=int,
         default=64800,
@@ -153,9 +157,10 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Stop the service after `exit_after` seconds.
         This primarily for use on CI, to stop service after some time.
         Use that with `fink start service --exit_after <time>`. Default is 24h.
+        Mutually exclusive with `exit_at`.
         """,
     )
-    parser.add_argument(
+    exit_policy.add_argument(
         "-exit_at",
         type=str,
         default="",
@@ -163,8 +168,9 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Stop the service at this time of day (HH:MM, UTC) on the day it
         started. Unlike `exit_after`, the deadline is absolute, so a job
         restarted by the scheduler aims at the same instant instead of
-        granting itself a fresh window. Takes precedence over `exit_after`.
-        Empty (default) keeps the `exit_after` duration policy.
+        granting itself a fresh window, and a job starting past it exits in
+        error instead of running an extra window. Mutually exclusive with
+        `exit_after`.
         """,
     )
     parser.add_argument(
