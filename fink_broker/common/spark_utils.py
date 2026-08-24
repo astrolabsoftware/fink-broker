@@ -15,7 +15,8 @@
 import time
 import logging
 import socket
-from typing import Tuple
+from datetime import datetime
+from typing import Optional, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -34,6 +35,7 @@ import os
 import json
 
 from fink_broker.common.avro_utils import readschemafromavrofile
+from fink_broker.common.night_utils import seconds_until
 from fink_broker.common.tester import spark_unit_tests
 
 # ---------------------------------
@@ -319,15 +321,15 @@ class NoDataAvailableError(Exception):
 
 
 def connect_to_raw_database(
-    basepath: str, path: str, latestfirst: bool, timeout: int = 3600
+    basepath: str, path: str, latestfirst: bool, deadline: Optional[datetime] = None
 ) -> DataFrame:
     """Initialise SparkSession, and connect to the raw database (Parquet)
 
     The upstream job writes the data while this one is already running, so the
-    path is expected to show up late. Give up after `timeout` rather than
-    waiting forever: a night which never receives any alert would otherwise
-    pin the job, and `concurrencyPolicy: Forbid` would block every subsequent
-    scheduled run.
+    path is expected to show up late. Waiting is therefore expected, but it is
+    bounded by the caller's own deadline: a night which never receives any
+    alert would otherwise pin the job, and `concurrencyPolicy: Forbid` would
+    block every subsequent scheduled run.
 
     Parameters
     ----------
@@ -338,9 +340,9 @@ def connect_to_raw_database(
     latestfirst: bool
         whether to process the latest new files first,
         useful when there is a large backlog of files
-    timeout: int, optional
-        Maximum time in seconds to wait for the data to become readable at
-        `basepath`. Default is 3600 (1 hour).
+    deadline: datetime, optional
+        Instant (timezone-aware, UTC) past which waiting is pointless, usually
+        the job's own exit deadline. None waits indefinitely.
 
     Returns
     -------
@@ -350,7 +352,7 @@ def connect_to_raw_database(
     Raises
     ------
     NoDataAvailableError
-        If no data is readable at `basepath` after `timeout` seconds.
+        If no data is readable at `basepath` when `deadline` is reached.
 
     Examples
     --------
@@ -362,12 +364,11 @@ def connect_to_raw_database(
     # Grab the running Spark Session
     spark = SparkSession.builder.getOrCreate()
 
-    deadline = time.time() + timeout
     wait_sec = 5
     while not path_exist(basepath):
-        if time.time() >= deadline:
+        if deadline is not None and seconds_until(deadline) <= 0:
             raise NoDataAvailableError(
-                "No data available at {} after {} s".format(basepath, timeout)
+                "No data available at {} by {}".format(basepath, deadline)
             )
         _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
         time.sleep(wait_sec)
@@ -381,11 +382,9 @@ def connect_to_raw_database(
             userschema = spark.read.parquet(basepath).schema
         except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
-            if time.time() >= deadline:
+            if deadline is not None and seconds_until(deadline) <= 0:
                 raise NoDataAvailableError(
-                    "Unable to read the schema of {} after {} s".format(
-                        basepath, timeout
-                    )
+                    "Unable to read the schema of {} by {}".format(basepath, deadline)
                 ) from e
             time.sleep(wait_sec)
             wait_sec = increase_wait_time(wait_sec)
