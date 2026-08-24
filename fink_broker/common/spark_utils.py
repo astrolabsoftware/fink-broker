@@ -309,8 +309,16 @@ def connect_to_kafka(
     return df
 
 
-def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> DataFrame:
+def connect_to_raw_database(
+    basepath: str, path: str, latestfirst: bool, timeout: int = 3600
+) -> DataFrame:
     """Initialise SparkSession, and connect to the raw database (Parquet)
+
+    The upstream job writes the data while this one is already running, so the
+    path is expected to show up late. Give up after `timeout` rather than
+    waiting forever: a night which never receives any alert would otherwise
+    pin the job, and `concurrencyPolicy: Forbid` would block every subsequent
+    scheduled run.
 
     Parameters
     ----------
@@ -321,11 +329,19 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     latestfirst: bool
         whether to process the latest new files first,
         useful when there is a large backlog of files
+    timeout: int, optional
+        Maximum time in seconds to wait for the data to become readable at
+        `basepath`. Default is 3600 (1 hour).
 
     Returns
     -------
     df: Streaming DataFrame
         Streaming DataFrame connected to the database
+
+    Raises
+    ------
+    TimeoutError
+        If no data is readable at `basepath` after `timeout` seconds.
 
     Examples
     --------
@@ -337,8 +353,13 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     # Grab the running Spark Session
     spark = SparkSession.builder.getOrCreate()
 
+    deadline = time.time() + timeout
     wait_sec = 5
     while not path_exist(basepath):
+        if time.time() >= deadline:
+            raise TimeoutError(
+                "No data available at {} after {} s".format(basepath, timeout)
+            )
         _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
         time.sleep(wait_sec)
         # Sleep for longer and longer
@@ -351,6 +372,12 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
             userschema = spark.read.parquet(basepath).schema
         except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
+            if time.time() >= deadline:
+                raise TimeoutError(
+                    "Unable to read the schema of {} after {} s".format(
+                        basepath, timeout
+                    )
+                ) from e
             time.sleep(wait_sec)
             wait_sec = increase_wait_time(wait_sec)
             continue
