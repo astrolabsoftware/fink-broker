@@ -53,6 +53,17 @@ def main():
     # instant instead of granting itself a fresh window.
     exit_deadline = get_exit_deadline(args.exit_at)
 
+    # A deadline already in the past means the job cannot honour its window:
+    # report it rather than run a full extra one.
+    if exit_deadline is not None and seconds_until(exit_deadline) <= 0:
+        logger.warning(
+            "The exit_at deadline %s has already passed: alerts of night %s "
+            "may not have been processed",
+            exit_deadline,
+            args.night,
+        )
+        sys.exit(1)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="raw2science_{}_{}".format(args.producer, args.night),
@@ -80,6 +91,7 @@ def main():
             os.path.join(rawdatapath, "{}".format(args.night)),
             os.path.join(rawdatapath, "{}".format(args.night)),
             latestfirst=False,
+            deadline=exit_deadline,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -147,13 +159,9 @@ def main():
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
         time.sleep(seconds_until(exit_deadline))
         countquery_science.stop()
-        logger.warning(
-            "Reached the exit_at deadline %s: some alerts of night %s may not "
-            "have been processed",
-            exit_deadline,
-            args.night,
+        logger.info(
+            "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )
-        sys.exit(1)
     elif args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
         remaining_time = args.exit_after
