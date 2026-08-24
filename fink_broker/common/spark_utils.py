@@ -17,7 +17,8 @@ import ipaddress
 import logging
 import re
 import socket
-from typing import List, Tuple
+from datetime import datetime
+from typing import List, Optional, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -36,6 +37,7 @@ import os
 import json
 
 from fink_broker.common.avro_utils import readschemafromavrofile
+from fink_broker.common.night_utils import seconds_until
 from fink_broker.common.tester import spark_unit_tests
 
 # ---------------------------------
@@ -311,8 +313,25 @@ def connect_to_kafka(
     return df
 
 
-def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> DataFrame:
+class NoDataAvailableError(Exception):
+    """No upstream data showed up within the allotted time
+
+    Not an error condition: the telescope does not observe every night, and a
+    night without any alert is a legitimate outcome. Callers are expected to
+    exit successfully rather than fail.
+    """
+
+
+def connect_to_raw_database(
+    basepath: str, path: str, latestfirst: bool, deadline: Optional[datetime] = None
+) -> DataFrame:
     """Initialise SparkSession, and connect to the raw database (Parquet)
+
+    The upstream job writes the data while this one is already running, so the
+    path is expected to show up late. Waiting is therefore expected, but it is
+    bounded by the caller's own deadline: a night which never receives any
+    alert would otherwise pin the job, and `concurrencyPolicy: Forbid` would
+    block every subsequent scheduled run.
 
     Parameters
     ----------
@@ -323,11 +342,19 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     latestfirst: bool
         whether to process the latest new files first,
         useful when there is a large backlog of files
+    deadline: datetime, optional
+        Instant (timezone-aware, UTC) past which waiting is pointless, usually
+        the job's own exit deadline. None waits indefinitely.
 
     Returns
     -------
     df: Streaming DataFrame
         Streaming DataFrame connected to the database
+
+    Raises
+    ------
+    NoDataAvailableError
+        If no data is readable at `basepath` when `deadline` is reached.
 
     Examples
     --------
@@ -341,10 +368,13 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
 
     wait_sec = 5
     while not path_exist(basepath):
+        if deadline is not None and seconds_until(deadline) <= 0:
+            raise NoDataAvailableError(
+                "No data available at {} by {}".format(basepath, deadline)
+            )
         _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
-        time.sleep(wait_sec)
-        # Sleep for longer and longer
-        wait_sec = increase_wait_time(wait_sec)
+        # Sleep for longer and longer, but never past the deadline
+        wait_sec = sleep_before_retry(wait_sec, deadline)
 
     # Create a DF from the database
     # We need to wait for the schema to be available
@@ -353,8 +383,11 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
             userschema = spark.read.parquet(basepath).schema
         except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
-            time.sleep(wait_sec)
-            wait_sec = increase_wait_time(wait_sec)
+            if deadline is not None and seconds_until(deadline) <= 0:
+                raise NoDataAvailableError(
+                    "Unable to read the schema of {} by {}".format(basepath, deadline)
+                ) from e
+            wait_sec = sleep_before_retry(wait_sec, deadline)
             continue
         else:
             break
@@ -369,6 +402,50 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
     )
 
     return df
+
+
+def sleep_before_retry(wait_sec: int, deadline: Optional[datetime] = None) -> int:
+    """Wait between two attempts, without overshooting `deadline`
+
+    The waiting time grows from one attempt to the next, so it may well be
+    longer than what is left before the deadline. Sleeping it whole would push
+    the job past the instant it promised to stop at, and a scheduled run would
+    then overlap the next tick.
+
+    Parameters
+    ----------
+    wait_sec : int
+        Waiting time of the current attempt, in seconds.
+    deadline : datetime, optional
+        Instant (timezone-aware, UTC) past which waiting is pointless. None
+        waits the whole `wait_sec`.
+
+    Returns
+    -------
+    int
+        Waiting time to use for the next attempt.
+
+    Examples
+    --------
+    A deadline already reached leaves nothing to wait for, and the next
+    attempt is still paced 20% further apart:
+    >>> from datetime import datetime, timedelta, timezone
+    >>> past = datetime.now(timezone.utc) - timedelta(hours=1)
+    >>> sleep_before_retry(5, past)
+    6.0
+    """
+    if deadline is None:
+        time.sleep(wait_sec)
+    else:
+        # The caller checked the deadline before calling, so some time is
+        # left -- but possibly less than wait_sec. Sleeping the whole of it
+        # would wake up past the deadline, and the caller would give up that
+        # late, eating into the margin kept for a clean shutdown.
+        time.sleep(min(wait_sec, seconds_until(deadline)))
+
+    # The pace of the retries is set by wait_sec, not by how long we actually
+    # slept: a sleep cut short by the deadline must not restart a fast loop.
+    return increase_wait_time(wait_sec)
 
 
 def increase_wait_time(wait_sec: int) -> int:
@@ -537,6 +614,43 @@ def wait_for_kafka(servers: str, timeout: int = 300) -> None:
         wait_sec = increase_wait_time(wait_sec)
 
 
+def probe_path(scheme: Optional[str], uri_path: str) -> str:
+    """Path to probe on the filesystem backing a URI
+
+    An object store answers for its bucket, not for a prefix: listing a prefix
+    that does not exist yet -- the normal state before the upstream job writes
+    it -- raises, and the wait would then time out on a perfectly healthy
+    store. The bucket root is what is really being waited for. Other
+    filesystems answer a missing path with a plain False, so the path itself
+    is kept.
+
+    A bucket URI also carries no path component (`s3a://bucket`), and Hadoop
+    rejects a Path built from an empty string: the root stands in for it.
+
+    Parameters
+    ----------
+    scheme : str, optional
+        Scheme of the URI, e.g. `s3a` or `hdfs`. None for a bare path.
+    uri_path : str
+        Path component of the URI, possibly empty.
+
+    Returns
+    -------
+    str
+        Path handed to the Hadoop probe.
+
+    Examples
+    --------
+    >>> probe_path("s3a", "/online/raw/20240101")
+    '/'
+    >>> probe_path("hdfs", "/user/185")
+    '/user/185'
+    """
+    if scheme in ("s3", "s3a"):
+        return "/"
+    return uri_path or "/"
+
+
 def wait_for_filesystem(path: str, timeout: int = 300) -> None:
     """Wait for the shared filesystem backing `path` to answer
 
@@ -578,11 +692,8 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
     conf.setInt("fs.s3a.connection.timeout", 10000)
 
     uri = jvm.java.net.URI(path)
-
-    # A bucket URI carries no path component (s3a://bucket), and Hadoop
-    # rejects a Path built from it. Probe the root of the filesystem instead,
-    # which is what we are really waiting for.
-    probe = jvm.org.apache.hadoop.fs.Path(uri.getPath() or "/")
+    scheme = uri.getScheme()
+    probe = jvm.org.apache.hadoop.fs.Path(probe_path(scheme, uri.getPath()))
 
     # On S3A, exists() never reaches the store: the root is always reported as
     # an existing directory, and the bucket probe at mount time is disabled by
@@ -590,7 +701,7 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
     # return as soon as the endpoint answers, while the bucket is still being
     # created by the MinIO tenant -- and the job would fail on the first read
     # with NoSuchBucket. Listing the root does reach the store.
-    is_s3 = uri.getScheme() in ("s3a", "s3")
+    is_s3 = scheme in ("s3a", "s3")
 
     deadline = time.time() + timeout
     wait_sec = 5
