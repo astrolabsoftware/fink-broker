@@ -97,9 +97,9 @@ Night-resolution arguments, which differ intrinsically by run.mode.
 - scheduled: deduce the night at runtime from UTC now (see get_night). No
   -night is passed, so the job computes it from -night_offset_hours.
 
-exit_after is deliberately NOT handled here: it is orthogonal to the night
-mode (both a scheduled run and a backfill must terminate) and is passed
-unconditionally via fink.commonargs.
+The stop policy is NOT handled here, but it does follow the run mode: see
+fink.commonargs, where a scheduled run gets the absolute scheduled.exitAt and
+a one-off gets the exitAfter duration. The job rejects both at once.
 */}}
 {{- define "fink.nightargs" -}}
 {{- if eq .Values.run.mode "scheduled" -}}
@@ -153,11 +153,12 @@ spec:
 - '{{ .Values.producer }}'
 - '-tinterval'
 - '{{ .Values.fink_trigger_update }}'
+{{- if eq .Values.run.mode "scheduled" }}
+- '-exit_at'
+- '{{ .Values.scheduled.exitAt }}'
+{{- else }}
 - '-exit_after'
 - '{{ .Values.exitAfter }}'
-{{- if .Values.exitAt }}
-- '-exit_at'
-- '{{ .Values.exitAt }}'
 {{- end }}
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
