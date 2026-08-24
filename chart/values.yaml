@@ -33,6 +33,14 @@ scheduled:
 # default (64800 = 18h). Override per environment (e.g. values-cc.yaml).
 exitAfter: 64800
 
+# Stop each streaming run at this time of day (HH:MM, UTC) on the day it
+# started, instead of after a duration. The deadline is absolute, so a run
+# restarted by restartPolicy aims at the same instant rather than granting
+# itself a fresh window, and a run starting late stops early instead of
+# overflowing into the next scheduled tick. Takes precedence over exitAfter.
+# Empty keeps the exitAfter duration policy.
+exitAt: ""
+
 image:
   pullPolicy: IfNotPresent
   repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink

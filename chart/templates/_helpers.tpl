@@ -155,6 +155,10 @@ spec:
 - '{{ .Values.fink_trigger_update }}'
 - '-exit_after'
 - '{{ .Values.exitAfter }}'
+{{- if .Values.exitAt }}
+- '-exit_at'
+- '{{ .Values.exitAt }}'
+{{- end }}
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
 {{- end -}}

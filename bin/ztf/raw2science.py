@@ -26,14 +26,19 @@ See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 from pyspark.sql import functions as F
 
 import argparse
+import sys
 import time
 import os
 
 from fink_broker import __version__ as fbvsn
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
+from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 from fink_broker.common.spark_utils import init_sparksession
-from fink_broker.common.spark_utils import connect_to_raw_database
+from fink_broker.common.spark_utils import (
+    NoDataAvailableError,
+    connect_to_raw_database,
+)
 from fink_broker.common.spark_utils import wait_for_filesystem
 from fink_broker.common.partitioning import convert_to_millitime
 
@@ -43,6 +48,10 @@ def main():
     args = getargs(parser)
 
     logger = init_logger(args.log_level)
+
+    # Anchored on the day the job starts, so a restart aims at the same
+    # instant instead of granting itself a fresh window.
+    exit_deadline = get_exit_deadline(args.exit_at)
 
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
@@ -66,11 +75,19 @@ def main():
     )
 
     # assume YYYYMMHH
-    df = connect_to_raw_database(
-        os.path.join(rawdatapath, "{}".format(args.night)),
-        os.path.join(rawdatapath, "{}".format(args.night)),
-        latestfirst=False,
-    )
+    try:
+        df = connect_to_raw_database(
+            os.path.join(rawdatapath, "{}".format(args.night)),
+            os.path.join(rawdatapath, "{}".format(args.night)),
+            latestfirst=False,
+        )
+    except NoDataAvailableError as e:
+        # The telescope does not observe every night. Exit successfully so the
+        # scheduler frees the slot instead of retrying a job with no input.
+        logger.info(
+            "No alert collected for night %s, nothing to do (%s)", args.night, e
+        )
+        return
 
     # Add ingestion timestamp
     df = df.withColumn(
@@ -124,7 +141,20 @@ def main():
         .start()
     )
 
-    if args.exit_after is not None:
+    if exit_deadline is not None:
+        # An absolute deadline already accounts for whatever was spent waiting
+        # for the upstream data, so nothing is subtracted here.
+        logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
+        time.sleep(seconds_until(exit_deadline))
+        countquery_science.stop()
+        logger.warning(
+            "Reached the exit_at deadline %s: some alerts of night %s may not "
+            "have been processed",
+            exit_deadline,
+            args.night,
+        )
+        sys.exit(1)
+    elif args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
         remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0

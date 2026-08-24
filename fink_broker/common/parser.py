@@ -156,6 +156,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-exit_at",
+        type=str,
+        default="",
+        help="""
+        Stop the service at this time of day (HH:MM, UTC) on the day it
+        started. Unlike `exit_after`, the deadline is absolute, so a job
+        restarted by the scheduler aims at the same instant instead of
+        granting itself a fresh window. Takes precedence over `exit_after`.
+        Empty (default) keeps the `exit_after` duration policy.
+        """,
+    )
+    parser.add_argument(
         "-distribution_servers",
         type=str,
         default="",

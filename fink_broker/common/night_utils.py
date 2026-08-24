@@ -101,6 +101,121 @@ def get_night(
     return reference.strftime("%Y%m%d")
 
 
+def get_exit_deadline(
+    exit_at: str,
+    now: Optional[datetime] = None,
+) -> Optional[datetime]:
+    """Resolve the UTC instant at which the job must stop (HH:MM policy).
+
+    Unlike a duration, this deadline is anchored on the calendar day the job
+    starts, so a job restarted by the operator aims at the same instant as its
+    first attempt instead of granting itself a fresh budget. It is the k8s
+    counterpart of the ``date -d '20:00 today'`` lease used by the on-premise
+    scheduler.
+
+    The deadline is deliberately allowed to lie in the past: a job starting
+    after ``exit_at`` has nothing left to do for that day, and the caller is
+    expected to report it rather than run a full extra window.
+
+    Parameters
+    ----------
+    exit_at: str
+        Time of day in HH:MM format, interpreted as UTC. An empty string means
+        "no deadline" and returns None.
+    now: datetime, optional
+        Reference time (timezone-aware, UTC). Defaults to the current UTC time.
+        Mainly used for deterministic testing.
+
+    Returns
+    -------
+    deadline: datetime or None
+        The UTC instant at which the job must stop, or None if ``exit_at`` is
+        empty.
+
+    Raises
+    ------
+    ValueError
+        If ``exit_at`` is not a valid HH:MM time of day.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> ref = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    >>> get_exit_deadline("20:00", now=ref)
+    datetime.datetime(2024, 1, 1, 20, 0, tzinfo=datetime.timezone.utc)
+
+    The day is the one the job starts on, so a restart later that day keeps
+    aiming at the same instant:
+    >>> get_exit_deadline("20:00", now=datetime(2024, 1, 1, 18, 30, tzinfo=timezone.utc))
+    datetime.datetime(2024, 1, 1, 20, 0, tzinfo=datetime.timezone.utc)
+
+    A job starting past the deadline gets an instant in the past:
+    >>> get_exit_deadline("20:00", now=datetime(2024, 1, 1, 23, 0, tzinfo=timezone.utc))
+    datetime.datetime(2024, 1, 1, 20, 0, tzinfo=datetime.timezone.utc)
+
+    An empty value disables the policy:
+    >>> get_exit_deadline("") is None
+    True
+    """
+    if not exit_at:
+        return None
+
+    try:
+        time_of_day = datetime.strptime(exit_at, "%H:%M").time()
+    except ValueError as e:
+        raise ValueError(
+            "Malformed exit_at {}, expected HH:MM (UTC)".format(exit_at)
+        ) from e
+
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    return now.replace(
+        hour=time_of_day.hour,
+        minute=time_of_day.minute,
+        second=0,
+        microsecond=0,
+    )
+
+
+def seconds_until(
+    deadline: datetime,
+    now: Optional[datetime] = None,
+) -> float:
+    """Seconds left before ``deadline``, clamped to zero.
+
+    A deadline already in the past yields 0 rather than a negative duration,
+    so the result can be handed to ``time.sleep`` unchecked.
+
+    Parameters
+    ----------
+    deadline: datetime
+        Target instant (timezone-aware, UTC).
+    now: datetime, optional
+        Reference time (timezone-aware, UTC). Defaults to the current UTC time.
+
+    Returns
+    -------
+    remaining: float
+        Seconds between ``now`` and ``deadline``, never negative.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> ref = datetime(2024, 1, 1, 18, 0, tzinfo=timezone.utc)
+    >>> seconds_until(datetime(2024, 1, 1, 20, 0, tzinfo=timezone.utc), now=ref)
+    7200.0
+
+    A past deadline never yields a negative duration:
+    >>> seconds_until(datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc), now=ref)
+    0.0
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    return max(0.0, (deadline - now).total_seconds())
+
+
 def resolve_night_placeholders(
     value: str,
     night: str,
