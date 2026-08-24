@@ -117,6 +117,27 @@ CC), which is what you want for a backfill or a rerun.
 The script is idempotent: it upserts the `fink` Application, so re-running it
 with a new `-r` is the normal way to upgrade.
 
+### When a run stops
+
+The two modes stop differently, and the job refuses both policies at once (the
+chart therefore renders exactly one of them):
+
+| Mode | Argument | Value |
+|------|----------|-------|
+| scheduled | `-exit_at` | `scheduled.exitAt`, `23:59` UTC by default |
+| one-shot | `-exit_after` | `exitAfter`, 64800 s (18 h) by default |
+
+A scheduled run needs an absolute deadline rather than a duration, because the
+deadline is recomputed identically by every `restartPolicy` attempt: a run
+restarted after a crash aims at the same instant instead of granting itself a
+fresh window. That matters under `concurrencyPolicy: Forbid`, where a run
+overflowing its window silently skips the days that follow. A run starting past
+its deadline exits in error before the Spark session is created, so it reserves
+no executor.
+
+A backfill keeps the duration: it must replay a whole night whatever the time of
+day it is started at.
+
 ## Check the deployment
 
 ```bash
@@ -129,6 +150,13 @@ argocd app list -l app.kubernetes.io/part-of=fink
 kubectl -n spark get scheduledsparkapplications   # scheduled mode
 kubectl -n spark get sparkapplications            # one-shot mode, and scheduled runs
 kubectl -n spark logs -l spark-role=driver --tail=100
+
+# Runs of one ScheduledSparkApplication (each run is a SparkApplication whose
+# name suffix is its launch time in epoch nanoseconds)
+kubectl -n spark get sparkapplications \
+  -l sparkoperator.k8s.io/scheduled-app-name=fink-broker-stream2raw
+kubectl -n spark get scheduledsparkapplication fink-broker-stream2raw \
+  -o jsonpath='{.status}'                        # lastRun / nextRun / history
 
 # Storage
 kubectl -n kafka get kafka,kafkauser,kafkatopic
@@ -171,6 +199,12 @@ HDFS/Kafka data. This is irreversible.
   `argocd app set fink-broker --sync-policy none`.
 - **Restarting a job** is done by deleting its `SparkApplication`; `selfHeal`
   recreates it identically (same night) and the operator relaunches it.
+- **A night without alerts is not a failure.** The telescope does not observe
+  every night. `raw2science` and `distribution` wait for their upstream data
+  until the deadline, then exit *successfully* with `No alert collected for
+  night <N>, nothing to do`. The run is `COMPLETED`, no retry is triggered and
+  the `Forbid` slot is freed for the next night. Before this was handled, such a
+  night pinned both jobs indefinitely and blocked every following run.
 - **The container image is pinned independently** of the chart revision:
   `ciux` derives it from the hash of the workspace sources. Always deploy from
   a clean checkout of the tag, otherwise the image and the chart diverge.
