@@ -27,11 +27,14 @@ import pyspark.sql.functions as F
 import pkgutil
 import argparse
 import logging
+import sys
 import time
 
 from fink_broker.common.parser import getargs
+from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 from fink_broker.common.spark_utils import (
     init_sparksession,
+    NoDataAvailableError,
     connect_to_raw_database,
     wait_for_filesystem,
     wait_for_kafka,
@@ -58,6 +61,10 @@ def main():
 
     logger = init_logger(args.log_level)
 
+    # Anchored on the day the job starts, so a restart aims at the same
+    # instant instead of granting itself a fresh window.
+    exit_deadline = get_exit_deadline(args.exit_at)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night),
@@ -77,7 +84,15 @@ def main():
     )
 
     logger.debug("Connect to the TMP science database")
-    df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
+    try:
+        df = connect_to_raw_database(scitmpdatapath, scitmpdatapath, latestfirst=False)
+    except NoDataAvailableError as e:
+        # The telescope does not observe every night. Exit successfully so the
+        # scheduler frees the slot instead of retrying a job with no input.
+        logger.info(
+            "No alert processed for night %s, nothing to do (%s)", args.night, e
+        )
+        return
 
     logger.debug("Cast fields to ease the distribution")
     cnames = df.columns
@@ -215,7 +230,23 @@ def main():
 
         time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
 
-    if args.exit_after is not None:
+    if exit_deadline is not None:
+        # An absolute deadline already accounts for whatever was spent waiting
+        # for the upstream data or for a GCN, so nothing is subtracted here.
+        logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
+        time.sleep(seconds_until(exit_deadline))
+        disquery.stop()
+        if stream_distrib_list:
+            for stream in stream_distrib_list:
+                stream.stop()
+        logger.warning(
+            "Reached the exit_at deadline %s: some alerts of night %s may not "
+            "have been distributed",
+            exit_deadline,
+            args.night,
+        )
+        sys.exit(1)
+    elif args.exit_after is not None:
         remaining_time = args.exit_after - time_spent_in_wait
         remaining_time = remaining_time if remaining_time > 0 else 0
         logger.debug("Keep the Streaming for %s seconds", remaining_time)

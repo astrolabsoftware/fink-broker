@@ -32,11 +32,13 @@ from pyspark.sql import functions as F
 import fastavro
 import fastavro.schema
 import argparse
+import sys
 import time
 import io
 import os
 
 from fink_broker.common.parser import getargs
+from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 
 from fink_broker.common.spark_utils import from_avro
 from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka
@@ -58,6 +60,10 @@ def main():
     # FIXME args.log_level should be checked to be both compliant with python and spark!
 
     logger = init_logger(args.log_level)
+
+    # Anchored on the day the job starts, so a restart aims at the same
+    # instant instead of granting itself a fresh window.
+    exit_deadline = get_exit_deadline(args.exit_at)
 
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
@@ -182,7 +188,18 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     logger.info("Stream2raw service is running...")
-    if args.exit_after is not None:
+    if exit_deadline is not None:
+        logger.debug("Polling until the exit_at deadline %s", exit_deadline)
+        time.sleep(seconds_until(exit_deadline))
+        countquery.stop()
+        logger.warning(
+            "Reached the exit_at deadline %s: some alerts of night %s may not "
+            "have been collected",
+            exit_deadline,
+            args.night,
+        )
+        sys.exit(1)
+    elif args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
         logger.info("Exiting the stream2raw service normally...")

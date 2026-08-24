@@ -309,6 +309,15 @@ def connect_to_kafka(
     return df
 
 
+class NoDataAvailableError(Exception):
+    """No upstream data showed up within the allotted time
+
+    Not an error condition: the telescope does not observe every night, and a
+    night without any alert is a legitimate outcome. Callers are expected to
+    exit successfully rather than fail.
+    """
+
+
 def connect_to_raw_database(
     basepath: str, path: str, latestfirst: bool, timeout: int = 3600
 ) -> DataFrame:
@@ -340,7 +349,7 @@ def connect_to_raw_database(
 
     Raises
     ------
-    TimeoutError
+    NoDataAvailableError
         If no data is readable at `basepath` after `timeout` seconds.
 
     Examples
@@ -357,7 +366,7 @@ def connect_to_raw_database(
     wait_sec = 5
     while not path_exist(basepath):
         if time.time() >= deadline:
-            raise TimeoutError(
+            raise NoDataAvailableError(
                 "No data available at {} after {} s".format(basepath, timeout)
             )
         _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
@@ -373,7 +382,7 @@ def connect_to_raw_database(
         except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
             if time.time() >= deadline:
-                raise TimeoutError(
+                raise NoDataAvailableError(
                     "Unable to read the schema of {} after {} s".format(
                         basepath, timeout
                     )
