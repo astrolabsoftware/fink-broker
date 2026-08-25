@@ -105,23 +105,31 @@ def get_exit_deadline(
     exit_at: str,
     now: Optional[datetime] = None,
 ) -> Optional[datetime]:
-    """Resolve the UTC instant at which the job must stop (HH:MM policy).
+    """Resolve the UTC instant at which the job must stop.
 
-    Unlike a duration, this deadline is anchored on the calendar day the job
-    starts, so a job restarted by the operator aims at the same instant as its
-    first attempt instead of granting itself a fresh budget. It is the k8s
-    counterpart of the ``date -d '20:00 today'`` lease used by the on-premise
-    scheduler.
+    Unlike a duration, this deadline is an instant, so a job restarted by the
+    operator aims at the same target as its first attempt instead of granting
+    itself a fresh budget.
+
+    Two spellings, for the two ways a stop time is decided:
+
+    - ``HH:MM`` -- a time of day in UTC, on the day the job starts. What a
+      daily scheduled run wants: one value, valid every day.
+    - an ISO 8601 instant -- ``2024-01-01T20:00:00+00:00``, or the same with
+      ``Z``, or without an offset (then read as UTC). What a caller computing
+      the stop time itself wants, typically to express it in local time, or
+      when the run crosses the UTC midnight and a time of day cannot say which
+      day is meant.
 
     The deadline is deliberately allowed to lie in the past: a job starting
-    after ``exit_at`` has nothing left to do for that day, and the caller is
-    expected to report it rather than run a full extra window.
+    after it has nothing left to do, and the caller is expected to report that
+    rather than run a full extra window.
 
     Parameters
     ----------
     exit_at: str
-        Time of day in HH:MM format, interpreted as UTC. An empty string means
-        "no deadline" and returns None.
+        ``HH:MM`` (UTC, day of the run) or an ISO 8601 instant. An empty string
+        means "no deadline" and returns None.
     now: datetime, optional
         Reference time (timezone-aware, UTC). Defaults to the current UTC time.
         Mainly used for deterministic testing.
@@ -135,7 +143,8 @@ def get_exit_deadline(
     Raises
     ------
     ValueError
-        If ``exit_at`` is not a valid HH:MM time of day.
+        If ``exit_at`` is neither a valid HH:MM time of day nor an ISO 8601
+        instant.
 
     Examples
     --------
@@ -153,6 +162,19 @@ def get_exit_deadline(
     >>> get_exit_deadline("20:00", now=datetime(2024, 1, 1, 23, 0, tzinfo=timezone.utc))
     datetime.datetime(2024, 1, 1, 20, 0, tzinfo=datetime.timezone.utc)
 
+    An ISO instant pins the day too, and ``now`` no longer matters:
+    >>> get_exit_deadline("2024-01-02T20:00:00+00:00", now=ref)
+    datetime.datetime(2024, 1, 2, 20, 0, tzinfo=datetime.timezone.utc)
+
+    An offset is honoured and normalised to UTC, which is how a local stop time
+    is passed in:
+    >>> get_exit_deadline("2024-01-02T20:00:00+02:00", now=ref)
+    datetime.datetime(2024, 1, 2, 18, 0, tzinfo=datetime.timezone.utc)
+
+    A naive instant is read as UTC:
+    >>> get_exit_deadline("2024-01-02T20:00", now=ref)
+    datetime.datetime(2024, 1, 2, 20, 0, tzinfo=datetime.timezone.utc)
+
     An empty value disables the policy:
     >>> get_exit_deadline("") is None
     True
@@ -162,20 +184,31 @@ def get_exit_deadline(
 
     try:
         time_of_day = datetime.strptime(exit_at, "%H:%M").time()
+    except ValueError:
+        pass
+    else:
+        if now is None:
+            now = datetime.now(timezone.utc)
+        return now.replace(
+            hour=time_of_day.hour,
+            minute=time_of_day.minute,
+            second=0,
+            microsecond=0,
+        )
+
+    # Not a time of day: an absolute instant. `Z` is only understood by
+    # fromisoformat from Python 3.11 on, so spell it out.
+    try:
+        instant = datetime.fromisoformat(exit_at.replace("Z", "+00:00"))
     except ValueError as e:
         raise ValueError(
-            "Malformed exit_at {}, expected HH:MM (UTC)".format(exit_at)
+            "Malformed exit_at {}, expected HH:MM (UTC, day of the run) "
+            "or an ISO 8601 instant".format(exit_at)
         ) from e
 
-    if now is None:
-        now = datetime.now(timezone.utc)
-
-    return now.replace(
-        hour=time_of_day.hour,
-        minute=time_of_day.minute,
-        second=0,
-        microsecond=0,
-    )
+    if instant.tzinfo is None:
+        return instant.replace(tzinfo=timezone.utc)
+    return instant.astimezone(timezone.utc)
 
 
 def seconds_until(

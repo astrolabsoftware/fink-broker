@@ -165,11 +165,15 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         type=str,
         default="",
         help="""
-        Stop the service at this time of day (HH:MM, UTC) on the day it
-        started. Unlike `exit_after`, the deadline is absolute, so a job
-        restarted by the scheduler aims at the same instant instead of
-        granting itself a fresh window, and a job starting past it exits in
-        error instead of running an extra window. Mutually exclusive with
+        Stop the service at an absolute instant, given either as HH:MM (UTC,
+        on the day the service starts) or as an ISO 8601 instant such as
+        2024-01-02T20:00:00+02:00 (an offset is honoured; without one the
+        value is read as UTC). Use the ISO form when the stop time is computed
+        by the caller, expressed in local time, or when the run crosses the UTC
+        midnight and a time of day cannot say which day is meant. Unlike
+        `exit_after`, the deadline survives a restart: every attempt resolves
+        the same instant instead of granting itself a fresh window, and a
+        service starting past it exits in error. Mutually exclusive with
         `exit_after`.
         """,
     )
