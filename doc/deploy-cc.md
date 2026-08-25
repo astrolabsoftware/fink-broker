@@ -127,6 +127,12 @@ chart therefore renders exactly one of them):
 | scheduled | `-exit_at` | `scheduled.exitAt`, `23:59` UTC by default |
 | one-shot | `-exit_after` | `exitAfter`, 64800 s (18 h) by default |
 
+`-exit_at` takes either a time of day in UTC (`23:59`, resolved on the day the
+job starts) or a full ISO 8601 instant (`2026-08-21T20:00:00+02:00`, offset
+honoured, UTC assumed when absent). The second form is what a caller computing
+the stop time itself needs — a stop time expressed in local time, or a run
+crossing the UTC midnight, where a time of day cannot say which day is meant.
+
 A scheduled run needs an absolute deadline rather than a duration, because the
 deadline is recomputed identically by every `restartPolicy` attempt: a run
 restarted after a crash aims at the same instant instead of granting itself a
