@@ -25,32 +25,37 @@ set -euo pipefail
 DIR=$(cd "$(dirname "$0")"; pwd -P)
 monitoring=false
 SUFFIX="noscience"
+mode="basic"
+night=""
+prefix="/user/185"
 
 usage () {
-  echo "Usage: $0 [-h] [-m] [-s <suffix>]"
-  echo "  -m: Check monitoring is enabled"
+  echo "Usage: $0 [-h] [--basic|--advanced] [-m] [-s <suffix>] [-n <night>] [-p <prefix>]"
+  echo "  --basic:    Check that the expected topics are created (default)"
+  echo "  --advanced: Check the balance reported by 'finkctl get balance'"
+  echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
+  echo "  -n: Observing night to check (YYYYMMDD, --advanced only)."
+  echo "      Default: every night found, checked on the TOTAL row"
+  echo "  -p: HDFS path prefix holding the datasets (--advanced only). Default: /user/185"
   echo "  -h: Display this help"
   echo ""
-  echo " Check that the expected topics are created"
+  echo " Two levels of checking, run as separate CI steps so a failure names"
+  echo " itself: --basic asserts the broker produced its topics, --advanced"
+  echo " asserts the alerts can be accounted for from end to end."
   exit 1
 }
 
-# Get options for suffix
-while getopts hms: opt; do
-  case ${opt} in
-    h )
-      usage
-      exit 0
-      ;;
-    m )
-      monitoring=true
-      ;;
-    s) SUFFIX="$OPTARG" ;;
-    \? )
-      usage
-      exit 1
-      ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --basic) mode="basic" ; shift ;;
+    --advanced) mode="advanced" ; shift ;;
+    -m) monitoring=true ; shift ;;
+    -s) SUFFIX="$2" ; shift 2 ;;
+    -n) night="$2" ; shift 2 ;;
+    -p) prefix="$2" ; shift 2 ;;
+    -h) usage ; exit 0 ;;
+    *) echo "Unknown option: $1" 1>&2 ; usage ; exit 1 ;;
   esac
 done
 
@@ -59,6 +64,76 @@ if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" 
     echo "Error: suffix must be 'noscience' or 'science'"
     usage
     exit 1
+fi
+
+# --advanced: account for the alerts that went through the broker.
+#
+# The parsing and the arithmetic behind `get balance` are covered by unit tests
+# in the finkctl repository. What cannot be tested there is the part touching a
+# live cluster: locating the HDFS and Kafka pods, being allowed to exec into
+# them, and the output format of the tools it drives. That is what this checks.
+#
+# Counts are not asserted against fixed values -- the alert simulator does not
+# produce a deterministic number of alerts. Only that both ends of the broker
+# moved, which is enough to catch a broken pod lookup, a denied exec or a
+# changed output format.
+#
+# HDFS only: balance reads the datasets from inside the namenode pod, so it has
+# nothing to read when the run stores its data in S3.
+if [ "$mode" = "advanced" ]; then
+  night_args=()
+  if [ -n "$night" ]; then
+    night_args+=(--night "$night")
+  fi
+
+  out="/tmp/finkctl-balance.out"
+  echo "INFO: Running finkctl get balance${night:+ for night $night}"
+  if ! finkctl get balance --prefix "$prefix" "${night_args[@]}" > "$out" 2>&1; then
+    echo "ERROR: finkctl get balance failed" 1>&2
+    cat "$out" 1>&2
+    exit 1
+  fi
+  cat "$out"
+
+  # Rows printed by printReport:
+  #   <night>  IN(kafka) RAW(f) RAW SCI(f) SCI DISTRIB
+  #   TOTAL    IN(kafka)                       DISTRIB
+  #
+  # Without an explicit night, read the TOTAL row: the night the run pinned
+  # lives in the fink-cd values, and duplicating it here would rot silently.
+  if [ -n "$night" ]; then
+    row=$(grep -E "^[[:space:]]+${night}[[:space:]]" "$out" || true)
+    consumed_col=2
+    distributed_col=7
+  else
+    row=$(grep -E "^[[:space:]]+TOTAL[[:space:]]" "$out" || true)
+    consumed_col=2
+    distributed_col=3
+  fi
+  if [ -z "$row" ]; then
+    echo "ERROR: no balance row${night:+ for night $night} in the report" 1>&2
+    exit 1
+  fi
+
+  consumed=$(echo "$row" | awk -v c="$consumed_col" '{print $c}')
+  distributed=$(echo "$row" | awk -v c="$distributed_col" '{print $c}')
+
+  for name in consumed distributed; do
+    eval "value=\$$name"
+    if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+      echo "ERROR: $name is not a count: '$value'" 1>&2
+      echo "       row: $row" 1>&2
+      exit 1
+    fi
+    if [ "$value" -le 0 ]; then
+      echo "ERROR: $name is $value, expected alerts to have gone through" 1>&2
+      echo "       row: $row" 1>&2
+      exit 1
+    fi
+  done
+
+  echo "INFO: balance is consistent: $consumed alerts consumed, $distributed distributed"
+  exit 0
 fi
 
 # TODO improve management of expected topics
