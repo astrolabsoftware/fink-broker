@@ -166,12 +166,20 @@ jobs:
         if: ${{ matrix.storage == 'hdfs' }}
         run: |
           ./e2e/check-results.sh --advanced
+      # The chart's own CronJob, not finkctl driven from the runner: this is
+      # what exercises its image, its ServiceAccount, the Roles letting it exec
+      # into the hdfs and kafka pods, and the arguments Helm renders for it.
+      - name: Check report CronJob
+        id: check_report
+        if: ${{ matrix.storage == 'hdfs' }}
+        run: |
+          ./e2e/check-results.sh --report
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure' || steps.check_report.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure' || steps.check_report.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}
