@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+import ipaddress
 import logging
+import re
 import socket
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -422,6 +424,102 @@ def increase_wait_time(wait_sec: int) -> int:
     return wait_sec
 
 
+# A DNS label: alphanumerics and dashes, never starting nor ending with a dash.
+_HOSTNAME_LABEL = r"(?!-)[A-Za-z0-9-]{1,63}(?<!-)"
+_HOSTNAME_RE = re.compile(r"^{label}(\.{label})*\.?$".format(label=_HOSTNAME_LABEL))
+
+
+def _is_valid_host(host: str) -> bool:
+    """Tell whether `host` is a usable hostname or IP literal
+
+    Parameters
+    ----------
+    host : str
+        Host part of a bootstrap server entry, brackets already stripped.
+
+    Returns
+    -------
+    bool
+        True if `host` is an IPv4/IPv6 literal, or a hostname of at most 253
+        characters made of valid DNS labels.
+    """
+    if not host or len(host) > 253:
+        return False
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return bool(_HOSTNAME_RE.match(host))
+
+    return True
+
+
+def parse_kafka_servers(servers: str) -> List[Tuple[str, int]]:
+    """Parse and validate a Kafka bootstrap server list
+
+    The list reaches the job as a command-line argument, so it is validated
+    here rather than handed straight to the network layer: only a syntactically
+    valid host and a port in the legal range come out of this function.
+
+    Parameters
+    ----------
+    servers : str
+        Comma-separated list of HOST:PORT. A bracketed IPv6 literal
+        (`[::1]:9092`) is accepted, and blanks around an entry are ignored.
+
+    Returns
+    -------
+    List[Tuple[str, int]]
+        The validated (host, port) pairs, in the order they were given.
+
+    Raises
+    ------
+    ValueError
+        If the list holds no entry, or if an entry is not a valid HOST:PORT.
+
+    Examples
+    --------
+    >>> parse_kafka_servers("kafka-0.kafka:9092,kafka-1.kafka:9093")
+    [('kafka-0.kafka', 9092), ('kafka-1.kafka', 9093)]
+    """
+    brokers = []
+    for server in servers.split(","):
+        server = server.strip()
+        if not server:
+            continue
+
+        host, separator, port = server.rpartition(":")
+        if not separator:
+            raise ValueError("Malformed Kafka bootstrap server: {}".format(server))
+
+        if host.startswith("[") and host.endswith("]"):
+            host = host[1:-1]
+
+        if not _is_valid_host(host):
+            raise ValueError(
+                "Invalid host in Kafka bootstrap server: {}".format(server)
+            )
+
+        try:
+            port_number = int(port)
+        except ValueError:
+            raise ValueError(
+                "Invalid port in Kafka bootstrap server: {}".format(server)
+            ) from None
+
+        if not 1 <= port_number <= 65535:
+            raise ValueError(
+                "Out of range port in Kafka bootstrap server: {}".format(server)
+            )
+
+        brokers.append((host, port_number))
+
+    if not brokers:
+        raise ValueError("No Kafka bootstrap server to wait for")
+
+    return brokers
+
+
 def wait_for_kafka(servers: str, timeout: int = 300) -> None:
     """Wait for a Kafka bootstrap server to accept connections
 
@@ -436,28 +534,20 @@ def wait_for_kafka(servers: str, timeout: int = 300) -> None:
     Parameters
     ----------
     servers : str
-        Kafka bootstrap servers, as a comma-separated list of HOST:PORT. As for
-        any bootstrap list, one reachable server is enough.
+        Kafka bootstrap servers, as a comma-separated list of HOST:PORT,
+        validated by `parse_kafka_servers` before any connection is attempted.
+        As for any bootstrap list, one reachable server is enough.
     timeout : int, optional
         Give up after that many seconds. Default is 300.
 
     Raises
     ------
+    ValueError
+        If `servers` is not a valid bootstrap server list.
     TimeoutError
         If no server is reachable within `timeout` seconds.
     """
-    brokers = []
-    for server in servers.split(","):
-        server = server.strip()
-        if not server:
-            continue
-        host, separator, port = server.rpartition(":")
-        if not separator:
-            raise ValueError("Malformed Kafka bootstrap server: {}".format(server))
-        brokers.append((host, int(port)))
-
-    if not brokers:
-        raise ValueError("No Kafka bootstrap server to wait for")
+    brokers = parse_kafka_servers(servers)
 
     deadline = time.time() + timeout
     wait_sec = 5
