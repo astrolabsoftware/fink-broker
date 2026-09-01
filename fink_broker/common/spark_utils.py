@@ -424,11 +424,27 @@ def sleep_before_retry(wait_sec: int, deadline: Optional[datetime] = None) -> in
     -------
     int
         Waiting time to use for the next attempt.
+
+    Examples
+    --------
+    A deadline already reached leaves nothing to wait for, and the next
+    attempt is still paced 20% further apart:
+    >>> from datetime import datetime, timedelta, timezone
+    >>> past = datetime.now(timezone.utc) - timedelta(hours=1)
+    >>> sleep_before_retry(5, past)
+    6.0
     """
     if deadline is None:
         time.sleep(wait_sec)
     else:
+        # The caller checked the deadline before calling, so some time is
+        # left -- but possibly less than wait_sec. Sleeping the whole of it
+        # would wake up past the deadline, and the caller would give up that
+        # late, eating into the margin kept for a clean shutdown.
         time.sleep(min(wait_sec, seconds_until(deadline)))
+
+    # The pace of the retries is set by wait_sec, not by how long we actually
+    # slept: a sleep cut short by the deadline must not restart a fast loop.
     return increase_wait_time(wait_sec)
 
 
