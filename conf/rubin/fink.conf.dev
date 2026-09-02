@@ -37,9 +37,9 @@ EXTRA_SPARK_CONFIG=""
 # Change the version according to your Spark version.
 # NOTE: HBase packages are not required for Parquet archiving
 FINK_PACKAGES=\
-org.apache.spark:spark-streaming-kafka-0-10-assembly_2.13:3.5.9,\
-org.apache.spark:spark-sql-kafka-0-10_2.13:3.5.9,\
-org.apache.spark:spark-avro_2.13:3.5.9,\
+org.apache.spark:spark-streaming-kafka-0-10-assembly_2.12:3.5.9,\
+org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9,\
+org.apache.spark:spark-avro_2.12:3.5.9,\
 org.apache.hbase:hbase-shaded-mapreduce:2.5.15
 
 # Other dependencies (incl. Scala part of Fink)
