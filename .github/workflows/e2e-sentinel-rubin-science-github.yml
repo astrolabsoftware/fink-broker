@@ -15,3 +15,5 @@ jobs:
     uses: ./.github/workflows/sentinel-template.yml
     with:
       survey: rubin
+      # Last fink-deps-sentinel image known to pass, still on Python 3.11
+      image_tag: 'v2.54.10-rc8-17-g34a543b'
