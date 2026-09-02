@@ -15,3 +15,5 @@ jobs:
     uses: ./.github/workflows/sentinel-template.yml
     with:
       survey: rubin
+      # fink-deps-sentinel image matching the Python 3.13 / Spark 3.5.9 stack
+      image_tag: 'v2.54.10-rc21'
