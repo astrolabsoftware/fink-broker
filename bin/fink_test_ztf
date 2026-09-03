@@ -148,12 +148,6 @@ if [[ "$WITH_DB" = true ]] ; then
 
 fi
 
-# MM offline test (need "fink start merge" before)
-if [[ "$WITH_MM_OFFLINE" = true ]] ; then
-  # fink-mm offline mode
-  fink_mm join_stream offline -night $NIGHT --config ${FINK_HOME}/conf/${SURVEY}/fink_mm.conf
-fi
-
 if [[ "$WITH_UNITS" = true ]] ; then
   # Run the test suite on the modules assuming the integration
   # tests have been run (to build the databases)
