@@ -1,54 +1,51 @@
-apiVersion: "sparkoperator.k8s.io/v1beta2"
-kind: SparkApplication
-metadata:
-  name: {{ include "fink.fullname" . }}-raw2science
-spec:
-{{- include "fink.common" . | nindent 2 }}
-  mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/raw2science.py
-  arguments: {{- include "fink.commonargs" . | nindent 4 }}
-    - '-night'
-    - '{{ .Values.night }}'
-  sparkConf: {{- include "fink.s3config" . | nindent 4 }}
-  driver:
-    cores: {{ tpl .Values.raw2science.driver.cores . }}
-    coreRequest: "{{ tpl .Values.raw2science.driver.coreRequest . }}"
-    env: {{- include "fink.hdfsconfig" . | nindent 6 }}
-    memory: "{{ tpl .Values.raw2science.driver.memory . }}"
-    javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
-    labels:
-      version: 3.4.1
-    serviceAccount: spark
-    {{- with .Values.raw2science.driver.nodeSelector }}
-    nodeSelector:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- with .Values.raw2science.driver.tolerations }}
-    tolerations:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-  executor:
-    cores: {{ tpl .Values.raw2science.executor.cores . }}
-    coreRequest: "{{ tpl .Values.raw2science.executor.coreRequest . }}"
-    env: {{- include "fink.hdfsconfig" . | nindent 6 }}
-    memory: "{{ tpl .Values.raw2science.executor.memory . }}"
-    javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
-    instances: {{ tpl .Values.raw2science.executor.instances . }}
-    {{- with .Values.raw2science.executor.nodeSelector }}
-    nodeSelector:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- with .Values.raw2science.executor.tolerations }}
-    tolerations:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    labels:
-      version: 3.4.1
+{{- define "fink.raw2science.spec" -}}
+{{- include "fink.common" . }}
+mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/raw2science.py
+arguments: {{- include "fink.commonargs" . | nindent 2 }}
+  {{- include "fink.nightargs" . | nindent 2 }}
+sparkConf: {{- include "fink.s3config" . | nindent 2 }}
+driver:
+  cores: {{ tpl .Values.raw2science.driver.cores . }}
+  coreRequest: "{{ tpl .Values.raw2science.driver.coreRequest . }}"
+  env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  memory: "{{ tpl .Values.raw2science.driver.memory . }}"
+  javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
+  labels:
+    version: 3.4.1
+  serviceAccount: spark
+  {{- with .Values.raw2science.driver.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.raw2science.driver.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+executor:
+  cores: {{ tpl .Values.raw2science.executor.cores . }}
+  coreRequest: "{{ tpl .Values.raw2science.executor.coreRequest . }}"
+  env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  memory: "{{ tpl .Values.raw2science.executor.memory . }}"
+  javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
+  instances: {{ tpl .Values.raw2science.executor.instances . }}
+  {{- with .Values.raw2science.executor.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.raw2science.executor.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    version: 3.4.1
 {{- if eq .Values.monitoring.enabled true }}
-  monitoring:
-    exposeDriverMetrics: true
-    exposeExecutorMetrics: true
-    prometheus:
-      # Added in Dockerfile
-      jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-1.1.0.jar"
-      port: 8090
+monitoring:
+  exposeDriverMetrics: true
+  exposeExecutorMetrics: true
+  prometheus:
+    # Added in Dockerfile
+    jmxExporterJar: "/opt/spark/jars/jmx_prometheus_javaagent-1.1.0.jar"
+    port: 8090
 {{- end }}
+{{- end }}
+{{- include "fink.sparkapp" (dict "ctx" . "name" "raw2science" "spec" "fink.raw2science.spec") }}

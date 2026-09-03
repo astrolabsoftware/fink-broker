@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.common.tester import regular_unit_tests
+from fink_broker.common.night_utils import get_night, resolve_night_placeholders
 import argparse
 
 
@@ -144,7 +145,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_TRIGGER_UPDATE]
         """,
     )
-    parser.add_argument(
+    # A duration and an absolute instant are two ways of answering the same
+    # question, and combining them only hides which one actually stopped the
+    # service. Let argparse reject the ambiguity outright.
+    exit_policy = parser.add_mutually_exclusive_group()
+    exit_policy.add_argument(
         "-exit_after",
         type=int,
         default=64800,
@@ -152,6 +157,24 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Stop the service after `exit_after` seconds.
         This primarily for use on CI, to stop service after some time.
         Use that with `fink start service --exit_after <time>`. Default is 24h.
+        Mutually exclusive with `exit_at`.
+        """,
+    )
+    exit_policy.add_argument(
+        "-exit_at",
+        type=str,
+        default="",
+        help="""
+        Stop the service at an absolute instant, given either as HH:MM (UTC,
+        on the day the service starts) or as an ISO 8601 instant such as
+        2024-01-02T20:00:00+02:00 (an offset is honoured; without one the
+        value is read as UTC). Use the ISO form when the stop time is computed
+        by the caller, expressed in local time, or when the run crosses the UTC
+        midnight and a time of day cannot say which day is meant. Unlike
+        `exit_after`, the deadline survives a restart: every attempt resolves
+        the same instant instead of granting itself a fresh window, and a
+        service starting past it exits in error. Mutually exclusive with
+        `exit_after`.
         """,
     )
     parser.add_argument(
@@ -254,8 +277,23 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         type=str,
         default="",
         help="""
-        YYYYMMDD night
+        YYYYMMDD night. Explicit override (pinned night: backfill, rerun of a
+        failed night, or CI). When empty, the night is deduced from the current
+        UTC time using -night_offset_hours.
         [NIGHT]
+        """,
+    )
+    parser.add_argument(
+        "-night_offset_hours",
+        type=int,
+        default=0,
+        help="""
+        Hours subtracted from UTC now before extracting the deduced night (i.e.
+        when -night is empty). Encodes both the topic rollover (sub-day shift)
+        and the night selection: 0 -> current night (live, midnight rollover),
+        12 -> current night with a noon-UTC rollover, 24 -> previous complete
+        night (n-1). Ignored when -night is set.
+        [NIGHT_OFFSET_HOURS]
         """,
     )
     parser.add_argument(
@@ -347,6 +385,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     args = parser.parse_args(None)
+
+    # Resolve the observing night once, centrally: an explicit -night wins
+    # (pinned night); otherwise it is deduced from the current UTC time
+    # following the offset/rollover policy. The Kafka topic and output prefix
+    # may carry a '{night}' placeholder resolved here, so the date is computed
+    # at runtime instead of being frozen at Helm-templating time.
+    args.night = get_night(args.night, args.night_offset_hours)
+    args.topic = resolve_night_placeholders(args.topic, args.night)
+    args.online_data_prefix = resolve_night_placeholders(
+        args.online_data_prefix, args.night
+    )
+
     return args
 
 

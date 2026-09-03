@@ -10,6 +10,10 @@ on:
         required: true
         type: string
         description: 'Survey name (ztf or rubin)'
+      image_tag:
+        required: true
+        type: string
+        description: 'Tag of the fink-deps-sentinel image to run the tests in'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.survey }}
@@ -20,9 +24,10 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      # Container image is pinned to a specific tag for reproducible runs.
-      # Bump this tag explicitly when updating Sentinel dependencies.
-      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:latest
+      # Never use "latest": that tag is overwritten whenever Sentinel
+      # dependencies are rebuilt, which silently breaks unrelated branches.
+      # Bump the immutable tag explicitly in the calling workflow.
+      image: gitlab-registry.in2p3.fr/astrolabsoftware/fink/fink-deps-sentinel-${{ inputs.survey }}:${{ inputs.image_tag }}
 
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
