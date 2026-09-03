@@ -95,7 +95,9 @@ export KAFKA_TOPIC="rubin_20250903_lsst_v10.0"
 export NIGHT=20250412
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
-export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+# Hack for Spark 3.5.9 with py3.13 - replace coverage_daemon.py
+#export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+export PYTHONPATH="${FINK_HOME}/conf/:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 # Create folder for log & artifacts
