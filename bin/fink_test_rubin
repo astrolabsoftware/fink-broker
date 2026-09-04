@@ -152,7 +152,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Ingest data to HBase
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --ingest_only -stop_at "`date -d '+2 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --ingest_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   echo "Sleeping 300 seconds to enable processing to produce output..."
   sleep 300
