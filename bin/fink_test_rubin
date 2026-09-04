@@ -143,7 +143,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Connect the service to build the science database from the raw one
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
