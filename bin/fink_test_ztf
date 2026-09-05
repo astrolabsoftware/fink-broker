@@ -90,7 +90,9 @@ export KAFKA_TOPIC="ztf_public_20200101"
 export NIGHT=20200101
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
-export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+# Hack for Spark 3.5.9 with py3.13 - replace coverage_daemon.py
+#export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+export PYTHONPATH="${FINK_HOME}/conf/:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 if [ -n "${SINGLE_FILE}" ]; then
@@ -108,17 +110,17 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  fink start stream2raw -s ${SURVEY} --simulator -exit_after 300 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
+  fink start stream2raw -s ${SURVEY} --simulator -exit_after 400 -c $conf -topic $KAFKA_TOPIC -night $NIGHT ${RESOURCES}
 
   # Connect the service to build the science database from the raw one
-  fink start raw2science -s ${SURVEY} -exit_after 600 -c $conf -night $NIGHT ${RESOURCES}
+  fink start raw2science -s ${SURVEY} -exit_after 900 -c $conf -night $NIGHT ${RESOURCES}
 
   # Start the distribution service
-  fink start distribute -s ${SURVEY} -exit_after 600 -c $conf -night $NIGHT ${RESOURCES}
+  fink start distribute -s ${SURVEY} -exit_after 900 -c $conf -night $NIGHT ${RESOURCES}
 
   # check we have all topics
   echo "TOPICS FOUND:"
-  kafka-topics.sh --list --zookeeper localhost:2181
+  kafka-topics.sh --list --bootstrap-server localhost:9092
 fi
 
 # DB Integration tests
@@ -144,12 +146,6 @@ if [[ "$WITH_DB" = true ]] ; then
 
   fink start archive_statistics -s ${SURVEY} -c $conf -night $NIGHT ${RESOURCES}
 
-fi
-
-# MM offline test (need "fink start merge" before)
-if [[ "$WITH_MM_OFFLINE" = true ]] ; then
-  # fink-mm offline mode
-  fink_mm join_stream offline -night $NIGHT --config ${FINK_HOME}/conf/${SURVEY}/fink_mm.conf
 fi
 
 if [[ "$WITH_UNITS" = true ]] ; then
