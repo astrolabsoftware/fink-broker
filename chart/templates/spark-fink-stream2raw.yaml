@@ -16,7 +16,7 @@ spec:
     - '{{ .Values.stream2raw.kafka.topic }}'
     - '-night'
     - '{{ .Values.night }}'
-  sparkVersion: "3.4.1"
+  sparkVersion: "3.5.9"
   sparkConf: {{- include "fink.s3config" . | nindent 4 }}
   driver:
     cores: {{ tpl .Values.stream2raw.cores . }}
@@ -24,7 +24,7 @@ spec:
     env: {{- include "fink.hdfsconfig" . | nindent 6 }}
     memory: "{{ tpl .Values.stream2raw.memory . }}"
     labels:
-      version: 3.4.1
+      version: 3.5.9
     serviceAccount: spark
     javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   executor:
@@ -35,7 +35,7 @@ spec:
     instances: {{ tpl .Values.stream2raw.instances . }}
     javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
     labels:
-      version: 3.4.1
+      version: 3.5.9
 {{- if eq .Values.monitoring.enabled true }}
   monitoring:
     exposeDriverMetrics: true
