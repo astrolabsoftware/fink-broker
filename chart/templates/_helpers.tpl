@@ -80,7 +80,7 @@ pythonVersion: "3"
 mode: cluster
 image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
 imagePullPolicy: "{{ .Values.image.pullPolicy}}"
-sparkVersion: "3.4.1"
+sparkVersion: "3.5.9"
 restartPolicy:
   type: OnFailure
   onFailureRetries: 3
