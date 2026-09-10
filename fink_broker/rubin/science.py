@@ -33,7 +33,9 @@ from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
+from fink_science.rubin.xmatch.processor import crossmatch_milliquas
 from fink_science.rubin.xmatch.utils import MANGROVE_COLS, MANGROVE_TYPES
+from fink_science.rubin.xmatch.utils import MILLIQUAS_COLS, MILLIQUAS_TYPES
 from fink_science.rubin.xmatch.utils import TNS_COLS, TNS_TYPES
 from fink_science.rubin.random_forest_snia.processor import (
     rfscore_rainbow_elasticc_nometa,
@@ -115,6 +117,12 @@ CAT_PROPERTIES = {
         "types": MANGROVE_TYPES,
         "distmaxarcsec": 60.0,
     },
+    "milliquas": {
+        "kind": "milliquas",
+        "cols_out": MILLIQUAS_COLS,
+        "types": MILLIQUAS_TYPES,
+        "distmaxarcsec": 1.2,
+    },
 }
 
 
@@ -185,6 +193,23 @@ def apply_all_xmatch(df, tns_raw_output):
                     df["mangrove"].getItem(col_).cast(type_),
                 )
             df = df.drop("mangrove")
+        elif CAT_PROPERTIES[catname]["kind"] == "milliquas":
+            df = df.withColumn(
+                catname,
+                crossmatch_milliquas(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
+            # Explode milliquas
+            for col_, type_ in zip(MILLIQUAS_COLS, MILLIQUAS_TYPES):
+                df = df.withColumn(
+                    "milliquas_{}".format(col_),
+                    df["milliquas"].getItem(col_).cast(type_),
+                )
+            df = df.drop("milliquas")
         elif CAT_PROPERTIES[catname]["kind"] == "internal":
             df = df.withColumn(
                 "{}{}_{}".format(
