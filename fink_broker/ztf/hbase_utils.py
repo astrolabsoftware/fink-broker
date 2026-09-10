@@ -88,6 +88,11 @@ def load_fink_cols():
         "gaiaClass": {"type": "string", "default": "Unknown"},
         "is_transient": {"type": "boolean", "default": False},
         "slsn_score": {"type": "float", "default": -1},
+        "z": {"type": "float", "default": -1},
+        "ezin": {"type": "float", "default": -1},
+        "R1": {"type": "float", "default": -1},
+        "R2": {"type": "float", "default": -1},
+        "PA": {"type": "float", "default": -1},
     }
 
     fink_nested_cols = {}
