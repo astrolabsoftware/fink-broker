@@ -33,7 +33,9 @@ from fink_science.rubin.xmatch.processor import xmatch_cds
 from fink_science.rubin.xmatch.processor import xmatch_tns
 from fink_science.rubin.xmatch.processor import crossmatch_other_catalog
 from fink_science.rubin.xmatch.processor import crossmatch_mangrove
+from fink_science.rubin.xmatch.processor import crossmatch_milliquas
 from fink_science.rubin.xmatch.utils import MANGROVE_COLS, MANGROVE_TYPES
+from fink_science.rubin.xmatch.utils import MILLIQUAS_COLS, MILLIQUAS_TYPES
 from fink_science.rubin.xmatch.utils import TNS_COLS, TNS_TYPES
 from fink_science.rubin.random_forest_snia.processor import (
     rfscore_rainbow_elasticc_nometa,
@@ -115,6 +117,12 @@ CAT_PROPERTIES = {
         "types": MANGROVE_TYPES,
         "distmaxarcsec": 60.0,
     },
+    "milliquas": {
+        "kind": "milliquas",
+        "cols_out": MILLIQUAS_COLS,
+        "types": MILLIQUAS_TYPES,
+        "distmaxarcsec": 1.2,
+    },
 }
 
 
@@ -141,7 +149,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 21, (new_cols, cols_out)
+    >>> assert len(new_cols) == 23, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -185,6 +193,23 @@ def apply_all_xmatch(df, tns_raw_output):
                     df["mangrove"].getItem(col_).cast(type_),
                 )
             df = df.drop("mangrove")
+        elif CAT_PROPERTIES[catname]["kind"] == "milliquas":
+            df = df.withColumn(
+                catname,
+                crossmatch_milliquas(
+                    df[alert_id],
+                    df[ra],
+                    df[dec],
+                    F.lit(CAT_PROPERTIES[catname]["distmaxarcsec"]),
+                ),
+            )
+            # Explode milliquas
+            for col_, type_ in zip(MILLIQUAS_COLS, MILLIQUAS_TYPES):
+                df = df.withColumn(
+                    "milliquas_{}".format(col_),
+                    df["milliquas"].getItem(col_).cast(type_),
+                )
+            df = df.drop("milliquas")
         elif CAT_PROPERTIES[catname]["kind"] == "internal":
             df = df.withColumn(
                 "{}{}_{}".format(
@@ -252,7 +277,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 21, xmatch_cols
+    >>> assert len(xmatch_cols) == 23, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
