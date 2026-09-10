@@ -19,6 +19,7 @@ import pyspark.sql.functions as F
 
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.spark_utils import init_sparksession
+from fink_broker.common.ssoft import make_checks
 
 from fink_utils.hdfs.utils import path_exist
 from fink_utils.sso.ssoft import aggregate_rubin_sso_data
@@ -100,71 +101,6 @@ def aggregate_and_add_ephem(year, month, npart, prefix_path, limit, logger):
     return df_expanded
 
 
-def make_checks(prefix_path, year=None, monthly=None, logger=None):
-    """Check if the ephemerides file and Fink data exist
-
-    Notes
-    -----
-    If the ephemerides file exist, the recomputation will be skipped.
-    If no Fink data is found, the aggregation will be skipped.
-
-    Parameters
-    ----------
-    prefix_path: str
-        Prefix path to Fink/Rubin data
-    year: int, optional
-        Year in format YYYY. If None, assume
-        `monthly` is set. Default is None.
-    monthly: bool
-        If True, check ephemerides and data required for
-        the current month computation. Default is None.
-
-    Notes
-    -----
-    `year` is only when recomputing all ephemerides, while
-    `monthly` is used in prod when computing last month ephemerides.
-
-    Returns
-    -------
-    is_ephem: bool
-        True if the ephemerides file exist.
-    is_data: bool
-        False if no Fink data for YYYY[MM].
-    """
-    if logger is None:
-        import logging
-
-        logger = logging.Logger(__name__)
-
-    if monthly:
-        curr = datetime.datetime.now()
-
-        # ephemerides take current month
-        filename = SSO_FILE.format(curr.year, "{:02d}".format(curr.month))
-        is_ephem = path_exist(filename)
-
-        # Rubin data takes N-1 month
-        lm = retrieve_last_date_of_previous_month(curr)
-        path = "{}/year={}/month={}".format(
-            prefix_path, lm.year, "{:02d}".format(lm.month)
-        )
-        is_data = path_exist(path)
-    elif year is not None:
-        filename = SSO_FILE.format(year, "")
-        is_ephem = path_exist(filename)
-
-        # Rubin data takes current year
-        path = "{}/year={}".format(prefix_path, year)
-        is_data = path_exist(path)
-
-    if is_ephem:
-        logger.warning("{} found on HDFS. Skipping the computation".format(filename))
-
-    if not is_data:
-        logger.warning("No data found for {}. Skipping...".format(path))
-    return is_ephem, is_data
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
 
@@ -227,7 +163,9 @@ def main():
         lm = retrieve_last_date_of_previous_month(datetime.datetime.now())
 
         # make checks
-        is_ephem, is_data = make_checks(args.prefix_path, monthly=True, logger=logger)
+        is_ephem, is_data = make_checks(
+            args.prefix_path, SSO_FILE, monthly=True, logger=logger
+        )
         if not is_ephem and is_data:
             # make computation
             df_new = aggregate_and_add_ephem(
