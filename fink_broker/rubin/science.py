@@ -149,7 +149,7 @@ def apply_all_xmatch(df, tns_raw_output):
     >>> cols_out = df.columns
 
     >>> new_cols = [col for col in cols_out if col not in cols_in]
-    >>> assert len(new_cols) == 21, (new_cols, cols_out)
+    >>> assert len(new_cols) == 23, (new_cols, cols_out)
 
     # apply_science_modules is lazy, so trigger the computation
     >>> an_alert = df.take(1)
@@ -277,7 +277,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     >>> assert len(classifiers_cols) == 6, classifiers_cols
 
     >>> xmatch_cols = df.select("xm.*").columns
-    >>> assert len(xmatch_cols) == 21, xmatch_cols
+    >>> assert len(xmatch_cols) == 23, xmatch_cols
 
     >>> prediction_cols = df.select("pred.*").columns
     >>> assert len(prediction_cols) == 5, prediction_cols
