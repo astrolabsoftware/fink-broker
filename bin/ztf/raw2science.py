@@ -153,37 +153,21 @@ def main():
         .start()
     )
 
-    if args.noscience:
-        logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, countquery_mm = 0, None
-    else:
-        logger.info("Perform multi-messenger operations")
-        from fink_broker.ztf.mm_utils import raw2science_launch_fink_mm
-
-        time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
-            args, scitmpdatapath
-        )
-
     if exit_deadline is not None:
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data or for a GCN, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
         time.sleep(seconds_until(exit_deadline))
         countquery_science.stop()
-        if countquery_mm is not None:
-            countquery_mm.stop()
         logger.info(
             "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )
     elif args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
-        # If GCN arrived, wait for the remaining time since the launch of raw2science
-        remaining_time = args.exit_after - time_spent_in_wait
+        remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         countquery_science.stop()
-        if countquery_mm is not None:
-            countquery_mm.stop()
     else:
         logger.debug("Wait for the end of queries")
         spark.streams.awaitAnyTermination()

@@ -95,7 +95,9 @@ export KAFKA_TOPIC="rubin_20250903_lsst_v10.0"
 export NIGHT=20250412
 
 # Add coverage_daemon to the pythonpath. See python/fink_broker/tester.py
-export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+# Hack for Spark 3.5.9 with py3.13 - replace coverage_daemon.py
+#export PYTHONPATH="${SPARK_HOME}/python/test_coverage:$PYTHONPATH"
+export PYTHONPATH="${FINK_HOME}/conf/:$PYTHONPATH"
 export COVERAGE_PROCESS_START="${FINK_HOME}/.coveragerc"
 
 # Create folder for log & artifacts
@@ -141,7 +143,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
   fink_simulator -c ${FINK_HOME}/conf/${SURVEY}/fink_alert_simulator.conf
 
   # Connect the service to build the raw database from the stream
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+30 seconds' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --poll_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Connect the service to build the science database from the raw one
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --enrich_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
@@ -150,7 +152,7 @@ if [[ "$WITH_STREAM" = true ]] ; then
   ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --distribute_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   # Ingest data to HBase
-  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --ingest_only -stop_at "`date -d '+2 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
+  ${FINK_HOME}/scheduler/rubin/launch_stream.sh -c ${conf} --ingest_only -stop_at "`date -d '+5 minutes' +'%Y-%m-%d %H:%M'`" -night ${NIGHT}
 
   echo "Sleeping 300 seconds to enable processing to produce output..."
   sleep 300

@@ -201,7 +201,7 @@ then
   expected_topics="20"
 else
   # 3 topics do not send results
-  expected_topics="16"
+  expected_topics="18"
 fi
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime

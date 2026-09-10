@@ -234,36 +234,21 @@ def main():
         kafka_cfg,
     )
 
-    if args.noscience:
-        logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, stream_distrib_list = 0, None
-    else:
-        logger.debug("Perform multi-messenger operations")
-        from fink_broker.ztf.mm_utils import distribute_launch_fink_mm
-
-        time_spent_in_wait, stream_distrib_list = distribute_launch_fink_mm(spark, args)
-
     if exit_deadline is not None:
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data or for a GCN, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
         time.sleep(seconds_until(exit_deadline))
         disquery.stop()
-        if stream_distrib_list:
-            for stream in stream_distrib_list:
-                stream.stop()
         logger.info(
             "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )
     elif args.exit_after is not None:
-        remaining_time = args.exit_after - time_spent_in_wait
+        remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0
         logger.debug("Keep the Streaming for %s seconds", remaining_time)
         time.sleep(remaining_time)
         disquery.stop()
-        if stream_distrib_list:
-            for stream in stream_distrib_list:
-                stream.stop()
         logger.info("Exiting the distribute service normally...")
     else:
         logger.debug("Wait for the end of queries")

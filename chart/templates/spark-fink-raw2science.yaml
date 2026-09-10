@@ -11,7 +11,7 @@ driver:
   memory: "{{ tpl .Values.raw2science.driver.memory . }}"
   javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   labels:
-    version: 3.4.1
+    version: 3.5.9
   serviceAccount: spark
   {{- with .Values.raw2science.driver.nodeSelector }}
   nodeSelector:
@@ -37,7 +37,7 @@ executor:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
-    version: 3.4.1
+    version: 3.5.9
 {{- if eq .Values.monitoring.enabled true }}
 monitoring:
   exposeDriverMetrics: true

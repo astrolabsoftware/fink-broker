@@ -11,7 +11,7 @@ arguments: {{- include "fink.commonargs" . | nindent 2 }}
   - '-topic'
   - '{{ .Values.stream2raw.kafka.topic }}'
   {{- include "fink.nightargs" . | nindent 2 }}
-sparkVersion: "3.4.1"
+sparkVersion: "3.5.9"
 sparkConf: {{- include "fink.s3config" . | nindent 2 }}
 driver:
   cores: {{ tpl .Values.stream2raw.cores . }}
@@ -19,7 +19,7 @@ driver:
   env: {{- include "fink.hdfsconfig" . | nindent 4 }}
   memory: "{{ tpl .Values.stream2raw.memory . }}"
   labels:
-    version: 3.4.1
+    version: 3.5.9
   serviceAccount: spark
   javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
 executor:
@@ -30,7 +30,7 @@ executor:
   instances: {{ tpl .Values.stream2raw.instances . }}
   javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
   labels:
-    version: 3.4.1
+    version: 3.5.9
 {{- if eq .Values.monitoring.enabled true }}
 monitoring:
   exposeDriverMetrics: true

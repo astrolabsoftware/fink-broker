@@ -9,7 +9,7 @@ arguments: {{- include "fink.commonargs" . | nindent 2 }}
   - '-kafka_security_protocol'
   - '{{ .Values.distribution.kafka.kafka_security_protocol }}'
   {{- include "fink.nightargs" . | nindent 2 }}
-sparkVersion: "3.4.1"
+sparkVersion: "3.5.9"
 sparkConf: {{- include "fink.s3config" . | nindent 2 }}
 volumes:
 - name: kafka-secret
@@ -22,7 +22,7 @@ driver:
   memory: "{{ tpl .Values.distribution.memory . }}"
   javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   labels:
-    version: 3.4.1
+    version: 3.5.9
   serviceAccount: {{ .Values.serviceAccount.name }}
 executor:
   cores: {{ tpl .Values.distribution.cores . }}
@@ -32,7 +32,7 @@ executor:
   instances: {{ tpl .Values.distribution.instances . }}
   javaOptions: "-Djava.security.auth.login.config=/etc/fink-broker/kafka-jaas.conf -Dcom.amazonaws.sdk.disableCertChecking=true"
   labels:
-    version: 3.4.1
+    version: 3.5.9
   volumeMounts:
   - name: kafka-secret
     mountPath: /etc/fink-broker
