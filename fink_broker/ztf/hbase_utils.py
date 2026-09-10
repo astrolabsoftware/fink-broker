@@ -19,7 +19,11 @@ from pyspark.sql.utils import AnalysisException
 import pyspark.sql.functions as F
 
 from fink_science.ztf.xmatch.utils import MANGROVE_COLS
-from fink_science.ztf.blazar_low_state.utils import BLAZAR_COLS
+from fink_science.ztf.blazar_extreme_state.processor import (
+    BLAZAR_LOW_COLS,
+    BLAZAR_HIGH_COLS,
+    CDF_COL,
+)
 
 from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import add_row_key
@@ -28,6 +32,8 @@ from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.tester import spark_unit_tests
 
 _LOG = logging.getLogger(__name__)
+
+BLAZAR_COLS = BLAZAR_LOW_COLS + BLAZAR_HIGH_COLS + CDF_COL
 
 
 def load_fink_cols():
@@ -42,10 +48,10 @@ def load_fink_cols():
     --------
     >>> fink_cols, fink_nested_cols = load_fink_cols()
     >>> print(len(fink_cols))
-    34
+    39
 
     >>> print(len(fink_nested_cols))
-    7
+    9
     """
     fink_cols = {
         "DR3Name": {"type": "string", "default": "Unknown"},
@@ -82,6 +88,11 @@ def load_fink_cols():
         "gaiaClass": {"type": "string", "default": "Unknown"},
         "is_transient": {"type": "boolean", "default": False},
         "slsn_score": {"type": "float", "default": -1},
+        "z": {"type": "float", "default": -1},
+        "ezin": {"type": "float", "default": -1},
+        "R1": {"type": "float", "default": -1},
+        "R2": {"type": "float", "default": -1},
+        "PA": {"type": "float", "default": -1},
     }
 
     fink_nested_cols = {}
@@ -109,7 +120,7 @@ def load_all_ztf_cols():
     >>> root_level, candidates, fink_cols, fink_nested_cols = load_all_ztf_cols()
     >>> out = {**root_level, **candidates, **fink_cols, **fink_nested_cols}
     >>> print(len(out))
-    149
+    156
     """
     fink_cols, fink_nested_cols = load_fink_cols()
 
@@ -244,7 +255,7 @@ def load_ztf_index_cols():
     --------
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
-    77
+    84
     """
     # From `root` or `candidates.`
     common = [
@@ -462,8 +473,7 @@ def flatten_dataframe(df, root_level, section, fink_cols, fink_nested_cols):
 
             # rename root.level into root_level
             name = (
-                F
-                .col(colname)
+                F.col(colname)
                 .alias(colname.replace(".", "_"))
                 .cast(coltype_and_default["type"])
             )

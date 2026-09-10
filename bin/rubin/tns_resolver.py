@@ -18,7 +18,7 @@ import pyspark.sql.functions as F
 import argparse
 import os
 
-from fink_tns.utils import download_catalog
+from fink_tns.lsst.utils import download_catalog
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.hbase_utils import add_row_key, push_to_hbase
 from fink_broker.common.parser import getargs

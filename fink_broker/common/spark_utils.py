@@ -21,7 +21,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql.column import Column, _to_java_column
 from pyspark.sql.types import StructType
 
-from pyspark.sql.functions import pandas_udf, PandasUDFType
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import StringType, LongType
 
 
@@ -270,8 +270,7 @@ def connect_to_kafka(
 
     # Create a streaming DF from the incoming stream from Kafka
     df = (
-        spark.readStream
-        .format("kafka")
+        spark.readStream.format("kafka")
         .option("kafka.bootstrap.servers", servers)
         .option("maxOffsetsPerTrigger", max_offsets_per_trigger)
     )
@@ -300,8 +299,7 @@ def connect_to_kafka(
             )
 
     df = (
-        df
-        .option("subscribePattern", topic)
+        df.option("subscribePattern", topic)
         .option("startingOffsets", startingoffsets)
         .option("failOnDataLoss", failondataloss)
         .load()
@@ -359,8 +357,7 @@ def connect_to_raw_database(basepath: str, path: str, latestfirst: bool) -> Data
             break
 
     df = (
-        spark.readStream
-        .format("parquet")
+        spark.readStream.format("parquet")
         .schema(userschema)
         .option("basePath", basepath)
         .option("path", path)
@@ -529,7 +526,7 @@ def ra2phi(ra: float) -> float:
     return np.pi / 180.0 * ra
 
 
-@pandas_udf(LongType(), PandasUDFType.SCALAR)
+@pandas_udf(LongType())
 def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """Compute pixel number at given nside
 
@@ -567,7 +564,7 @@ def ang2pix(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     )
 
 
-@pandas_udf(StringType(), PandasUDFType.SCALAR)
+@pandas_udf(StringType())
 def ang2pix_array(ra: pd.Series, dec: pd.Series, nside: pd.Series) -> pd.Series:
     """Return a col string with the pixel numbers corresponding to the nsides
 

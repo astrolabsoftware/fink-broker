@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-schema_url",
         type=str,
-        default="https://usdf-alert-schemas-dev.slac.stanford.edu",
+        default="https://rubin-alert-schemas.slac.stanford.edu/schema-registry",
         help="URL for LSST schema",
     )
     parser.add_argument(
@@ -67,8 +67,7 @@ if __name__ == "__main__":
         schema = response.text
 
         spark = (
-            SparkSession.builder
-            .master("local[1]")
+            SparkSession.builder.master("local[1]")
             .config("spark.hadoop.fs.defaultFS", "file:///")
             .getOrCreate()
         )

@@ -92,7 +92,7 @@ def spark_unit_tests(
     confdic = {
         "spark.jars.packages": os.environ["FINK_PACKAGES"],
         "spark.jars": os.environ["FINK_JARS"],
-        "spark.python.daemon.module": "coverage_daemon",
+        # "spark.python.daemon.module": "coverage_daemon",
     }
     conf.setMaster("local[2]")
     conf.setAppName("fink_test")
@@ -107,8 +107,7 @@ def spark_unit_tests(
 
     if withstreaming:
         dfstream = (
-            spark.readStream
-            .format("kafka")
+            spark.readStream.format("kafka")
             .option("kafka.bootstrap.servers", os.environ["KAFKA_IPPORT_SIM"])
             .option("subscribe", os.environ["KAFKA_TOPIC"])
             .option("startingOffsets", "earliest")

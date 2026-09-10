@@ -70,7 +70,7 @@ def main():
     # Add ingestion timestamp
     df = df.withColumn(
         "brokerStartProcessTimestamp",
-        convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
+        convert_to_millitime(df["candidate.jd"], "jd", True),
     )
 
     # Add library versions
@@ -106,13 +106,12 @@ def main():
     logger.debug("Add ingestion timestamp")
     df = df.withColumn(
         "brokerEndProcessTimestamp",
-        convert_to_millitime(df["candidate.jd"], F.lit("jd"), F.lit(True)),
+        convert_to_millitime(df["candidate.jd"], "jd", True),
     )
 
     logger.debug("Append new rows in the tmp science database")
     countquery_science = (
-        df.writeStream
-        .outputMode("append")
+        df.writeStream.outputMode("append")
         .format("parquet")
         .option("checkpointLocation", checkpointpath_sci_tmp)
         .option("path", scitmpdatapath)
@@ -120,26 +119,12 @@ def main():
         .start()
     )
 
-    if args.noscience:
-        logger.info("Do not perform multi-messenger operations")
-        time_spent_in_wait, countquery_mm = 0, None
-    else:
-        logger.info("Perform multi-messenger operations")
-        from fink_broker.ztf.mm_utils import raw2science_launch_fink_mm
-
-        time_spent_in_wait, countquery_mm = raw2science_launch_fink_mm(
-            args, scitmpdatapath
-        )
-
     if args.exit_after is not None:
         logger.debug("Keep the Streaming running until something or someone ends it!")
-        # If GCN arrived, wait for the remaining time since the launch of raw2science
-        remaining_time = args.exit_after - time_spent_in_wait
+        remaining_time = args.exit_after
         remaining_time = remaining_time if remaining_time > 0 else 0
         time.sleep(remaining_time)
         countquery_science.stop()
-        if countquery_mm is not None:
-            countquery_mm.stop()
     else:
         logger.debug("Wait for the end of queries")
         spark.streams.awaitAnyTermination()

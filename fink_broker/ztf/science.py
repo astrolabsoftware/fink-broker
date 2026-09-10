@@ -1,4 +1,4 @@
-# Copyright 2020-2025 AstroLab Software
+# Copyright 2020-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,6 +151,15 @@ def apply_all_xmatch(df, tns_raw_output):
         F.when(df["spicy_class"] == "nan", F.lit("Unknown")).otherwise(
             df["spicy_class"]
         ),
+    )
+
+    _LOG.info("New processor: REGALADE (1.2 arcsec)")
+    df = xmatch_cds(
+        df,
+        distmaxarcsec=1.2,
+        catalogname="vizier:J/A+A/706/A284/regalade",
+        cols_out=["R1", "R2", "PA", "z", "ezin"],
+        types=["float", "float", "float", "float", "float"],
     )
 
     _LOG.info("New processor: GCVS (1.5 arcsec)")
@@ -345,8 +354,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
 
     # split features
     df = (
-        df
-        .withColumn("lc_features_g", df["lc_features"].getItem("1"))
+        df.withColumn("lc_features_g", df["lc_features"].getItem("1"))
         .withColumn("lc_features_r", df["lc_features"].getItem("2"))
         .drop("lc_features")
     )

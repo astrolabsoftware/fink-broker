@@ -17,7 +17,6 @@
 
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql.functions import pandas_udf, PandasUDFType
 
 import os
 import numpy as np
@@ -108,18 +107,19 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     df_filt = apply_tracklet_cuts(df)
 
     # Initialise `tracklet` column
-    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select([
-        "candid",
-        "candidate.jd",
-        "candidate.xpos",
-        "candidate.ypos",
-        "candidate.nid",
-        "tracklet",
-        "candidate.ra",
-        "candidate.dec",
-    ])
+    df_filt_tracklet = df_filt.withColumn("tracklet", F.lit("")).select(
+        [
+            "candid",
+            "candidate.jd",
+            "candidate.xpos",
+            "candidate.ypos",
+            "candidate.nid",
+            "tracklet",
+            "candidate.ra",
+            "candidate.dec",
+        ]
+    )
 
-    @pandas_udf(df_filt_tracklet.schema, PandasUDFType.GROUPED_MAP)
     def extract_tracklet_number(pdf: pd.DataFrame) -> pd.DataFrame:
         """Extract tracklet ID from a Spark DataFrame
 
@@ -325,11 +325,10 @@ def add_tracklet_information(df: DataFrame) -> DataFrame:
     # extract tracklet information - beware there could be duplicated rows
     # so we use dropDuplicates to avoid these.
     df_trck = (
-        df_filt_tracklet
-        .cache()
+        df_filt_tracklet.cache()
         .dropDuplicates(["jd", "xpos", "ypos"])
         .groupBy("jd")
-        .apply(extract_tracklet_number)
+        .applyInPandas(extract_tracklet_number, schema=df_filt_tracklet.schema)
         .select(["candid", "tracklet"])
         .filter(F.col("tracklet") != "")
     )

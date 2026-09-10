@@ -48,10 +48,22 @@ stream2raw:
 # Parameters used to run the raw2science task
 #
 raw2science:
-  cores: "{{.Values.cores}}"
-  coreRequest: "{{.Values.coreRequest}}"
-  memory: "{{.Values.memory}}"
-  instances: "{{.Values.instances}}"
+  # driver and executor are sized/placed independently so a big executor can
+  # run on a dedicated node pool while the driver stays small on the general
+  # pool. Values default to the global cores/coreRequest/memory/instances.
+  driver:
+    cores: "{{.Values.cores}}"
+    coreRequest: "{{.Values.coreRequest}}"
+    memory: "{{.Values.memory}}"
+    nodeSelector: {}
+    tolerations: []
+  executor:
+    cores: "{{.Values.cores}}"
+    coreRequest: "{{.Values.coreRequest}}"
+    memory: "{{.Values.memory}}"
+    instances: "{{.Values.instances}}"
+    nodeSelector: {}
+    tolerations: []
 
 #
 # Parameters used to run the distribution task
