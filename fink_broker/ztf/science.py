@@ -158,9 +158,13 @@ def apply_all_xmatch(df, tns_raw_output):
         df,
         distmaxarcsec=1.2,
         catalogname="vizier:J/A+A/706/A284/regalade",
-        cols_out=["R1", "R2", "PA", "z", "ezin"],
-        types=["float", "float", "float", "float", "float"],
+        cols_out=["R1", "R2", "PA", "z", "ezin", "RAJ2000", "DEJ2000"],
+        types=["float", "float", "float", "float", "float", "float", "float"],
     )
+
+    # Rename generic ra/dec columns from REGALADE
+    df = df.withColumnRenamed("RAJ2000", "regalade_ra")
+    df = df.withColumnRenamed("DEJ2000", "regalade_dec")
 
     _LOG.info("New processor: GCVS (1.5 arcsec)")
     df = df.withColumn(
