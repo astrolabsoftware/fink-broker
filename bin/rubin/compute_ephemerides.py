@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# Copyright 2023-2026 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the ZTF Solar System Object Fink Table (SSOFT)."""
 
-from fink_broker.common.ssoft import generate_ssoft
+
+from fink_broker.common.ssoft import compute_ephemerides
+
+
+SSO_FILE = "sso_rubin_lc_aggregated_{}{}.parquet"
 
 
 if __name__ == "__main__":
-    generate_ssoft(sso_file="sso_ztf_lc_aggregated.parquet")
+    compute_ephemerides(survey="rubin", sso_file=SSO_FILE)

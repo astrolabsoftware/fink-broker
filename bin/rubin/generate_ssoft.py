@@ -13,10 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the ZTF Solar System Object Fink Table (SSOFT)."""
+"""Construct the Rubin Solar System Object Fink Table (SSOFT)."""
 
 from fink_broker.common.ssoft import generate_ssoft
 
-
 if __name__ == "__main__":
-    generate_ssoft(sso_file="sso_ztf_lc_aggregated.parquet")
+    generate_ssoft(sso_file="sso_rubin_lc_aggregated.parquet")

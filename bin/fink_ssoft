@@ -204,12 +204,21 @@ fi
 if [[ $NMIN != "" ]]; then
   echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 else
-  NMIN=50 # default value
+  # default value
+  if [[ ${SURVEY} == "ztf" ]]; then
+    NMIN=50
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    NMIN=10
+  fi
   echo -e "${SINFO} Setting minimum lightcurve length for SSOFT to $NMIN"
 fi
 
 if [[ $SSOFT_OUTFOLDER == "" ]]; then
-  SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+  if [[ ${SURVEY} == "ztf" ]]; then
+    SSOFT_OUTFOLDER="/spark_mongo_tmp/julien.peloton/ssoft"
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    SSOFT_OUTFOLDER="/data/fink/ssoft"
+  fi
 fi
 echo -e "${SINFO} Saving the SSOFT at ${SSOFT_OUTFOLDER}"
 
@@ -236,7 +245,7 @@ source $conf
 
 if [[ ${LIST_DATA} == true ]]; then
   echo -e "${SINFO} Listing aggregated files"
-  hdfs dfs -du -h | grep sso_ztf_lc_aggregated*
+  hdfs dfs -du -h | grep sso_${SURVEY}_lc_aggregated*
   exit 0
 fi
 
@@ -252,6 +261,8 @@ fi
 if [[ ${RECONSTRUCT_DATA} == true ]]; then
   if [[ ${SURVEY} == "ztf" ]]; then
     EXTRA_ARGS="-mode all"
+  elif [[ ${SURVEY} == "rubin" ]]; then
+    EXTRA_ARGS="-mode all"
   elif [[ ${SURVEY} == "atlas" ]]; then
     EXTRA_ARGS="-path atlas-sscat.v3.0_x_ztf.202512_${OBSCODE}.parquet -observer ${OBSCODE}"
   fi
@@ -263,13 +274,13 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
     ${LIMIT_ARGS} ${EXTRA_ARGS}
 
-  if [[ ${SURVEY} == "ztf" ]]; then
+  if [[ ${SURVEY} == "ztf" ]] || [[ ${SURVEY} == "rubin" ]]; then
     # At this point yearly data has been computed
     # Copy the last file to monthly version it
     CURRENT_YYYYMM=`date +"%Y%m"`
     YEAR=${CURRENT_YYYYMM:0:4}
     MONTH=${CURRENT_YYYYMM:4:2}
-    hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}.parquet sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet
+    hdfs dfs -cp sso_${SURVEY}_lc_aggregated_${YEAR}.parquet sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet
   fi
   echo -e "${SDONE} done!"
   exit 0
@@ -280,9 +291,9 @@ if [[ ${UPDATE_DATA} == true ]]; then
   CURRENT_YYYYMM=`date +"%Y%m"`
   YEAR=${CURRENT_YYYYMM:0:4}
   MONTH=${CURRENT_YYYYMM:4:2}
-  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  is_data=$(hdfs dfs -test -d sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? == 0 ]]; then
-    echo -e >&2 "${SERROR} File sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet exist. Move it before aggregation."
+    echo -e >&2 "${SERROR} File sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet exist. Move it before aggregation."
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
   else
@@ -322,7 +333,7 @@ if [[ ${RUN_SSOFT} == true ]]; then
   fi
 
   # check last aggregation exist
-  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  is_data=$(hdfs dfs -test -d sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? == 0 ]]; then
     echo -e "Computing the SSOFT for the model ${MODEL}..."
     # Run the script
@@ -337,7 +348,7 @@ if [[ ${RUN_SSOFT} == true ]]; then
       -model ${MODEL} -version ${VERSION} \
       -nmin ${NMIN} -outfolder ${SSOFT_OUTFOLDER} ${LIMIT_ARGS}
   else
-    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Create it, or specify another existing version."
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
@@ -348,20 +359,20 @@ fi
 
 if [[ ${LINK_DATA} == true ]]; then
   # Check the file we want to link exists
-  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  is_data=$(hdfs dfs -test -d sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? != 0 ]]; then
-    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SERROR} Aborting..."
     exit 1
   fi
 
-  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated.parquet)
+  is_data=$(hdfs dfs -test -d sso_${SURVEY}_lc_aggregated.parquet)
   if [[ $? == 0 ]]; then
     echo -e "${SINFO} Removing old file..."
-    hdfs dfs -rm -r sso_ztf_lc_aggregated.parquet
+    hdfs dfs -rm -r sso_${SURVEY}_lc_aggregated.parquet
   fi
   echo -e "${SINFO} Linking version ${YEAR}${MONTH} to the latest one..."
-  hdfs dfs -cp sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet sso_ztf_lc_aggregated.parquet
+  hdfs dfs -cp sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet sso_${SURVEY}_lc_aggregated.parquet
   echo -e "${SDONE} done!"
   exit 0
 fi
@@ -384,7 +395,7 @@ fi
 
 if [[ ${CONSTRUCT_BULK} == true ]]; then
   # check last aggregation exist
-  is_data=$(hdfs dfs -test -d sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet)
+  is_data=$(hdfs dfs -test -d sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet)
   if [[ $? == 0 ]]; then
     echo -e "Computing the SSO BULK..."
     # Run the script
@@ -397,7 +408,7 @@ if [[ ${CONSTRUCT_BULK} == true ]]; then
       ${PYTHON_EXTRA_FILE}\
       ${FINK_HOME}/bin/${SURVEY}/extract_ssobulk.py ${LIMIT_ARGS}
   else
-    echo -e >&2 "${SERROR} sso_ztf_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
+    echo -e >&2 "${SERROR} sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet does not exist."
     echo -e >&2 "${SSTOP} Merging aborted..."
     exit 1
   fi

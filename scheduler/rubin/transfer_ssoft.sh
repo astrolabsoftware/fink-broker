@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# Copyright 2023-2026 AstroLab Software
+#!/bin/bash
+# Copyright 2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Construct the ZTF Solar System Object Fink Table (SSOFT)."""
+set -e
 
-from fink_broker.common.ssoft import generate_ssoft
+source ~/.bash_profile
 
+FOLDER=/data/fink/ssoft/
 
-if __name__ == "__main__":
-    generate_ssoft(sso_file="sso_ztf_lc_aggregated.parquet")
+sudo su livy <<'EOF'
+source ~/.bashrc
+FOLDER=/data/fink/ssoft/
+YEAR=`date +"%Y"`
+MONTH=`date +"%m"`
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_HG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_HG1G2_${YEAR}.${MONTH}.parquet
+/opt/hadoop-3/bin/hdfs dfs -put ${FOLDER}/ssoft_SHG1G2_${YEAR}${MONTH}.parquet SSOFT/ssoft_SHG1G2_${YEAR}.${MONTH}.parquet
+EOF
