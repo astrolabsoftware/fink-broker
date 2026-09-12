@@ -21,7 +21,11 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.7-rc4
+  CIUX_VERSION: v0.0.7-rc5
+  # Self-hosted runners keep their workspace across runs, and actions/checkout
+  # only cleans the main repository: without this, ciux reuses the dependency
+  # clones left by a previous run, pinning them to a stale revision.
+  CIUX_REFRESH_DEPS: "true"
   GHA_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   SUFFIX: ${{ inputs.suffix }}
   MONITORING_OPT: "-m"
@@ -147,17 +151,35 @@ jobs:
       - name: Run argoCD
         id: run_argocd
         run: |
-          ./e2e/argocd.sh -s "${{ env.SUFFIX }}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+          # The ciux image suffix is empty for the science variant, but the infra
+          # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
+          ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       - name: Check results
         id: check_results
         run: |
-          ./e2e/check-results.sh -s "${{ env.SUFFIX }}"
+          ./e2e/check-results.sh --basic -s "${{ env.SUFFIX }}"
+      # Separate step so a failure names itself: the broker produced its
+      # topics, but the alerts cannot be accounted for end to end. HDFS only,
+      # `get balance` reads the datasets from inside the namenode pod.
+      - name: Check balance
+        id: check_balance
+        if: ${{ matrix.storage == 'hdfs' }}
+        run: |
+          ./e2e/check-results.sh --advanced
+      # The chart's own CronJob, not finkctl driven from the runner: this is
+      # what exercises its image, its ServiceAccount, the Roles letting it exec
+      # into the hdfs and kafka pods, and the arguments Helm renders for it.
+      - name: Check report CronJob
+        id: check_report
+        if: ${{ matrix.storage == 'hdfs' }}
+        run: |
+          ./e2e/check-results.sh --report
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure' || steps.check_report.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_balance.outcome == 'failure' || steps.check_report.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}

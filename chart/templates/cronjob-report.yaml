@@ -1,0 +1,39 @@
+{{- if and .Values.report.enabled (eq .Values.storage "hdfs") }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "fink.fullname" . }}-report
+  labels:
+    {{- include "fink.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.report.schedule | quote }}
+  # The report is a read-only snapshot: skip a tick rather than running two at
+  # once, and keep everything in UTC like the streaming jobs.
+  concurrencyPolicy: Forbid
+  timeZone: "Etc/UTC"
+  successfulJobsHistoryLimit: {{ .Values.report.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.report.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "fink.selectorLabels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ .Values.report.serviceAccount.name }}
+          restartPolicy: OnFailure
+          containers:
+            - name: report
+              image: "{{ .Values.report.image.repository }}/{{ .Values.report.image.name }}:{{ .Values.report.image.tag }}"
+              imagePullPolicy: {{ .Values.report.image.pullPolicy }}
+              args:
+                - 'get'
+                - 'balance'
+                - '--prefix'
+                - '{{ include "fink.hdfsPath" . }}'
+                # Run window used to attribute distributed messages to a night
+                - '--cron'
+                - '{{ include "fink.runTime" . }}'
+                - '--night-offset'
+                - '{{ .Values.scheduled.nightOffsetHours }}'
+{{- end }}

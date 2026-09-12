@@ -32,15 +32,18 @@ from pyspark.sql import functions as F
 import fastavro
 import fastavro.schema
 import argparse
+import sys
 import time
 import io
 import os
 
 from fink_broker.common.parser import getargs
+from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 
 from fink_broker.common.spark_utils import from_avro
 from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.common.spark_utils import get_schemas_from_avro
+from fink_broker.common.spark_utils import wait_for_filesystem, wait_for_kafka
 from fink_broker.common.logging_utils import init_logger, inspect_application
 from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
 
@@ -58,6 +61,21 @@ def main():
 
     logger = init_logger(args.log_level)
 
+    # Anchored on the day the job starts, so a restart aims at the same
+    # instant instead of granting itself a fresh window.
+    exit_deadline = get_exit_deadline(args.exit_at)
+
+    # A deadline already in the past means the job cannot honour its window:
+    # report it rather than run a full extra one.
+    if exit_deadline is not None and seconds_until(exit_deadline) <= 0:
+        logger.warning(
+            "The exit_at deadline %s has already passed: alerts of night %s "
+            "may not have been collected",
+            exit_deadline,
+            args.night,
+        )
+        sys.exit(1)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
@@ -68,6 +86,11 @@ def main():
 
     # debug statements
     inspect_application(logger)
+
+    # This job is deployed alongside the services it depends on, so they may
+    # not be up yet. Wait for them instead of failing on the first access.
+    wait_for_kafka(args.servers)
+    wait_for_filesystem(args.online_data_prefix)
 
     # debug statements
     # data path
@@ -176,7 +199,14 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     logger.info("Stream2raw service is running...")
-    if args.exit_after is not None:
+    if exit_deadline is not None:
+        logger.debug("Polling until the exit_at deadline %s", exit_deadline)
+        time.sleep(seconds_until(exit_deadline))
+        countquery.stop()
+        logger.info(
+            "Reached the exit_at deadline %s, exiting normally...", exit_deadline
+        )
+    elif args.exit_after is not None:
         time.sleep(args.exit_after)
         countquery.stop()
         logger.info("Exiting the stream2raw service normally...")
