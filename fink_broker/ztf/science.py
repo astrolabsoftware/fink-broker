@@ -153,10 +153,10 @@ def apply_all_xmatch(df, tns_raw_output):
         ),
     )
 
-    _LOG.info("New processor: REGALADE (1.2 arcsec)")
+    _LOG.info("New processor: REGALADE (20 arcsec)")
     df = xmatch_cds(
         df,
-        distmaxarcsec=1.2,
+        distmaxarcsec=20.,
         catalogname="vizier:J/A+A/706/A284/regalade",
         cols_out=["R1", "R2", "PA", "z", "ezin", "RAJ2000", "DEJ2000"],
         types=["float", "float", "float", "float", "float", "float", "float"],
