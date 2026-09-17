@@ -1,7 +1,44 @@
 # Default values for chart.
 # These values are used for fink-broker e2e tests
 
+# Pinned night used in run.mode=oneoff (backfill, rerun, CI). Ignored in
+# run.mode=scheduled, where the night is deduced at runtime (see scheduled).
 night: "20240101"
+
+run:
+  # oneoff    -> 3 SparkApplication with a pinned -night (backfill / rerun / CI,
+  #              imperative, applied on demand out of ArgoCD).
+  # scheduled -> 3 ScheduledSparkApplication deducing the night at runtime
+  #              (permanent daily production run, managed by ArgoCD).
+  mode: oneoff
+
+# Only used when run.mode=scheduled.
+scheduled:
+  # Single cron shared by the three jobs so they fire together and agree on the
+  # same night (same side of the UTC boundary). UTC.
+  schedule: "0 12 * * *"
+  # Forbid a new run while the previous one is still active (a streaming run may
+  # overrun its window).
+  concurrencyPolicy: Forbid
+  successfulRunHistoryLimit: 3
+  failedRunHistoryLimit: 3
+  # Hours subtracted from UTC now to deduce the night (see get_night):
+  # 0 -> current night (live), 24 -> previous complete night (n-1). To settle
+  # against the ZTF topic rollover convention.
+  nightOffsetHours: 24
+  # Time of day (HH:MM, UTC) at which a run stops, on the day it started. A
+  # scheduled run needs an absolute deadline rather than a duration: it is
+  # recomputed identically by every restartPolicy attempt, so a restarted run
+  # aims at the same instant instead of granting itself a fresh window, and a
+  # run starting late exits in error instead of overflowing into the next
+  # tick. Replaces exitAfter in this mode -- the job rejects both at once.
+  exitAt: "23:59"
+
+# Stop each streaming run after this many seconds. Only used in
+# run.mode=oneoff, where a backfill must terminate once the night is replayed;
+# a scheduled run uses the absolute scheduled.exitAt instead. Sized to a night;
+# matches the job default (64800 = 18h).
+exitAfter: 64800
 
 image:
   pullPolicy: IfNotPresent
@@ -31,6 +68,34 @@ monitoring:
   enabled: false
 
 #
+# Daily diagnostic reporting what entered and what left the broker for each
+# observing night: alerts consumed from the survey Kafka cluster, size of the
+# raw and science datasets, messages pushed to each distribution topic. The
+# report is written to the pod stdout (kubectl logs).
+#
+# Only makes sense with run.mode=scheduled and storage=hdfs: it reads the
+# datasets through the namenode, and attributes distributed messages to a
+# night using the run window deduced from scheduled.schedule.
+#
+report:
+  enabled: false
+  # Fires once the streaming jobs of the previous run have stopped: they start
+  # at scheduled.schedule and last exitAfter (12:00 UTC + 18h -> ~06:00 UTC).
+  schedule: "0 7 * * *"
+  # A CronJob retains a number of jobs, not a duration: with a daily schedule,
+  # 7 successful runs is a week of reports readable with kubectl logs.
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  image:
+    repository: gitlab-registry.in2p3.fr/astrolabsoftware/fink
+    name: finkctl
+    # Built and published from the finkctl repository (build.sh, push-image.sh)
+    tag: "v3.1.3-rc5"
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    name: fink-report
+
+#
 # Parameters used to run the stream2raw task
 #
 stream2raw:
@@ -42,7 +107,9 @@ stream2raw:
   kafka:
     in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest
-    topic: "ztf_public_{{.Values.night}}"
+    # {night} is a runtime placeholder resolved by the job (get_night), not by
+    # Helm: it works for both a pinned and a deduced night.
+    topic: "ztf_public_{night}"
 
 #
 # Parameters used to run the raw2science task
@@ -87,8 +154,9 @@ storage: hdfs
 s3:
   endpoint: https://minio.minio:443
   use_ssl: "true"
-  # {{.Night}} is optional and will be replaced by the value of run.night
-  bucket: "fink-broker-online-{{.Values.night}}"
+  # {night} is a runtime placeholder resolved by the job (get_night), not by
+  # Helm: it works for both a pinned and a deduced night.
+  bucket: "fink-broker-online-{night}"
   access_key: "minio"
   secret_key: "minio123"
 
