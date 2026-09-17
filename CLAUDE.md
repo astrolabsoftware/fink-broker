@@ -64,7 +64,7 @@ This repository has **two** test mechanisms. Match the one already used by the m
 
    ```python
    if __name__ == "__main__":
-       regular_unit_tests(globals())   # or spark_unit_tests(globals()) for Spark code
+       regular_unit_tests(globals())  # or spark_unit_tests(globals()) for Spark code
    ```
 
    They are executed module by module by `bin/fink_test_ztf --unit-tests` /

@@ -1,8 +1,7 @@
 # fink_broker/ztf
 
 ZTF-specific processing: science modules (`science.py`), HBase schemas (`hbase_utils.py`),
-multi-messenger / GRB joins (`mm_utils.py`, via `fink_mm`), tracklet identification
-(`tracklet_identification.py`).
+tracklet identification (`tracklet_identification.py`).
 
 ## Rules
 
