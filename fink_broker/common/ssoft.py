@@ -321,7 +321,8 @@ def compute_ephemerides(survey: str, sso_file: str):
 
             curr = datetime.datetime.now()
             current_month = "{:02d}".format(curr.month)
-            df_join.write.mode("overwrite").parquet(
+            df_join = df_join.withColumn('version', F.lit("{}.{}".format(curr.year, current_month)))
+            df_join.coalesce(10).write.mode("overwrite").parquet(
                 sso_file.format(curr.year, current_month)
             )
         else:
