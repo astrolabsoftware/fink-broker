@@ -332,6 +332,9 @@ def compute_ephemerides(survey: str, sso_file: str):
                     sso_file.format(curr.year, current_month),
                 )
             )
+            df_prev = df_prev.withColumn(
+                "version", F.lit("{}.{}".format(curr.year, current_month))
+            )
             df_prev.coalesce(10).write.mode("overwrite").parquet(
                 sso_file.format(curr.year, current_month)
             )
