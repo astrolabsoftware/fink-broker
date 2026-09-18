@@ -275,7 +275,17 @@ def compute_ephemerides(survey: str, sso_file: str):
         # get last month coordinates
         lm = retrieve_last_date_of_previous_month(datetime.datetime.now())
 
-        # make checks
+        logger.info("Loading previous ephemerides data...")
+        prev_ephem_folder = sso_file.format(lm.year, "{:02d}".format(lm.month))
+        if not path_exist(prev_ephem_folder):
+            logger.warning("{} does not exist. Exiting...".format(prev_ephem_folder))
+            return 1
+
+        df_prev = spark.read.format("parquet").load(
+            sso_file.format(lm.year, "{:02d}".format(lm.month))
+        )
+
+        # make checks for new data
         is_ephem, is_data = make_checks(
             args.prefix_path, sso_file, monthly=True, logger=logger
         )
@@ -300,18 +310,6 @@ def compute_ephemerides(survey: str, sso_file: str):
                     logger,
                 )
 
-            logger.info("Loading previous ephemerides data...")
-            prev_ephem_folder = sso_file.format(lm.year, "{:02d}".format(lm.month))
-            if not path_exist(prev_ephem_folder):
-                logger.warning(
-                    "{} does not exist. Exiting...".format(prev_ephem_folder)
-                )
-                return 1
-
-            df_prev = spark.read.format("parquet").load(
-                sso_file.format(lm.year, "{:02d}".format(lm.month))
-            )
-
             logger.info("Joining previous and new data...")
             assert sorted(df_prev.columns) == sorted(df_new.columns), (
                 df_prev.columns,
@@ -321,12 +319,22 @@ def compute_ephemerides(survey: str, sso_file: str):
 
             curr = datetime.datetime.now()
             current_month = "{:02d}".format(curr.month)
-            df_join = df_join.withColumn('version', F.lit("{}.{}".format(curr.year, current_month)))
+            df_join = df_join.withColumn(
+                "version", F.lit("{}.{}".format(curr.year, current_month))
+            )
             df_join.coalesce(10).write.mode("overwrite").parquet(
                 sso_file.format(curr.year, current_month)
             )
         else:
-            return 1
+            logger.warning(
+                "Copying previous ephemerides files {} into {}".format(
+                    sso_file.format(lm.year, "{:02d}".format(lm.month)),
+                    sso_file.format(curr.year, current_month),
+                )
+            )
+            df_prev.coalesce(10).write.mode("overwrite").parquet(
+                sso_file.format(curr.year, current_month)
+            )
 
 
 def aggregate_and_add_ephem_rubin(year, month, npart, prefix_path, limit, logger):
