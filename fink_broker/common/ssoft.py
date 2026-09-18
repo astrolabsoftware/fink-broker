@@ -289,6 +289,8 @@ def compute_ephemerides(survey: str, sso_file: str):
         is_ephem, is_data = make_checks(
             args.prefix_path, sso_file, monthly=True, logger=logger
         )
+        curr = datetime.datetime.now()
+        current_month = "{:02d}".format(curr.month)
         if not is_ephem and is_data:
             # make computation
             if survey == "rubin":
@@ -317,8 +319,6 @@ def compute_ephemerides(survey: str, sso_file: str):
             )
             df_join = join_aggregated_sso_data(df_prev, df_new, on="ssnamenr")
 
-            curr = datetime.datetime.now()
-            current_month = "{:02d}".format(curr.month)
             df_join = df_join.withColumn(
                 "version", F.lit("{}.{}".format(curr.year, current_month))
             )
