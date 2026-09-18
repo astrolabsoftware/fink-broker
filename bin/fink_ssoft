@@ -281,6 +281,11 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     YEAR=${CURRENT_YYYYMM:0:4}
     MONTH=${CURRENT_YYYYMM:4:2}
     hdfs dfs -cp sso_${SURVEY}_lc_aggregated_${YEAR}.parquet sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet
+
+    # Aggregate files into one
+    ALLFILES=`hdfs dfs -ls -C sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/part-*.parquet`
+    hdfs dfs -touch sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/agg.parquet
+    hdfs dfs -concat sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/agg.parquet $ALLFILES
   fi
   echo -e "${SDONE} done!"
   exit 0
@@ -304,6 +309,11 @@ if [[ ${UPDATE_DATA} == true ]]; then
       ${RESOURCES} \
       ${FINK_HOME}/bin/${SURVEY}/compute_ephemerides.py ${HELP_ON_SERVICE} \
       ${LIMIT_ARGS} -mode last_month
+
+    # Aggregate files into one
+    ALLFILES=`hdfs dfs -ls -C sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/part-*.parquet`
+    hdfs dfs -touch sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/agg.parquet
+    hdfs dfs -concat sso_${SURVEY}_lc_aggregated_${YEAR}${MONTH}.parquet/agg.parquet $ALLFILES
   fi
   echo -e "${SDONE} done!"
   exit 0
