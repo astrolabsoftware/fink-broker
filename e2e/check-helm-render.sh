@@ -16,7 +16,9 @@ src_dir=$DIR/..
 
 fink_cd_url="https://github.com/astrolabsoftware/fink-cd.git"
 if [ -z "${FINK_CD_DIR:-}" ]; then
-    branch=$(git -C "$src_dir" branch --show-current)
+    # On a pull_request event the checkout is a detached merge commit, so the
+    # branch under test is only known through GITHUB_HEAD_REF.
+    branch=${GITHUB_HEAD_REF:-$(git -C "$src_dir" branch --show-current)}
     if ! git ls-remote --exit-code "$fink_cd_url" "refs/heads/$branch" > /dev/null 2>&1; then
         branch=$(git ls-remote --symref "$fink_cd_url" HEAD | sed -n 's|^ref: refs/heads/\(.*\)\tHEAD$|\1|p')
     fi
