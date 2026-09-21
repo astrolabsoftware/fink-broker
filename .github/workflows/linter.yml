@@ -32,3 +32,13 @@ jobs:
       run: |
         ruff check --statistics bin/*/*.py
         ruff format --check bin/*/*.py
+
+  helm-render:
+    # Renders the fink-cd app-of-apps and the fink-broker chart, and checks
+    # which components each storage/HDFS/Kafka switch deploys (no cluster).
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: azure/setup-helm@v4
+    - name: Check the rendered manifests
+      run: e2e/check-helm-render.sh

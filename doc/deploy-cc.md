@@ -22,8 +22,16 @@ so Argo CD gates each wave on the health of the previous one:
 | 2 | fink-broker, fink-alert-simulator | Spark jobs (the simulator is disabled on CC) |
 
 The CC-specific configuration lives in `fink-cd/apps/values-cc.yaml`: local
-Kafka enabled, no alert simulator, HDFS sized for a real ZTF night, and the
+Kafka enabled, no alert simulator, the datasets written to the CC-IN2P3
+production HDFS outside the cluster (`hdfs.external: true`, `hdfs.onlineDataPrefix` pointing there), and the
 `raw2science` executor pinned to the dedicated big-worker node pool.
+
+With `hdfs.external`, the Stackable operators and the `hdfs` Application are
+not deployed, and the fink-broker chart skips the resources bound to the
+in-cluster namenode (the `/user/185` init Job and the balance report). Setting
+`hdfs.external: false` falls back to the in-cluster HDFS, sized for a real ZTF
+night by the knobs kept in the same file; `e2e/check-helm-render.sh` renders
+both variants (no cluster needed).
 
 ## Prerequisites
 
@@ -166,7 +174,7 @@ kubectl -n spark get scheduledsparkapplication fink-broker-stream2raw \
 
 # Storage
 kubectl -n kafka get kafka,kafkauser,kafkatopic
-kubectl -n hdfs get hdfsclusters
+kubectl -n hdfs get hdfsclusters    # in-cluster HDFS only (hdfs.external=false)
 ```
 
 `e2e/diag.sh` collects a broader diagnostic dump when something is wrong; see

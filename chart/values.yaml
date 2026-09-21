@@ -73,9 +73,10 @@ monitoring:
 # raw and science datasets, messages pushed to each distribution topic. The
 # report is written to the pod stdout (kubectl logs).
 #
-# Only makes sense with run.mode=scheduled and storage=hdfs: it reads the
-# datasets through the namenode, and attributes distributed messages to a
-# night using the run window deduced from scheduled.schedule.
+# Only makes sense with run.mode=scheduled and the in-cluster HDFS
+# (storage=hdfs, hdfs.external=false): it reads the datasets by exec-ing into
+# the namenode pod, and attributes distributed messages to a night using the
+# run window deduced from scheduled.schedule.
 #
 report:
   enabled: false
@@ -162,6 +163,13 @@ s3:
 
 hdfs:
   hadoop_user_name: "185"
+  # false -> the Stackable HDFS deployed in the cluster: the chart creates the
+  #          user directory through its namenode (job-hdfs-init) and the report
+  #          reads the datasets by exec-ing into the namenode pod.
+  # true  -> an HDFS outside the cluster, reached through online_data_prefix:
+  #          the user directory is provisioned by its admins, and the report is
+  #          not deployed (it has no pod to exec into).
+  external: false
 
 serviceAccount:
   # Specifies whether a service account should be created
