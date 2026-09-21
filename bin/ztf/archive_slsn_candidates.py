@@ -236,7 +236,12 @@ def apply_cuts(unique):
         _regalade_photoz_and_brightness, axis=1, result_type="expand"
     )
     regalade_results.columns = [
-        "photoz", "photozerr", "ebv", "lower_M", "M", "upper_M",
+        "photoz",
+        "photozerr",
+        "ebv",
+        "lower_M",
+        "M",
+        "upper_M",
     ]
     brightness_cut = np.array(~(regalade_results["upper_M"] > kern.not_sl_threshold))
 
