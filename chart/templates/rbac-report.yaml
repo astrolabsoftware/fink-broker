@@ -1,4 +1,4 @@
-{{- if and .Values.report.enabled (eq .Values.storage "hdfs") }}
+{{- if and .Values.report.enabled (eq .Values.storage "hdfs") (not .Values.hdfs.external) }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
