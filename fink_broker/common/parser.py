@@ -17,6 +17,38 @@ from fink_broker.common.night_utils import get_night, resolve_night_placeholders
 import argparse
 
 
+def night_label(value: str) -> str:
+    """Validate a -night value: a non-empty label.
+
+    Parameters
+    ----------
+    value : str
+        Raw command-line value.
+
+    Returns
+    -------
+    str
+        The value itself.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the value is empty, which would otherwise be mistaken for "deduce".
+
+    Examples
+    --------
+    >>> night_label("20240314")
+    '20240314'
+    >>> night_label("")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must not be empty
+    """
+    if not value:
+        raise argparse.ArgumentTypeError("-night must not be empty")
+    return value
+
+
 def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
     """Parse command line arguments for fink services
 
@@ -32,11 +64,14 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
     Examples
     --------
-    >>> import argparse
+    >>> import argparse, sys
     >>> parser = argparse.ArgumentParser(description=__doc__)
+    >>> sys.argv = ["job.py", "-night", "20240314"]
     >>> args = getargs(parser)
     >>> print(type(args))
     <class 'argparse.Namespace'>
+    >>> args.night
+    '20240314'
     """
     parser.add_argument(
         "-servers",
@@ -272,27 +307,31 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [DISTRIBUTION_OFFSET_FILE]
         """,
     )
-    parser.add_argument(
+    # The night is either pinned or deduced, and every job derives its paths
+    # from it: an omitted night used to default to an empty string, which was
+    # then sliced into broken paths ({prefix}/raw/, year=""). Make the source
+    # of the night explicit and let argparse reject a missing or ambiguous one.
+    night_source = parser.add_mutually_exclusive_group(required=True)
+    night_source.add_argument(
         "-night",
-        type=str,
-        default="",
+        type=night_label,
+        default=None,
         help="""
-        YYYYMMDD night. Explicit override (pinned night: backfill, rerun of a
-        failed night, or CI). When empty, the night is deduced from the current
-        UTC time using -night_offset_hours.
+        YYYYMMDD night, pinned explicitly (backfill, rerun of a failed night,
+        or CI). Mutually exclusive with -night_offset_hours.
         [NIGHT]
         """,
     )
-    parser.add_argument(
+    night_source.add_argument(
         "-night_offset_hours",
         type=int,
-        default=0,
+        default=None,
         help="""
-        Hours subtracted from UTC now before extracting the deduced night (i.e.
-        when -night is empty). Encodes both the topic rollover (sub-day shift)
-        and the night selection: 0 -> current night (live, midnight rollover),
-        12 -> current night with a noon-UTC rollover, 24 -> previous complete
-        night (n-1). Ignored when -night is set.
+        Deduce the night from the current UTC time: hours subtracted from UTC
+        now before extracting the date. Encodes both the topic rollover
+        (sub-day shift) and the night selection: 0 -> current night (live,
+        midnight rollover), 12 -> current night with a noon-UTC rollover, 24 ->
+        previous complete night (n-1). Mutually exclusive with -night.
         [NIGHT_OFFSET_HOURS]
         """,
     )
@@ -386,12 +425,13 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
     )
     args = parser.parse_args(None)
 
-    # Resolve the observing night once, centrally: an explicit -night wins
-    # (pinned night); otherwise it is deduced from the current UTC time
-    # following the offset/rollover policy. The Kafka topic and output prefix
-    # may carry a '{night}' placeholder resolved here, so the date is computed
-    # at runtime instead of being frozen at Helm-templating time.
-    args.night = get_night(args.night, args.night_offset_hours)
+    # Resolve the observing night once, centrally: either pinned by -night or
+    # deduced from the current UTC time following the -night_offset_hours
+    # rollover policy (argparse guarantees exactly one of them). The Kafka
+    # topic and output prefix may carry a '{night}' placeholder resolved here,
+    # so the date is computed at runtime instead of being frozen at
+    # Helm-templating time.
+    args.night = get_night(args.night or "", args.night_offset_hours or 0)
     args.topic = resolve_night_placeholders(args.topic, args.night)
     args.online_data_prefix = resolve_night_placeholders(
         args.online_data_prefix, args.night
