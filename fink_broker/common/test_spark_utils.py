@@ -158,3 +158,56 @@ def test_sleep_returns_a_longer_wait(monkeypatch):
     deadline = datetime.now(timezone.utc) + timedelta(seconds=1)
 
     assert spark_utils.sleep_before_retry(10, deadline) == pytest.approx(12)
+
+
+def test_budget_is_the_timeout_without_a_deadline():
+    """Without a deadline, the wait gets its full timeout."""
+    assert spark_utils.wait_budget(300, None) == 300
+
+
+def test_budget_is_capped_by_a_closer_deadline():
+    """A deadline closer than the timeout shortens the wait."""
+    deadline = datetime.now(timezone.utc) + timedelta(seconds=30)
+    assert spark_utils.wait_budget(300, deadline) == pytest.approx(30, abs=0.5)
+
+
+def test_budget_keeps_the_timeout_when_the_deadline_is_further():
+    """A distant deadline does not extend the wait beyond its timeout."""
+    deadline = datetime.now(timezone.utc) + timedelta(hours=2)
+    assert spark_utils.wait_budget(300, deadline) == 300
+
+
+def test_budget_is_zero_past_the_deadline():
+    """Nothing is left to wait for once the deadline has passed."""
+    deadline = datetime.now(timezone.utc) - timedelta(seconds=10)
+    assert spark_utils.wait_budget(300, deadline) == 0
+
+
+def test_kafka_wait_gives_up_at_the_deadline(monkeypatch):
+    """The Kafka wait stops at the job's deadline, not at its own timeout.
+
+    A pod starting shortly before the stop instant must not sit in the startup
+    probe past it: the run window is over, and concurrencyPolicy: Forbid holds
+    the slot until the job exits.
+    """
+    slept = []
+    real_sleep = spark_utils.time.sleep
+    monkeypatch.setattr(
+        spark_utils.time, "sleep", lambda sec: (slept.append(sec), real_sleep(sec))
+    )
+
+    def unreachable(*args, **kwargs):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(spark_utils.socket, "create_connection", unreachable)
+
+    started = datetime.now(timezone.utc)
+    deadline = started + timedelta(seconds=2)
+    with pytest.raises(TimeoutError):
+        spark_utils.wait_for_kafka("kafka:9092", timeout=300, deadline=deadline)
+    elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+
+    # Gave up on the 2 s left, not on the 300 s timeout.
+    assert elapsed < 10
+    # ... and the retry sleep was clamped to those 2 s instead of its own 5 s.
+    assert max(slept) <= 2.5

@@ -17,7 +17,7 @@ import ipaddress
 import logging
 import re
 import socket
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
@@ -448,6 +448,51 @@ def sleep_before_retry(wait_sec: int, deadline: Optional[datetime] = None) -> in
     return increase_wait_time(wait_sec)
 
 
+def wait_budget(timeout: int, deadline: Optional[datetime] = None) -> float:
+    """Seconds a startup probe may spend waiting.
+
+    A probe has its own timeout, sized for a cold cluster, but a scheduled run
+    also has a stop instant. Whichever comes first wins: a pod starting a few
+    minutes before `deadline` must not sit in the probe past it, since the run
+    window is over and `concurrencyPolicy: Forbid` holds the slot until the job
+    exits.
+
+    Parameters
+    ----------
+    timeout : int
+        The probe's own budget, in seconds.
+    deadline : datetime, optional
+        The job's stop instant (timezone-aware, UTC). None leaves the timeout
+        alone, which is what an unscheduled run wants.
+
+    Returns
+    -------
+    float
+        Seconds the probe may wait, never negative.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timedelta, timezone
+    >>> wait_budget(300)
+    300
+
+    A closer deadline shortens the wait, a further one leaves it alone:
+    >>> now = datetime.now(timezone.utc)
+    >>> round(wait_budget(300, now + timedelta(seconds=30)))
+    30
+    >>> wait_budget(300, now + timedelta(hours=2))
+    300
+
+    Nothing is left once the deadline has passed:
+    >>> wait_budget(300, now - timedelta(seconds=10))
+    0.0
+    """
+    if deadline is None:
+        return timeout
+
+    return min(timeout, seconds_until(deadline))
+
+
 def increase_wait_time(wait_sec: int) -> int:
     """Increase the waiting time between two checks by 20%
 
@@ -562,7 +607,9 @@ def parse_kafka_servers(servers: str) -> List[Tuple[str, int]]:
     return brokers
 
 
-def wait_for_kafka(servers: str, timeout: int = 300) -> None:
+def wait_for_kafka(
+    servers: str, timeout: int = 300, deadline: Optional[datetime] = None
+) -> None:
     """Wait for a Kafka bootstrap server to accept connections
 
     A job is deployed together with the services it depends on, so it can start
@@ -581,17 +628,21 @@ def wait_for_kafka(servers: str, timeout: int = 300) -> None:
         As for any bootstrap list, one reachable server is enough.
     timeout : int, optional
         Give up after that many seconds. Default is 300.
+    deadline : datetime, optional
+        The job's stop instant (timezone-aware, UTC). The wait ends at
+        whichever comes first, it or `timeout`. None waits the full timeout.
 
     Raises
     ------
     ValueError
         If `servers` is not a valid bootstrap server list.
     TimeoutError
-        If no server is reachable within `timeout` seconds.
+        If no server is reachable within the budget.
     """
     brokers = parse_kafka_servers(servers)
 
-    deadline = time.time() + timeout
+    budget = wait_budget(timeout, deadline)
+    stop_at = datetime.now(timezone.utc) + timedelta(seconds=budget)
     wait_sec = 5
     while True:
         for host, port in brokers:
@@ -602,16 +653,15 @@ def wait_for_kafka(servers: str, timeout: int = 300) -> None:
             except OSError as exc:  # noqa: PERF203
                 _LOG.debug("Kafka server %s:%s unreachable, %s", host, port, exc)
 
-        if time.time() >= deadline:
+        if seconds_until(stop_at) <= 0:
             raise TimeoutError(
-                "No Kafka bootstrap server reachable among {} after {} s".format(
-                    servers, timeout
+                "No Kafka bootstrap server reachable among {} after {:.0f} s".format(
+                    servers, budget
                 )
             )
 
         _LOG.info("Waiting for a Kafka bootstrap server among %s", servers)
-        time.sleep(wait_sec)
-        wait_sec = increase_wait_time(wait_sec)
+        wait_sec = sleep_before_retry(wait_sec, stop_at)
 
 
 def probe_path(scheme: Optional[str], uri_path: str) -> str:
@@ -651,7 +701,9 @@ def probe_path(scheme: Optional[str], uri_path: str) -> str:
     return uri_path or "/"
 
 
-def wait_for_filesystem(path: str, timeout: int = 300) -> None:
+def wait_for_filesystem(
+    path: str, timeout: int = 300, deadline: Optional[datetime] = None
+) -> None:
     """Wait for the shared filesystem backing `path` to answer
 
     HDFS and S3 are both covered: the URI scheme selects the Hadoop
@@ -667,11 +719,14 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
         `hdfs://namenode:8020/user`. An empty path is a no-op.
     timeout : int, optional
         Give up after that many seconds. Default is 300.
+    deadline : datetime, optional
+        The job's stop instant (timezone-aware, UTC). The wait ends at
+        whichever comes first, it or `timeout`. None waits the full timeout.
 
     Raises
     ------
     TimeoutError
-        If the filesystem cannot be reached within `timeout` seconds.
+        If the filesystem cannot be reached within the budget.
     """
     if not path:
         return
@@ -703,7 +758,8 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
     # with NoSuchBucket. Listing the root does reach the store.
     is_s3 = scheme in ("s3a", "s3")
 
-    deadline = time.time() + timeout
+    budget = wait_budget(timeout, deadline)
+    stop_at = datetime.now(timezone.utc) + timedelta(seconds=budget)
     wait_sec = 5
     while True:
         try:
@@ -718,13 +774,12 @@ def wait_for_filesystem(path: str, timeout: int = 300) -> None:
             _LOG.info("Filesystem %s is available", path)
             return
 
-        if time.time() >= deadline:
+        if seconds_until(stop_at) <= 0:
             raise TimeoutError(
-                "Filesystem {} unreachable after {} s".format(path, timeout)
+                "Filesystem {} unreachable after {:.0f} s".format(path, budget)
             )
 
-        time.sleep(wait_sec)
-        wait_sec = increase_wait_time(wait_sec)
+        wait_sec = sleep_before_retry(wait_sec, stop_at)
 
 
 def path_exist(path: str) -> bool:
