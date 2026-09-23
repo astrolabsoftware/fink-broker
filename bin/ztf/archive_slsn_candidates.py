@@ -33,9 +33,8 @@ from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
 )
 
 from fink_science.ztf.superluminous.slsn_classifier import (
-    get_sdss_photoz,
+    get_regalade_photoz,
     get_ebv,
-    abs_peak,
 )
 
 from fink_science.ztf.superluminous.processor import get_and_format
@@ -64,6 +63,54 @@ def ntrend_changes(cflux, csigflux, cfid, k=3):
     return np.mean(n)
 
 
+def _regalade_photoz(row):
+    """Compute the REGALADE-refined host photo-z for a row, for display only.
+
+    Notes
+    -----
+    This is informational only -- no brightness veto is computed here.
+    The real-time classifier (`superluminous_score` in
+    fink_science.ztf.superluminous.processor) already applies the
+    peak-absolute-magnitude veto using the object's *full* light-curve
+    history (fetched via `get_and_format`) before a candidate is ever
+    scored. Recomputing it here from just the alert's own
+    `prv_candidates` would use strictly worse data -- `prv_candidates`
+    is a rolling ~30-day window, which can be much shorter than the time
+    since the object's first detection (`jdstarthist`), silently missing
+    an earlier, brighter peak and producing a wrong (too faint) veto.
+
+    Parameters
+    ----------
+    row: dict
+        Pandas DataFrame row as dictionary. Must include ra, dec, and the
+        REGALADE columns already attached to the alert (regalade_ra,
+        regalade_dec, R1, R2, PA, z, ezin).
+
+    Returns
+    -------
+    photoz, photozerr: float
+        REGALADE photo-z and its uncertainty. NaN if no host is found.
+    ebv: float
+        Milky Way E(B-V) extinction at (ra, dec).
+    """
+    ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
+
+    photoz, photozerr = get_regalade_photoz(
+        np.array([row.ra]),
+        np.array([row.dec]),
+        np.array([row.regalade_ra]),
+        np.array([row.regalade_dec]),
+        np.array([row.R1]),
+        np.array([row.R2]),
+        np.array([row.PA]),
+        np.array([row.z]),
+        np.array([row.ezin]),
+    )
+    photoz, photozerr = photoz[0], photozerr[0]
+
+    return photoz, photozerr, ebv
+
+
 def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> None:
     """Append messages to list for Slack distribution.
 
@@ -83,7 +130,7 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
     else:
         t0 = f"TNS classification: {row.tns}"
 
-    t1 = f"Fink: <https://ztf.fink-portal.org/{row.objectId}>"
+    t1 = f"Fink: <https://ztf.fink-portal.org/{row.objectId}|{row.objectId}>"
     t1bis = f"Fritz: <https://fritz.science/source/{row.objectId}|{row.objectId}>"
     t2 = f"Score: {round(row.slsn_score, 3)}"
 
@@ -91,52 +138,26 @@ def append_slack_messages(slack_data: list, row: dict, slack_token_env: str) -> 
         row.objectId, slack_token_env=slack_token_env
     )
 
-    magnitudes = np.array(
-        [row["magpsf"]] + [k["magpsf"] for k in row["prv_candidates"]]
-    )
-
-    bands = np.array([row["fid"]] + [k["fid"] for k in row["prv_candidates"]])
-    mask_nones = [type(k) is float for k in magnitudes]
-    magnitudes = magnitudes[mask_nones]
-    bands = bands[mask_nones]
-
-    photoz, photozerr = get_sdss_photoz(row.ra, row.dec)
-    ebv = get_ebv(np.array([row.ra]), np.array([row.dec]))[0]
+    photoz, photozerr, ebv = _regalade_photoz(row)
     t3 = f"E(B-V) = {ebv:.3f}"
-    t4, t5 = "", ""
-    low_brightness = False
-    if (photoz == photoz) and (len(magnitudes) > 0):
-        peak_g = np.min(magnitudes[bands == 1], initial=99)
-        peak_r = np.min(magnitudes[bands == 2], initial=99)
-        lower_M, M, upper_M = abs_peak(
-            [peak_g, peak_r],
-            [kern.band_wave_aa[1], kern.band_wave_aa[2]],
-            photoz,
-            photozerr,
-            ebv,
-        )
-        t4 = f"SDSS photo-z = {photoz:.3f} +- {photozerr:.3f}"
-        t5 = f"Peak M = {M:.2f} ({upper_M:.2f} < M < {lower_M:.2f})"
+    t4 = ""
+    if photoz == photoz:
+        t4 = f"REGALADE photo-z = {photoz:.3f} +- {photozerr:.3f}"
 
-        if upper_M > kern.not_sl_threshold:
-            low_brightness = True
-
-    if not low_brightness:
-        curve.seek(0)
-        cutout.seek(0)
-        cutout_perml = f"<{cutout_perml}|{' '}>"
-        curve_perml = f"<{curve_perml}|{' '}>"
-        slack_data.append(
-            f"""==========================
+    curve.seek(0)
+    cutout.seek(0)
+    cutout_perml = f"<{cutout_perml}|{' '}>"
+    curve_perml = f"<{curve_perml}|{' '}>"
+    slack_data.append(
+        f"""==========================
     {t0}
     {t1}
     {t1bis}
     {t2}
     {t3}
     {t4}
-    {t5}
     {cutout_perml}{curve_perml}"""
-        )
+    )
 
 
 def apply_cuts(unique):
@@ -153,8 +174,11 @@ def apply_cuts(unique):
 
     Returns
     -------
-    unique_oids: pd.Series
-        Series of objectIds
+    unique_filtered: pd.DataFrame
+        `unique`, filtered down to objects passing the cuts below. Has
+        the same columns as `unique`, so it can be iterated directly to
+        build the Slack detail messages -- keeping the summary count and
+        the number of messages sent always in sync.
     summary: pd.DataFrame
         DataFrame with objectId and score to be printed on Slack
     """
@@ -179,16 +203,21 @@ def apply_cuts(unique):
     # Check that the object isn"t too old (likely AGN or bad photometry, and if not should have been catch way before)
     duration_cut = np.array(unique_lcs["cjd"].apply(np.ptp) < 500)
 
+    # No brightness veto here: `superluminous_score` already applies it
+    # upstream using the object's full light-curve history, before a
+    # candidate is ever scored -- see `_regalade_photoz`'s docstring for
+    # why recomputing it here (from just the alert's own prv_candidates)
+    # would be both redundant and wrong.
+
     # Apply cuts
     unique_filtered = unique[n_trends_cut & duration_cut]
-    unique_oids = unique_filtered.objectId
 
     summary = (unique_filtered[["objectId", "slsn_score"]]).sort_values(
         "slsn_score", ascending=False
     )
     summary = summary.reset_index(drop=True)
 
-    return unique_oids, summary
+    return unique_filtered, summary
 
 
 def main():
@@ -243,11 +272,14 @@ def main():
         "candidate.ndethist",
         "candidate.jdstarthist",
         "candidate.jd",
-        "candidate.fid",
-        "candidate.magpsf",
-        "candidate.sigmapsf",
-        "prv_candidates",
         "tns",
+        "regalade_ra",
+        "regalade_dec",
+        "R1",
+        "R2",
+        "PA",
+        "z",
+        "ezin",
     ]
 
     pdf = df_filt.select(cols_).toPandas()
@@ -259,10 +291,11 @@ def main():
 
         # Apply some additional cuts based on the full light curves.
         # These cuts should later be integrated directly to the model.
-        unique_oids, summary = apply_cuts(unique)
+        unique_filtered, summary = apply_cuts(unique)
 
-        init_msg = f"Number of unique candidates for the night {args.night}: {len(unique_oids)}.\n\n{summary}"
+        init_msg = f"Number of unique candidates for the night {args.night}: {len(unique_filtered)}.\n\n{summary}"
     else:
+        unique_filtered = pdf
         init_msg = f"No candidates found for the night {args.night}"
 
     envs = ["ANOMALY_SLACK_TOKEN", "SLSN_SLACK_ZTF", "SLSN_SLACK_OSCAR"]
@@ -270,7 +303,7 @@ def main():
 
     for slack_token_env, channel in zip(envs, channels):
         slack_data = []
-        for _, row in pdf.iterrows():
+        for _, row in unique_filtered.iterrows():
             append_slack_messages(slack_data, row, slack_token_env)
 
         msg_handler_slack(
@@ -280,7 +313,7 @@ def main():
     # Send to HBase
     # Need to recompute a Spark DF because there are cuts applied later on Pandas DF
     if not pdf.empty:
-        df_hbase = df.filter(df["objectId"].isin(unique_oids.to_list()))
+        df_hbase = df.filter(df["objectId"].isin(unique_filtered["objectId"].to_list()))
 
         # Drop images
         df_hbase = (
