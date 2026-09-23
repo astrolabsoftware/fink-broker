@@ -88,9 +88,11 @@ def main():
     inspect_application(logger)
 
     # This job is deployed alongside the services it depends on, so they may
-    # not be up yet. Wait for them instead of failing on the first access.
-    wait_for_kafka(args.servers)
-    wait_for_filesystem(args.online_data_prefix)
+    # not be up yet. Wait for them instead of failing on the first access, but
+    # never past the stop instant: waiting into the next tick would hold the
+    # Forbid slot for a run whose window is already over.
+    wait_for_kafka(args.servers, deadline=exit_deadline)
+    wait_for_filesystem(args.online_data_prefix, deadline=exit_deadline)
 
     # debug statements
     # data path
