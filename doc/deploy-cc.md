@@ -109,7 +109,7 @@ Useful variants:
 
 `-s` (scheduled) deploys `ScheduledSparkApplication`s that deduce the observing
 night at runtime; the schedule and the night offset come from
-`fink-cd/apps/values.yaml` (`0 12 * * *`, `nightOffsetHours: 24` — the previous
+`fink-cd/apps/values.yaml` (`0 9 * * *`, `nightOffsetHours: 24` — the previous
 complete ZTF night). Without `-s`, one-shot `SparkApplication`s are deployed
 with the night frozen at Helm render time (defaulting to the previous night on
 CC), which is what you want for a backfill or a rerun.
@@ -124,19 +124,22 @@ chart therefore renders exactly one of them):
 
 | Mode | Argument | Value |
 |------|----------|-------|
-| scheduled | `-exit_at` | `scheduled.exitAt`, `23:59` UTC by default |
+| scheduled | `-exit_at` | `scheduled.exitAt`, `23:00` UTC by default |
 | one-shot | `-exit_after` | `exitAfter`, 64800 s (18 h) by default |
 
-`-exit_at` takes either a time of day in UTC (`23:59`, resolved on the day the
+`-exit_at` takes either a time of day in UTC (`23:00`, resolved on the day the
 job starts) or a full ISO 8601 instant (`2026-08-21T20:00:00+02:00`, offset
 honoured, UTC assumed when absent). The second form is what a caller computing
 the stop time itself needs — a stop time expressed in local time, or a run
 crossing the UTC midnight, where a time of day cannot say which day is meant.
 
-A scheduled run needs an absolute deadline rather than a duration, because the
-deadline is recomputed identically by every `restartPolicy` attempt: a run
-restarted after a crash aims at the same instant instead of granting itself a
-fresh window. That matters under `concurrencyPolicy: Forbid`, where a run
+A scheduled run needs an absolute deadline rather than a duration, because a
+run restarted after a crash aims at the same instant instead of granting itself
+a fresh window. That holds as long as the restart stays on the starting day:
+the deadline is resolved against the calendar date of the attempt resolving it,
+so an attempt landing past midnight aims at the next day and runs for a full
+extra day. Hence the hour of margin in the default (`23:00`); the defect itself
+is tracked in [#1246](https://github.com/astrolabsoftware/fink-broker/issues/1246). That matters under `concurrencyPolicy: Forbid`, where a run
 overflowing its window silently skips the days that follow. A run starting past
 its deadline exits in error before the Spark session is created, so it reserves
 no executor.
