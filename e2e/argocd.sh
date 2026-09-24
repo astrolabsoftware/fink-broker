@@ -168,11 +168,20 @@ fi
 # CI exercises exactly what production runs -- and no password lives in git or
 # in the Argo CD Application manifest.
 #
-# Idempotent, so it runs before every deployment: a password is picked on the
-# first run only, later runs reuse the one already stored in the cluster. That
-# is what keeps the two secrets consistent -- a partial state (one secret
-# missing, a namespace wiped by a sync) is repaired from the surviving value
-# instead of rotating the credential behind Strimzi's back.
+# kafka/fink-producer-password is the single source of truth: it is what the
+# KafkaUser consumes, so it is what the broker authenticates against.
+# spark/fink-kafka-jaas is derived from it, a client-side rendering of the same
+# value. Recovery is therefore asymmetric on purpose -- it reads the source,
+# never the derived copy, which would promote that copy to a second source of
+# truth and let the two drift apart silently.
+#
+# Idempotent, so it runs before every deployment: the password is read back
+# from the source when it is there, so a run that only lost the derived secret
+# rebuilds it without touching the credential. Losing the source is a different
+# matter: no authoritative value is left, a new one is generated, and Strimzi
+# applies it to the KafkaUser. A distribution job already running then holds a
+# jaas file that no longer authenticates, and has to be restarted -- which is
+# why the source secret is not something to prune casually.
 provision_jaas_secrets() {
     local kafka_ns="kafka"
     local spark_ns="spark"
