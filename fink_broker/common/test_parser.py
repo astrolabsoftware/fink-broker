@@ -58,8 +58,13 @@ def test_night_sources_are_exclusive(monkeypatch):
     assert exc.value.code == 2
 
 
-def test_night_pinned_must_not_be_empty(monkeypatch):
-    """An explicit empty -night is rejected rather than read as "deduce"."""
+@pytest.mark.parametrize("night", ["", "20241", "202403141", "abcdefgh", "2024-03-14"])
+def test_night_pinned_must_be_eight_digits(monkeypatch, night):
+    """A malformed -night is refused instead of reaching the paths.
+
+    The value is sliced into topics, buckets and date partitions, so a short
+    or non-numeric one would produce a misdirected run rather than an error.
+    """
     with pytest.raises(SystemExit) as exc:
-        parse(monkeypatch, "-night", "")
+        parse(monkeypatch, "-night", night)
     assert exc.value.code == 2
