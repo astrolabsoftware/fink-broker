@@ -354,7 +354,14 @@ def connect_to_raw_database(
     Raises
     ------
     NoDataAvailableError
-        If no data is readable at `basepath` when `deadline` is reached.
+        If no parquet file has appeared under `basepath` when `deadline` is
+        reached: the night produced nothing, which the caller treats as a
+        clean exit.
+    Exception
+        Whatever the schema read raised, if parquet files are there but stay
+        unreadable until `deadline`. Files exist, so this is corruption, lost
+        credentials or a filesystem failure -- a real error, never an empty
+        night, and it must not be reported as a successful run.
 
     Examples
     --------

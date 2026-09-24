@@ -18,7 +18,13 @@ import argparse
 
 
 def night_label(value: str) -> str:
-    """Validate a -night value: a non-empty label.
+    """Validate a -night value: an eight-digit YYYYMMDD label.
+
+    The night is sliced into Kafka topics, storage paths and date partitions
+    (``value[:4]``, ``[4:6]``, ``[6:8]``), so anything shorter or non-numeric
+    silently produces a misdirected run rather than an error. An empty value
+    is refused for the same reason it cannot be let through: it would read as
+    "deduce", which is what -night_offset_hours is for.
 
     Parameters
     ----------
@@ -33,16 +39,28 @@ def night_label(value: str) -> str:
     Raises
     ------
     argparse.ArgumentTypeError
-        If the value is empty, which would otherwise be mistaken for "deduce".
+        If the value is not eight digits.
 
     Examples
     --------
     >>> night_label("20240314")
     '20240314'
+
+    An empty value is not a way to ask for the night to be deduced:
     >>> night_label("")
     Traceback (most recent call last):
     ...
-    argparse.ArgumentTypeError: -night must not be empty
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
+
+    Neither is a truncated or non-numeric one:
+    >>> night_label("20241")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
+    >>> night_label("abcdefgh")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
     """
     if len(value) != 8 or not value.isdigit():
         raise argparse.ArgumentTypeError("-night must be an eight-digit YYYYMMDD value")
