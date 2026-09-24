@@ -206,10 +206,16 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         value is read as UTC). Use the ISO form when the stop time is computed
         by the caller, expressed in local time, or when the run crosses the UTC
         midnight and a time of day cannot say which day is meant. Unlike
-        `exit_after`, the deadline survives a restart: every attempt resolves
-        the same instant instead of granting itself a fresh window, and a
-        service starting past it exits in error. Mutually exclusive with
-        `exit_after`.
+        `exit_after`, the deadline survives a restart on the starting day: the
+        attempt resolves the same instant instead of granting itself a fresh
+        window, and a service starting past it exits in error. An attempt
+        landing on the next day resolves the HH:MM form against that day, which
+        is tracked in #1246. Mutually exclusive with `exit_after`.
+
+        Honoured by the ZTF streaming jobs only, which is all the chart
+        deploys. The other entrypoints branch on `exit_after`, so passing
+        `exit_at` to them stops nothing and they run the `exit_after` default
+        instead; they need porting when another survey gets a scheduled mode.
         """,
     )
     parser.add_argument(
