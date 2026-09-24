@@ -384,9 +384,7 @@ def connect_to_raw_database(
         except Exception as e:  # noqa: PERF203
             _LOG.error("Error while reading %s, %s", basepath, e)
             if deadline is not None and seconds_until(deadline) <= 0:
-                raise NoDataAvailableError(
-                    "Unable to read the schema of {} by {}".format(basepath, deadline)
-                ) from e
+                raise
             wait_sec = sleep_before_retry(wait_sec, deadline)
             continue
         else:
