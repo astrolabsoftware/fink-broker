@@ -44,8 +44,8 @@ def night_label(value: str) -> str:
     ...
     argparse.ArgumentTypeError: -night must not be empty
     """
-    if not value:
-        raise argparse.ArgumentTypeError("-night must not be empty")
+    if len(value) != 8 or not value.isdigit():
+        raise argparse.ArgumentTypeError("-night must be an eight-digit YYYYMMDD value")
     return value
 
 
