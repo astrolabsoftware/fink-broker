@@ -81,7 +81,10 @@ jobs:
   integration-tests:
     strategy:
       matrix:
-        storage: [hdfs, s3]
+        # s3 disabled: the MinIO server image is no longer public (quay.io 401,
+        # removed from Docker Hub). Re-enable once the Tenant image is mirrored,
+        # see #1249.
+        storage: [hdfs]
     name: Run integration tests
     runs-on: ${{ fromJSON(inputs.runner) }}
     outputs:
