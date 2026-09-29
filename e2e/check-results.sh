@@ -129,12 +129,37 @@ assert_balance () {
 # Early Jobs may legitimately find nothing -- the streaming jobs are still
 # warming up -- so a Job whose report does not add up is not a failure on its
 # own: wait for a later one, and fail on the timeout.
+#
+# A failed Job is, though. The CronJob runs with restartPolicy=OnFailure: a run
+# started too early (e.g. before <prefix>/raw exists) restarts its container
+# until it succeeds, and a Job only turns Failed once its backoffLimit is
+# exhausted, i.e. on a persistent error. Checking only for a successful Job
+# would let such a failure hide behind a later run that succeeds, while at CC
+# the report runs once a day and that failure is all there is.
 if [ "$mode" = "report" ]; then
   cronjob="fink-broker-report"
   deadline=$(( SECONDS + report_timeout ))
 
+  # Print the Jobs of the CronJob that ended in the Failed condition.
+  failed_jobs() {
+    kubectl get jobs -n spark \
+      -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.conditions[?(@.type=='Failed')].status}{'\n'}{end}" \
+      2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 == "True" { print $1 }'
+  }
+
   echo "INFO: Waiting for a run of cronjob/$cronjob to account for the alerts"
   while [ $SECONDS -lt $deadline ]; do
+    failed=$(failed_jobs)
+    if [ -n "$failed" ]; then
+      echo "ERROR: cronjob/$cronjob has failed runs: $(echo $failed)" 1>&2
+      for job in $failed; do
+        echo "--- job/$job ---" 1>&2
+        kubectl describe job -n spark "$job" 1>&2 || true
+        kubectl logs -n spark "job/$job" --tail -1 1>&2 || true
+      done
+      exit 1
+    fi
+
     for job in $(kubectl get jobs -n spark \
         -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.metadata.name}{'\n'}{end}" \
         2>/dev/null | grep "^${cronjob}-" | sort -r); do
@@ -144,6 +169,15 @@ if [ "$mode" = "report" ]; then
         echo "INFO: report produced by job/${job}"
         cat "$out"
         assert_balance "$out" ""
+        # Not a failure, but the sign of a run started too early or of a
+        # flaky dependency: say so, with the logs of the failed attempts.
+        kubectl get pods -n spark -l job-name \
+          -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
+          2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
+          | while IFS=$'\t' read -r pod restarts; do
+              echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
+              kubectl logs -n spark "$pod" --previous --tail 20 || true
+            done
         exit 0
       fi
     done
