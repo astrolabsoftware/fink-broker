@@ -167,12 +167,26 @@ spec:
 
 {{/*
 Path part of online_data_prefix, e.g.
-"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report reads the
-datasets from inside the namenode pod, where only the path is meaningful.
+"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report takes the
+NameNode address separately (fink.reportNamenode).
 */}}
 {{- define "fink.hdfsPath" -}}
 {{- $path := regexReplaceAll "^[a-zA-Z0-9]+://[^/]+" .Values.online_data_prefix "" -}}
 {{- regexReplaceAll "/{2,}" $path "/" | trimSuffix "/" -}}
+{{- end }}
+
+{{/*
+NameNode RPC address(es) the report reads HDFS from: report.namenode when
+set, host:port[,host:port] with every namenode of an HA pair, else the
+authority of online_data_prefix, e.g.
+"hdfs://namenode.hdfs:8020///user/185" -> "namenode.hdfs:8020".
+*/}}
+{{- define "fink.reportNamenode" -}}
+{{- if .Values.report.namenode -}}
+{{- .Values.report.namenode -}}
+{{- else -}}
+{{- regexReplaceAll "^[a-zA-Z0-9]+://([^/]+).*$" .Values.online_data_prefix "${1}" -}}
+{{- end -}}
 {{- end }}
 
 {{/*
