@@ -440,6 +440,7 @@ def apply_science_modules(df: DataFrame, tns_raw_output: str = "") -> DataFrame:
     # Perform the fit + classification (default model)
     args = ["is_transient", "objectId", "candidate.jdstarthist"]
     args += ["cjd", "cfid", "cmagpsf", "csigmapsf"]
+    args += ["regalade_ra", "regalade_dec", "R1", "R2", "PA", "z", "ezin"]
 
     df = df.withColumn("slsn_score", superluminous_score(*args))
 

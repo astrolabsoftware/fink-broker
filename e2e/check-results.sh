@@ -65,10 +65,10 @@ fi
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="20"
+  expected_topics="21"
 else
   # 3 topics do not send results
-  expected_topics="18"
+  expected_topics="19"
 fi
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime
