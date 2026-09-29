@@ -27,8 +27,9 @@ production HDFS outside the cluster (`hdfs.external: true`, `hdfs.onlineDataPref
 `raw2science` executor pinned to the dedicated big-worker node pool.
 
 With `hdfs.external`, the Stackable operators and the `hdfs` Application are
-not deployed, and the fink-broker chart skips the resources bound to the
-in-cluster namenode (the `/user/185` init Job and the balance report). Setting
+not deployed, and the fink-broker chart skips the `/user/185` init Job, which
+needs the in-cluster namenode. The balance report reads HDFS directly, from the
+NameNode(s) listed in `hdfs.namenodes`, in both cases. Setting
 `hdfs.external: false` falls back to the in-cluster HDFS, sized for a real ZTF
 night by the knobs kept in the same file; `e2e/check-helm-render.sh` renders
 both variants (no cluster needed).

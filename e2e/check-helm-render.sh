@@ -73,6 +73,9 @@ out=$(apps)
 assert "applications" "$stackable $common kafka fink-alert-simulator" "$(echo "$out" | names Application)"
 assert "hdfs.external forwarded" "false" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "in-cluster prefix" "$incluster_prefix" "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
+assert "report reads both HA namenodes" \
+    "simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020,simple-hdfs-namenode-default-1.simple-hdfs-namenode-default.hdfs:8020" \
+    "$(echo "$out" | broker_values | yq -r '.report.namenode')"
 
 echo "== fink-cd: values-cc.yaml (external HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml")
@@ -80,6 +83,8 @@ assert "applications" "$common kafka" "$(echo "$out" | names Application)"
 assert "hdfs.external forwarded" "true" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "external prefix" "hdfs://ccmaster1:8020///user/185" \
     "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
+assert "report reads the external namenode" "ccmaster1:8020" \
+    "$(echo "$out" | broker_values | yq -r '.report.namenode')"
 
 echo "== fink-cd: values-cc.yaml with hdfs.external=false (back to in-cluster HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" --set hdfs.external=false \
@@ -103,20 +108,37 @@ chart() {
     helm template fink-broker "$src_dir/chart" --set report.enabled=true "$@"
 }
 
-# Resources tied to the in-cluster HDFS stack: the pre-install Job creating
-# /user/185 through the Stackable namenode, and the report which reads the
-# datasets by exec-ing into the namenode pod (RBAC in the hdfs namespace).
+# Resources tied to HDFS: the pre-install Job creating /user/185 through the
+# in-cluster Stackable namenode, and the report, which reads HDFS directly and
+# execs into the Kafka pods only (RBAC in the kafka namespace).
 hdfs_bound() {
     echo "$1" | yq -r 'select(.kind == "Job" or .kind == "CronJob" or .metadata.name == "fink-report") | .kind + "/" + .metadata.name'
 }
 
+# Namespaces the report is granted rights in.
+report_rbac_namespaces() {
+    echo "$1" | yq -r 'select(.kind == "Role" and .metadata.name == "fink-report") | .metadata.namespace'
+}
+
+# NameNode address(es) passed to the report.
+report_namenode() {
+    echo "$1" | yq -r 'select(.kind == "CronJob") | .spec.jobTemplate.spec.template.spec.containers[0].args as $a | $a | to_entries[] | select(.value == "--namenode") | $a[.key + 1]'
+}
+
 echo "== fink-broker: in-cluster HDFS"
 out=$(chart)
-assert "hdfs-bound resources" "Job/hdfs-init CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report Role/fink-report RoleBinding/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
+assert "hdfs-bound resources" "Job/hdfs-init CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
+assert "report RBAC namespaces" "kafka" "$(report_rbac_namespaces "$out")"
+assert "report namenode from online_data_prefix" "simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020" "$(report_namenode "$out")"
 
 echo "== fink-broker: external HDFS"
-out=$(chart --set hdfs.external=true)
-assert "hdfs-bound resources" "" "$(hdfs_bound "$out")"
+out=$(chart --set hdfs.external=true --set online_data_prefix=hdfs://nn.example:8020///user/185)
+assert "hdfs-bound resources" "CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
+assert "report namenode from online_data_prefix" "nn.example:8020" "$(report_namenode "$out")"
+
+echo "== fink-broker: HA namenodes"
+out=$(chart --set 'report.namenode=nn0:8020\,nn1:8020')
+assert "report namenode" "nn0:8020,nn1:8020" "$(report_namenode "$out")"
 assert "spark applications" "fink-broker-stream2raw fink-broker-raw2science fink-broker-distribution" \
     "$(echo "$out" | names SparkApplication)"
 assert "SPARK_USER kept" "185 185 185 185 185 185" \
