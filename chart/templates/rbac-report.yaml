@@ -1,0 +1,38 @@
+{{- if and .Values.report.enabled (eq .Values.storage "hdfs") }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.report.serviceAccount.name }}
+  labels:
+    {{- include "fink.labels" . | nindent 4 }}
+---
+# The report reads HDFS directly (NameNode RPC and DataNodes), but still runs
+# the Kafka CLI tools inside a broker pod: it needs to locate the pod, then to
+# open an exec session there, and nothing else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fink-report
+  namespace: kafka
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fink-report
+  namespace: kafka
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fink-report
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.report.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
