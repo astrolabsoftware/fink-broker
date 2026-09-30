@@ -65,6 +65,19 @@ spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 {{- end }}
 {{- end }}
 
+{{/*
+Spark configuration: the S3 connector settings, or the HDFS client
+replication. HDFS clients pick the replication of the files they create
+from their own configuration (default 3), not from the cluster, so
+hdfs.replication aligns them with the dfs.replication of the cluster.
+*/}}
+{{- define "fink.sparkconf" -}}
+{{ include "fink.s3config" . }}
+{{- if and (eq .Values.storage "hdfs") .Values.hdfs.replication }}
+spark.hadoop.dfs.replication: "{{ .Values.hdfs.replication }}"
+{{- end }}
+{{- end }}
+
 {{/* Generate hdfs configuration */}}
 {{- define "fink.hdfsconfig" -}}
 {{ if eq .Values.storage "hdfs" -}}

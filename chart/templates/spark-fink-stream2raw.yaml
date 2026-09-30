@@ -12,11 +12,15 @@ arguments: {{- include "fink.commonargs" . | nindent 2 }}
   - '{{ .Values.stream2raw.kafka.topic }}'
   {{- include "fink.nightargs" . | nindent 2 }}
 sparkVersion: "3.5.9"
-sparkConf: {{- include "fink.s3config" . | nindent 2 }}
+sparkConf: {{- include "fink.sparkconf" . | nindent 2 }}
 driver:
   cores: {{ tpl .Values.stream2raw.cores . }}
   coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
   env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  {{- with .Values.hostAliases }}
+  hostAliases:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   memory: "{{ tpl .Values.stream2raw.memory . }}"
   labels:
     version: 3.5.9
@@ -26,6 +30,10 @@ executor:
   cores: {{ tpl .Values.stream2raw.cores . }}
   coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
   env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  {{- with .Values.hostAliases }}
+  hostAliases:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   memory: "{{ tpl .Values.stream2raw.memory . }}"
   instances: {{ tpl .Values.stream2raw.instances . }}
   javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
