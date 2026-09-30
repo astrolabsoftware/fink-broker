@@ -107,6 +107,33 @@ git checkout <tag>          # keep the workspace clean: ciux derives the
 ./e2e/argocd.sh -i cc -s -r <tag>
 ```
 
+### Site-local values
+
+Some values are specific to the site and must stay out of git, the
+repositories being public: the production HDFS hosts are not in the cluster
+DNS, so `ccmaster1` (the NameNode in `hdfs.onlineDataPrefix` and
+`hdfs.namenodes`) is resolved through `/etc/hosts` entries of the Spark and
+report pods. Keep them in a file on the bastion, outside the repositories:
+
+```yaml
+# ~/fink/values-cc.local.yaml -- not in git
+hdfs:
+  hostAliases:
+    - ip: "<ccmaster1 IP>"
+      hostnames: ["ccmaster1"]
+```
+
+and pass it on every deployment with `-l`:
+
+```bash
+./e2e/argocd.sh -i cc -s -r <tag> -l ~/fink/values-cc.local.yaml
+```
+
+`argocd.sh` hands it to Argo CD as a literal values block: it lives in the
+`fink` Application, in the cluster, and a deployment without `-l` drops it.
+The DataNodes need no entry: the HDFS client reaches them by the IP the
+NameNode reports.
+
 Useful variants:
 
 ```bash

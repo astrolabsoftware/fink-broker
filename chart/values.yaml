@@ -180,6 +180,16 @@ hdfs:
   #          the user directory is provisioned by its admins.
   # The report reads HDFS the same way in both cases (report.namenode).
   external: false
+  # Replication of the files the Spark jobs write. HDFS clients do not inherit
+  # it from the cluster: set it to the dfs.replication of the cluster.
+  # Empty -> the Hadoop client default (3).
+  replication: ""
+
+# Extra /etc/hosts entries of the Spark and report pods, as a list of
+# Kubernetes HostAlias ({ip, hostnames}). Used to resolve the hosts of an HDFS
+# outside the cluster whose names are not in the cluster DNS. Site-specific,
+# keep the addresses out of git (see doc/deploy-cc.md).
+hostAliases: []
 
 serviceAccount:
   # Specifies whether a service account should be created

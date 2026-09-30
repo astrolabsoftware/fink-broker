@@ -85,6 +85,15 @@ assert "external prefix" "hdfs://ccmaster1:8020///user/185" \
     "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
 assert "report reads the external namenode" "ccmaster1:8020" \
     "$(echo "$out" | broker_values | yq -r '.report.namenode')"
+assert "replication aligned with the production cluster" "2" \
+    "$(echo "$out" | broker_values | yq -r '.hdfs.replication')"
+assert "no host alias in git" "null" "$(echo "$out" | broker_values | yq -r '.hostAliases')"
+
+echo "== fink-cd: values-cc.yaml with site-local host aliases"
+out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" \
+    --set 'hdfs.hostAliases[0].ip=192.0.2.10' --set 'hdfs.hostAliases[0].hostnames[0]=ccmaster1')
+assert "host aliases forwarded" "192.0.2.10 ccmaster1" \
+    "$(echo "$out" | broker_values | yq -r '.hostAliases[] | .ip, .hostnames[]')"
 
 echo "== fink-cd: values-cc.yaml with hdfs.external=false (back to in-cluster HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" --set hdfs.external=false \
@@ -135,6 +144,15 @@ echo "== fink-broker: external HDFS"
 out=$(chart --set hdfs.external=true --set online_data_prefix=hdfs://nn.example:8020///user/185)
 assert "hdfs-bound resources" "CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
 assert "report namenode from online_data_prefix" "nn.example:8020" "$(report_namenode "$out")"
+
+echo "== fink-broker: HDFS host aliases and replication"
+out=$(chart --set 'hostAliases[0].ip=192.0.2.10' --set 'hostAliases[0].hostnames[0]=nn.example' \
+    --set hdfs.replication=2)
+assert "host aliases on driver, executor and report pods" "192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10" \
+    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | (.spec.driver.hostAliases[], .spec.executor.hostAliases[]) | .ip'; \
+       echo "$out" | yq -r 'select(.kind == "CronJob") | .spec.jobTemplate.spec.template.spec.hostAliases[] | .ip')"
+assert "client replication" "2 2 2" \
+    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | .spec.sparkConf["spark.hadoop.dfs.replication"]')"
 
 echo "== fink-broker: HA namenodes"
 out=$(chart --set 'report.namenode=nn0:8020\,nn1:8020')
