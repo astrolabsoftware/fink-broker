@@ -140,6 +140,9 @@ raw2science:
     cores: "{{.Values.cores}}"
     coreRequest: "{{.Values.coreRequest}}"
     memory: "{{.Values.memory}}"
+    # Off-heap memory of the executor pod (Python workers of the science
+    # modules, one per core). Empty -> Spark default, 40% of memory here.
+    memoryOverhead: ""
     instances: "{{.Values.instances}}"
     nodeSelector: {}
     tolerations: []

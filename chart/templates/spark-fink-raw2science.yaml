@@ -34,6 +34,9 @@ executor:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   memory: "{{ tpl .Values.raw2science.executor.memory . }}"
+  {{- with .Values.raw2science.executor.memoryOverhead }}
+  memoryOverhead: "{{ . }}"
+  {{- end }}
   javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
   instances: {{ tpl .Values.raw2science.executor.instances . }}
   {{- with .Values.raw2science.executor.nodeSelector }}
