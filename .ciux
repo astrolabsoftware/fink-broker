@@ -23,6 +23,9 @@ dependencies:
       dev: "true"
       release: "true"
   - url: https://github.com/astrolabsoftware/fink-cd
+    # Cloned for its git-ignored site-local values (apps/values-<infra>.local.yaml),
+    # read by e2e/argocd.sh
+    clone: true
     labels:
       dev: "true"
       itest: "true"

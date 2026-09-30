@@ -44,8 +44,9 @@ Available options:
                 production. The ref must exist in the three repositories.
   -l <file>     Site-local values for the fink app-of-apps, kept out of git
                 (e.g. hdfs.hostAliases with the IP of an HDFS host the cluster
-                DNS does not resolve). Stored in the Application only, so pass
-                it again on every deployment. See doc/deploy-cc.md.
+                DNS does not resolve). Default: values-<infra>.local.yaml in
+                the fink-cd clone (apps/, git-ignored) when it exists. Stored
+                in the Application only. See doc/deploy-cc.md.
   -m            Enable monitoring.
   -S <storage>  Storage to use (hdfs or s3). Default: hdfs
 
@@ -151,7 +152,14 @@ values_args=(--values "values-${infra}.yaml")
 if [ "$scheduled" == "true" ]; then
     values_args+=(--values "values-scheduled.yaml")
 fi
+# Site-local values sit next to values-<infra>.yaml in the fink-cd clone,
+# git-ignored (see apps/values-<infra>.local.yaml.example there).
+if [ -z "$local_values" ] && [ -n "${FINK_CD_DIR:-}" ] && \
+        [ -f "$FINK_CD_DIR/apps/values-${infra}.local.yaml" ]; then
+    local_values="$FINK_CD_DIR/apps/values-${infra}.local.yaml"
+fi
 if [ -n "$local_values" ]; then
+    echo "Using site-local values: $local_values"
     if [ ! -f "$local_values" ]; then
         echo "Error: local values file '$local_values' not found"
         exit 1
