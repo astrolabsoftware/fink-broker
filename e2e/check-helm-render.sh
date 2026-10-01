@@ -89,6 +89,10 @@ assert "replication aligned with the production cluster" "2" \
     "$(echo "$out" | broker_values | yq -r '.hdfs.replication')"
 assert "no host alias in git" "null" "$(echo "$out" | broker_values | yq -r '.hostAliases')"
 
+echo "== fink-cd: values-cc.yaml with a trigger interval"
+out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" --set finkBroker.tinterval=60)
+assert "trigger interval forwarded" "60" "$(echo "$out" | broker_values | yq -r '.fink_trigger_update')"
+
 echo "== fink-cd: values-cc.yaml with site-local host aliases"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" \
     --set 'hdfs.hostAliases[0].ip=192.0.2.10' --set 'hdfs.hostAliases[0].hostnames[0]=ccmaster1')
