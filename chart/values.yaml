@@ -41,10 +41,12 @@ scheduled:
   # default and needs the same value).
   exitAt: "23:00"
 
-# Stop each streaming run after this many seconds. Only used in
-# run.mode=oneoff, where a backfill must terminate once the night is replayed;
-# a scheduled run uses the absolute scheduled.exitAt instead. Sized to a night;
-# matches the job default (64800 = 18h).
+# run.mode=oneoff only: a one-off run stops by itself once its night is
+# processed (-stop_when_done: stream2raw read the topic to its end, then
+# raw2science and distribution consumed everything upstream). exitAfter is a
+# safety ceiling, in seconds: reaching it after reading alerts fails the job,
+# reaching it with nothing read ends an empty night. A scheduled run uses the
+# absolute scheduled.exitAt instead. 64800 = 18h.
 exitAfter: 64800
 
 image:

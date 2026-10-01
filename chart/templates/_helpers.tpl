@@ -170,6 +170,7 @@ spec:
 - '-exit_at'
 - '{{ .Values.scheduled.exitAt }}'
 {{- else }}
+- '-stop_when_done'
 - '-exit_after'
 - '{{ .Values.exitAfter }}'
 {{- end }}
