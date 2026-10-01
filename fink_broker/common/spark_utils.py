@@ -18,7 +18,7 @@ import logging
 import re
 import socket
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
@@ -323,7 +323,11 @@ class NoDataAvailableError(Exception):
 
 
 def connect_to_raw_database(
-    basepath: str, path: str, latestfirst: bool, deadline: Optional[datetime] = None
+    basepath: str,
+    path: str,
+    latestfirst: bool,
+    deadline: Optional[datetime] = None,
+    give_up: Optional[Callable[[], bool]] = None,
 ) -> DataFrame:
     """Initialise SparkSession, and connect to the raw database (Parquet)
 
@@ -345,6 +349,9 @@ def connect_to_raw_database(
     deadline: datetime, optional
         Instant (timezone-aware, UTC) past which waiting is pointless, usually
         the job's own exit deadline. None waits indefinitely.
+    give_up: callable, optional
+        Tells that the data will never come, typically because the upstream
+        job finished a one-off run without writing anything.
 
     Returns
     -------
@@ -354,7 +361,8 @@ def connect_to_raw_database(
     Raises
     ------
     NoDataAvailableError
-        If no data is readable at `basepath` when `deadline` is reached.
+        If no data is readable at `basepath` when `deadline` is reached, or
+        once `give_up` says it never will be.
 
     Examples
     --------
@@ -371,6 +379,14 @@ def connect_to_raw_database(
         if deadline is not None and seconds_until(deadline) <= 0:
             raise NoDataAvailableError(
                 "No data available at {} by {}".format(basepath, deadline)
+            )
+        if give_up is not None and give_up():
+            # Checked again: the upstream job may have written its last files
+            # right before finishing
+            if path_exist(basepath):
+                break
+            raise NoDataAvailableError(
+                "No data at {}: the upstream job finished without any".format(basepath)
             )
         _LOG.info("Waiting for stream2raw to upload data to %s", basepath)
         # Sleep for longer and longer, but never past the deadline
@@ -756,6 +772,200 @@ def path_exist(path: str) -> bool:
         return True
     else:
         return False
+
+
+def _hadoop_fs(path: str):
+    """Hadoop FileSystem serving `path`, and `path` as a Hadoop Path"""
+    spark = SparkSession.builder.getOrCreate()
+    jvm = spark._jvm
+    conf = spark._jsc.hadoopConfiguration()
+    fs = jvm.org.apache.hadoop.fs.FileSystem.get(jvm.java.net.URI(path), conf)
+    return fs, jvm.org.apache.hadoop.fs.Path(path)
+
+
+def file_exists(path: str) -> bool:
+    """Check if a file exists on Spark shared filesystem (HDFS or S3)
+
+    Unlike `path_exist`, which looks for Parquet files under a directory.
+
+    Parameters
+    ----------
+    path : str
+        Path of the file to check
+
+    Returns
+    -------
+    bool
+        True if the file exists
+    """
+    fs, hpath = _hadoop_fs(path)
+    return bool(fs.exists(hpath))
+
+
+def done_marker(checkpoint: str) -> str:
+    """Path of the marker a one-off job leaves once its night is processed
+
+    It sits in the checkpoint directory of the job, out of the datasets, so
+    no reader ever sees it, and goes away with the checkpoints.
+
+    Examples
+    --------
+    >>> done_marker("hdfs://nn:8020/user/185/raw_checkpoint/20260929")
+    'hdfs://nn:8020/user/185/raw_checkpoint/20260929/_DONE'
+    """
+    return os.path.join(checkpoint, "_DONE")
+
+
+def write_done_marker(checkpoint: str) -> None:
+    """Leave the marker telling the downstream job this night is processed"""
+    fs, hpath = _hadoop_fs(done_marker(checkpoint))
+    fs.create(hpath, True).close()
+
+
+class CompletionTimeoutError(RuntimeError):
+    """A one-off job reached its time ceiling before processing its night"""
+
+
+def _offsets(value) -> Optional[dict]:
+    """Offsets of a streaming source progress, which reports JSON strings"""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = json.loads(value)
+    return value or None
+
+
+def caught_up(progress: Optional[dict]) -> bool:
+    """Tell whether a streaming query has nothing left to read
+
+    Parameters
+    ----------
+    progress: dict, optional
+        Last progress of the query (`StreamingQuery.lastProgress`)
+
+    Returns
+    -------
+    bool
+        True if the last batch read nothing and every Kafka source reached the
+        latest offset of its topics. A Kafka source without offsets has no
+        topic (yet) to read: it is not caught up, the night may still come.
+        Other sources (Parquet files) report no latest offset: an empty batch
+        is all there is to check.
+    """
+    if not progress or progress.get("numInputRows", 0) != 0:
+        return False
+
+    for source in progress.get("sources", []):
+        if not source.get("description", "").startswith("Kafka"):
+            continue
+        latest = _offsets(source.get("latestOffset"))
+        if latest is None or _offsets(source.get("endOffset")) != latest:
+            return False
+    return True
+
+
+def completion_idle_seconds(tinterval: int) -> int:
+    """How long the queries of a one-off run must stay idle to be done
+
+    At least two triggers, so the sources have been polled again after the
+    upstream job finished, and never less than a minute.
+
+    Examples
+    --------
+    >>> completion_idle_seconds(2)
+    60
+    >>> completion_idle_seconds(300)
+    600
+    """
+    return max(2 * tinterval, 60)
+
+
+def run_until_done(
+    queries: Sequence,
+    upstream_done: Callable[[], bool],
+    idle_seconds: float,
+    ceiling_seconds: Optional[float],
+    on_done: Callable[[], None],
+    poll_seconds: float = 10,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Run streaming queries until the night they process is complete
+
+    A one-off run (pinned night) processes a closed dataset: the queries are
+    done once the upstream job is done and none of them has read anything for
+    `idle_seconds`. They are then stopped and `on_done` leaves the marker for
+    the downstream job.
+
+    Parameters
+    ----------
+    queries: sequence of StreamingQuery
+        Queries of the job, all of which must be done
+    upstream_done: callable
+        Tells whether the job feeding the input has finished
+    idle_seconds: float
+        How long every query must stay caught up, so that its source has
+        been polled again after the upstream job finished
+    ceiling_seconds: float, optional
+        Time after which the run is given up. Reached with nothing ever read,
+        the night is empty and done; otherwise it is an error. None: no limit.
+    on_done: callable
+        Called once the night is processed, typically to leave the marker
+    poll_seconds: float
+        Interval between two checks
+    clock, sleep: callables
+        Time source and sleep function, replaced in tests
+
+    Raises
+    ------
+    CompletionTimeoutError
+        If the ceiling is reached while the night was not processed
+    Exception
+        The error of a query that terminated
+    """
+
+    def stop_all():
+        for query in queries:
+            query.stop()
+
+    start = clock()
+    idle_since = None
+    rows_seen = False
+    while True:
+        for query in queries:
+            error = query.exception()
+            if error is not None:
+                stop_all()
+                raise error
+
+        # Read every progress at each poll, even past the first busy query
+        progresses = [query.lastProgress for query in queries]
+        rows_seen = rows_seen or any(
+            p and p.get("numInputRows", 0) > 0 for p in progresses
+        )
+
+        if upstream_done() and all(caught_up(p) for p in progresses):
+            idle_since = clock() if idle_since is None else idle_since
+            if clock() - idle_since >= idle_seconds:
+                stop_all()
+                on_done()
+                return
+        else:
+            idle_since = None
+
+        if ceiling_seconds is not None and clock() - start >= ceiling_seconds:
+            stop_all()
+            if rows_seen:
+                raise CompletionTimeoutError(
+                    "Night not processed after {} seconds".format(ceiling_seconds)
+                )
+            _LOG.warning(
+                "Nothing read in %s seconds: empty night, exiting", ceiling_seconds
+            )
+            on_done()
+            return
+
+        sleep(poll_seconds)
 
 
 def load_parquet_files(path: str) -> DataFrame:

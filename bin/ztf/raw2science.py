@@ -37,7 +37,12 @@ from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import (
     NoDataAvailableError,
+    completion_idle_seconds,
     connect_to_raw_database,
+    done_marker,
+    file_exists,
+    run_until_done,
+    write_done_marker,
 )
 from fink_broker.common.spark_utils import wait_for_filesystem
 from fink_broker.common.partitioning import convert_to_millitime
@@ -84,6 +89,18 @@ def main():
     checkpointpath_sci_tmp = os.path.join(
         args.online_data_prefix, "science_checkpoint/{}".format(args.night)
     )
+    checkpointpath_raw = os.path.join(
+        args.online_data_prefix, "raw_checkpoint/{}".format(args.night)
+    )
+
+    # One-off run: stream2raw leaves a marker once the night is collected
+    def raw_collected():
+        return file_exists(done_marker(checkpointpath_raw))
+
+    # A one-off run restarted after it completed has nothing left to do
+    if args.stop_when_done and file_exists(done_marker(checkpointpath_sci_tmp)):
+        logger.info("Night %s already processed, exiting normally...", args.night)
+        return
 
     # assume YYYYMMHH
     try:
@@ -92,6 +109,7 @@ def main():
             os.path.join(rawdatapath, "{}".format(args.night)),
             latestfirst=False,
             deadline=exit_deadline,
+            give_up=raw_collected if args.stop_when_done else None,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -99,6 +117,8 @@ def main():
         logger.info(
             "No alert collected for night %s, nothing to do (%s)", args.night, e
         )
+        if args.stop_when_done:
+            write_done_marker(checkpointpath_sci_tmp)
         return
 
     # Add ingestion timestamp
@@ -153,7 +173,16 @@ def main():
         .start()
     )
 
-    if exit_deadline is not None:
+    if args.stop_when_done:
+        run_until_done(
+            [countquery_science],
+            upstream_done=raw_collected,
+            idle_seconds=completion_idle_seconds(args.tinterval),
+            ceiling_seconds=args.exit_after,
+            on_done=lambda: write_done_marker(checkpointpath_sci_tmp),
+        )
+        logger.info("Night %s processed", args.night)
+    elif exit_deadline is not None:
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)

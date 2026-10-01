@@ -44,6 +44,13 @@ from fink_broker.common.spark_utils import from_avro
 from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka
 from fink_broker.common.spark_utils import get_schemas_from_avro
 from fink_broker.common.spark_utils import wait_for_filesystem, wait_for_kafka
+from fink_broker.common.spark_utils import (
+    completion_idle_seconds,
+    done_marker,
+    file_exists,
+    run_until_done,
+    write_done_marker,
+)
 from fink_broker.common.logging_utils import init_logger, inspect_application
 from fink_broker.common.partitioning import convert_to_datetime, convert_to_millitime
 
@@ -98,6 +105,11 @@ def main():
     checkpointpath_raw = os.path.join(
         args.online_data_prefix, f"raw_checkpoint/{args.night}"
     )
+
+    # A one-off run restarted after it completed has nothing left to do
+    if args.stop_when_done and file_exists(done_marker(checkpointpath_raw)):
+        logger.info("Night %s already collected, exiting normally...", args.night)
+        return
 
     # Create a streaming dataframe pointing to a Kafka stream
     # debug statements
@@ -199,7 +211,17 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     logger.info("Stream2raw service is running...")
-    if exit_deadline is not None:
+    if args.stop_when_done:
+        # The topic of a past night is closed: done once it is read to its end
+        run_until_done(
+            [countquery],
+            upstream_done=lambda: True,
+            idle_seconds=completion_idle_seconds(args.tinterval),
+            ceiling_seconds=args.exit_after,
+            on_done=lambda: write_done_marker(checkpointpath_raw),
+        )
+        logger.info("Night %s collected, exiting normally...", args.night)
+    elif exit_deadline is not None:
         logger.debug("Polling until the exit_at deadline %s", exit_deadline)
         time.sleep(seconds_until(exit_deadline))
         countquery.stop()

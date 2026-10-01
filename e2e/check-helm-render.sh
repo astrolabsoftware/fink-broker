@@ -158,6 +158,17 @@ assert "host aliases on driver, executor and report pods" "192.0.2.10 192.0.2.10
 assert "client replication" "2 2 2" \
     "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | .spec.sparkConf["spark.hadoop.dfs.replication"]')"
 
+# Arguments of the Spark jobs that decide when a run stops, one line per job.
+stop_args() {
+    echo "$1" | yq -r '(select(.kind == "SparkApplication") | .spec.arguments), (select(.kind == "ScheduledSparkApplication") | .spec.template.arguments) | map(select(. == "-stop_when_done" or . == "-exit_after" or . == "-exit_at")) | join(",")'
+}
+
+echo "== fink-broker: how a run stops"
+assert "one-off: when the night is processed, exitAfter as a ceiling" \
+    "-stop_when_done,-exit_after -stop_when_done,-exit_after -stop_when_done,-exit_after" "$(stop_args "$(chart)")"
+assert "scheduled: at the exit_at deadline" "-exit_at -exit_at -exit_at" \
+    "$(stop_args "$(chart --set run.mode=scheduled)")"
+
 echo "== fink-broker: HA namenodes"
 out=$(chart --set 'report.namenode=nn0:8020\,nn1:8020')
 assert "report namenode" "nn0:8020,nn1:8020" "$(report_namenode "$out")"
