@@ -97,7 +97,7 @@ echo "== fink-cd: values-cc.yaml with site-local host aliases"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" \
     --set 'hdfs.hostAliases[0].ip=192.0.2.10' --set 'hdfs.hostAliases[0].hostnames[0]=ccmaster1')
 assert "host aliases forwarded" "192.0.2.10 ccmaster1" \
-    "$(echo "$out" | broker_values | yq -r '.hostAliases[] | .ip, .hostnames[]')"
+    "$(echo "$out" | broker_values | yq -r '.hostAliases[] | (.ip, .hostnames[])')"
 
 echo "== fink-cd: values-cc.yaml with hdfs.external=false (back to in-cluster HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" --set hdfs.external=false \
@@ -160,7 +160,7 @@ assert "client replication" "2 2 2" \
 
 # Arguments of the Spark jobs that decide when a run stops, one line per job.
 stop_args() {
-    echo "$1" | yq -r '(select(.kind == "SparkApplication") | .spec.arguments), (select(.kind == "ScheduledSparkApplication") | .spec.template.arguments) | map(select(. == "-stop_when_done" or . == "-exit_after" or . == "-exit_at")) | join(",")'
+    echo "$1" | yq -r '((select(.kind == "SparkApplication") | .spec.arguments), (select(.kind == "ScheduledSparkApplication") | .spec.template.arguments)) | map(select(. == "-stop_when_done" or . == "-exit_after" or . == "-exit_at")) | join(",")'
 }
 
 echo "== fink-broker: how a run stops"
