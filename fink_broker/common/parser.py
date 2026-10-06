@@ -13,7 +13,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.common.tester import regular_unit_tests
+from fink_broker.common.night_utils import get_night, resolve_night_placeholders
 import argparse
+
+
+def night_label(value: str) -> str:
+    """Validate a -night value: an eight-digit YYYYMMDD label.
+
+    The night is sliced into Kafka topics, storage paths and date partitions
+    (``value[:4]``, ``[4:6]``, ``[6:8]``), so anything shorter or non-numeric
+    silently produces a misdirected run rather than an error. An empty value
+    is refused for the same reason it cannot be let through: it would read as
+    "deduce", which is what -night_offset_hours is for.
+
+    Parameters
+    ----------
+    value : str
+        Raw command-line value.
+
+    Returns
+    -------
+    str
+        The value itself.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        If the value is not eight digits.
+
+    Examples
+    --------
+    >>> night_label("20240314")
+    '20240314'
+
+    An empty value is not a way to ask for the night to be deduced:
+    >>> night_label("")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
+
+    Neither is a truncated or non-numeric one:
+    >>> night_label("20241")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
+    >>> night_label("abcdefgh")
+    Traceback (most recent call last):
+    ...
+    argparse.ArgumentTypeError: -night must be an eight-digit YYYYMMDD value
+    """
+    if len(value) != 8 or not value.isdigit():
+        raise argparse.ArgumentTypeError("-night must be an eight-digit YYYYMMDD value")
+    return value
 
 
 def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
@@ -31,11 +82,14 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
 
     Examples
     --------
-    >>> import argparse
+    >>> import argparse, sys
     >>> parser = argparse.ArgumentParser(description=__doc__)
+    >>> sys.argv = ["job.py", "-night", "20240314"]
     >>> args = getargs(parser)
     >>> print(type(args))
     <class 'argparse.Namespace'>
+    >>> args.night
+    '20240314'
     """
     parser.add_argument(
         "-servers",
@@ -144,7 +198,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [FINK_TRIGGER_UPDATE]
         """,
     )
-    parser.add_argument(
+    # A duration and an absolute instant are two ways of answering the same
+    # question, and combining them only hides which one actually stopped the
+    # service. Let argparse reject the ambiguity outright.
+    exit_policy = parser.add_mutually_exclusive_group()
+    exit_policy.add_argument(
         "-exit_after",
         type=int,
         default=64800,
@@ -152,6 +210,30 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         Stop the service after `exit_after` seconds.
         This primarily for use on CI, to stop service after some time.
         Use that with `fink start service --exit_after <time>`. Default is 24h.
+        Mutually exclusive with `exit_at`.
+        """,
+    )
+    exit_policy.add_argument(
+        "-exit_at",
+        type=str,
+        default="",
+        help="""
+        Stop the service at an absolute instant, given either as HH:MM (UTC,
+        on the day the service starts) or as an ISO 8601 instant such as
+        2024-01-02T20:00:00+02:00 (an offset is honoured; without one the
+        value is read as UTC). Use the ISO form when the stop time is computed
+        by the caller, expressed in local time, or when the run crosses the UTC
+        midnight and a time of day cannot say which day is meant. Unlike
+        `exit_after`, the deadline survives a restart on the starting day: the
+        attempt resolves the same instant instead of granting itself a fresh
+        window, and a service starting past it exits in error. An attempt
+        landing on the next day resolves the HH:MM form against that day, which
+        is tracked in #1246. Mutually exclusive with `exit_after`.
+
+        Honoured by the ZTF streaming jobs only, which is all the chart
+        deploys. The other entrypoints branch on `exit_after`, so passing
+        `exit_at` to them stops nothing and they run the `exit_after` default
+        instead; they need porting when another survey gets a scheduled mode.
         """,
     )
     parser.add_argument(
@@ -249,13 +331,32 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [DISTRIBUTION_OFFSET_FILE]
         """,
     )
-    parser.add_argument(
+    # The night is either pinned or deduced, and every job derives its paths
+    # from it: an omitted night used to default to an empty string, which was
+    # then sliced into broken paths ({prefix}/raw/, year=""). Make the source
+    # of the night explicit and let argparse reject a missing or ambiguous one.
+    night_source = parser.add_mutually_exclusive_group(required=True)
+    night_source.add_argument(
         "-night",
-        type=str,
-        default="",
+        type=night_label,
+        default=None,
         help="""
-        YYYYMMDD night
+        YYYYMMDD night, pinned explicitly (backfill, rerun of a failed night,
+        or CI). Mutually exclusive with -night_offset_hours.
         [NIGHT]
+        """,
+    )
+    night_source.add_argument(
+        "-night_offset_hours",
+        type=int,
+        default=None,
+        help="""
+        Deduce the night from the current UTC time: hours subtracted from UTC
+        now before extracting the date. Encodes both the topic rollover
+        (sub-day shift) and the night selection: 0 -> current night (live,
+        midnight rollover), 12 -> current night with a noon-UTC rollover, 24 ->
+        previous complete night (n-1). Mutually exclusive with -night.
+        [NIGHT_OFFSET_HOURS]
         """,
     )
     parser.add_argument(
@@ -347,6 +448,19 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     args = parser.parse_args(None)
+
+    # Resolve the observing night once, centrally: either pinned by -night or
+    # deduced from the current UTC time following the -night_offset_hours
+    # rollover policy (argparse guarantees exactly one of them). The Kafka
+    # topic and output prefix may carry a '{night}' placeholder resolved here,
+    # so the date is computed at runtime instead of being frozen at
+    # Helm-templating time.
+    args.night = get_night(args.night or "", args.night_offset_hours or 0)
+    args.topic = resolve_night_placeholders(args.topic, args.night)
+    args.online_data_prefix = resolve_night_placeholders(
+        args.online_data_prefix, args.night
+    )
+
     return args
 
 
