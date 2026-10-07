@@ -63,6 +63,11 @@ stackable="$operators hdfs"
 common="fink-broker spark-operator strimzi"
 incluster_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
 
+# The namespaces and secrets the app-of-apps creates itself, as kind/name.
+prereqs() {
+    yq -r 'select(.kind == "Namespace" or .kind == "Secret") | .kind + "/" + .metadata.name'
+}
+
 # The valuesObject handed to the fink-broker chart, as YAML.
 broker_values() {
     yq -r 'select(.kind == "Application" and .metadata.name == "fink-broker") | .spec.source.helm.valuesObject'
@@ -71,6 +76,9 @@ broker_values() {
 echo "== fink-cd: CI defaults (in-cluster HDFS, kafka, simulator)"
 out=$(apps)
 assert "applications" "$stackable $common kafka fink-alert-simulator" "$(echo "$out" | names Application)"
+assert "Stackable namespace and chart repository" \
+    "Namespace/spark Namespace/spark-operator Namespace/stackable-operators Secret/stackable-oci-repo" \
+    "$(echo "$out" | prereqs)"
 assert "hdfs.external forwarded" "false" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "in-cluster prefix" "$incluster_prefix" "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
 assert "report reads both HA namenodes" \
@@ -80,6 +88,8 @@ assert "report reads both HA namenodes" \
 echo "== fink-cd: values-cc.yaml (external HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml")
 assert "applications" "$common kafka" "$(echo "$out" | names Application)"
+assert "no Stackable namespace nor chart repository" "Namespace/spark Namespace/spark-operator" \
+    "$(echo "$out" | prereqs)"
 assert "hdfs.external forwarded" "true" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "external prefix" "hdfs://ccmaster1:8020///user/185" \
     "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
