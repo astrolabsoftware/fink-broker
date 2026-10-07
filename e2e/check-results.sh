@@ -117,6 +117,32 @@ assert_balance () {
   return 0
 }
 
+# Print the Kafka side of a missing-topics failure (#1255): finkctl lists the
+# topics through the external listener with the fink user, so "no fink topics"
+# means either nothing was written, or finkctl could not see it. The broker's
+# own view, on the unauthenticated internal listener, tells the two apart.
+dump_kafka_state () {
+  local broker
+  echo "--- Topics seen from inside the Kafka broker ---"
+  broker=$(kubectl get pods -n kafka -l strimzi.io/cluster=kafka-cluster,strimzi.io/broker-role=true \
+    -o name 2>/dev/null | head -n 1)
+  if [ -n "$broker" ]; then
+    kubectl exec -n kafka "$broker" -- bin/kafka-topics.sh \
+      --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list || true
+  else
+    echo "WARNING: no Kafka broker pod found" 1>&2
+  fi
+  echo "--- KafkaTopic and KafkaUser resources ---"
+  kubectl get kafkatopic,kafkauser -n kafka || true
+  echo "--- Failed runs of the report CronJob ---"
+  for job in $(kubectl get jobs -n spark -o name 2>/dev/null | grep fink-broker-report); do
+    if [ "$(kubectl get -n spark "$job" -o jsonpath="{.status.conditions[?(@.type=='Failed')].status}")" = "True" ]; then
+      echo "--- logs of $job ---"
+      kubectl logs -n spark "$job" --tail 50 || true
+    fi
+  done
+}
+
 # --report: same assertion, but on what the report CronJob itself printed.
 #
 # --advanced runs finkctl from the runner, with the runner's kubeconfig. It
@@ -247,6 +273,7 @@ do
           echo "--- Logs for Pod: $pod ---"
           kubectl logs "$pod" -n spark --tail -1
       done
+      dump_kafka_state
       err_msg="ERROR: fink-broker did not produce expected results after ~20 minutes"
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
       # sleep 7200
