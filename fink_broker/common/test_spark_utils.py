@@ -17,7 +17,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from fink_broker.common import spark_utils
-from fink_broker.common.spark_utils import parse_kafka_servers, probe_path
+from fink_broker.common.spark_utils import (
+    CompletionTimeoutError,
+    caught_up,
+    parse_kafka_servers,
+    probe_path,
+    run_until_done,
+)
 
 
 def test_single_server():
@@ -211,3 +217,159 @@ def test_kafka_wait_gives_up_at_the_deadline(monkeypatch):
     assert elapsed < 10
     # ... and the retry sleep was clamped to those 2 s instead of its own 5 s.
     assert max(slept) <= 2.5
+
+
+# --- Stop a one-off run once the night is processed -------------------------
+
+KAFKA = "KafkaV2[SubscribePattern[ztf_20260929.*]]"
+FILES = "FileStreamSource[hdfs://nn/user/185/raw/20260929]"
+
+
+def progress(rows=0, **sources):
+    """A StreamingQueryProgress as returned by query.lastProgress."""
+    return {
+        "numInputRows": rows,
+        "sources": [
+            {"description": d, "endOffset": end, "latestOffset": latest}
+            for d, (end, latest) in sources.items()
+        ],
+    }
+
+
+def test_caught_up_without_progress():
+    """A query that has not reported anything yet is not done."""
+    assert not caught_up(None)
+
+
+def test_caught_up_requires_an_empty_batch():
+    """A batch that still read rows means there may be more to come."""
+    assert not caught_up(progress(rows=12))
+
+
+def test_caught_up_kafka_at_its_latest_offset():
+    """Kafka offsets are reported as JSON strings, at the latest offset: done."""
+    offsets = '{"ztf_20260929_programid1":{"0":11144,"1":11144}}'
+    assert caught_up(progress(**{KAFKA: (offsets, offsets)}))
+
+
+def test_caught_up_kafka_behind_its_latest_offset():
+    """An empty batch while the topic still holds unread alerts is not the end."""
+    end = '{"ztf_20260929_programid1":{"0":5000,"1":11144}}'
+    latest = '{"ztf_20260929_programid1":{"0":11144,"1":11144}}'
+    assert not caught_up(progress(**{KAFKA: (end, latest)}))
+
+
+def test_caught_up_kafka_without_topic():
+    """No offset at all: the topic does not exist (yet), the night may come."""
+    assert not caught_up(progress(**{KAFKA: (None, None)}))
+    assert not caught_up(progress(**{KAFKA: ("{}", "{}")}))
+
+
+def test_caught_up_file_source():
+    """A file source reports no latest offset: an empty batch is enough."""
+    assert caught_up(progress(**{FILES: ('{"logOffset":7}', None)}))
+
+
+class FakeQuery:
+    """A streaming query whose progress follows a script, one entry per poll."""
+
+    def __init__(self, script, error=None):
+        self.script = list(script)
+        self.error = error
+        self.stopped = False
+
+    @property
+    def lastProgress(self):  # noqa: N802 -- name of the Spark API it fakes
+        return self.script.pop(0) if len(self.script) > 1 else self.script[0]
+
+    def exception(self):
+        return self.error
+
+    def stop(self):
+        self.stopped = True
+
+
+class FakeClock:
+    """Time only moves when the code under test sleeps."""
+
+    def __init__(self):
+        self.now = 0.0
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+def run(queries, upstream_done=lambda: True, ceiling=3600):
+    clock = FakeClock()
+    done = []
+    run_until_done(
+        queries,
+        upstream_done=upstream_done,
+        idle_seconds=60,
+        ceiling_seconds=ceiling,
+        on_done=lambda: done.append(clock()),
+        poll_seconds=10,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    return done
+
+
+def test_done_once_idle_long_enough():
+    """Rows, then nothing new for idle_seconds: the queries stop, the marker is set."""
+    query = FakeQuery([progress(rows=100)] * 3 + [progress()])
+    done = run([query])
+    assert query.stopped
+    # 3 busy polls (0, 10, 20 s), idle from 30 s, done 60 s later
+    assert done == [90.0]
+
+
+def test_idle_period_restarts_when_rows_come_back():
+    """An empty batch followed by new rows is not the end of the night."""
+    query = FakeQuery([progress(), progress(), progress(rows=5)] + [progress()])
+    assert run([query]) == [90.0]
+
+
+def test_waits_for_the_upstream_job():
+    """Idle, but the upstream job has not finished: keep going."""
+    polls = []
+
+    def upstream_done():
+        polls.append(1)
+        return len(polls) > 5
+
+    query = FakeQuery([progress(rows=1), progress()])
+    assert run([query], upstream_done=upstream_done) == [110.0]
+
+
+def test_every_query_must_be_idle():
+    """Distribution runs one query per topic: all of them must be done."""
+    busy = FakeQuery([progress(rows=1)] * 9 + [progress()])
+    idle = FakeQuery([progress(rows=1), progress()])
+    # busy reports rows on its first 9 polls (0 to 80 s), idle from 90 s
+    assert run([idle, busy]) == [150.0]
+    assert busy.stopped and idle.stopped
+
+
+def test_failed_query_is_reported():
+    """A query that died must fail the job, not be mistaken for an idle one."""
+    query = FakeQuery([progress()], error=RuntimeError("OOM"))
+    with pytest.raises(RuntimeError, match="OOM"):
+        run([query])
+
+
+def test_ceiling_after_reading_rows_is_a_failure():
+    """Still busy at the ceiling: the night is not complete, say so loudly."""
+    query = FakeQuery([progress(rows=1)])
+    with pytest.raises(CompletionTimeoutError):
+        run([query], ceiling=600)
+    assert query.stopped
+
+
+def test_ceiling_without_any_row_is_an_empty_night():
+    """Nothing ever read (no observation, no topic): the night is done, empty."""
+    query = FakeQuery([progress(**{KAFKA: (None, None)})])
+    assert run([query], ceiling=600) == [600.0]

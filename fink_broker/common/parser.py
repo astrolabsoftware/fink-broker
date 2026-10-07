@@ -136,6 +136,16 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-stop_when_done",
+        action="store_true",
+        help="""One-off run (pinned -night): stop once the night is processed,
+        i.e. the upstream job is done and nothing was read for a while, and
+        leave a _DONE marker in the checkpoint directory for the downstream
+        job. -exit_after is then a ceiling: reaching it after reading alerts
+        is an error.
+        """,
+    )
+    parser.add_argument(
         "-online_data_prefix",
         type=str,
         default="",
