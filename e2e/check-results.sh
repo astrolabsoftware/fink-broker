@@ -125,7 +125,7 @@ dump_kafka_state () {
   local broker
   echo "--- Topics seen from inside the Kafka broker ---"
   broker=$(kubectl get pods -n kafka -l strimzi.io/cluster=kafka-cluster,strimzi.io/broker-role=true \
-    -o name 2>/dev/null | head -n 1)
+    -o name 2>/dev/null | head -n 1) || true
   if [ -n "$broker" ]; then
     kubectl exec -n kafka "$broker" -- bin/kafka-topics.sh \
       --bootstrap-server kafka-cluster-kafka-bootstrap.kafka:9092 --list || true
