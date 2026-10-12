@@ -19,7 +19,6 @@ import pytest
 from fink_broker.common.night_utils import (
     check_night,
     get_night,
-    late_alerts_expected,
     night_is_closed,
     resolve_night_placeholders,
 )
@@ -90,16 +89,29 @@ def test_resolve_placeholder_noop():
     )
 
 
-def test_past_night_is_closed():
-    """A night before today's UTC date is closed, from the first minute."""
+@pytest.mark.parametrize(
+    "now, closed",
+    [
+        # Today's night, while its alerts arrive
+        (datetime(2026, 10, 8, 18, 0, tzinfo=timezone.utc), False),
+        # Some nights still receive alerts until 22:00-03:00 UTC the next day
+        (datetime(2026, 10, 9, 0, 30, tzinfo=timezone.utc), False),
+        (datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc), False),
+        # Closed from 10:00 UTC the next day on
+        (datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc), True),
+        (datetime(2026, 10, 11, 6, 0, tzinfo=timezone.utc), True),
+    ],
+)
+def test_night_closes_at_10_utc_the_next_day(now, closed):
+    """A night is closed once its late alerts are in, by default 10:00 UTC J+1."""
+    assert night_is_closed("20261008", now) is closed
+
+
+def test_night_close_hour_is_a_parameter():
+    """The closing hour, on the day after the night, can be changed."""
     now = datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc)
-    assert night_is_closed("20261008", now)
-
-
-def test_today_night_is_open():
-    """Today's UTC night stays open until the UTC midnight."""
-    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
-    assert not night_is_closed("20261009", now)
+    assert night_is_closed("20261008", now, close_hour=0)
+    assert not night_is_closed("20261008", now, close_hour=1)
 
 
 def test_future_night_is_refused():
@@ -114,21 +126,3 @@ def test_past_or_today_night_is_accepted(night):
     """A closed night or today's open night can be processed."""
     now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
     check_night(night, now)
-
-
-@pytest.mark.parametrize(
-    "now, expected",
-    [
-        # Today's night is open, not a catch-up: nothing to warn about
-        (datetime(2026, 10, 8, 18, 0, tzinfo=timezone.utc), False),
-        # Closed, but some nights still receive alerts until ~03:00 UTC J+1
-        (datetime(2026, 10, 9, 0, 30, tzinfo=timezone.utc), True),
-        (datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc), True),
-        # From 10:00 UTC J+1 on, the night is considered complete
-        (datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc), False),
-        (datetime(2026, 10, 11, 6, 0, tzinfo=timezone.utc), False),
-    ],
-)
-def test_late_alerts_expected(now, expected):
-    """A closed night may still receive late alerts until 10:00 UTC J+1."""
-    assert late_alerts_expected("20261008", now) is expected

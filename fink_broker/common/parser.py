@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.common.tester import regular_unit_tests
-from fink_broker.common.night_utils import get_night, resolve_night_placeholders
+from fink_broker.common.night_utils import (
+    NIGHT_CLOSE_HOUR,
+    get_night,
+    resolve_night_placeholders,
+)
 import argparse
 
 
@@ -230,10 +234,10 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         landing on the next day resolves the HH:MM form against that day, which
         is tracked in #1246. Mutually exclusive with `exit_after`.
 
-        On a closed night (before today, UTC), the ZTF streaming jobs stop as
-        soon as the night is processed and leave a _DONE marker; the deadline,
-        or `exit_after`, is then only a ceiling, reaching it after reading
-        alerts is an error. Today's night is open and runs to the deadline.
+        On a closed night (see `night_close_hour`), the ZTF streaming jobs stop
+        as soon as the night is processed and leave a _DONE marker; the
+        deadline, or `exit_after`, is then only a ceiling, reaching it after
+        reading alerts is an error. An open night runs to the deadline.
 
         Honoured by the ZTF streaming jobs only, which is all the chart
         deploys. The other entrypoints branch on `exit_after`, so passing
@@ -362,6 +366,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         midnight rollover), 12 -> current night with a noon-UTC rollover, 24 ->
         previous complete night (n-1). Mutually exclusive with -night.
         [NIGHT_OFFSET_HOURS]
+        """,
+    )
+    parser.add_argument(
+        "-night_close_hour",
+        type=int,
+        default=NIGHT_CLOSE_HOUR,
+        help="""
+        Hour (UTC), on the day after the night, from which the night is closed,
+        once its late alerts are in. A job on a closed night stops as soon as
+        it has caught up and leaves a _DONE marker; on an open night it runs to
+        its deadline and leaves no marker. Default: %(default)s.
+        [NIGHT_CLOSE_HOUR]
         """,
     )
     parser.add_argument(
