@@ -88,10 +88,10 @@ def main():
         sys.exit(1)
 
     # A closed night is complete upstream, so the job stops once it has caught
-    # up; today's night is open and runs to its deadline.
+    # up; an open night runs to its deadline and leaves no _DONE marker.
     now = datetime.now(timezone.utc)
     check_night(args.night, now)
-    night_closed = night_is_closed(args.night, now)
+    night_closed = night_is_closed(args.night, now, args.night_close_hour)
 
     logger.debug("Initialise Spark session")
     spark = init_sparksession(

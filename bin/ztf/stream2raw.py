@@ -42,8 +42,6 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.night_utils import (
     check_night,
     get_exit_deadline,
-    LATE_ALERTS_UNTIL_HOUR,
-    late_alerts_expected,
     night_is_closed,
     seconds_until,
 )
@@ -92,17 +90,10 @@ def main():
         sys.exit(1)
 
     # A closed night is complete upstream, so the job stops once it has caught
-    # up; today's night is open and runs to its deadline.
+    # up; an open night runs to its deadline and leaves no _DONE marker.
     now = datetime.now(timezone.utc)
     check_night(args.night, now)
-    night_closed = night_is_closed(args.night, now)
-    if late_alerts_expected(args.night, now):
-        logger.warning(
-            "Night %s may still receive late alerts until %02d:00 UTC the next "
-            "day: those arriving after this run has caught up will be missed",
-            args.night,
-            LATE_ALERTS_UNTIL_HOUR,
-        )
+    night_closed = night_is_closed(args.night, now, args.night_close_hour)
 
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
