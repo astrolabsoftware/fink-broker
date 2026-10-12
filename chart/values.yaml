@@ -41,8 +41,14 @@ scheduled:
   # default and needs the same value).
   exitAt: "23:00"
 
-# run.mode=oneoff only: on a closed night (from 10:00 UTC the next day, see
-# the jobs' -night_close_hour) a job stops by itself once the night is
+# Hour (UTC), on the day after a night, from which the night is closed, once
+# its late alerts are in: a job on a closed night stops as soon as it has
+# caught up and leaves a _DONE marker, an open one runs to its deadline. Only
+# closed nights can be caught up (workflows); passed to the catch-up jobs and
+# their guard, the other jobs use the same default (-night_close_hour).
+nightCloseHour: 10
+
+# run.mode=oneoff only: on a closed night (see nightCloseHour) a job stops by itself once the night is
 # processed (stream2raw read the topic to its end, then raw2science and
 # distribution consumed everything upstream). exitAfter is a safety ceiling,
 # in seconds: reaching it after reading alerts fails the job, reaching it with
@@ -88,6 +94,18 @@ monitoring:
 # distributed messages to a night using the run window deduced from
 # scheduled.schedule.
 #
+# WorkflowTemplate <fullname>-night catching a night up from the checkpoints of
+# the daily run (Argo Workflows, which must be installed in the cluster):
+#   argo submit --from workflowtemplate/fink-broker-night -p night=YYYYMMDD
+# A guard step refuses a night that is not closed yet (see nightCloseHour),
+# then the three jobs run with an absolute deadline.
+workflows:
+  enabled: false
+  # Runs the guard: needs bash and date.
+  guardImage: "bash:5.2"
+  # Deadline of a catch-up, in hours after its guard step started.
+  deadlineHours: 18
+
 report:
   enabled: false
   # NameNode RPC address(es) the report reads HDFS from, host:port[,host:port].

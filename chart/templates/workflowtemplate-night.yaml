@@ -1,0 +1,66 @@
+{{- if .Values.workflows.enabled }}
+{{- /*
+The three jobs of a night, as SparkApplications created by the workflow, from
+the same specs as the daily run: same data and checkpoints, so a catch-up
+resumes where the daily run stopped. Rendered with run.mode=workflow, which
+pins the night and the deadline to Argo expressions.
+*/}}
+{{- $values := deepCopy .Values }}
+{{- $_ := set $values.run "mode" "workflow" }}
+{{- $ctx := dict "Values" $values "Chart" .Chart "Release" .Release "Template" .Template "Files" .Files "Capabilities" .Capabilities }}
+{{- $fullname := include "fink.fullname" . }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: {{ $fullname }}-night
+spec:
+  entrypoint: night
+  serviceAccountName: fink-workflow
+  arguments:
+    parameters:
+      - name: night
+  # Two runs on the same night would write the same checkpoints
+  synchronization:
+    mutexes:
+      - name: fink-night-{{ "{{workflow.parameters.night}}" }}
+  templates:
+    - name: night
+      steps:
+        - - name: guard
+            template: guard
+        - - name: stream2raw
+            template: stream2raw
+          - name: raw2science
+            template: raw2science
+          - name: distribution
+            template: distribution
+    - name: guard
+      container:
+        image: {{ .Values.workflows.guardImage | quote }}
+        # chart/files/workflow-guard.sh, tested by e2e/workflow-guard_test.sh
+        command:
+          - bash
+          - -c
+          - |
+            {{- .Files.Get "files/workflow-guard.sh" | nindent 12 }}
+          - workflow-guard
+        args:
+          - {{ "{{workflow.parameters.night}}" | quote }}
+          - {{ .Values.workflows.deadlineHours | quote }}
+          - {{ .Values.nightCloseHour | quote }}
+    {{- range $job := list "stream2raw" "raw2science" "distribution" }}
+    - name: {{ $job }}
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.applicationState.state == COMPLETED
+        failureCondition: status.applicationState.state in (FAILED,SUBMISSION_FAILED)
+        manifest: |
+          apiVersion: sparkoperator.k8s.io/v1beta2
+          kind: SparkApplication
+          metadata:
+            name: "{{ "{{workflow.name}}" }}-{{ $job }}"
+          spec:
+            {{- include (printf "fink.%s.spec" $job) $ctx | nindent 12 }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,35 @@
+{{- if .Values.workflows.enabled }}
+{{- /*
+Identity of the WorkflowTemplate catching a night up: its steps create and
+watch the SparkApplications of the night, and the Argo executor reports the
+step results.
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fink-workflow
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fink-workflow
+rules:
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["sparkapplications"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fink-workflow
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fink-workflow
+subjects:
+  - kind: ServiceAccount
+    name: fink-workflow
+{{- end }}
