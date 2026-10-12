@@ -101,22 +101,16 @@ def get_night(
     return reference.strftime("%Y%m%d")
 
 
-# Hour (UTC), on the day after a ZTF night, from which the night is closed:
-# most nights are complete by 20:00 UTC, but some keep receiving alerts until
-# 22:00-03:00 UTC the next day (scheduler/ztf/ztf_late_alerts.sh).
-NIGHT_CLOSE_HOUR = 10
+def night_is_closed(night: str, now: datetime) -> bool:
+    """Tell whether ``night`` is over.
 
+    A night is closed once the UTC date has moved past it: a job processing
+    it can then stop as soon as it has caught up, and leave its _DONE marker.
+    Today's night is open: alerts keep arriving, so a quiet spell is not the
+    end of the night, and the job runs to its deadline and leaves no marker.
 
-def night_is_closed(
-    night: str, now: datetime, close_hour: int = NIGHT_CLOSE_HOUR
-) -> bool:
-    """Tell whether no alert of ``night`` can arrive anymore.
-
-    A night is closed at ``close_hour`` UTC on the next day, once its late
-    alerts are in: a job processing it can then stop as soon as it has caught
-    up, and leave its _DONE marker. Before that the night is open: a quiet
-    spell is not the end of the night, so the job runs to its deadline and
-    leaves no marker.
+    Late alerts may still arrive the next morning: catching a night up too
+    early is prevented by the guard of the catch-up workflow, not here.
 
     Parameters
     ----------
@@ -124,29 +118,21 @@ def night_is_closed(
         Night label in YYYYMMDD format.
     now: datetime
         Reference time (timezone-aware).
-    close_hour: int
-        Hour (UTC), on the day after ``night``, from which it is closed.
 
     Returns
     -------
     closed: bool
-        True if ``now`` is at or after ``close_hour`` UTC the day after
-        ``night``.
+        True if ``night`` is before the UTC date of ``now``.
 
     Examples
     --------
     >>> from datetime import datetime, timezone
-    >>> night_is_closed("20261008", datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc))
+    >>> night_is_closed("20261008", datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc))
     True
-
-    Late alerts may still arrive the next morning:
-    >>> night_is_closed("20261008", datetime(2026, 10, 9, 6, 0, tzinfo=timezone.utc))
+    >>> night_is_closed("20261009", datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc))
     False
     """
-    closes_at = datetime.strptime(night, "%Y%m%d").replace(
-        tzinfo=timezone.utc
-    ) + timedelta(days=1, hours=close_hour)
-    return now >= closes_at
+    return night < now.astimezone(timezone.utc).strftime("%Y%m%d")
 
 
 def check_night(night: str, now: datetime) -> None:

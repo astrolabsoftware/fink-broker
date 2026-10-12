@@ -89,29 +89,16 @@ def test_resolve_placeholder_noop():
     )
 
 
-@pytest.mark.parametrize(
-    "now, closed",
-    [
-        # Today's night, while its alerts arrive
-        (datetime(2026, 10, 8, 18, 0, tzinfo=timezone.utc), False),
-        # Some nights still receive alerts until 22:00-03:00 UTC the next day
-        (datetime(2026, 10, 9, 0, 30, tzinfo=timezone.utc), False),
-        (datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc), False),
-        # Closed from 10:00 UTC the next day on
-        (datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc), True),
-        (datetime(2026, 10, 11, 6, 0, tzinfo=timezone.utc), True),
-    ],
-)
-def test_night_closes_at_10_utc_the_next_day(now, closed):
-    """A night is closed once its late alerts are in, by default 10:00 UTC J+1."""
-    assert night_is_closed("20261008", now) is closed
-
-
-def test_night_close_hour_is_a_parameter():
-    """The closing hour, on the day after the night, can be changed."""
+def test_past_night_is_closed():
+    """A night before today's UTC date is closed, from the first minute."""
     now = datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc)
-    assert night_is_closed("20261008", now, close_hour=0)
-    assert not night_is_closed("20261008", now, close_hour=1)
+    assert night_is_closed("20261008", now)
+
+
+def test_today_night_is_open():
+    """Today's UTC night stays open until the UTC midnight."""
+    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
+    assert not night_is_closed("20261009", now)
 
 
 def test_future_night_is_refused():
