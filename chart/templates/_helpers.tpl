@@ -179,7 +179,7 @@ spec:
 aims at the same instant. Same closing hour as the guard, which only lets
 closed nights through. */}}
 - '-exit_at'
-- '{{ "{{steps.guard.outputs.result}}" }}'
+- '{{ "{{inputs.parameters.deadline}}" }}'
 - '-night_close_hour'
 - '{{ .Values.nightCloseHour }}'
 {{- else }}
