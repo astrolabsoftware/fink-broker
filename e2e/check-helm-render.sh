@@ -139,6 +139,8 @@ rm -f "$values_file"
 assert "cron, UTC" "1_0_*_*_* 1_0_*_*_* 1_0_*_*_*" \
     "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
 assert "live night" "0 0 0" "$(scheduled_arg "$out" -night_offset_hours)"
+assert "no closing hour: the daily run's night is always open" "" \
+    "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.template.arguments[] | select(. == "-night_close_hour")')"
 assert "stops at 20:00 UTC" "20:00 20:00 20:00" "$(scheduled_arg "$out" -exit_at)"
 assert "report once the run has stopped" "30_20_*_*_*" \
     "$(echo "$out" | yq -r 'select(.kind == "CronJob" and .metadata.name == "fink-broker-report") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
@@ -204,6 +206,60 @@ assert "spark applications" "fink-broker-stream2raw fink-broker-raw2science fink
     "$(echo "$out" | names SparkApplication)"
 assert "SPARK_USER kept" "185 185 185 185 185 185" \
     "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | (.spec.driver.env[], .spec.executor.env[]) | select(.name == "SPARK_USER") | .value')"
+
+# Template of the WorkflowTemplate rendered from the chart, by name, as YAML.
+wf_template() {
+    echo "$1" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "'"$2"'")'
+}
+
+# SparkApplication manifest created by a step of the WorkflowTemplate.
+wf_manifest() {
+    echo "$1" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "'"$2"'") | .resource.manifest'
+}
+
+# Value following an argument of a SparkApplication manifest.
+manifest_arg() {
+    echo "$1" | yq -r '.spec.arguments as $a | $a | to_entries[] | select(.value == "'"$2"'") | $a[.key + 1]'
+}
+
+echo "== fink-broker: WorkflowTemplate catching a night up"
+assert "no WorkflowTemplate by default" "" "$(chart | names WorkflowTemplate)"
+out=$(chart --set workflows.enabled=true --set run.mode=scheduled \
+    --set online_data_prefix=hdfs://nn.example:8020///user/185)
+assert "template name" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
+assert "night parameter" "night" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[].name')"
+assert "one catch-up per night at a time" "fink-night-{{workflow.parameters.night}}" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.synchronization.mutexes[].name')"
+assert "guard step first, then the three jobs" "guard distribution raw2science stream2raw" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "night") | .steps[][].name')"
+assert "guard checks the night is closed and computes the deadline" "{{workflow.parameters.night}} 18 10" \
+    "$(wf_template "$out" guard | yq -r '.container.args[]')"
+assert "guard service account" "fink-workflow" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.serviceAccountName')"
+assert "guard RBAC" "ServiceAccount/fink-workflow Role/fink-workflow RoleBinding/fink-workflow" \
+    "$(echo "$out" | yq -r 'select(.metadata.name == "fink-workflow") | .kind + "/" + .metadata.name')"
+for job in stream2raw raw2science distribution; do
+    tmpl=$(wf_template "$out" "$job")
+    manifest=$(wf_manifest "$out" "$job")
+    assert "$job: created and owned by the workflow" "create true" \
+        "$(echo "$tmpl" | yq -r '.resource.action, .resource.setOwnerReference')"
+    assert "$job: success and failure conditions" \
+        "status.applicationState.state_==_COMPLETED status.applicationState.state_in_(FAILED,SUBMISSION_FAILED)" \
+        "$(echo "$tmpl" | yq -r '.resource.successCondition, .resource.failureCondition' | tr ' ' '_')"
+    assert "$job: SparkApplication named after the workflow" "SparkApplication {{workflow.name}}-$job" \
+        "$(echo "$manifest" | yq -r '.kind, .metadata.name')"
+    assert "$job: pinned night" "{{workflow.parameters.night}}" "$(manifest_arg "$manifest" -night)"
+    assert "$job: absolute deadline from the guard" "{{steps.guard.outputs.result}}" \
+        "$(manifest_arg "$manifest" -exit_at)"
+    assert "$job: no duration nor deduced night" "" \
+        "$(echo "$manifest" | yq -r '.spec.arguments[] | select(. == "-exit_after" or . == "-night_offset_hours")')"
+    assert "$job: same data and checkpoints as the daily run" "hdfs://nn.example:8020///user/185" \
+        "$(manifest_arg "$manifest" -online_data_prefix)"
+    assert "$job: same closing hour as the guard" "10" "$(manifest_arg "$manifest" -night_close_hour)"
+    assert "$job: no Argo CD annotation" "" \
+        "$(echo "$manifest" | yq -r '.metadata.annotations // {} | keys[] | select(test("argocd.argoproj.io"))')"
+done
 
 echo "== fink-broker: storage=s3"
 out=$(chart --set storage=s3)
