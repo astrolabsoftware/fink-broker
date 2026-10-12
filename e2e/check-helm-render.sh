@@ -140,6 +140,8 @@ assert "cron, UTC" "1_0_*_*_* 1_0_*_*_* 1_0_*_*_*" \
     "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
 assert "live night" "0 0 0" "$(scheduled_arg "$out" -night_offset_hours)"
 assert "stops at 20:00 UTC" "20:00 20:00 20:00" "$(scheduled_arg "$out" -exit_at)"
+assert "report once the run has stopped" "30_20_*_*_*" \
+    "$(echo "$out" | yq -r 'select(.kind == "CronJob" and .metadata.name == "fink-broker-report") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
 
 # --- fink-broker chart -----------------------------------------------------
 
