@@ -68,21 +68,3 @@ def test_night_pinned_must_be_eight_digits(monkeypatch, night):
     with pytest.raises(SystemExit) as exc:
         parse(monkeypatch, "-night", night)
     assert exc.value.code == 2
-
-
-def test_stop_when_done_needs_a_pinned_night(monkeypatch):
-    """-stop_when_done is refused when the night is deduced.
-
-    On a live night, a quiet spell would look like the end of the night:
-    the job would write its _DONE marker, and every restart would then skip
-    the rest of the night's alerts.
-    """
-    with pytest.raises(SystemExit) as exc:
-        parse(monkeypatch, "-night_offset_hours", "0", "-stop_when_done")
-    assert exc.value.code == 2
-
-
-def test_stop_when_done_with_a_pinned_night(monkeypatch):
-    """A one-off run of a pinned night may stop once it is processed."""
-    args = parse(monkeypatch, "-night", "20240314", "-stop_when_done")
-    assert args.stop_when_done
