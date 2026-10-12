@@ -258,7 +258,8 @@ for job in stream2raw raw2science distribution; do
         "$(echo "$manifest" | yq -r '.spec.arguments[] | select(. == "-exit_after" or . == "-night_offset_hours")')"
     assert "$job: same data and checkpoints as the daily run" "hdfs://nn.example:8020///user/185" \
         "$(manifest_arg "$manifest" -online_data_prefix)"
-    assert "$job: same closing hour as the guard" "10" "$(manifest_arg "$manifest" -night_close_hour)"
+    assert "$job: no closing hour, the guard only lets closed nights through" "" \
+        "$(echo "$manifest" | yq -r '.spec.arguments[] | select(. == "-night_close_hour")')"
     assert "$job: no Argo CD annotation" "" \
         "$(echo "$manifest" | yq -r '.metadata.annotations // {} | keys[] | select(test("argocd.argoproj.io"))')"
 done
