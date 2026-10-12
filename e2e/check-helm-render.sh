@@ -60,7 +60,7 @@ apps() {
 }
 operators="zookeeper-operator hdfs-operator commons-operator secret-operator listener-operator"
 stackable="$operators hdfs"
-common="fink-broker spark-operator strimzi"
+common="fink-broker spark-operator strimzi argo-workflows"
 incluster_prefix="hdfs://simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020///user/185"
 
 # The namespaces and secrets the app-of-apps creates itself, as kind/name.
@@ -119,7 +119,17 @@ assert "datanodes sized for CC" "3" \
 
 echo "== fink-cd: values-cc.yaml without kafka"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml" --set components.kafka=false)
-assert "applications" "fink-broker spark-operator" "$(echo "$out" | names Application)"
+assert "applications" "fink-broker spark-operator argo-workflows" "$(echo "$out" | names Application)"
+
+echo "== fink-cd: Argo Workflows, for the night catch-ups"
+out=$(apps)
+assert "WorkflowTemplate rendered by fink-broker" "true" "$(echo "$out" | broker_values | yq -r '.workflows.enabled')"
+assert "controller only, workflow RBAC in the spark namespace" "false spark" \
+    "$(echo "$out" | yq -r 'select(.kind == "Application" and .metadata.name == "argo-workflows") | .spec.source.helm.valuesObject | (.server.enabled, .controller.workflowNamespaces[])')"
+out=$(apps --set components.argoWorkflows=false)
+assert "applications without Argo Workflows" "$stackable fink-broker spark-operator strimzi kafka fink-alert-simulator" \
+    "$(echo "$out" | names Application)"
+assert "no WorkflowTemplate without Argo Workflows" "false" "$(echo "$out" | broker_values | yq -r '.workflows.enabled')"
 
 echo "== fink-cd: storage=s3"
 out=$(apps --set storage=s3)
