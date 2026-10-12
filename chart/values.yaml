@@ -41,12 +41,12 @@ scheduled:
   # default and needs the same value).
   exitAt: "23:00"
 
-# run.mode=oneoff only: a one-off run stops by itself once its night is
-# processed (-stop_when_done: stream2raw read the topic to its end, then
-# raw2science and distribution consumed everything upstream). exitAfter is a
-# safety ceiling, in seconds: reaching it after reading alerts fails the job,
-# reaching it with nothing read ends an empty night. A scheduled run uses the
-# absolute scheduled.exitAt instead. 64800 = 18h.
+# run.mode=oneoff only: on a closed night (before today, UTC) a job stops by
+# itself once the night is processed (stream2raw read the topic to its end,
+# then raw2science and distribution consumed everything upstream). exitAfter
+# is a safety ceiling, in seconds: reaching it after reading alerts fails the
+# job, reaching it with nothing read ends an empty night. A scheduled run uses
+# the absolute scheduled.exitAt instead. 64800 = 18h.
 exitAfter: 64800
 
 image:
