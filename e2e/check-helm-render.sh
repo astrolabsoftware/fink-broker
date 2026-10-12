@@ -250,8 +250,10 @@ for job in stream2raw raw2science distribution; do
     assert "$job: SparkApplication named after the workflow" "SparkApplication {{workflow.name}}-$job" \
         "$(echo "$manifest" | yq -r '.kind, .metadata.name')"
     assert "$job: pinned night" "{{workflow.parameters.night}}" "$(manifest_arg "$manifest" -night)"
-    assert "$job: absolute deadline from the guard" "{{steps.guard.outputs.result}}" \
+    assert "$job: absolute deadline from the guard" "{{inputs.parameters.deadline}}" \
         "$(manifest_arg "$manifest" -exit_at)"
+    assert "$job: deadline handed over by the guard step" "{{steps.guard.outputs.result}}" \
+        "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "night") | .steps[][] | select(.name == "'"$job"'") | .arguments.parameters[] | select(.name == "deadline") | .value')"
     assert "$job: no duration nor deduced night" "" \
         "$(echo "$manifest" | yq -r '.spec.arguments[] | select(. == "-exit_after" or . == "-night_offset_hours")')"
     assert "$job: same data and checkpoints as the daily run" "hdfs://nn.example:8020///user/185" \

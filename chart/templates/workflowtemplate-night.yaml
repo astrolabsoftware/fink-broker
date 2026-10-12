@@ -28,12 +28,16 @@ spec:
       steps:
         - - name: guard
             template: guard
-        - - name: stream2raw
-            template: stream2raw
-          - name: raw2science
-            template: raw2science
-          - name: distribution
-            template: distribution
+        {{- /* The guard's output is only visible in these steps, so it is
+        handed over to each job as an input parameter */}}
+        {{- range $i, $job := list "stream2raw" "raw2science" "distribution" }}
+        {{ if eq $i 0 }}- -{{ else }}  -{{ end }} name: {{ $job }}
+            template: {{ $job }}
+            arguments:
+              parameters:
+                - name: deadline
+                  value: {{ "{{steps.guard.outputs.result}}" | quote }}
+        {{- end }}
     - name: guard
       container:
         image: {{ .Values.workflows.guardImage | quote }}
@@ -50,6 +54,9 @@ spec:
           - {{ .Values.nightCloseHour | quote }}
     {{- range $job := list "stream2raw" "raw2science" "distribution" }}
     - name: {{ $job }}
+      inputs:
+        parameters:
+          - name: deadline
       resource:
         action: create
         setOwnerReference: true
