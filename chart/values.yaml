@@ -41,15 +41,13 @@ scheduled:
   # default and needs the same value).
   exitAt: "23:00"
 
-# Hour (UTC), on the day after a night, from which the night is closed, once
-# its late alerts are in: a job on a closed night stops as soon as it has
-# caught up and leaves a _DONE marker, an open one runs to its deadline. Read
-# by the guard of the catch-ups (workflows), which only lets closed nights
-# through; the jobs use their own default (-night_close_hour), so keep both
-# equal, or at least this one not below it.
+# Hour (UTC), on the day after a night, from which the night can be caught up
+# (workflows): its late alerts are in, and the daily run, which processes
+# today's night, can no longer write the same checkpoints. Only read by the
+# guard of the catch-ups.
 nightCloseHour: 10
 
-# run.mode=oneoff only: on a closed night (see nightCloseHour) a job stops by
+# run.mode=oneoff only: on a closed night (before today, UTC) a job stops by
 # itself once the night is processed (stream2raw read the topic to its end,
 # then raw2science and distribution consumed everything upstream). exitAfter
 # is a safety ceiling, in seconds: reaching it after reading alerts fails the
