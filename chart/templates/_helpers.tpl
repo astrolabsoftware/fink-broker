@@ -176,12 +176,9 @@ spec:
 - '{{ .Values.scheduled.exitAt }}'
 {{- else if eq .Values.run.mode "workflow" }}
 {{- /* Absolute deadline computed once by the guard step, so a restarted job
-aims at the same instant. Same closing hour as the guard, which only lets
-closed nights through. */}}
+aims at the same instant */}}
 - '-exit_at'
 - '{{ "{{inputs.parameters.deadline}}" }}'
-- '-night_close_hour'
-- '{{ .Values.nightCloseHour }}'
 {{- else }}
 - '-exit_after'
 - '{{ .Values.exitAfter }}'
