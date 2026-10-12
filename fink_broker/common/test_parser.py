@@ -68,4 +68,3 @@ def test_night_pinned_must_be_eight_digits(monkeypatch, night):
     with pytest.raises(SystemExit) as exc:
         parse(monkeypatch, "-night", night)
     assert exc.value.code == 2
-
