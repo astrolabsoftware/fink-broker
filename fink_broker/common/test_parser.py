@@ -69,9 +69,3 @@ def test_night_pinned_must_be_eight_digits(monkeypatch, night):
         parse(monkeypatch, "-night", night)
     assert exc.value.code == 2
 
-
-def test_night_close_hour_defaults_to_10(monkeypatch):
-    """A night closes at 10:00 UTC the next day unless told otherwise."""
-    assert parse(monkeypatch, "-night", "20240314").night_close_hour == 10
-    args = parse(monkeypatch, "-night", "20240314", "-night_close_hour", "6")
-    assert args.night_close_hour == 6

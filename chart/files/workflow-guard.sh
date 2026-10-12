@@ -6,9 +6,9 @@
 #
 # Usage: workflow-guard.sh NIGHT DEADLINE_HOURS CLOSE_HOUR
 #
-# Only a closed night is accepted, i.e. from CLOSE_HOUR UTC on the next day
-# (the jobs' -night_close_hour): its late alerts are in, and the daily run,
-# which processes today's night, can no longer write the same checkpoints.
+# Only a night that can be caught up is accepted, i.e. from CLOSE_HOUR UTC on
+# the next day: its late alerts are in, and the daily run, which processes
+# today's night, can no longer write the same checkpoints.
 #
 # The deadline is computed once, here, so a restarted job aims at the same
 # instant instead of granting itself a fresh window.
