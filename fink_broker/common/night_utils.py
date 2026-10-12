@@ -132,6 +132,48 @@ def night_is_closed(night: str, now: datetime) -> bool:
     return night < now.astimezone(timezone.utc).strftime("%Y%m%d")
 
 
+# Hour (UTC) of the day after a ZTF night from which no late alert is expected
+# anymore: most nights are complete by 20:00 UTC, but some keep receiving
+# alerts until 22:00-03:00 UTC the next day (scheduler/ztf/ztf_late_alerts.sh).
+LATE_ALERTS_UNTIL_HOUR = 10
+
+
+def late_alerts_expected(night: str, now: datetime) -> bool:
+    """Tell whether a closed night may still receive late alerts.
+
+    A catch-up started before LATE_ALERTS_UNTIL_HOUR UTC on the next day may
+    stop, and leave its _DONE marker, before they arrive: they are then
+    missed.
+
+    Parameters
+    ----------
+    night: str
+        Night label in YYYYMMDD format.
+    now: datetime
+        Reference time (timezone-aware).
+
+    Returns
+    -------
+    expected: bool
+        True if ``night`` is closed and ``now`` is before
+        LATE_ALERTS_UNTIL_HOUR UTC on the day after ``night``.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> late_alerts_expected("20261008", datetime(2026, 10, 9, 6, 0, tzinfo=timezone.utc))
+    True
+    >>> late_alerts_expected("20261008", datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc))
+    False
+    """
+    if not night_is_closed(night, now):
+        return False
+    complete_at = datetime.strptime(night, "%Y%m%d").replace(
+        tzinfo=timezone.utc
+    ) + timedelta(days=1, hours=LATE_ALERTS_UNTIL_HOUR)
+    return now < complete_at
+
+
 def check_night(night: str, now: datetime) -> None:
     """Refuse a night which has not started yet.
 
