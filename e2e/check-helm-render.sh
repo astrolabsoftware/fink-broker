@@ -125,6 +125,22 @@ echo "== fink-cd: storage=s3"
 out=$(apps --set storage=s3)
 assert "applications" "$common kafka fink-alert-simulator minio-operator minio-tenant" "$(echo "$out" | names Application)"
 
+# Value following an argument of the ScheduledSparkApplications, one per job.
+scheduled_arg() {
+    echo "$1" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.template.arguments as $a | $a | to_entries[] | select(.value == "'"$2"'") | $a[.key + 1]'
+}
+
+echo "== fink-cd + fink-broker: daily run at CC, on the production timetable"
+values_file=$(mktemp)
+apps -f "$FINK_CD_DIR/apps/values-cc.yaml" -f "$FINK_CD_DIR/apps/values-scheduled.yaml" \
+    | broker_values > "$values_file"
+out=$(helm template fink-broker "$src_dir/chart" -f "$values_file")
+rm -f "$values_file"
+assert "cron, UTC" "1_0_*_*_* 1_0_*_*_* 1_0_*_*_*" \
+    "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
+assert "live night" "0 0 0" "$(scheduled_arg "$out" -night_offset_hours)"
+assert "stops at 20:00 UTC" "20:00 20:00 20:00" "$(scheduled_arg "$out" -exit_at)"
+
 # --- fink-broker chart -----------------------------------------------------
 
 chart() {
