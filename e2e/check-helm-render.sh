@@ -192,8 +192,8 @@ stop_args() {
 }
 
 echo "== fink-broker: how a run stops"
-assert "one-off: when the night is processed, exitAfter as a ceiling" \
-    "-stop_when_done,-exit_after -stop_when_done,-exit_after -stop_when_done,-exit_after" "$(stop_args "$(chart)")"
+assert "one-off: exitAfter as a ceiling, the job decides from its night" \
+    "-exit_after -exit_after -exit_after" "$(stop_args "$(chart)")"
 assert "scheduled: at the exit_at deadline" "-exit_at -exit_at -exit_at" \
     "$(stop_args "$(chart --set run.mode=scheduled)")"
 

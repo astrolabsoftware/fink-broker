@@ -101,6 +101,66 @@ def get_night(
     return reference.strftime("%Y%m%d")
 
 
+def night_is_closed(night: str, now: datetime) -> bool:
+    """Tell whether no alert of ``night`` can arrive anymore.
+
+    A night is closed once the UTC date has moved past it: its topic is then
+    complete, so a job processing it can stop as soon as it has caught up.
+    Today's night is open: alerts keep arriving until the UTC midnight, so a
+    quiet spell is not the end of the night.
+
+    Parameters
+    ----------
+    night: str
+        Night label in YYYYMMDD format.
+    now: datetime
+        Reference time (timezone-aware).
+
+    Returns
+    -------
+    closed: bool
+        True if ``night`` is before the UTC date of ``now``.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> night_is_closed("20261008", datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc))
+    True
+    >>> night_is_closed("20261009", datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc))
+    False
+    """
+    return night < now.astimezone(timezone.utc).strftime("%Y%m%d")
+
+
+def check_night(night: str, now: datetime) -> None:
+    """Refuse a night which has not started yet.
+
+    Parameters
+    ----------
+    night: str
+        Night label in YYYYMMDD format.
+    now: datetime
+        Reference time (timezone-aware).
+
+    Raises
+    ------
+    ValueError
+        If ``night`` is after the UTC date of ``now``.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+    >>> check_night("20261009", now)
+    >>> check_night("20261010", now)
+    Traceback (most recent call last):
+    ...
+    ValueError: Night 20261010 is in the future
+    """
+    if night > now.astimezone(timezone.utc).strftime("%Y%m%d"):
+        raise ValueError("Night {} is in the future".format(night))
+
+
 def get_exit_deadline(
     exit_at: str,
     now: Optional[datetime] = None,

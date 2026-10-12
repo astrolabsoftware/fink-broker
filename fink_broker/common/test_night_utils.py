@@ -14,7 +14,14 @@
 # limitations under the License.
 from datetime import datetime, timezone
 
-from fink_broker.common.night_utils import get_night, resolve_night_placeholders
+import pytest
+
+from fink_broker.common.night_utils import (
+    check_night,
+    get_night,
+    night_is_closed,
+    resolve_night_placeholders,
+)
 
 
 def test_explicit_night_wins():
@@ -80,3 +87,29 @@ def test_resolve_placeholder_noop():
         resolve_night_placeholders("ztf_public_20200101", "20240315")
         == "ztf_public_20200101"
     )
+
+
+def test_past_night_is_closed():
+    """A night before today's UTC date is closed, from the first minute."""
+    now = datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc)
+    assert night_is_closed("20261008", now)
+
+
+def test_today_night_is_open():
+    """Today's UTC night stays open until the UTC midnight."""
+    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
+    assert not night_is_closed("20261009", now)
+
+
+def test_future_night_is_refused():
+    """A night after today's UTC date has no alert yet: refused at startup."""
+    now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="Night 20261010 is in the future"):
+        check_night("20261010", now)
+
+
+@pytest.mark.parametrize("night", ["20261008", "20261009"])
+def test_past_or_today_night_is_accepted(night):
+    """A closed night or today's open night can be processed."""
+    now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+    check_night(night, now)

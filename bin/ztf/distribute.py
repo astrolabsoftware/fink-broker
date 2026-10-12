@@ -25,13 +25,19 @@
 import pyspark.sql.functions as F
 
 import pkgutil
+from datetime import datetime, timezone
 import argparse
 import logging
 import sys
 import time
 
 from fink_broker.common.parser import getargs
-from fink_broker.common.night_utils import get_exit_deadline, seconds_until
+from fink_broker.common.night_utils import (
+    check_night,
+    get_exit_deadline,
+    night_is_closed,
+    seconds_until,
+)
 from fink_broker.common.spark_utils import (
     init_sparksession,
     NoDataAvailableError,
@@ -81,6 +87,12 @@ def main():
         )
         sys.exit(1)
 
+    # A closed night is complete upstream, so the job stops once it has caught
+    # up; today's night is open and runs to its deadline.
+    now = datetime.now(timezone.utc)
+    check_night(args.night, now)
+    night_closed = night_is_closed(args.night, now)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="distribute_{}_{}".format(args.producer, args.night),
@@ -104,12 +116,12 @@ def main():
         args.night
     )
 
-    # One-off run: raw2science leaves a marker once the night is processed
+    # On a closed night, raw2science leaves a marker once it is processed
     def science_processed():
         return file_exists(done_marker(checkpointpath_sci_tmp))
 
-    # A one-off run restarted after it completed has nothing left to do
-    if args.stop_when_done and file_exists(done_marker(checkpointpath_kafka)):
+    # A closed night already done by a previous run has nothing left to do
+    if night_closed and file_exists(done_marker(checkpointpath_kafka)):
         logger.info("Night %s already distributed, exiting normally...", args.night)
         return
 
@@ -120,7 +132,7 @@ def main():
             scitmpdatapath,
             latestfirst=False,
             deadline=exit_deadline,
-            give_up=science_processed if args.stop_when_done else None,
+            give_up=science_processed if night_closed else None,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -128,7 +140,7 @@ def main():
         logger.info(
             "No alert processed for night %s, nothing to do (%s)", args.night, e
         )
-        if args.stop_when_done:
+        if night_closed:
             write_done_marker(checkpointpath_kafka)
         return
 
@@ -261,12 +273,14 @@ def main():
     )
     disqueries.append(disquery)
 
-    if args.stop_when_done:
+    if night_closed:
         run_until_done(
             disqueries,
             upstream_done=science_processed,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=args.exit_after,
+            ceiling_seconds=seconds_until(exit_deadline)
+            if exit_deadline is not None
+            else args.exit_after,
             on_done=lambda: write_done_marker(checkpointpath_kafka),
         )
         logger.info("Night %s distributed, exiting normally...", args.night)
