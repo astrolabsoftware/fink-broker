@@ -157,6 +157,12 @@ jobs:
           # The ciux image suffix is empty for the science variant, but the infra
           # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
           ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
+      # No Spark job is deployed in CI (run.mode=workflow): the night is run
+      # through the WorkflowTemplate, as any catch-up.
+      - name: Run the night
+        id: run_night
+        run: |
+          ./e2e/catchup.sh
       - name: Check results
         id: check_results
         run: |
@@ -183,11 +189,11 @@ jobs:
         run: |
           ./e2e/check-results.sh --catchup-open
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}
