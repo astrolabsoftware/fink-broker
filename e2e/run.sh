@@ -179,6 +179,15 @@ else
     exit 1
 fi
 
+echo "Phase: Open Night Catch-up Check"
+echo "Catch today's night up, which must be refused."
+if $DIR/check-results.sh --catchup-open; then
+    home-ci-reporter step "catchup_open_check" "passed" "Open night catch-up refused" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "catchup_open_check" "failed" "Open night catch-up not refused" --file "$TEST_REPORT"
+    exit 1
+fi
+
 echo "Phase: Image Push"
 echo "Push the image to Container Registry"
 if $src_dir/push-image.sh; then
