@@ -30,10 +30,11 @@ report_timeout=600
 catchup_timeout=300
 
 usage () {
-  echo "Usage: $0 [-h] [--basic|--report|--catchup] [-m] [-s <suffix>]"
+  echo "Usage: $0 [-h] [--basic|--report|--catchup|--catchup-open] [-m] [-s <suffix>]"
   echo "  --basic:    Check that the expected topics are created (default)"
   echo "  --report:   Check the balance printed by the report CronJob"
   echo "  --catchup:  Check that catching up the night of the run does nothing more"
+  echo "  --catchup-open: Check that catching up today's night is refused"
   echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -h: Display this help"
@@ -49,6 +50,7 @@ while [ "$#" -gt 0 ]; do
     --basic) mode="basic" ; shift ;;
     --report) mode="report" ; shift ;;
     --catchup) mode="catchup" ; shift ;;
+    --catchup-open) mode="catchup-open" ; shift ;;
     -m) monitoring=true ; shift ;;
     -s) SUFFIX="$2" ; shift 2 ;;
     -h) usage ; exit 0 ;;
@@ -233,6 +235,36 @@ if [ "$mode" = "catchup" ]; then
     fi
   done
   echo "INFO: catch-up of night $night found it complete and did nothing more"
+  exit 0
+fi
+
+# --catchup-open: today's night is still open, the daily run may be writing
+# its checkpoints, so the guard step of the workflow must refuse it before any
+# job is created.
+if [ "$mode" = "catchup-open" ]; then
+  night=$(date -u +%Y%m%d)
+  echo "INFO: Catching today's night $night up, which must be refused"
+  workflow=$("$DIR"/catchup.sh -n "$night" -w -t "$catchup_timeout" 2> /dev/null) && rc=0 || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    echo "ERROR: the catch-up of the open night $night succeeded" 1>&2
+    exit 1
+  fi
+  if [ -z "$workflow" ]; then
+    echo "ERROR: the catch-up of night $night was not even submitted" 1>&2
+    exit 1
+  fi
+  log=$(kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
+  if ! grep -q "Night $night is still open until" <<< "$log"; then
+    echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
+    echo "$log" 1>&2
+    exit 1
+  fi
+  apps=$(kubectl get sparkapplications -n spark -o name | grep "/$workflow-" || true)
+  if [ -n "$apps" ]; then
+    echo "ERROR: workflow/$workflow created jobs despite the refusal: $apps" 1>&2
+    exit 1
+  fi
+  echo "INFO: catch-up of the open night $night refused by the guard"
   exit 0
 fi
 

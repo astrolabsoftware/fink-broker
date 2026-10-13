@@ -177,12 +177,17 @@ jobs:
         id: check_catchup
         run: |
           ./e2e/check-results.sh --catchup
+      # Today's night is still open: its catch-up must be refused.
+      - name: Check open night catch-up refused
+        id: check_catchup_open
+        run: |
+          ./e2e/check-results.sh --catchup-open
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}
