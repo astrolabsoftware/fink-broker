@@ -171,12 +171,18 @@ jobs:
         if: ${{ matrix.storage == 'hdfs' }}
         run: |
           ./e2e/check-results.sh --report
+      # Catch the night of the run up through Argo Workflows once the run is
+      # over: the night is complete, so the catch-up must do nothing more.
+      - name: Check catch-up
+        id: check_catchup
+        run: |
+          ./e2e/check-results.sh --catchup
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}

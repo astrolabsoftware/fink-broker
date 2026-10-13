@@ -27,11 +27,13 @@ monitoring=false
 SUFFIX="noscience"
 mode="basic"
 report_timeout=600
+catchup_timeout=300
 
 usage () {
-  echo "Usage: $0 [-h] [--basic|--report] [-m] [-s <suffix>]"
+  echo "Usage: $0 [-h] [--basic|--report|--catchup] [-m] [-s <suffix>]"
   echo "  --basic:    Check that the expected topics are created (default)"
   echo "  --report:   Check the balance printed by the report CronJob"
+  echo "  --catchup:  Check that catching up the night of the run does nothing more"
   echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -h: Display this help"
@@ -46,6 +48,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --basic) mode="basic" ; shift ;;
     --report) mode="report" ; shift ;;
+    --catchup) mode="catchup" ; shift ;;
     -m) monitoring=true ; shift ;;
     -s) SUFFIX="$2" ; shift 2 ;;
     -h) usage ; exit 0 ;;
@@ -174,6 +177,61 @@ if [ "$mode" = "report" ]; then
     kubectl logs -n spark "$job" --tail -1 1>&2 || true
   done
   exit 1
+fi
+
+# --catchup: catch the night of the one-off run up through the Argo
+# WorkflowTemplate, once that run is over. The night is then complete, so each
+# job of the catch-up must find its _DONE marker and exit at once: nothing is
+# processed nor distributed twice.
+#
+# Waiting for the one-off matters: a catch-up submitted while it still runs
+# would write the same checkpoints, which is what the per-night mutex forbids
+# between workflows but cannot enforce against SparkApplications outside Argo.
+if [ "$mode" = "catchup" ]; then
+  jobs="stream2raw raw2science distribution"
+  deadline=$(( SECONDS + catchup_timeout ))
+
+  night=$(kubectl get sparkapplication -n spark fink-broker-stream2raw \
+    -o jsonpath='{.spec.arguments}' | grep -o '"-night","[0-9]*"' | grep -o '[0-9]\{8\}')
+  if [ -z "$night" ]; then
+    echo "ERROR: no -night in the arguments of the one-off run" 1>&2
+    exit 1
+  fi
+
+  echo "INFO: Waiting for the one-off run of night $night to complete"
+  for job in $jobs; do
+    app="fink-broker-$job"
+    while true; do
+      state=$(kubectl get sparkapplication -n spark "$app" \
+        -o jsonpath='{.status.applicationState.state}')
+      case "$state" in
+        COMPLETED) break ;;
+        FAILED|SUBMISSION_FAILED)
+          echo "ERROR: sparkapplication/$app is $state" 1>&2
+          exit 1 ;;
+      esac
+      if [ $SECONDS -ge $deadline ]; then
+        echo "ERROR: sparkapplication/$app still $state after ${catchup_timeout}s" 1>&2
+        kubectl get sparkapplications -n spark 1>&2 || true
+        exit 1
+      fi
+      sleep 10
+    done
+  done
+
+  echo "INFO: Catching night $night up"
+  workflow=$("$DIR"/catchup.sh -n "$night" -w -t "$catchup_timeout")
+
+  for job in $jobs; do
+    if ! kubectl logs -n spark "$workflow-$job-driver" \
+        | grep -q "Night $night already .*, exiting normally"; then
+      echo "ERROR: $job processed night $night again instead of exiting at once" 1>&2
+      kubectl logs -n spark "$workflow-$job-driver" --tail 50 1>&2 || true
+      exit 1
+    fi
+  done
+  echo "INFO: catch-up of night $night found it complete and did nothing more"
+  exit 0
 fi
 
 # TODO improve management of expected topics
