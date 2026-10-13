@@ -203,13 +203,13 @@ assert "hdfs-bound resources" "CronJob/fink-broker-report ServiceAccount/fink-re
 assert "report namenode from online_data_prefix" "nn.example:8020" "$(report_namenode "$out")"
 
 echo "== fink-broker: HDFS host aliases and replication"
-out=$(chart --set 'hostAliases[0].ip=192.0.2.10' --set 'hostAliases[0].hostnames[0]=nn.example' \
-    --set hdfs.replication=2)
+out=$(chart --set run.mode=scheduled --set 'hostAliases[0].ip=192.0.2.10' \
+    --set 'hostAliases[0].hostnames[0]=nn.example' --set hdfs.replication=2)
 assert "host aliases on driver, executor and report pods" "192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10 192.0.2.10" \
-    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | (.spec.driver.hostAliases[], .spec.executor.hostAliases[]) | .ip'; \
+    "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | (.spec.template.driver.hostAliases[], .spec.template.executor.hostAliases[]) | .ip'; \
        echo "$out" | yq -r 'select(.kind == "CronJob") | .spec.jobTemplate.spec.template.spec.hostAliases[] | .ip')"
 assert "client replication" "2 2 2" \
-    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | .spec.sparkConf["spark.hadoop.dfs.replication"]')"
+    "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | .spec.template.sparkConf["spark.hadoop.dfs.replication"]')"
 
 # Arguments of the Spark jobs that decide when a run stops, one line per job.
 stop_args() {
@@ -217,18 +217,18 @@ stop_args() {
 }
 
 echo "== fink-broker: how a run stops"
-assert "one-off: exitAfter as a ceiling, the job decides from its night" \
-    "-exit_after -exit_after -exit_after" "$(stop_args "$(chart)")"
 assert "scheduled: at the exit_at deadline" "-exit_at -exit_at -exit_at" \
     "$(stop_args "$(chart --set run.mode=scheduled)")"
+assert "the legacy one-off mode is gone" "1" \
+    "$(chart --set run.mode=oneoff 2>&1 | grep -c 'run.mode must be scheduled or workflow')"
 
 echo "== fink-broker: HA namenodes"
-out=$(chart --set 'report.namenode=nn0:8020\,nn1:8020')
+out=$(chart --set run.mode=scheduled --set 'report.namenode=nn0:8020\,nn1:8020')
 assert "report namenode" "nn0:8020,nn1:8020" "$(report_namenode "$out")"
 assert "spark applications" "fink-broker-stream2raw fink-broker-raw2science fink-broker-distribution" \
-    "$(echo "$out" | names SparkApplication)"
+    "$(echo "$out" | names ScheduledSparkApplication)"
 assert "SPARK_USER kept" "185 185 185 185 185 185" \
-    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication") | (.spec.driver.env[], .spec.executor.env[]) | select(.name == "SPARK_USER") | .value')"
+    "$(echo "$out" | yq -r 'select(.kind == "ScheduledSparkApplication") | (.spec.template.driver.env[], .spec.template.executor.env[]) | select(.name == "SPARK_USER") | .value')"
 
 # Template of the WorkflowTemplate rendered from the chart, by name, as YAML.
 wf_template() {
@@ -246,8 +246,9 @@ manifest_arg() {
 }
 
 echo "== fink-broker: WorkflowTemplate catching a night up"
-assert "no WorkflowTemplate by default" "" "$(chart | names WorkflowTemplate)"
-out=$(chart --set workflows.enabled=true --set run.mode=scheduled \
+assert "no WorkflowTemplate without Argo Workflows" "" \
+    "$(chart --set run.mode=scheduled --set workflows.enabled=false | names WorkflowTemplate)"
+out=$(chart --set run.mode=scheduled \
     --set online_data_prefix=hdfs://nn.example:8020///user/185)
 assert "template name" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
 assert "night parameter" "night" \
@@ -287,8 +288,8 @@ for job in stream2raw raw2science distribution; do
         "$(echo "$manifest" | yq -r '.metadata.annotations // {} | keys[] | select(test("argocd.argoproj.io"))')"
 done
 
-echo "== fink-broker: run.mode=workflow, nights launched through the WorkflowTemplate"
-out=$(chart --set workflows.enabled=true --set run.mode=workflow --set night=20200101)
+echo "== fink-broker: run.mode=workflow (default), nights launched through the WorkflowTemplate"
+out=$(chart --set night=20200101)
 assert "no Spark job deployed" "" \
     "$(echo "$out" | yq -r 'select(.kind == "SparkApplication" or .kind == "ScheduledSparkApplication") | .metadata.name')"
 assert "WorkflowTemplate" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
@@ -297,7 +298,7 @@ assert "night parameter defaults to the night value" "20200101" \
 assert "no default night in scheduled mode" "null" \
     "$(chart --set workflows.enabled=true --set run.mode=scheduled | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
 assert "run.mode=workflow requires workflows.enabled" "1" \
-    "$(chart --set run.mode=workflow 2>&1 | grep -c 'run.mode=workflow requires workflows.enabled')"
+    "$(chart --set workflows.enabled=false 2>&1 | grep -c 'run.mode=workflow requires workflows.enabled')"
 
 echo "== fink-broker: storage=s3"
 out=$(chart --set storage=s3)

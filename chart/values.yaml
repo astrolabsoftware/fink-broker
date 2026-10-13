@@ -1,19 +1,17 @@
 # Default values for chart.
 # These values are used for fink-broker e2e tests
 
-# Pinned night used in run.mode=oneoff (backfill, rerun), default night of the
-# WorkflowTemplate in run.mode=workflow (CI). Ignored in run.mode=scheduled,
-# where the night is deduced at runtime (see scheduled).
+# Default night of the WorkflowTemplate in run.mode=workflow (CI). Ignored in
+# run.mode=scheduled, where the night is deduced at runtime (see scheduled).
 night: "20240101"
 
 run:
-  # oneoff    -> 3 SparkApplication with a pinned -night (backfill / rerun / CI,
-  #              imperative, applied on demand out of ArgoCD).
-  # scheduled -> 3 ScheduledSparkApplication deducing the night at runtime
-  #              (permanent daily production run, managed by ArgoCD).
   # workflow  -> no Spark job: each night is run by submitting the
   #              WorkflowTemplate (e2e/catchup.sh, CI). Needs workflows.enabled.
-  mode: oneoff
+  # scheduled -> 3 ScheduledSparkApplication deducing the night at runtime
+  #              (permanent daily production run, managed by ArgoCD); other
+  #              nights are caught up through the WorkflowTemplate.
+  mode: workflow
 
 # Only used when run.mode=scheduled.
 scheduled:
@@ -33,8 +31,7 @@ scheduled:
   # scheduled run needs an absolute deadline rather than a duration: a restart
   # on the starting day aims at the same instant instead of granting itself a
   # fresh window, and a run starting late exits in error instead of overflowing
-  # into the next tick. Replaces exitAfter in this mode -- the job rejects both
-  # at once.
+  # into the next tick.
   #
   # An hour of margin before midnight, on purpose: the deadline is resolved
   # against the calendar date of the attempt that resolves it, so an attempt
@@ -49,14 +46,6 @@ scheduled:
 # today's night, can no longer write the same checkpoints. Only read by the
 # guard of the catch-ups.
 nightCloseHour: 10
-
-# run.mode=oneoff only: on a closed night (before today, UTC) a job stops by
-# itself once the night is processed (stream2raw read the topic to its end,
-# then raw2science and distribution consumed everything upstream). exitAfter
-# is a safety ceiling, in seconds: reaching it after reading alerts fails the
-# job, reaching it with nothing read ends an empty night. A scheduled run uses
-# the absolute scheduled.exitAt instead. 64800 = 18h.
-exitAfter: 64800
 
 image:
   pullPolicy: IfNotPresent
@@ -96,13 +85,14 @@ monitoring:
 # distributed messages to a night using the run window deduced from
 # scheduled.schedule.
 #
-# WorkflowTemplate <fullname>-night catching a night up from the checkpoints of
-# the daily run (Argo Workflows, which must be installed in the cluster):
-#   argo submit --from workflowtemplate/fink-broker-night -p night=YYYYMMDD
+# WorkflowTemplate <fullname>-night running a night from the checkpoints of the
+# daily run, if any (Argo Workflows, which must be installed in the cluster):
+#   e2e/catchup.sh -n YYYYMMDD
 # A guard step refuses a night that is not closed yet (see nightCloseHour),
-# then the three jobs run with an absolute deadline.
+# then the three jobs run with an absolute deadline. Disable only for a
+# scheduled-only deployment without Argo Workflows.
 workflows:
-  enabled: false
+  enabled: true
   # Runs the guard: needs bash and date.
   guardImage: "bash:5.2"
   # Deadline of a catch-up, in hours after its guard step started.
@@ -114,8 +104,8 @@ report:
   # List every namenode of an HA pair, so the report follows the active one.
   # Empty -> the host:port of online_data_prefix.
   namenode: ""
-  # Fires once the streaming jobs of the previous run have stopped: they start
-  # at scheduled.schedule and last exitAfter (12:00 UTC + 18h -> ~06:00 UTC).
+  # Fires once the streaming jobs of the daily run have stopped, at
+  # scheduled.exitAt.
   schedule: "0 7 * * *"
   # A CronJob retains a number of jobs, not a duration: with a daily schedule,
   # 7 successful runs is a week of reports readable with kubectl logs.
