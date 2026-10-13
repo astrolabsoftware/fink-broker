@@ -170,6 +170,15 @@ if [ "$storage" = "hdfs" ]; then
     fi
 fi
 
+echo "Phase: Catch-up Check"
+echo "Catch the night of the run up, which must find it complete."
+if $DIR/check-results.sh --catchup; then
+    home-ci-reporter step "catchup_check" "passed" "Catch-up check completed successfully" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "catchup_check" "failed" "Catch-up check failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
 echo "Phase: Image Push"
 echo "Push the image to Container Registry"
 if $src_dir/push-image.sh; then
