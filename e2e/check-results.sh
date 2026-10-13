@@ -223,8 +223,10 @@ if [ "$mode" = "catchup" ]; then
   workflow=$("$DIR"/catchup.sh -n "$night" -w -t "$catchup_timeout")
 
   for job in $jobs; do
-    if ! kubectl logs -n spark "$workflow-$job-driver" \
-        | grep -q "Night $night already .*, exiting normally"; then
+    # Read the whole log first: grep -q stops at the first match, and the
+    # SIGPIPE it would send to kubectl fails the pipeline under pipefail.
+    log=$(kubectl logs -n spark "$workflow-$job-driver")
+    if ! grep -q "Night $night already .*, exiting normally" <<< "$log"; then
       echo "ERROR: $job processed night $night again instead of exiting at once" 1>&2
       kubectl logs -n spark "$workflow-$job-driver" --tail 50 1>&2 || true
       exit 1
