@@ -105,41 +105,38 @@ restartPolicy:
 {{/*
 Night-resolution arguments, which differ intrinsically by run.mode.
 
-- oneoff (default): pin the night explicitly (backfill, rerun, CI). The night
-  is frozen at deploy time and injected via -night.
 - scheduled: deduce the night at runtime from UTC now (see get_night). No
   -night is passed, so the job computes it from -night_offset_hours.
-- workflow: the night is the parameter of the WorkflowTemplate catching a
-  night up, an Argo expression resolved at submission.
+- workflow: the night is the parameter of the WorkflowTemplate running a
+  night, an Argo expression resolved at submission.
 
 The stop policy is NOT handled here, but it does follow the run mode: see
-fink.commonargs, where a scheduled run gets the absolute scheduled.exitAt and
-a one-off gets the exitAfter duration. The job rejects both at once.
+fink.commonargs, where a scheduled run gets scheduled.exitAt and a workflow
+the deadline computed by its guard step, both absolute.
 */}}
 {{- define "fink.nightargs" -}}
 {{- if eq .Values.run.mode "scheduled" -}}
 - '-night_offset_hours'
 - '{{ .Values.scheduled.nightOffsetHours }}'
-{{- else if eq .Values.run.mode "workflow" -}}
-- '-night'
-- '{{ "{{workflow.parameters.night}}" }}'
 {{- else -}}
 - '-night'
-- '{{ .Values.night }}'
+- '{{ "{{workflow.parameters.night}}" }}'
 {{- end -}}
 {{- end }}
 
 {{/*
-Wrap a SparkApplication spec as either a one-off SparkApplication or a
-ScheduledSparkApplication, depending on run.mode; nothing in run.mode=workflow,
-where the WorkflowTemplate creates the jobs of each night. Call with a dict:
+Wrap a SparkApplication spec as a ScheduledSparkApplication in
+run.mode=scheduled; nothing in run.mode=workflow, where the WorkflowTemplate
+creates the jobs of each night. Call with a dict:
   {"ctx": ., "name": "<suffix>", "spec": "<named spec template>"}.
 */}}
 {{- define "fink.sparkapp" -}}
 {{- $ctx := .ctx -}}
-{{- if ne $ctx.Values.run.mode "workflow" }}
-apiVersion: "sparkoperator.k8s.io/v1beta2"
+{{- if not (has $ctx.Values.run.mode (list "scheduled" "workflow")) }}
+{{- fail (printf "run.mode must be scheduled or workflow, not %q" $ctx.Values.run.mode) }}
+{{- end }}
 {{- if eq $ctx.Values.run.mode "scheduled" }}
+apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: ScheduledSparkApplication
 metadata:
   name: {{ include "fink.fullname" $ctx }}-{{ .name }}
@@ -150,13 +147,6 @@ spec:
   failedRunHistoryLimit: {{ $ctx.Values.scheduled.failedRunHistoryLimit }}
   template:
     {{- include .spec $ctx | nindent 4 }}
-{{- else }}
-kind: SparkApplication
-metadata:
-  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
-spec:
-  {{- include .spec $ctx | nindent 2 }}
-{{- end }}
 {{- end }}
 {{- end }}
 
@@ -177,14 +167,11 @@ spec:
 {{- if eq .Values.run.mode "scheduled" }}
 - '-exit_at'
 - '{{ .Values.scheduled.exitAt }}'
-{{- else if eq .Values.run.mode "workflow" }}
+{{- else }}
 {{- /* Absolute deadline computed once by the guard step, so a restarted job
 aims at the same instant */}}
 - '-exit_at'
 - '{{ "{{inputs.parameters.deadline}}" }}'
-{{- else }}
-- '-exit_after'
-- '{{ .Values.exitAfter }}'
 {{- end }}
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
