@@ -134,7 +134,6 @@ Useful variants:
 
 ```bash
 ./e2e/argocd.sh -i cc -s                 # follow the ciux work branches (dev only)
-./e2e/argocd.sh -i cc -n 20260722        # one-shot backfill of a given night
 ./e2e/argocd.sh -i cc -s -m              # with monitoring enabled
 ./e2e/argocd.sh -h                       # all options
 ```
@@ -142,22 +141,20 @@ Useful variants:
 `-s` (scheduled) deploys `ScheduledSparkApplication`s that deduce the observing
 night at runtime; the schedule and the night offset come from
 `fink-cd/apps/values.yaml` (`0 9 * * *`, `nightOffsetHours: 24` — the previous
-complete ZTF night). Without `-s`, one-shot `SparkApplication`s are deployed
-with the night frozen at Helm render time (defaulting to the previous night on
-CC), which is what you want for a backfill or a rerun.
+complete ZTF night). Without `-s`, no Spark job is deployed: nights are run
+with `e2e/catchup.sh` only (see [Catch up a night](#catch-up-a-night)).
 
 The script is idempotent: it upserts the `fink` Application, so re-running it
 with a new `-r` is the normal way to upgrade.
 
 ### When a run stops
 
-The two modes stop differently, and the job refuses both policies at once (the
-chart therefore renders exactly one of them):
+Every run stops at an absolute deadline, `-exit_at`:
 
-| Mode | Argument | Value |
-|------|----------|-------|
-| scheduled | `-exit_at` | `scheduled.exitAt`, `23:00` UTC by default |
-| one-shot | `-exit_after` | `exitAfter`, 64800 s (18 h) by default |
+| Run | Value |
+|-----|-------|
+| scheduled | `scheduled.exitAt`, `23:00` UTC by default |
+| workflow (`catchup.sh`) | start of the workflow + `workflows.deadlineHours` (18 h) |
 
 `-exit_at` takes either a time of day in UTC (`23:00`, resolved on the day the
 job starts) or a full ISO 8601 instant (`2026-08-21T20:00:00+02:00`, offset
@@ -175,9 +172,6 @@ is tracked in [#1246](https://github.com/astrolabsoftware/fink-broker/issues/124
 overflowing its window silently skips the days that follow. A run starting past
 its deadline exits in error before the Spark session is created, so it reserves
 no executor.
-
-A backfill keeps the duration: it must replay a whole night whatever the time of
-day it is started at.
 
 ## Catch up a night
 
@@ -211,9 +205,6 @@ running the command again.
   (`components.argoWorkflows`). At CC that Application is synced by hand:
   `argocd app sync fink` after an upgrade bringing it.
 
-Without Argo Workflows, `argocd.sh -i cc -n <night>` still replays a night, but
-it replaces the daily run by a one-shot run until the next `argocd.sh -s`.
-
 ## Check the deployment
 
 ```bash
@@ -224,7 +215,8 @@ argocd app list -l app.kubernetes.io/part-of=fink
 
 # Spark jobs
 kubectl -n spark get scheduledsparkapplications   # scheduled mode
-kubectl -n spark get sparkapplications            # one-shot mode, and scheduled runs
+kubectl -n spark get sparkapplications            # runs of the daily run and of the workflows
+kubectl -n spark get workflows                    # nights run with catchup.sh
 kubectl -n spark logs -l spark-role=driver --tail=100
 
 # Runs of one ScheduledSparkApplication (each run is a SparkApplication whose
