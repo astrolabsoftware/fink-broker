@@ -179,6 +179,41 @@ no executor.
 A backfill keeps the duration: it must replay a whole night whatever the time of
 day it is started at.
 
+## Catch up a night
+
+A night the daily run did not finish (crash, alerts arriving after its
+deadline) is caught up without touching the daily run:
+
+```bash
+./e2e/catchup.sh -n 20261008 -w     # prints the workflow name, waits for its end
+kubectl -n spark get workflows
+```
+
+The script submits the Argo `WorkflowTemplate` `fink-broker-night`, which runs
+the three jobs of the night from the checkpoints of the daily run: they resume
+where it stopped, so only what is missing is processed and distributed. A night
+already complete exits at once. A failed catch-up is resumed the same way, by
+running the command again.
+
+- **Closed nights only.** A night can be caught up from `nightCloseHour`
+  (10:00 UTC by default) on the next day, once its late alerts are in and the
+  daily run has moved to the next night. Before that, the workflow fails at its
+  `guard` step, which prints when the night closes.
+- **Deadline.** The jobs stop `workflows.deadlineHours` (18 h) after the
+  workflow started, an instant fixed once so a restarted job keeps it.
+- **One catch-up per night.** A second catch-up of the same night waits for
+  the first to end; different nights run in parallel, each with the resources
+  of a daily run.
+- **Re-sending a night** to the `fink_*` topics: delete its distribution
+  checkpoint, `<online_data_prefix>/kafka_checkpoint/<night>`, then catch the
+  night up.
+- **Argo Workflows** is installed by the `fink` app-of-apps
+  (`components.argoWorkflows`). At CC that Application is synced by hand:
+  `argocd app sync fink` after an upgrade bringing it.
+
+Without Argo Workflows, `argocd.sh -i cc -n <night>` still replays a night, but
+it replaces the daily run by a one-shot run until the next `argocd.sh -s`.
+
 ## Check the deployment
 
 ```bash
