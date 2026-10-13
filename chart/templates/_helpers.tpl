@@ -131,11 +131,13 @@ a one-off gets the exitAfter duration. The job rejects both at once.
 
 {{/*
 Wrap a SparkApplication spec as either a one-off SparkApplication or a
-ScheduledSparkApplication, depending on run.mode. Call with a dict:
+ScheduledSparkApplication, depending on run.mode; nothing in run.mode=workflow,
+where the WorkflowTemplate creates the jobs of each night. Call with a dict:
   {"ctx": ., "name": "<suffix>", "spec": "<named spec template>"}.
 */}}
 {{- define "fink.sparkapp" -}}
 {{- $ctx := .ctx -}}
+{{- if ne $ctx.Values.run.mode "workflow" }}
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 {{- if eq $ctx.Values.run.mode "scheduled" }}
 kind: ScheduledSparkApplication
@@ -154,6 +156,7 @@ metadata:
   name: {{ include "fink.fullname" $ctx }}-{{ .name }}
 spec:
   {{- include .spec $ctx | nindent 2 }}
+{{- end }}
 {{- end }}
 {{- end }}
 

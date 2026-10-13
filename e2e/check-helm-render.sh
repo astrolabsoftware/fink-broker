@@ -85,6 +85,17 @@ assert "report reads both HA namenodes" \
     "simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020,simple-hdfs-namenode-default-1.simple-hdfs-namenode-default.hdfs:8020" \
     "$(echo "$out" | broker_values | yq -r '.report.namenode')"
 
+echo "== fink-cd: CI values, the night run through Argo Workflows"
+for variant in noscience science; do
+    out=$(apps -f "$FINK_CD_DIR/apps/values-ci-$variant.yaml")
+    assert "$variant: jobs launched by workflows only" "workflow" \
+        "$(echo "$out" | broker_values | yq -r '.run.mode')"
+    assert "$variant: default night of the WorkflowTemplate" "20200101" \
+        "$(echo "$out" | broker_values | yq -r '.night')"
+    assert "$variant: topic resolved by the job from its night" "ztf_public_{night}" \
+        "$(echo "$out" | broker_values | yq -r '.stream2raw.kafka.topic')"
+done
+
 echo "== fink-cd: values-cc.yaml (external HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml")
 assert "applications" "$common kafka" "$(echo "$out" | names Application)"
@@ -93,6 +104,8 @@ assert "no Stackable namespace nor chart repository" "Namespace/spark Namespace/
 assert "hdfs.external forwarded" "true" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "external prefix" "hdfs://ccmaster1:8020///user/185" \
     "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
+assert "ZTF topic resolved by the job from its night" "ztf_{night}.*" \
+    "$(echo "$out" | broker_values | yq -r '.stream2raw.kafka.topic')"
 assert "report reads the external namenode" "ccmaster1:8020" \
     "$(echo "$out" | broker_values | yq -r '.report.namenode')"
 assert "replication aligned with the production cluster" "2" \
@@ -273,6 +286,18 @@ for job in stream2raw raw2science distribution; do
     assert "$job: no Argo CD annotation" "" \
         "$(echo "$manifest" | yq -r '.metadata.annotations // {} | keys[] | select(test("argocd.argoproj.io"))')"
 done
+
+echo "== fink-broker: run.mode=workflow, nights launched through the WorkflowTemplate"
+out=$(chart --set workflows.enabled=true --set run.mode=workflow --set night=20200101)
+assert "no Spark job deployed" "" \
+    "$(echo "$out" | yq -r 'select(.kind == "SparkApplication" or .kind == "ScheduledSparkApplication") | .metadata.name')"
+assert "WorkflowTemplate" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
+assert "night parameter defaults to the night value" "20200101" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
+assert "no default night in scheduled mode" "null" \
+    "$(chart --set workflows.enabled=true --set run.mode=scheduled | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
+assert "run.mode=workflow requires workflows.enabled" "1" \
+    "$(chart --set run.mode=workflow 2>&1 | grep -c 'run.mode=workflow requires workflows.enabled')"
 
 echo "== fink-broker: storage=s3"
 out=$(chart --set storage=s3)

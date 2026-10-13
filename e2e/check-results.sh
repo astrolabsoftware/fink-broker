@@ -181,44 +181,42 @@ if [ "$mode" = "report" ]; then
   exit 1
 fi
 
-# --catchup: catch the night of the one-off run up through the Argo
-# WorkflowTemplate, once that run is over. The night is then complete, so each
-# job of the catch-up must find its _DONE marker and exit at once: nothing is
-# processed nor distributed twice.
+# --catchup: once the workflow which ran the night of the CI is over, catch
+# that night up again. The night is then complete, so each job of the second
+# workflow must find its _DONE marker and exit at once: nothing is processed
+# nor distributed twice.
 #
-# Waiting for the one-off matters: a catch-up submitted while it still runs
-# would write the same checkpoints, which is what the per-night mutex forbids
-# between workflows but cannot enforce against SparkApplications outside Argo.
+# Waiting for the first workflow is not needed for correctness, the per-night
+# mutex would hold the second one, but it bounds the time each may take.
 if [ "$mode" = "catchup" ]; then
   jobs="stream2raw raw2science distribution"
   deadline=$(( SECONDS + catchup_timeout ))
 
-  night=$(kubectl get sparkapplication -n spark fink-broker-stream2raw \
-    -o jsonpath='{.spec.arguments}' | grep -o '"-night","[0-9]*"' | grep -o '[0-9]\{8\}')
-  if [ -z "$night" ]; then
-    echo "ERROR: no -night in the arguments of the one-off run" 1>&2
+  first=$(kubectl get workflows -n spark --sort-by=.metadata.creationTimestamp \
+    -o jsonpath='{.items[0].metadata.name}')
+  if [ -z "$first" ]; then
+    echo "ERROR: no workflow ran the night of the CI" 1>&2
     exit 1
   fi
+  night=$(kubectl get workflow -n spark "$first" \
+    -o jsonpath='{.spec.arguments.parameters[?(@.name=="night")].value}')
 
-  echo "INFO: Waiting for the one-off run of night $night to complete"
-  for job in $jobs; do
-    app="fink-broker-$job"
-    while true; do
-      state=$(kubectl get sparkapplication -n spark "$app" \
-        -o jsonpath='{.status.applicationState.state}')
-      case "$state" in
-        COMPLETED) break ;;
-        FAILED|SUBMISSION_FAILED)
-          echo "ERROR: sparkapplication/$app is $state" 1>&2
-          exit 1 ;;
-      esac
-      if [ $SECONDS -ge $deadline ]; then
-        echo "ERROR: sparkapplication/$app still $state after ${catchup_timeout}s" 1>&2
-        kubectl get sparkapplications -n spark 1>&2 || true
-        exit 1
-      fi
-      sleep 10
-    done
+  echo "INFO: Waiting for workflow/$first, running night $night, to succeed"
+  while true; do
+    phase=$(kubectl get workflow -n spark "$first" -o jsonpath='{.status.phase}')
+    case "$phase" in
+      Succeeded) break ;;
+      Failed|Error)
+        echo "ERROR: workflow/$first ended $phase" 1>&2
+        kubectl get workflow -n spark "$first" -o jsonpath='{.status.message}' 1>&2 || true
+        exit 1 ;;
+    esac
+    if [ $SECONDS -ge $deadline ]; then
+      echo "ERROR: workflow/$first still ${phase:-pending} after ${catchup_timeout}s" 1>&2
+      kubectl get workflows,sparkapplications -n spark 1>&2 || true
+      exit 1
+    fi
+    sleep 10
   done
 
   echo "INFO: Catching night $night up"
@@ -337,7 +335,9 @@ fi
 if $monitoring;
 then
     echo "Checking prometheus exporter is enabled in fink-broker"
-    if kubectl exec -it -n spark fink-broker-stream2raw-driver -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
+    # Named after the workflow which created it
+    driver=$(kubectl get pods -n spark -l spark-role=driver -o name | grep -m1 -- "-stream2raw-driver$")
+    if kubectl exec -n spark "$driver" -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
     then
         echo "Prometheus exporter is enabled"
     else
