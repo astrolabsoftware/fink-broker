@@ -1,8 +1,9 @@
 # Default values for chart.
 # These values are used for fink-broker e2e tests
 
-# Pinned night used in run.mode=oneoff (backfill, rerun, CI). Ignored in
-# run.mode=scheduled, where the night is deduced at runtime (see scheduled).
+# Pinned night used in run.mode=oneoff (backfill, rerun), default night of the
+# WorkflowTemplate in run.mode=workflow (CI). Ignored in run.mode=scheduled,
+# where the night is deduced at runtime (see scheduled).
 night: "20240101"
 
 run:
@@ -10,6 +11,8 @@ run:
   #              imperative, applied on demand out of ArgoCD).
   # scheduled -> 3 ScheduledSparkApplication deducing the night at runtime
   #              (permanent daily production run, managed by ArgoCD).
+  # workflow  -> no Spark job: each night is run by submitting the
+  #              WorkflowTemplate (e2e/catchup.sh, CI). Needs workflows.enabled.
   mode: oneoff
 
 # Only used when run.mode=scheduled.

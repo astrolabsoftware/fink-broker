@@ -1,3 +1,6 @@
+{{- if and (eq .Values.run.mode "workflow") (not .Values.workflows.enabled) }}
+{{- fail "run.mode=workflow requires workflows.enabled: the WorkflowTemplate is the only way to run a night" }}
+{{- end }}
 {{- if .Values.workflows.enabled }}
 {{- /*
 The three jobs of a night, as SparkApplications created by the workflow, from
@@ -19,6 +22,11 @@ spec:
   arguments:
     parameters:
       - name: night
+        {{- /* Nights run only through workflows, as in CI: the night value
+        is the one run by default */}}
+        {{- if eq .Values.run.mode "workflow" }}
+        value: {{ .Values.night | quote }}
+        {{- end }}
   # Two runs on the same night would write the same checkpoints
   synchronization:
     mutexes:

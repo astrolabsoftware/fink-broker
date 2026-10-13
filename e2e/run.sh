@@ -147,6 +147,15 @@ else
     exit 1
 fi
 
+echo "Phase: Night Run"
+echo "Run the night through the WorkflowTemplate, as any catch-up."
+if $DIR/catchup.sh; then
+    home-ci-reporter step "night_run" "passed" "Night submitted successfully" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "night_run" "failed" "Night submission failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
 echo "Phase: Test Results Check"
 echo "Check the results of the tests."
 if $DIR/check-results.sh --basic -s "$SUFFIX" $monitoring_opt; then
