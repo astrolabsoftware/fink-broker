@@ -22,8 +22,17 @@ so Argo CD gates each wave on the health of the previous one:
 | 2 | fink-broker, fink-alert-simulator | Spark jobs (the simulator is disabled on CC) |
 
 The CC-specific configuration lives in `fink-cd/apps/values-cc.yaml`: local
-Kafka enabled, no alert simulator, HDFS sized for a real ZTF night, and the
+Kafka enabled, no alert simulator, the datasets written to the CC-IN2P3
+production HDFS outside the cluster (`hdfs.external: true`, `hdfs.onlineDataPrefix` pointing there), and the
 `raw2science` executor pinned to the dedicated big-worker node pool.
+
+With `hdfs.external`, the Stackable operators and the `hdfs` Application are
+not deployed, and the fink-broker chart skips the `/user/185` init Job, which
+needs the in-cluster namenode. The balance report reads HDFS directly, from the
+NameNode(s) listed in `hdfs.namenodes`, in both cases. Setting
+`hdfs.external: false` falls back to the in-cluster HDFS, sized for a real ZTF
+night by the knobs kept in the same file; `e2e/check-helm-render.sh` renders
+both variants (no cluster needed).
 
 ## Prerequisites
 
@@ -98,6 +107,29 @@ git checkout <tag>          # keep the workspace clean: ciux derives the
 ./e2e/argocd.sh -i cc -s -r <tag>
 ```
 
+### Site-local values
+
+Some values are specific to the site and must stay out of git, the
+repositories being public: the production HDFS hosts are not in the cluster
+DNS, so `ccmaster1` (the NameNode in `hdfs.onlineDataPrefix` and
+`hdfs.namenodes`) is resolved through `/etc/hosts` entries of the Spark and
+report pods. They go in `apps/values-cc.local.yaml`, next to `values-cc.yaml`
+in the fink-cd clone that ciux sets up beside fink-broker. The file is
+git-ignored; start from the committed example, which holds everything but the
+addresses:
+
+```bash
+cd ../fink-cd/apps
+cp values-cc.local.yaml.example values-cc.local.yaml
+# fill in the real ccmaster1 IP
+```
+
+`e2e/argocd.sh -i cc` picks it up by itself (`-l <file>` points to another
+one) and hands it to Argo CD as a literal values block: it lives in the `fink`
+Application, in the cluster, never in git.
+The DataNodes need no entry: the HDFS client reaches them by the IP the
+NameNode reports.
+
 Useful variants:
 
 ```bash
@@ -169,7 +201,7 @@ kubectl -n spark get scheduledsparkapplication fink-broker-stream2raw \
 
 # Storage
 kubectl -n kafka get kafka,kafkauser,kafkatopic
-kubectl -n hdfs get hdfsclusters
+kubectl -n hdfs get hdfsclusters    # in-cluster HDFS only (hdfs.external=false)
 ```
 
 `e2e/diag.sh` collects a broader diagnostic dump when something is wrong; see

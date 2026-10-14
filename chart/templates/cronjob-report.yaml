@@ -22,6 +22,10 @@ spec:
         spec:
           serviceAccountName: {{ .Values.report.serviceAccount.name }}
           restartPolicy: OnFailure
+          {{- with .Values.hostAliases }}
+          hostAliases:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           containers:
             - name: report
               image: "{{ .Values.report.image.repository }}/{{ .Values.report.image.name }}:{{ .Values.report.image.tag }}"
@@ -29,6 +33,8 @@ spec:
               args:
                 - 'get'
                 - 'balance'
+                - '--namenode'
+                - '{{ include "fink.reportNamenode" . }}'
                 - '--prefix'
                 - '{{ include "fink.hdfsPath" . }}'
                 # Run window used to attribute distributed messages to a night

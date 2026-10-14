@@ -1,4 +1,4 @@
-{{ if eq .Values.storage "hdfs" -}}
+{{ if and (eq .Values.storage "hdfs") (not .Values.hdfs.external) -}}
 apiVersion: batch/v1
 kind: Job
 metadata:

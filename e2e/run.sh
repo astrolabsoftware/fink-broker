@@ -158,11 +158,11 @@ else
 fi
 
 # Reported apart from the check above, so a failure says which of the two it
-# was. HDFS only: `get balance` reads the datasets from inside the namenode pod.
+# was. HDFS only: the report CronJob reads the datasets from the namenode.
 if [ "$storage" = "hdfs" ]; then
     echo "Phase: Balance Check"
     echo "Account for the alerts which went through the broker."
-    if $DIR/check-results.sh --advanced; then
+    if $DIR/check-results.sh --report; then
         home-ci-reporter step "balance_check" "passed" "Balance check completed successfully" --file "$TEST_REPORT"
     else
         home-ci-reporter step "balance_check" "failed" "Balance check failed" --file "$TEST_REPORT"

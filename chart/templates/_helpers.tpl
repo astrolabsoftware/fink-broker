@@ -65,6 +65,19 @@ spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 {{- end }}
 {{- end }}
 
+{{/*
+Spark configuration: the S3 connector settings, or the HDFS client
+replication. HDFS clients pick the replication of the files they create
+from their own configuration (default 3), not from the cluster, so
+hdfs.replication aligns them with the dfs.replication of the cluster.
+*/}}
+{{- define "fink.sparkconf" -}}
+{{ include "fink.s3config" . }}
+{{- if and (eq .Values.storage "hdfs") .Values.hdfs.replication }}
+spark.hadoop.dfs.replication: "{{ .Values.hdfs.replication }}"
+{{- end }}
+{{- end }}
+
 {{/* Generate hdfs configuration */}}
 {{- define "fink.hdfsconfig" -}}
 {{ if eq .Values.storage "hdfs" -}}
@@ -157,6 +170,7 @@ spec:
 - '-exit_at'
 - '{{ .Values.scheduled.exitAt }}'
 {{- else }}
+- '-stop_when_done'
 - '-exit_after'
 - '{{ .Values.exitAfter }}'
 {{- end }}
@@ -167,12 +181,26 @@ spec:
 
 {{/*
 Path part of online_data_prefix, e.g.
-"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report reads the
-datasets from inside the namenode pod, where only the path is meaningful.
+"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report takes the
+NameNode address separately (fink.reportNamenode).
 */}}
 {{- define "fink.hdfsPath" -}}
 {{- $path := regexReplaceAll "^[a-zA-Z0-9]+://[^/]+" .Values.online_data_prefix "" -}}
 {{- regexReplaceAll "/{2,}" $path "/" | trimSuffix "/" -}}
+{{- end }}
+
+{{/*
+NameNode RPC address(es) the report reads HDFS from: report.namenode when
+set, host:port[,host:port] with every namenode of an HA pair, else the
+authority of online_data_prefix, e.g.
+"hdfs://namenode.hdfs:8020///user/185" -> "namenode.hdfs:8020".
+*/}}
+{{- define "fink.reportNamenode" -}}
+{{- if .Values.report.namenode -}}
+{{- .Values.report.namenode -}}
+{{- else -}}
+{{- regexReplaceAll "^[a-zA-Z0-9]+://([^/]+).*$" .Values.online_data_prefix "${1}" -}}
+{{- end -}}
 {{- end }}
 
 {{/*

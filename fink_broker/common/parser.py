@@ -136,6 +136,16 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-stop_when_done",
+        action="store_true",
+        help="""One-off run (pinned -night): stop once the night is processed,
+        i.e. the upstream job is done and nothing was read for a while, and
+        leave a _DONE marker in the checkpoint directory for the downstream
+        job. -exit_after is then a ceiling: reaching it after reading alerts
+        is an error.
+        """,
+    )
+    parser.add_argument(
         "-online_data_prefix",
         type=str,
         default="",
@@ -448,6 +458,12 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     args = parser.parse_args(None)
+
+    # On a deduced (possibly live) night, a quiet spell would look like the
+    # end of the night: the _DONE marker would then make every restart skip
+    # the rest of its alerts.
+    if args.stop_when_done and args.night is None:
+        parser.error("-stop_when_done requires a pinned -night")
 
     # Resolve the observing night once, centrally: either pinned by -night or
     # deduced from the current UTC time following the -night_offset_hours
