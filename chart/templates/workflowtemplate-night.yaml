@@ -23,12 +23,15 @@ spec:
       # catchup (by hand) or nightly (CronWorkflow), see the guard
       - name: mode
         value: catchup
-  # Two runs on the same night would write the same checkpoints
-  synchronization:
-    mutexes:
-      - name: fink-night-{{ "{{workflow.parameters.night}}" }}
   templates:
     - name: night
+      # Two runs on the same night would write the same checkpoints. Held at
+      # the template level: there the night parameter is resolved, while a
+      # workflow-level mutex would take the raw value of the nightly run's
+      # night, a creationTimestamp expression
+      synchronization:
+        mutexes:
+          - name: fink-night-{{ "{{workflow.parameters.night}}" }}
       steps:
         - - name: guard
             template: guard

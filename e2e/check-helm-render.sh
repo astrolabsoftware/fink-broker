@@ -255,7 +255,9 @@ assert "night and mode parameters" "night mode" \
 assert "catch-up by default" "catchup" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "mode") | .value')"
 assert "one run per night at a time" "fink-night-{{workflow.parameters.night}}" \
-    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.synchronization.mutexes[].name')"
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "night") | .synchronization.mutexes[].name')"
+assert "no workflow-level mutex, where the night is not resolved" "null" \
+    "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.synchronization')"
 assert "guard step first, then the three jobs" "guard distribution raw2science stream2raw" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.templates[] | select(.name == "night") | .steps[][].name')"
 assert "guard checks the night and computes the deadline" \
