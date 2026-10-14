@@ -197,6 +197,15 @@ else
     exit 1
 fi
 
+echo "Phase: Nightly Run Check"
+echo "Submit a nightly run as the CronWorkflow does, check its night and deadline."
+if $DIR/check-results.sh --nightly; then
+    home-ci-reporter step "nightly_check" "passed" "Nightly run started today's night" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "nightly_check" "failed" "Nightly run check failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
 echo "Phase: Image Push"
 echo "Push the image to Container Registry"
 if $src_dir/push-image.sh; then
