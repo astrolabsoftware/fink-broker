@@ -115,8 +115,8 @@ stream2raw:
   kafka:
     in_sockets: kafka-cluster-kafka-bootstrap.kafka:9092
     starting_offset: earliest
-    # {night} is a runtime placeholder resolved by the job (get_night), not by
-    # Helm: it works for both a pinned and a deduced night.
+    # {night} is a runtime placeholder resolved by the job from its -night
+    # (resolve_night_placeholders), not by Helm: one chart serves every night.
     topic: "ztf_public_{night}"
 
 #
@@ -165,8 +165,8 @@ storage: hdfs
 s3:
   endpoint: https://minio.minio:443
   use_ssl: "true"
-  # {night} is a runtime placeholder resolved by the job (get_night), not by
-  # Helm: it works for both a pinned and a deduced night.
+  # {night} is a runtime placeholder resolved by the job from its -night
+  # (resolve_night_placeholders), not by Helm: one chart serves every night.
   bucket: "fink-broker-online-{night}"
   access_key: "minio"
   secret_key: "minio123"
