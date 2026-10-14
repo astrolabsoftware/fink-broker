@@ -103,51 +103,12 @@ restartPolicy:
 {{- end }}
 
 {{/*
-Night-resolution arguments, which differ intrinsically by run.mode.
-
-- scheduled: deduce the night at runtime from UTC now (see get_night). No
-  -night is passed, so the job computes it from -night_offset_hours.
-- workflow: the night is the parameter of the WorkflowTemplate running a
-  night, an Argo expression resolved at submission.
-
-The stop policy is NOT handled here, but it does follow the run mode: see
-fink.commonargs, where a scheduled run gets scheduled.exitAt and a workflow
-the deadline computed by its guard step, both absolute.
+Night of the jobs: the parameter of the WorkflowTemplate running the night, an
+Argo expression resolved at submission.
 */}}
 {{- define "fink.nightargs" -}}
-{{- if eq .Values.run.mode "scheduled" -}}
-- '-night_offset_hours'
-- '{{ .Values.scheduled.nightOffsetHours }}'
-{{- else -}}
 - '-night'
 - '{{ "{{workflow.parameters.night}}" }}'
-{{- end -}}
-{{- end }}
-
-{{/*
-Wrap a SparkApplication spec as a ScheduledSparkApplication in
-run.mode=scheduled; nothing in run.mode=workflow, where the WorkflowTemplate
-creates the jobs of each night. Call with a dict:
-  {"ctx": ., "name": "<suffix>", "spec": "<named spec template>"}.
-*/}}
-{{- define "fink.sparkapp" -}}
-{{- $ctx := .ctx -}}
-{{- if not (has $ctx.Values.run.mode (list "scheduled" "workflow")) }}
-{{- fail (printf "run.mode must be scheduled or workflow, not %q" $ctx.Values.run.mode) }}
-{{- end }}
-{{- if eq $ctx.Values.run.mode "scheduled" }}
-apiVersion: "sparkoperator.k8s.io/v1beta2"
-kind: ScheduledSparkApplication
-metadata:
-  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
-spec:
-  schedule: {{ $ctx.Values.scheduled.schedule | quote }}
-  concurrencyPolicy: {{ $ctx.Values.scheduled.concurrencyPolicy }}
-  successfulRunHistoryLimit: {{ $ctx.Values.scheduled.successfulRunHistoryLimit }}
-  failedRunHistoryLimit: {{ $ctx.Values.scheduled.failedRunHistoryLimit }}
-  template:
-    {{- include .spec $ctx | nindent 4 }}
-{{- end }}
 {{- end }}
 
 {{/* Generate common argument for fink-broker command line */}}
@@ -164,15 +125,10 @@ spec:
 - '{{ .Values.producer }}'
 - '-tinterval'
 - '{{ .Values.fink_trigger_update }}'
-{{- if eq .Values.run.mode "scheduled" }}
-- '-exit_at'
-- '{{ .Values.scheduled.exitAt }}'
-{{- else }}
 {{- /* Absolute deadline computed once by the guard step, so a restarted job
 aims at the same instant */}}
 - '-exit_at'
 - '{{ "{{inputs.parameters.deadline}}" }}'
-{{- end }}
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
 {{- end -}}
@@ -203,11 +159,11 @@ authority of online_data_prefix, e.g.
 {{- end }}
 
 {{/*
-Time of day at which a scheduled run starts, deduced from scheduled.schedule
+Time of day at which a nightly run starts, deduced from nightly.schedule
 and formatted as HH:MM. The report uses it to bracket the window during which
 a run produced its messages.
 */}}
 {{- define "fink.runTime" -}}
-{{- $fields := splitList " " .Values.scheduled.schedule -}}
+{{- $fields := splitList " " .Values.nightly.schedule -}}
 {{- printf "%02d:%02d" (atoi (index $fields 1)) (atoi (index $fields 0)) -}}
 {{- end }}

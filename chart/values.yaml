@@ -1,50 +1,33 @@
 # Default values for chart.
 # These values are used for fink-broker e2e tests
 
-# Default night of the WorkflowTemplate in run.mode=workflow (CI). Ignored in
-# run.mode=scheduled, where the night is deduced at runtime (see scheduled).
+# Default night of the WorkflowTemplate, run by e2e/catchup.sh without -n (CI).
+# Not set with nightly.enabled, so that a catch-up has to name its night.
 night: "20240101"
 
-run:
-  # workflow  -> no Spark job: each night is run by submitting the
-  #              WorkflowTemplate (e2e/catchup.sh, CI). Needs workflows.enabled.
-  # scheduled -> 3 ScheduledSparkApplication deducing the night at runtime
-  #              (permanent daily production run, managed by ArgoCD); other
-  #              nights are caught up through the WorkflowTemplate.
-  mode: workflow
-
-# Only used when run.mode=scheduled.
-scheduled:
-  # Single cron shared by the three jobs so they fire together and agree on the
-  # same night (same side of the UTC boundary). UTC.
-  schedule: "0 12 * * *"
-  # Forbid a new run while the previous one is still active (a streaming run may
-  # overrun its window).
+# Nightly run: a CronWorkflow submitting the WorkflowTemplate every day, on
+# today's night (UTC), processed live as its alerts arrive. Disabled -> no
+# Spark job runs by itself: each night is submitted by hand (e2e/catchup.sh,
+# CI). Every time in this block is UTC.
+nightly:
+  enabled: false
+  schedule: "1 0 * * *"
+  # Time of day (HH:MM, UTC) at which the run stops, on the day of its night:
+  # an absolute deadline, computed once by the guard step, so a restarted job
+  # aims at the same instant. Alerts arriving later are recovered by a
+  # catch-up of the night.
+  exitAt: "20:00"
+  # Forbid a new run while the previous one is still active; the per-night
+  # mutex of the WorkflowTemplate already keeps a catch-up of the same night
+  # away.
   concurrencyPolicy: Forbid
-  successfulRunHistoryLimit: 3
-  failedRunHistoryLimit: 3
-  # Hours subtracted from UTC now to deduce the night (see get_night):
-  # 0 -> current night (live), 24 -> previous complete night (n-1). To settle
-  # against the ZTF topic rollover convention.
-  nightOffsetHours: 24
-  # Time of day (HH:MM, UTC) at which a run stops, on the day it started. A
-  # scheduled run needs an absolute deadline rather than a duration: a restart
-  # on the starting day aims at the same instant instead of granting itself a
-  # fresh window, and a run starting late exits in error instead of overflowing
-  # into the next tick.
-  #
-  # An hour of margin before midnight, on purpose: the deadline is resolved
-  # against the calendar date of the attempt that resolves it, so an attempt
-  # landing past midnight would aim at the NEXT day and run for a full extra
-  # day. This margin keeps a healthy run well clear of that boundary; it does
-  # not remove the defect, which is tracked in #1246 (fink-cd overrides this
-  # default and needs the same value).
-  exitAt: "23:00"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
 
-# Hour (UTC), on the day after a night, from which the night can be caught up
-# (workflows): its late alerts are in, and the daily run, which processes
-# today's night, can no longer write the same checkpoints. Only read by the
-# guard of the catch-ups.
+# Hour (UTC), on the day after a night, from which the night can be caught up:
+# its late alerts are in, and the nightly run, which processes today's night,
+# can no longer write the same checkpoints. Only read by the guard of the
+# catch-ups.
 nightCloseHour: 10
 
 image:
@@ -80,19 +63,19 @@ monitoring:
 # raw and science datasets, messages pushed to each distribution topic. The
 # report is written to the pod stdout (kubectl logs).
 #
-# Only makes sense with run.mode=scheduled and storage=hdfs: it reads the
+# Only makes sense with nightly.enabled and storage=hdfs: it reads the
 # datasets from the NameNode(s) given by report.namenode, and attributes
 # distributed messages to a night using the run window deduced from
-# scheduled.schedule.
+# nightly.schedule.
 #
-# WorkflowTemplate <fullname>-night running a night from the checkpoints of the
-# daily run, if any (Argo Workflows, which must be installed in the cluster):
+# WorkflowTemplate <fullname>-night, the only way a night is run (Argo
+# Workflows must be installed in the cluster): by the nightly CronWorkflow, or
+# by hand to catch a night up from the checkpoints of the nightly run:
 #   e2e/catchup.sh -n YYYYMMDD
-# A guard step refuses a night that is not closed yet (see nightCloseHour),
-# then the three jobs run with an absolute deadline. Disable only for a
-# scheduled-only deployment without Argo Workflows.
+# A guard step refuses a night that cannot be run in that mode (a catch-up
+# needs a closed night, see nightCloseHour; a nightly run, today's night), then
+# the three jobs run with an absolute deadline.
 workflows:
-  enabled: true
   # Runs the guard: needs bash and date.
   guardImage: "bash:5.2"
   # Deadline of a catch-up, in hours after its guard step started.
@@ -104,8 +87,8 @@ report:
   # List every namenode of an HA pair, so the report follows the active one.
   # Empty -> the host:port of online_data_prefix.
   namenode: ""
-  # Fires once the streaming jobs of the daily run have stopped, at
-  # scheduled.exitAt.
+  # Fires once the streaming jobs of the nightly run have stopped, at
+  # nightly.exitAt.
   schedule: "0 7 * * *"
   # A CronJob retains a number of jobs, not a duration: with a daily schedule,
   # 7 successful runs is a week of reports readable with kubectl logs.

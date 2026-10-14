@@ -236,7 +236,7 @@ if [ "$mode" = "catchup" ]; then
   exit 0
 fi
 
-# --catchup-open: today's night is still open, the daily run may be writing
+# --catchup-open: today's night is still open, the nightly run may be writing
 # its checkpoints, so the guard step of the workflow must refuse it before any
 # job is created.
 if [ "$mode" = "catchup-open" ]; then

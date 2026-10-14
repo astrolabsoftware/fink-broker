@@ -54,4 +54,3 @@ monitoring:
     port: 8090
 {{- end }}
 {{- end }}
-{{- include "fink.sparkapp" (dict "ctx" . "name" "distribution" "spec" "fink.distribution.spec") }}
