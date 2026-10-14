@@ -30,11 +30,13 @@ report_timeout=600
 catchup_timeout=300
 
 usage () {
-  echo "Usage: $0 [-h] [--basic|--report|--catchup|--catchup-open] [-m] [-s <suffix>]"
+  echo "Usage: $0 [-h] [--basic|--report|--catchup|--catchup-open|--nightly] [-m] [-s <suffix>]"
   echo "  --basic:    Check that the expected topics are created (default)"
   echo "  --report:   Check the balance printed by the report CronJob"
   echo "  --catchup:  Check that catching up the night of the run does nothing more"
   echo "  --catchup-open: Check that catching up today's night is refused"
+  echo "  --nightly:  Check that a nightly run, as submitted by the CronWorkflow,"
+  echo "              starts today's night with its deadline"
   echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -h: Display this help"
@@ -51,6 +53,7 @@ while [ "$#" -gt 0 ]; do
     --report) mode="report" ; shift ;;
     --catchup) mode="catchup" ; shift ;;
     --catchup-open) mode="catchup-open" ; shift ;;
+    --nightly) mode="nightly" ; shift ;;
     -m) monitoring=true ; shift ;;
     -s) SUFFIX="$2" ; shift 2 ;;
     -h) usage ; exit 0 ;;
@@ -263,6 +266,118 @@ if [ "$mode" = "catchup-open" ]; then
     exit 1
   fi
   echo "INFO: catch-up of the open night $night refused by the guard"
+  exit 0
+fi
+
+# --nightly: submit the workflow the nightly CronWorkflow submits (same
+# template, mode and night expression; the CronWorkflow itself is not deployed
+# in CI), check its night and deadline, then delete it: an open night runs
+# until its deadline.
+if [ "$mode" = "nightly" ]; then
+  jobs="stream2raw raw2science distribution"
+  deadline=$(( SECONDS + catchup_timeout ))
+  template="fink-broker-night"
+
+  workflow=$(kubectl create -n spark -o jsonpath='{.metadata.name}' -f - <<EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: nightly-check-
+spec:
+  arguments:
+    parameters:
+      - name: night
+        value: "{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}"
+      - name: mode
+        value: nightly
+  workflowTemplateRef:
+    name: $template
+EOF
+)
+  # An open night runs until its deadline: stop the run however this check
+  # ends, its jobs go with it
+  trap 'kubectl delete workflow -n spark "$workflow" --wait > /dev/null 2>&1 || true' EXIT
+
+  # Today's night is the UTC date of the submission, even if this check
+  # crosses midnight
+  created=$(kubectl get workflow -n spark "$workflow" -o jsonpath='{.metadata.creationTimestamp}')
+  night=$(date -u -d "$created" +%Y%m%d)
+  exit_at=$(kubectl get workflowtemplate -n spark "$template" \
+    -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[4]}')
+  expected="${night:0:4}-${night:4:2}-${night:6:2}T${exit_at}:00Z"
+  echo "INFO: workflow/$workflow runs night $night, expected deadline $expected"
+
+  # Past its deadline (a CI run in the evening), the guard must refuse the
+  # night; before, it must let it through with the deadline
+  if [ "$(date -u -d "$created" +%s)" -ge "$(date -u -d "$expected" +%s)" ]; then
+    guard_phase="Failed"
+  else
+    guard_phase="Succeeded"
+  fi
+  # status.nodes is a map, which jsonpath cannot filter: list it instead
+  guard_node() {
+    kubectl get workflow -n spark "$workflow" \
+      -o jsonpath='{range .status.nodes.*}{.displayName}{"\t"}{.phase}{"\t"}{.outputs.result}{"\n"}{end}' |
+      awk -F '\t' -v field="$1" '$1 == "guard" { print $field }'
+  }
+  while true; do
+    phase=$(guard_node 2)
+    case "$phase" in
+      Succeeded|Failed|Error) break ;;
+    esac
+    if [ $SECONDS -ge $deadline ]; then
+      echo "ERROR: guard of workflow/$workflow still ${phase:-pending} after ${catchup_timeout}s" 1>&2
+      exit 1
+    fi
+    sleep 5
+  done
+  if [ "$phase" != "$guard_phase" ]; then
+    echo "ERROR: guard of workflow/$workflow ended $phase, expected $guard_phase" 1>&2
+    kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
+    exit 1
+  fi
+
+  if [ "$guard_phase" = "Failed" ]; then
+    log=$(kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
+    if ! grep -q "Nightly run of $night started past its deadline" <<< "$log"; then
+      echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
+      echo "$log" 1>&2
+      exit 1
+    fi
+    echo "INFO: nightly run of $night refused past its deadline $expected"
+  else
+    result=$(guard_node 3)
+    if [ "$result" != "$expected" ]; then
+      echo "ERROR: guard deadline $result, expected $expected" 1>&2
+      exit 1
+    fi
+    for job in $jobs; do
+      app="$workflow-$job"
+      until args=$(kubectl get sparkapplication -n spark "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
+        if [ $SECONDS -ge $deadline ]; then
+          echo "ERROR: sparkapplication/$app not created after ${catchup_timeout}s" 1>&2
+          exit 1
+        fi
+        sleep 5
+      done
+      for arg in "\"-night\",\"$night\"" "\"-exit_at\",\"$expected\""; do
+        if ! grep -qF -- "$arg" <<< "$args"; then
+          echo "ERROR: sparkapplication/$app lacks $arg: $args" 1>&2
+          exit 1
+        fi
+      done
+    done
+    # The running night holds its mutex, shared with the catch-ups: the night
+    # must be resolved in its name, not left as an expression
+    mutex=$(kubectl get workflow -n spark "$workflow" \
+      -o jsonpath='{.status.synchronization.mutex.holding[*].mutex}')
+    if [ "$mutex" != "spark/Mutex/fink-night-$night" ]; then
+      echo "ERROR: workflow/$workflow holds mutex '$mutex'," \
+        "expected spark/Mutex/fink-night-$night" 1>&2
+      exit 1
+    fi
+    echo "INFO: nightly run of $night started its jobs, stopping at $expected"
+  fi
   exit 0
 fi
 

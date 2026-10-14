@@ -188,12 +188,16 @@ jobs:
         id: check_catchup_open
         run: |
           ./e2e/check-results.sh --catchup-open
+      - name: Check nightly run
+        id: check_nightly
+        run: |
+          ./e2e/check-results.sh --nightly
       - name: Collect diagnostics
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure' || steps.check_nightly.outcome == 'failure')
         run: |
           ./e2e/diag.sh /tmp/k8s-diag
       - name: Upload diagnostics artifacts
-        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure')
+        if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure' || steps.check_nightly.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: k8s-diag-${{ matrix.storage }}
