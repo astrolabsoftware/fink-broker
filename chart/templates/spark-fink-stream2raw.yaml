@@ -49,4 +49,3 @@ monitoring:
     port: 8090
 {{- end }}
 {{- end }}
-{{- include "fink.sparkapp" (dict "ctx" . "name" "stream2raw" "spec" "fink.stream2raw.spec") }}

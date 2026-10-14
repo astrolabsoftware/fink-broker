@@ -1,0 +1,31 @@
+{{- if .Values.nightly.enabled }}
+{{- /*
+Nightly run: submits the WorkflowTemplate every day on today's night (UTC),
+fixed once at submission, so a restarted job keeps its night.
+*/}}
+{{- $fullname := include "fink.fullname" . }}
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: {{ $fullname }}-nightly
+  labels:
+    {{- include "fink.labels" . | nindent 4 }}
+spec:
+  schedules:
+    - {{ .Values.nightly.schedule | quote }}
+  # The jobs deduce nothing from local time: everything is UTC
+  timezone: "Etc/UTC"
+  concurrencyPolicy: {{ .Values.nightly.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.nightly.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.nightly.failedJobsHistoryLimit }}
+  workflowSpec:
+    workflowTemplateRef:
+      name: {{ $fullname }}-night
+    arguments:
+      parameters:
+        # Creation date of the workflow, in UTC like Kubernetes timestamps
+        - name: night
+          value: {{ "{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}" | quote }}
+        - name: mode
+          value: nightly
+{{- end }}
