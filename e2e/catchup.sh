@@ -15,13 +15,13 @@ timeout=900
 usage () {
   echo "Usage: $0 [-n <night>] [-w] [-t <timeout>] [-h]"
   echo "  -n: Night to catch up, YYYYMMDD (UTC). Default: the default night of"
-  echo "      the WorkflowTemplate, set with run.mode=workflow only (CI)"
+  echo "      the WorkflowTemplate, set without a nightly run only (CI)"
   echo "  -w: Wait for the workflow to end, exit non-zero if it did not succeed"
   echo "  -t: Seconds to wait with -w. Default: $timeout"
   echo "  -h: Display this help"
   echo ""
   echo " Submit a workflow running the three jobs of the night from the"
-  echo " checkpoints of the daily run, and print its name on stdout. The"
+  echo " checkpoints of the nightly run, and print its name on stdout. The"
   echo " workflow refuses a night still open (see nightCloseHour in the chart),"
   echo " and waits for any other catch-up of the same night to end."
 }

@@ -1,16 +1,9 @@
-{{- if and (eq .Values.run.mode "workflow") (not .Values.workflows.enabled) }}
-{{- fail "run.mode=workflow requires workflows.enabled: the WorkflowTemplate is the only way to run a night" }}
-{{- end }}
-{{- if .Values.workflows.enabled }}
 {{- /*
-The three jobs of a night, as SparkApplications created by the workflow, from
-the same specs as the daily run: same data and checkpoints, so a catch-up
-resumes where the daily run stopped. Rendered with run.mode=workflow, which
-pins the night and the deadline to Argo expressions.
+The three jobs of a night, as SparkApplications created by the workflow. The
+nightly run and the catch-ups share the same data and checkpoints, so a
+catch-up resumes where the nightly run stopped.
 */}}
-{{- $values := deepCopy .Values }}
-{{- $_ := set $values.run "mode" "workflow" }}
-{{- $ctx := dict "Values" $values "Chart" .Chart "Release" .Release "Template" .Template "Files" .Files "Capabilities" .Capabilities }}
+{{- $ctx := . }}
 {{- $fullname := include "fink.fullname" . }}
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
@@ -22,11 +15,14 @@ spec:
   arguments:
     parameters:
       - name: night
-        {{- /* Nights run only through workflows, as in CI: the night value
-        is the one run by default */}}
-        {{- if eq .Values.run.mode "workflow" }}
+        {{- /* No default night next to a nightly run: a catch-up has to
+        name its night */}}
+        {{- if not .Values.nightly.enabled }}
         value: {{ .Values.night | quote }}
         {{- end }}
+      # catchup (by hand) or nightly (CronWorkflow), see the guard
+      - name: mode
+        value: catchup
   # Two runs on the same night would write the same checkpoints
   synchronization:
     mutexes:
@@ -57,9 +53,11 @@ spec:
             {{- .Files.Get "files/workflow-guard.sh" | nindent 12 }}
           - workflow-guard
         args:
+          - {{ "{{workflow.parameters.mode}}" | quote }}
           - {{ "{{workflow.parameters.night}}" | quote }}
           - {{ .Values.workflows.deadlineHours | quote }}
           - {{ .Values.nightCloseHour | quote }}
+          - {{ .Values.nightly.exitAt | quote }}
     {{- range $job := list "stream2raw" "raw2science" "distribution" }}
     - name: {{ $job }}
       inputs:
@@ -78,4 +76,3 @@ spec:
           spec:
             {{- include (printf "fink.%s.spec" $job) $ctx | nindent 12 }}
     {{- end }}
-{{- end }}

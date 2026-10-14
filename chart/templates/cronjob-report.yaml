@@ -40,6 +40,7 @@ spec:
                 # Run window used to attribute distributed messages to a night
                 - '--cron'
                 - '{{ include "fink.runTime" . }}'
+                # The nightly run processes today's night
                 - '--night-offset'
-                - '{{ .Values.scheduled.nightOffsetHours }}'
+                - '0'
 {{- end }}

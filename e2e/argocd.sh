@@ -27,10 +27,10 @@ Available options:
                 'ci-*' infras enable the e2e alert simulator; others are
                 production-like (e2e disabled). The fink-broker image variant
                 (science/noscience) is derived from the infra name.
-  -s            Scheduled mode: layer values-scheduled.yaml on top, deploying
-                ScheduledSparkApplications that deduce the observing night at
-                runtime. Without -s, no Spark job is deployed: nights are run
-                with e2e/catchup.sh, through the Argo WorkflowTemplate.
+  -s            Nightly run: layer values-scheduled.yaml on top, deploying a
+                CronWorkflow that submits the Argo WorkflowTemplate every day
+                on today's night. Without -s, no night runs by itself: nights
+                are run with e2e/catchup.sh, through the same WorkflowTemplate.
   -r <ref>      Git revision (tag or commit sha) deployed for fink-cd,
                 fink-broker and fink-alert-simulator. Default: the work
                 branches resolved by ciux (the current branch when it exists
@@ -47,7 +47,7 @@ Available options:
   -S <storage>  Storage to use (hdfs or s3). Default: hdfs
 
 Examples:
-  $(basename "$0") -i cc -s       # CC-IN2P3, scheduled daily run
+  $(basename "$0") -i cc -s       # CC-IN2P3, nightly run
   $(basename "$0") -i cc -s -r v3.3.0   # ... pinned on a release tag
 EOD
 }

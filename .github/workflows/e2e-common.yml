@@ -157,8 +157,8 @@ jobs:
           # The ciux image suffix is empty for the science variant, but the infra
           # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
           ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
-      # No Spark job is deployed in CI (run.mode=workflow): the night is run
-      # through the WorkflowTemplate, as any catch-up.
+      # No nightly run is deployed in CI: the night is run through the
+      # WorkflowTemplate, as any catch-up.
       - name: Run the night
         id: run_night
         run: |
