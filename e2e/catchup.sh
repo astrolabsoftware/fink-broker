@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Catch a ZTF night up through the Argo WorkflowTemplate fink-broker-night
+# Catch a ZTF night up through the Argo WorkflowTemplate night
 
 # @author  Fabrice Jammes
 
 set -euo pipefail
 
-namespace="spark"
-template="fink-broker-night"
+namespace="fink-broker"
+template="night"
 night=""
 wait=false
 timeout=900

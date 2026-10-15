@@ -128,12 +128,12 @@ assert_balance () {
 # would let such a failure hide behind a later run that succeeds, while at CC
 # the report runs once a day and that failure is all there is.
 if [ "$mode" = "report" ]; then
-  cronjob="fink-broker-report"
+  cronjob="report"
   deadline=$(( SECONDS + report_timeout ))
 
   # Print the Jobs of the CronJob that ended in the Failed condition.
   failed_jobs() {
-    kubectl get jobs -n spark \
+    kubectl get jobs -n fink-broker \
       -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.conditions[?(@.type=='Failed')].status}{'\n'}{end}" \
       2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 == "True" { print $1 }'
   }
@@ -145,29 +145,29 @@ if [ "$mode" = "report" ]; then
       echo "ERROR: cronjob/$cronjob has failed runs: $(echo $failed)" 1>&2
       for job in $failed; do
         echo "--- job/$job ---" 1>&2
-        kubectl describe job -n spark "$job" 1>&2 || true
-        kubectl logs -n spark "job/$job" --tail -1 1>&2 || true
+        kubectl describe job -n fink-broker "$job" 1>&2 || true
+        kubectl logs -n fink-broker "job/$job" --tail -1 1>&2 || true
       done
       exit 1
     fi
 
-    for job in $(kubectl get jobs -n spark \
+    for job in $(kubectl get jobs -n fink-broker \
         -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.metadata.name}{'\n'}{end}" \
         2>/dev/null | grep "^${cronjob}-" | sort -r); do
       out="/tmp/${job}.out"
-      kubectl logs -n spark "job/${job}" > "$out" 2>&1 || continue
+      kubectl logs -n fink-broker "job/${job}" > "$out" 2>&1 || continue
       if assert_balance "$out" > /dev/null 2>&1; then
         echo "INFO: report produced by job/${job}"
         cat "$out"
         assert_balance "$out"
         # Not a failure, but the sign of a run started too early or of a
         # flaky dependency: say so, with the logs of the failed attempts.
-        kubectl get pods -n spark -l job-name \
+        kubectl get pods -n fink-broker -l job-name \
           -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
           2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
           | while IFS=$'\t' read -r pod restarts; do
               echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
-              kubectl logs -n spark "$pod" --previous --tail 20 || true
+              kubectl logs -n fink-broker "$pod" --previous --tail 20 || true
             done
         exit 0
       fi
@@ -176,10 +176,10 @@ if [ "$mode" = "report" ]; then
   done
 
   echo "ERROR: no run of cronjob/$cronjob accounted for the alerts within ${report_timeout}s" 1>&2
-  kubectl get cronjob,jobs -n spark 1>&2 || true
-  for job in $(kubectl get jobs -n spark -o name 2>/dev/null | grep "$cronjob"); do
+  kubectl get cronjob,jobs -n fink-broker 1>&2 || true
+  for job in $(kubectl get jobs -n fink-broker -o name 2>/dev/null | grep "$cronjob"); do
     echo "--- logs of $job ---" 1>&2
-    kubectl logs -n spark "$job" --tail -1 1>&2 || true
+    kubectl logs -n fink-broker "$job" --tail -1 1>&2 || true
   done
   exit 1
 fi
@@ -195,28 +195,28 @@ if [ "$mode" = "catchup" ]; then
   jobs="stream2raw raw2science distribution"
   deadline=$(( SECONDS + catchup_timeout ))
 
-  first=$(kubectl get workflows -n spark --sort-by=.metadata.creationTimestamp \
+  first=$(kubectl get workflows -n fink-broker --sort-by=.metadata.creationTimestamp \
     -o jsonpath='{.items[0].metadata.name}')
   if [ -z "$first" ]; then
     echo "ERROR: no workflow ran the night of the CI" 1>&2
     exit 1
   fi
-  night=$(kubectl get workflow -n spark "$first" \
+  night=$(kubectl get workflow -n fink-broker "$first" \
     -o jsonpath='{.spec.arguments.parameters[?(@.name=="night")].value}')
 
   echo "INFO: Waiting for workflow/$first, running night $night, to succeed"
   while true; do
-    phase=$(kubectl get workflow -n spark "$first" -o jsonpath='{.status.phase}')
+    phase=$(kubectl get workflow -n fink-broker "$first" -o jsonpath='{.status.phase}')
     case "$phase" in
       Succeeded) break ;;
       Failed|Error)
         echo "ERROR: workflow/$first ended $phase" 1>&2
-        kubectl get workflow -n spark "$first" -o jsonpath='{.status.message}' 1>&2 || true
+        kubectl get workflow -n fink-broker "$first" -o jsonpath='{.status.message}' 1>&2 || true
         exit 1 ;;
     esac
     if [ $SECONDS -ge $deadline ]; then
       echo "ERROR: workflow/$first still ${phase:-pending} after ${catchup_timeout}s" 1>&2
-      kubectl get workflows,sparkapplications -n spark 1>&2 || true
+      kubectl get workflows,sparkapplications -n fink-broker 1>&2 || true
       exit 1
     fi
     sleep 10
@@ -228,10 +228,10 @@ if [ "$mode" = "catchup" ]; then
   for job in $jobs; do
     # Read the whole log first: grep -q stops at the first match, and the
     # SIGPIPE it would send to kubectl fails the pipeline under pipefail.
-    log=$(kubectl logs -n spark "$workflow-$job-driver")
+    log=$(kubectl logs -n fink-broker "$workflow-$job-driver")
     if ! grep -q "Night $night already .*, exiting normally" <<< "$log"; then
       echo "ERROR: $job processed night $night again instead of exiting at once" 1>&2
-      kubectl logs -n spark "$workflow-$job-driver" --tail 50 1>&2 || true
+      kubectl logs -n fink-broker "$workflow-$job-driver" --tail 50 1>&2 || true
       exit 1
     fi
   done
@@ -254,13 +254,13 @@ if [ "$mode" = "catchup-open" ]; then
     echo "ERROR: the catch-up of night $night was not even submitted" 1>&2
     exit 1
   fi
-  log=$(kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
+  log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
   if ! grep -q "Night $night is still open until" <<< "$log"; then
     echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
     echo "$log" 1>&2
     exit 1
   fi
-  apps=$(kubectl get sparkapplications -n spark -o name | grep "/$workflow-" || true)
+  apps=$(kubectl get sparkapplications -n fink-broker -o name | grep "/$workflow-" || true)
   if [ -n "$apps" ]; then
     echo "ERROR: workflow/$workflow created jobs despite the refusal: $apps" 1>&2
     exit 1
@@ -276,9 +276,9 @@ fi
 if [ "$mode" = "nightly" ]; then
   jobs="stream2raw raw2science distribution"
   deadline=$(( SECONDS + catchup_timeout ))
-  template="fink-broker-night"
+  template="night"
 
-  workflow=$(kubectl create -n spark -o jsonpath='{.metadata.name}' -f - <<EOF
+  workflow=$(kubectl create -n fink-broker -o jsonpath='{.metadata.name}' -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
@@ -296,13 +296,13 @@ EOF
 )
   # An open night runs until its deadline: stop the run however this check
   # ends, its jobs go with it
-  trap 'kubectl delete workflow -n spark "$workflow" --wait > /dev/null 2>&1 || true' EXIT
+  trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
 
   # Today's night is the UTC date of the submission, even if this check
   # crosses midnight
-  created=$(kubectl get workflow -n spark "$workflow" -o jsonpath='{.metadata.creationTimestamp}')
+  created=$(kubectl get workflow -n fink-broker "$workflow" -o jsonpath='{.metadata.creationTimestamp}')
   night=$(date -u -d "$created" +%Y%m%d)
-  exit_at=$(kubectl get workflowtemplate -n spark "$template" \
+  exit_at=$(kubectl get workflowtemplate -n fink-broker "$template" \
     -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[4]}')
   expected="${night:0:4}-${night:4:2}-${night:6:2}T${exit_at}:00Z"
   echo "INFO: workflow/$workflow runs night $night, expected deadline $expected"
@@ -316,7 +316,7 @@ EOF
   fi
   # status.nodes is a map, which jsonpath cannot filter: list it instead
   guard_node() {
-    kubectl get workflow -n spark "$workflow" \
+    kubectl get workflow -n fink-broker "$workflow" \
       -o jsonpath='{range .status.nodes.*}{.displayName}{"\t"}{.phase}{"\t"}{.outputs.result}{"\n"}{end}' |
       awk -F '\t' -v field="$1" '$1 == "guard" { print $field }'
   }
@@ -333,12 +333,12 @@ EOF
   done
   if [ "$phase" != "$guard_phase" ]; then
     echo "ERROR: guard of workflow/$workflow ended $phase, expected $guard_phase" 1>&2
-    kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
+    kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
     exit 1
   fi
 
   if [ "$guard_phase" = "Failed" ]; then
-    log=$(kubectl logs -n spark -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
+    log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
     if ! grep -q "Nightly run of $night started past its deadline" <<< "$log"; then
       echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
       echo "$log" 1>&2
@@ -353,7 +353,7 @@ EOF
     fi
     for job in $jobs; do
       app="$workflow-$job"
-      until args=$(kubectl get sparkapplication -n spark "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
+      until args=$(kubectl get sparkapplication -n fink-broker "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
         if [ $SECONDS -ge $deadline ]; then
           echo "ERROR: sparkapplication/$app not created after ${catchup_timeout}s" 1>&2
           exit 1
@@ -369,11 +369,11 @@ EOF
     done
     # The running night holds its mutex, shared with the catch-ups: the night
     # must be resolved in its name, not left as an expression
-    mutex=$(kubectl get workflow -n spark "$workflow" \
+    mutex=$(kubectl get workflow -n fink-broker "$workflow" \
       -o jsonpath='{.status.synchronization.mutex.holding[*].mutex}')
-    if [ "$mutex" != "spark/Mutex/fink-night-$night" ]; then
+    if [ "$mutex" != "fink-broker/Mutex/fink-night-$night" ]; then
       echo "ERROR: workflow/$workflow holds mutex '$mutex'," \
-        "expected spark/Mutex/fink-night-$night" 1>&2
+        "expected fink-broker/Mutex/fink-night-$night" 1>&2
       exit 1
     fi
     echo "INFO: nightly run of $night started its jobs, stopping at $expected"
@@ -401,23 +401,23 @@ while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /d
 do
     echo "INFO: Waiting for expected topics: $expected_topics, attempt: $((count+1))/$max_attempts"
     sleep 5
-    echo "INFO: List pods in spark namespace:"
-    kubectl get pods -n spark
+    echo "INFO: List pods in fink-broker namespace:"
+    kubectl get pods -n fink-broker
 
-    crashed_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Failed -o name)
+    crashed_pods=$(kubectl get pods -n fink-broker -l $selector --field-selector=status.phase=Failed -o name)
     if [ -n "$crashed_pods" ]; then
       echo "ERROR: crashed pods found: $crashed_pods" 1>&2
           for pod in $crashed_pods
           do
               echo "--- Logs for crashed Pod: $pod ---"
-              kubectl logs "$pod" -n spark
+              kubectl logs "$pod" -n fink-broker
           done
-          running_pods=$(kubectl get pods -n spark -l $selector --field-selector=status.phase=Running -o name)
+          running_pods=$(kubectl get pods -n fink-broker -l $selector --field-selector=status.phase=Running -o name)
           if [ -n "$running_pods" ]; then
               echo "INFO: logs of running pods:"
               for pod in $running_pods; do
                   echo "--- Logs for running Pod: $pod ---"
-                  kubectl logs "$pod" -n spark --tail -1
+                  kubectl logs "$pod" -n fink-broker --tail -1
               done
           fi
       err_msg="ERROR: fink-broker has crashed" 1>&2
@@ -428,11 +428,11 @@ do
 
     count=$((count+1))
     if [ $count -eq $max_attempts ]; then
-      pods=$(kubectl get pods -n spark -l $selector -o name)
+      pods=$(kubectl get pods -n fink-broker -l $selector -o name)
       for pod in $pods
       do
           echo "--- Logs for Pod: $pod ---"
-          kubectl logs "$pod" -n spark --tail -1
+          kubectl logs "$pod" -n fink-broker --tail -1
       done
       err_msg="ERROR: fink-broker did not produce expected results after ~20 minutes"
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
@@ -451,8 +451,8 @@ if $monitoring;
 then
     echo "Checking prometheus exporter is enabled in fink-broker"
     # Named after the workflow which created it
-    driver=$(kubectl get pods -n spark -l spark-role=driver -o name | grep -m1 -- "-stream2raw-driver$")
-    if kubectl exec -n spark "$driver" -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
+    driver=$(kubectl get pods -n fink-broker -l spark-role=driver -o name | grep -m1 -- "-stream2raw-driver$")
+    if kubectl exec -n fink-broker "$driver" -- curl http://localhost:8090/metrics  | grep jvm > /dev/null
     then
         echo "Prometheus exporter is enabled"
     else
