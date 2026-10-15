@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from fink_broker.common.tester import regular_unit_tests
-from fink_broker.common.night_utils import get_night, resolve_night_placeholders
+from fink_broker.common.night_utils import resolve_night_placeholders
 import argparse
 
 
@@ -23,8 +23,7 @@ def night_label(value: str) -> str:
     The night is sliced into Kafka topics, storage paths and date partitions
     (``value[:4]``, ``[4:6]``, ``[6:8]``), so anything shorter or non-numeric
     silently produces a misdirected run rather than an error. An empty value
-    is refused for the same reason it cannot be let through: it would read as
-    "deduce", which is what -night_offset_hours is for.
+    is refused for the same reason.
 
     Parameters
     ----------
@@ -230,6 +229,11 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         landing on the next day resolves the HH:MM form against that day, which
         is tracked in #1246. Mutually exclusive with `exit_after`.
 
+        On a closed night (before today, UTC), the ZTF streaming jobs stop as
+        soon as the night is processed and leave a _DONE marker; the deadline,
+        or `exit_after`, is then only a ceiling, reaching it after reading
+        alerts is an error. Today's night is open and runs to the deadline.
+
         Honoured by the ZTF streaming jobs only, which is all the chart
         deploys. The other entrypoints branch on `exit_after`, so passing
         `exit_at` to them stops nothing and they run the `exit_after` default
@@ -331,32 +335,29 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         [DISTRIBUTION_OFFSET_FILE]
         """,
     )
-    # The night is either pinned or deduced, and every job derives its paths
-    # from it: an omitted night used to default to an empty string, which was
-    # then sliced into broken paths ({prefix}/raw/, year=""). Make the source
-    # of the night explicit and let argparse reject a missing or ambiguous one.
-    night_source = parser.add_mutually_exclusive_group(required=True)
-    night_source.add_argument(
+    # Every job derives its paths from the night: an omitted night used to
+    # default to an empty string, which was then sliced into broken paths
+    # ({prefix}/raw/, year=""). Let argparse reject a missing one.
+    parser.add_argument(
         "-night",
         type=night_label,
-        default=None,
+        required=True,
         help="""
-        YYYYMMDD night, pinned explicitly (backfill, rerun of a failed night,
-        or CI). Mutually exclusive with -night_offset_hours.
+        YYYYMMDD night, given by the workflow running it (nightly run,
+        catch-up or CI).
         [NIGHT]
         """,
     )
-    night_source.add_argument(
-        "-night_offset_hours",
+    parser.add_argument(
+        "-night_close_hour",
         type=int,
-        default=None,
+        default=0,
         help="""
-        Deduce the night from the current UTC time: hours subtracted from UTC
-        now before extracting the date. Encodes both the topic rollover
-        (sub-day shift) and the night selection: 0 -> current night (live,
-        midnight rollover), 12 -> current night with a noon-UTC rollover, 24 ->
-        previous complete night (n-1). Mutually exclusive with -night.
-        [NIGHT_OFFSET_HOURS]
+        Hour (UTC), on the day after the night, from which the night is
+        closed, its late alerts in: a job of a closed night stops once caught
+        up and marks it done, a job of an open night runs to its deadline.
+        Default 0: the night closes at midnight UTC.
+        [NIGHT_CLOSE_HOUR]
         """,
     )
     parser.add_argument(
@@ -449,13 +450,9 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
     )
     args = parser.parse_args(None)
 
-    # Resolve the observing night once, centrally: either pinned by -night or
-    # deduced from the current UTC time following the -night_offset_hours
-    # rollover policy (argparse guarantees exactly one of them). The Kafka
-    # topic and output prefix may carry a '{night}' placeholder resolved here,
-    # so the date is computed at runtime instead of being frozen at
+    # The Kafka topic and output prefix may carry a '{night}' placeholder
+    # resolved here, so one chart serves every night instead of freezing it at
     # Helm-templating time.
-    args.night = get_night(args.night or "", args.night_offset_hours or 0)
     args.topic = resolve_night_placeholders(args.topic, args.night)
     args.online_data_prefix = resolve_night_placeholders(
         args.online_data_prefix, args.night

@@ -16,14 +16,23 @@ so Argo CD gates each wave on the health of the previous one:
 
 | Wave | Applications | Role |
 |------|--------------|------|
-| -1 | `spark` namespace | Persistent namespace for the Spark jobs |
+| -1 | `fink-broker` namespace | Persistent namespace for the Spark jobs and their workflows |
 | 0 | strimzi, spark-operator, minio-operator, stackable-hadoop-operators | Operators and their CRDs |
 | 1 | kafka, hdfs, minio-tenant | Storage, including the Kafka SASL/JAAS secret |
 | 2 | fink-broker, fink-alert-simulator | Spark jobs (the simulator is disabled on CC) |
 
 The CC-specific configuration lives in `fink-cd/apps/values-cc.yaml`: local
-Kafka enabled, no alert simulator, HDFS sized for a real ZTF night, and the
+Kafka enabled, no alert simulator, the datasets written to the CC-IN2P3
+production HDFS outside the cluster (`hdfs.external: true`, `hdfs.onlineDataPrefix` pointing there), and the
 `raw2science` executor pinned to the dedicated big-worker node pool.
+
+With `hdfs.external`, the Stackable operators and the `hdfs` Application are
+not deployed, and the fink-broker chart skips the `/user/185` init Job, which
+needs the in-cluster namenode. The balance report reads HDFS directly, from the
+NameNode(s) listed in `hdfs.namenodes`, in both cases. Setting
+`hdfs.external: false` falls back to the in-cluster HDFS, sized for a real ZTF
+night by the knobs kept in the same file; `e2e/check-helm-render.sh` renders
+both variants (no cluster needed).
 
 ## Prerequisites
 
@@ -57,7 +66,7 @@ ignition step in [e2e.md](e2e.md).
 
 No SCRAM password lives in git: `e2e/argocd.sh` provisions the two secrets it
 derives — `kafka/fink-producer-password`, read by the `KafkaUser`, and
-`spark/fink-kafka-jaas`, mounted by the distribution `SparkApplication` — before
+`fink-broker/fink-kafka-jaas`, mounted by the distribution `SparkApplication` — before
 creating the app-of-apps. The step is idempotent and runs on every deployment:
 on CC the password is generated on the first run and reused afterwards (CI
 infras get a fixed throwaway one, so both environments exercise the same path).
@@ -94,58 +103,113 @@ cd fink-broker
 git checkout <tag>          # keep the workspace clean: ciux derives the
                             # container image tag from the sources
 
-# Permanent daily run, pinned on a release tag
+# Permanent nightly run, pinned on a release tag
 ./e2e/argocd.sh -i cc -s -r <tag>
 ```
+
+### Site-local values
+
+Some values are specific to the site and must stay out of git, the
+repositories being public: the production HDFS hosts are not in the cluster
+DNS, so `ccmaster1` (the NameNode in `hdfs.onlineDataPrefix` and
+`hdfs.namenodes`) is resolved through `/etc/hosts` entries of the Spark and
+report pods. They go in `apps/values-cc.local.yaml`, next to `values-cc.yaml`
+in the fink-cd clone that ciux sets up beside fink-broker. The file is
+git-ignored; start from the committed example, which holds everything but the
+addresses:
+
+```bash
+cd ../fink-cd/apps
+cp values-cc.local.yaml.example values-cc.local.yaml
+# fill in the real ccmaster1 IP
+```
+
+`e2e/argocd.sh -i cc` picks it up by itself (`-l <file>` points to another
+one) and hands it to Argo CD as a literal values block: it lives in the `fink`
+Application, in the cluster, never in git.
+The DataNodes need no entry: the HDFS client reaches them by the IP the
+NameNode reports.
 
 Useful variants:
 
 ```bash
 ./e2e/argocd.sh -i cc -s                 # follow the ciux work branches (dev only)
-./e2e/argocd.sh -i cc -n 20260722        # one-shot backfill of a given night
 ./e2e/argocd.sh -i cc -s -m              # with monitoring enabled
 ./e2e/argocd.sh -h                       # all options
 ```
 
-`-s` (scheduled) deploys `ScheduledSparkApplication`s that deduce the observing
-night at runtime; the schedule and the night offset come from
-`fink-cd/apps/values.yaml` (`0 9 * * *`, `nightOffsetHours: 24` — the previous
-complete ZTF night). Without `-s`, one-shot `SparkApplication`s are deployed
-with the night frozen at Helm render time (defaulting to the previous night on
-CC), which is what you want for a backfill or a rerun.
+`-s` deploys the nightly run: a `CronWorkflow`, `nightly`, which
+submits the Argo `WorkflowTemplate` `night` every day on today's
+night (UTC), fixed at submission. The schedule and the deadline come from
+`fink-cd/apps/values.yaml` (`nightly.schedule: 1 0 * * *`,
+`nightly.exitAt: 20:00`). Without `-s`, no night runs by itself: nights are run
+with `e2e/catchup.sh` only (see [Catch up a night](#catch-up-a-night)). Both
+go through the same `WorkflowTemplate`, so a night is always run the same way.
 
 The script is idempotent: it upserts the `fink` Application, so re-running it
 with a new `-r` is the normal way to upgrade.
 
 ### When a run stops
 
-The two modes stop differently, and the job refuses both policies at once (the
-chart therefore renders exactly one of them):
+Every run stops at an absolute deadline, computed once by the `guard` step of
+the workflow and handed to the three jobs as `-exit_at`:
 
-| Mode | Argument | Value |
-|------|----------|-------|
-| scheduled | `-exit_at` | `scheduled.exitAt`, `23:00` UTC by default |
-| one-shot | `-exit_after` | `exitAfter`, 64800 s (18 h) by default |
+| Run | Deadline |
+|-----|----------|
+| nightly | `nightly.exitAt` on the day of its night, `20:00` UTC by default |
+| catch-up (`catchup.sh`) of a closed night | start of the workflow + `workflows.deadlineHours` (18 h) |
+| catch-up of an open night | when the night closes, `nightCloseHour` (10:00 UTC) the next day |
+
+A job restarted after a crash keeps the deadline of its workflow, so it aims at
+the same instant instead of granting itself a fresh window. The deadline of a
+nightly run derives from its night, not from the day the job (re)starts: a
+restart past midnight no longer aims at the next day
+([#1246](https://github.com/astrolabsoftware/fink-broker/issues/1246)). A
+nightly run starting past its deadline is refused by the guard before any job
+is created, so it reserves no executor; its night is then caught up.
 
 `-exit_at` takes either a time of day in UTC (`23:00`, resolved on the day the
 job starts) or a full ISO 8601 instant (`2026-08-21T20:00:00+02:00`, offset
-honoured, UTC assumed when absent). The second form is what a caller computing
-the stop time itself needs — a stop time expressed in local time, or a run
-crossing the UTC midnight, where a time of day cannot say which day is meant.
+honoured, UTC assumed when absent). The workflows always pass the second form.
 
-A scheduled run needs an absolute deadline rather than a duration, because a
-run restarted after a crash aims at the same instant instead of granting itself
-a fresh window. That holds as long as the restart stays on the starting day:
-the deadline is resolved against the calendar date of the attempt resolving it,
-so an attempt landing past midnight aims at the next day and runs for a full
-extra day. Hence the hour of margin in the default (`23:00`); the defect itself
-is tracked in [#1246](https://github.com/astrolabsoftware/fink-broker/issues/1246). That matters under `concurrencyPolicy: Forbid`, where a run
-overflowing its window silently skips the days that follow. A run starting past
-its deadline exits in error before the Spark session is created, so it reserves
-no executor.
+## Catch up a night
 
-A backfill keeps the duration: it must replay a whole night whatever the time of
-day it is started at.
+A night the nightly run did not finish (crash, alerts arriving after its
+deadline) is caught up without touching the nightly run:
+
+```bash
+./e2e/catchup.sh -n 20261008 -w     # prints the workflow name, waits for its end
+kubectl -n fink-broker get workflows
+```
+
+The script submits the Argo `WorkflowTemplate` `night`, which runs
+the three jobs of the night from the checkpoints of the nightly run: they resume
+where it stopped, so only what is missing is processed and distributed. A night
+already complete exits at once. A failed catch-up is resumed the same way, by
+running the command again.
+
+- **Open and closed nights.** A night is open until `nightCloseHour`
+  (10:00 UTC by default) on the next day, once its late alerts are in. The
+  jobs of an **open** night, today's or yesterday's, run live until the night
+  closes and leave no done marker; those of a **closed** night stop as soon as
+  it is caught up and mark it done. A future night is refused.
+- **Restarting a failed nightly run**: delete its workflow first
+  (`kubectl -n fink-broker delete workflow nightly-<id>`), which frees the
+  night and stops its jobs, then `catchup.sh -n <today>`. The jobs resume from
+  the checkpoints and run live until the night closes, the next morning, so
+  alongside the next nightly run.
+- **Deadline.** Fixed once by the guard, so a restarted job keeps it: when the
+  night closes for an open night, `workflows.deadlineHours` (18 h) after the
+  workflow started for a closed one.
+- **One run per night.** A second run of the same night, nightly or catch-up,
+  waits for the first to end; different nights run in parallel, each with the
+  resources of a nightly run.
+- **Re-sending a night** to the `fink_*` topics: delete its distribution
+  checkpoint, `<online_data_prefix>/kafka_checkpoint/<night>`, then catch the
+  night up.
+- **Argo Workflows** is installed by the `fink` app-of-apps
+  (`components.argoWorkflows`). At CC that Application is synced by hand:
+  `argocd app sync fink` after an upgrade bringing it.
 
 ## Check the deployment
 
@@ -155,22 +219,24 @@ export ARGOCD_OPTS="--core --namespace argocd"
 # Rollout status of every component
 argocd app list -l app.kubernetes.io/part-of=fink
 
-# Spark jobs
-kubectl -n spark get scheduledsparkapplications   # scheduled mode
-kubectl -n spark get sparkapplications            # one-shot mode, and scheduled runs
-kubectl -n spark logs -l spark-role=driver --tail=100
-
-# Runs of one ScheduledSparkApplication (each run is a SparkApplication whose
-# name suffix is its launch time in epoch nanoseconds)
-kubectl -n spark get sparkapplications \
-  -l sparkoperator.k8s.io/scheduled-app-name=fink-broker-stream2raw
-kubectl -n spark get scheduledsparkapplication fink-broker-stream2raw \
-  -o jsonpath='{.status}'                        # lastRun / nextRun / history
+# Nights
+kubectl -n fink-broker get cronworkflows                # nightly run (-s)
+kubectl -n fink-broker get workflows                    # nightly runs and catch-ups
+kubectl -n fink-broker get sparkapplications            # jobs of the running nights
+kubectl -n fink-broker logs -l spark-role=driver --tail=100
+kubectl -n fink-broker get cronworkflow nightly \
+  -o jsonpath='{.status}'                        # last scheduled run, active ones
 
 # Storage
 kubectl -n kafka get kafka,kafkauser,kafkatopic
-kubectl -n hdfs get hdfsclusters
+kubectl -n hdfs get hdfsclusters    # in-cluster HDFS only (hdfs.external=false)
 ```
+
+Every object of a run is named after it: a nightly run `nightly-<id>`, a
+catch-up `catchup-<night>-<id>`. Its SparkApplications are `<run>-<job>`, and
+their pods `<run>-<job>-driver`, `<run>-<job>-exec-<n>`, next to the workflow
+step pods `<run>-<job>-<n>`, so `kubectl get pods | grep <run>` lists a whole
+run. The report pods are `report-<n>-<id>`.
 
 `e2e/diag.sh` collects a broader diagnostic dump when something is wrong; see
 also [troubleshoot.md](troubleshoot.md).
@@ -206,13 +272,15 @@ HDFS/Kafka data. This is irreversible.
   in the `spark`, `kafka` or `hdfs` namespaces is reverted within seconds by
   `selfHeal`. To pause it during an investigation:
   `argocd app set fink-broker --sync-policy none`.
-- **Restarting a job** is done by deleting its `SparkApplication`; `selfHeal`
-  recreates it identically (same night) and the operator relaunches it.
+- **Restarting a night.** The `SparkApplication`s of a night belong to its
+  workflow, not to Argo CD: a job that crashes is retried by the Spark
+  operator, and a workflow that failed is resumed by catching its night up
+  (`e2e/catchup.sh -n <night>`), once the night is closed.
 - **A night without alerts is not a failure.** The telescope does not observe
   every night. `raw2science` and `distribution` wait for their upstream data
   until the deadline, then exit *successfully* with `No alert collected for
-  night <N>, nothing to do`. The run is `COMPLETED`, no retry is triggered and
-  the `Forbid` slot is freed for the next night. Before this was handled, such a
+  night <N>, nothing to do`. The workflow succeeds, no retry is triggered and
+  the next night starts as usual. Before this was handled, such a
   night pinned both jobs indefinitely and blocked every following run.
 - **The container image is pinned independently** of the chart revision:
   `ciux` derives it from the hash of the workspace sources. Always deploy from

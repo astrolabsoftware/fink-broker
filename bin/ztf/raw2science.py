@@ -25,6 +25,7 @@ See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 
 from pyspark.sql import functions as F
 
+from datetime import datetime, timezone
 import argparse
 import sys
 import time
@@ -33,11 +34,21 @@ import os
 from fink_broker import __version__ as fbvsn
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
-from fink_broker.common.night_utils import get_exit_deadline, seconds_until
+from fink_broker.common.night_utils import (
+    check_night,
+    get_exit_deadline,
+    night_is_closed,
+    seconds_until,
+)
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import (
     NoDataAvailableError,
+    completion_idle_seconds,
     connect_to_raw_database,
+    done_marker,
+    file_exists,
+    run_until_done,
+    write_done_marker,
 )
 from fink_broker.common.spark_utils import wait_for_filesystem
 from fink_broker.common.partitioning import convert_to_millitime
@@ -64,6 +75,12 @@ def main():
         )
         sys.exit(1)
 
+    # A closed night is complete upstream, so the job stops once it has caught
+    # up; today's night is open and runs to its deadline, with no _DONE marker.
+    now = datetime.now(timezone.utc)
+    check_night(args.night, now)
+    night_closed = night_is_closed(args.night, now, args.night_close_hour)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="raw2science_{}_{}".format(args.producer, args.night),
@@ -86,6 +103,18 @@ def main():
     checkpointpath_sci_tmp = os.path.join(
         args.online_data_prefix, "science_checkpoint/{}".format(args.night)
     )
+    checkpointpath_raw = os.path.join(
+        args.online_data_prefix, "raw_checkpoint/{}".format(args.night)
+    )
+
+    # On a closed night, stream2raw leaves a marker once it is collected
+    def raw_collected():
+        return file_exists(done_marker(checkpointpath_raw))
+
+    # A closed night already done by a previous run has nothing left to do
+    if night_closed and file_exists(done_marker(checkpointpath_sci_tmp)):
+        logger.info("Night %s already processed, exiting normally...", args.night)
+        return
 
     # assume YYYYMMHH
     try:
@@ -94,6 +123,7 @@ def main():
             os.path.join(rawdatapath, "{}".format(args.night)),
             latestfirst=False,
             deadline=exit_deadline,
+            give_up=raw_collected if night_closed else None,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -101,6 +131,8 @@ def main():
         logger.info(
             "No alert collected for night %s, nothing to do (%s)", args.night, e
         )
+        if night_closed:
+            write_done_marker(checkpointpath_sci_tmp)
         return
 
     # Add ingestion timestamp
@@ -155,7 +187,18 @@ def main():
         .start()
     )
 
-    if exit_deadline is not None:
+    if night_closed:
+        run_until_done(
+            [countquery_science],
+            upstream_done=raw_collected,
+            idle_seconds=completion_idle_seconds(args.tinterval),
+            ceiling_seconds=seconds_until(exit_deadline)
+            if exit_deadline is not None
+            else args.exit_after,
+            on_done=lambda: write_done_marker(checkpointpath_sci_tmp),
+        )
+        logger.info("Night %s processed", args.night)
+    elif exit_deadline is not None:
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)

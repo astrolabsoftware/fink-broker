@@ -65,6 +65,19 @@ spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
 {{- end }}
 {{- end }}
 
+{{/*
+Spark configuration: the S3 connector settings, or the HDFS client
+replication. HDFS clients pick the replication of the files they create
+from their own configuration (default 3), not from the cluster, so
+hdfs.replication aligns them with the dfs.replication of the cluster.
+*/}}
+{{- define "fink.sparkconf" -}}
+{{ include "fink.s3config" . }}
+{{- if and (eq .Values.storage "hdfs") .Values.hdfs.replication }}
+spark.hadoop.dfs.replication: "{{ .Values.hdfs.replication }}"
+{{- end }}
+{{- end }}
+
 {{/* Generate hdfs configuration */}}
 {{- define "fink.hdfsconfig" -}}
 {{ if eq .Values.storage "hdfs" -}}
@@ -90,53 +103,15 @@ restartPolicy:
 {{- end }}
 
 {{/*
-Night-resolution arguments, which differ intrinsically by run.mode.
-
-- oneoff (default): pin the night explicitly (backfill, rerun, CI). The night
-  is frozen at deploy time and injected via -night.
-- scheduled: deduce the night at runtime from UTC now (see get_night). No
-  -night is passed, so the job computes it from -night_offset_hours.
-
-The stop policy is NOT handled here, but it does follow the run mode: see
-fink.commonargs, where a scheduled run gets the absolute scheduled.exitAt and
-a one-off gets the exitAfter duration. The job rejects both at once.
+Night of the jobs: the parameter of the WorkflowTemplate running the night, an
+Argo expression resolved at submission.
 */}}
 {{- define "fink.nightargs" -}}
-{{- if eq .Values.run.mode "scheduled" -}}
-- '-night_offset_hours'
-- '{{ .Values.scheduled.nightOffsetHours }}'
-{{- else -}}
 - '-night'
-- '{{ .Values.night }}'
-{{- end -}}
-{{- end }}
-
-{{/*
-Wrap a SparkApplication spec as either a one-off SparkApplication or a
-ScheduledSparkApplication, depending on run.mode. Call with a dict:
-  {"ctx": ., "name": "<suffix>", "spec": "<named spec template>"}.
-*/}}
-{{- define "fink.sparkapp" -}}
-{{- $ctx := .ctx -}}
-apiVersion: "sparkoperator.k8s.io/v1beta2"
-{{- if eq $ctx.Values.run.mode "scheduled" }}
-kind: ScheduledSparkApplication
-metadata:
-  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
-spec:
-  schedule: {{ $ctx.Values.scheduled.schedule | quote }}
-  concurrencyPolicy: {{ $ctx.Values.scheduled.concurrencyPolicy }}
-  successfulRunHistoryLimit: {{ $ctx.Values.scheduled.successfulRunHistoryLimit }}
-  failedRunHistoryLimit: {{ $ctx.Values.scheduled.failedRunHistoryLimit }}
-  template:
-    {{- include .spec $ctx | nindent 4 }}
-{{- else }}
-kind: SparkApplication
-metadata:
-  name: {{ include "fink.fullname" $ctx }}-{{ .name }}
-spec:
-  {{- include .spec $ctx | nindent 2 }}
-{{- end }}
+- '{{ "{{workflow.parameters.night}}" }}'
+{{- /* Same closing rule as the guard: open until then, closed after */}}
+- '-night_close_hour'
+- '{{ .Values.nightCloseHour }}'
 {{- end }}
 
 {{/* Generate common argument for fink-broker command line */}}
@@ -153,13 +128,10 @@ spec:
 - '{{ .Values.producer }}'
 - '-tinterval'
 - '{{ .Values.fink_trigger_update }}'
-{{- if eq .Values.run.mode "scheduled" }}
+{{- /* Absolute deadline computed once by the guard step, so a restarted job
+aims at the same instant */}}
 - '-exit_at'
-- '{{ .Values.scheduled.exitAt }}'
-{{- else }}
-- '-exit_after'
-- '{{ .Values.exitAfter }}'
-{{- end }}
+- '{{ "{{inputs.parameters.deadline}}" }}'
 {{- if hasSuffix "-noscience" .Values.image.name }}
 - '--noscience'
 {{- end -}}
@@ -167,8 +139,8 @@ spec:
 
 {{/*
 Path part of online_data_prefix, e.g.
-"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report reads the
-datasets from inside the namenode pod, where only the path is meaningful.
+"hdfs://namenode.hdfs:8020///user/185" -> "/user/185". The report takes the
+NameNode address separately (fink.reportNamenode).
 */}}
 {{- define "fink.hdfsPath" -}}
 {{- $path := regexReplaceAll "^[a-zA-Z0-9]+://[^/]+" .Values.online_data_prefix "" -}}
@@ -176,11 +148,25 @@ datasets from inside the namenode pod, where only the path is meaningful.
 {{- end }}
 
 {{/*
-Time of day at which a scheduled run starts, deduced from scheduled.schedule
+NameNode RPC address(es) the report reads HDFS from: report.namenode when
+set, host:port[,host:port] with every namenode of an HA pair, else the
+authority of online_data_prefix, e.g.
+"hdfs://namenode.hdfs:8020///user/185" -> "namenode.hdfs:8020".
+*/}}
+{{- define "fink.reportNamenode" -}}
+{{- if .Values.report.namenode -}}
+{{- .Values.report.namenode -}}
+{{- else -}}
+{{- regexReplaceAll "^[a-zA-Z0-9]+://([^/]+).*$" .Values.online_data_prefix "${1}" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Time of day at which a nightly run starts, deduced from nightly.schedule
 and formatted as HH:MM. The report uses it to bracket the window during which
 a run produced its messages.
 */}}
 {{- define "fink.runTime" -}}
-{{- $fields := splitList " " .Values.scheduled.schedule -}}
+{{- $fields := splitList " " .Values.nightly.schedule -}}
 {{- printf "%02d:%02d" (atoi (index $fields 1)) (atoi (index $fields 0)) -}}
 {{- end }}
