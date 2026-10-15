@@ -4,11 +4,10 @@ nightly run and the catch-ups share the same data and checkpoints, so a
 catch-up resumes where the nightly run stopped.
 */}}
 {{- $ctx := . }}
-{{- $fullname := include "fink.fullname" . }}
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: {{ $fullname }}-night
+  name: night
 spec:
   entrypoint: night
   serviceAccountName: fink-workflow
