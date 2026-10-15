@@ -34,7 +34,7 @@ usage () {
   echo "  --basic:    Check that the expected topics are created (default)"
   echo "  --report:   Check the balance printed by the report CronJob"
   echo "  --catchup:  Check that catching up the night of the run does nothing more"
-  echo "  --catchup-open: Check that catching up today's night is refused"
+  echo "  --catchup-open: Check that catching up today's night runs until it closes"
   echo "  --nightly:  Check that a nightly run, as submitted by the CronWorkflow,"
   echo "              starts today's night with its deadline"
   echo "  -m: Check monitoring is enabled (--basic only)"
@@ -239,33 +239,98 @@ if [ "$mode" = "catchup" ]; then
   exit 0
 fi
 
-# --catchup-open: today's night is still open, the nightly run may be writing
-# its checkpoints, so the guard step of the workflow must refuse it before any
-# job is created.
+# Check a run of today's open night, just submitted as $workflow for $night:
+# its guard must end <guard phase>. When it lets the night through, the jobs
+# start with -night and the <expected deadline>, and the run holds the mutex
+# of the night; when it refuses it, its log must hold <refusal>.
+# Usage: check_open_run <guard phase> <expected deadline> [<refusal>]
+check_open_run() {
+  local guard_phase="$1" expected="$2" refusal="${3:-}"
+  local phase result job app args arg mutex log
+
+  # status.nodes is a map, which jsonpath cannot filter: list it instead
+  guard_node() {
+    kubectl get workflow -n fink-broker "$workflow" \
+      -o jsonpath='{range .status.nodes.*}{.displayName}{"\t"}{.phase}{"\t"}{.outputs.result}{"\n"}{end}' |
+      awk -F '\t' -v field="$1" '$1 == "guard" { print $field }'
+  }
+  while true; do
+    phase=$(guard_node 2)
+    case "$phase" in
+      Succeeded|Failed|Error) break ;;
+    esac
+    if [ $SECONDS -ge $deadline ]; then
+      echo "ERROR: guard of workflow/$workflow still ${phase:-pending} after ${catchup_timeout}s" 1>&2
+      exit 1
+    fi
+    sleep 5
+  done
+  if [ "$phase" != "$guard_phase" ]; then
+    echo "ERROR: guard of workflow/$workflow ended $phase, expected $guard_phase" 1>&2
+    kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
+    exit 1
+  fi
+
+  if [ "$guard_phase" = "Failed" ]; then
+    log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
+    if ! grep -q "$refusal" <<< "$log"; then
+      echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
+      echo "$log" 1>&2
+      exit 1
+    fi
+    return
+  fi
+
+  result=$(guard_node 3)
+  if [ "$result" != "$expected" ]; then
+    echo "ERROR: guard deadline $result, expected $expected" 1>&2
+    exit 1
+  fi
+  for job in $jobs; do
+    app="$workflow-$job"
+    until args=$(kubectl get sparkapplication -n fink-broker "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
+      if [ $SECONDS -ge $deadline ]; then
+        echo "ERROR: sparkapplication/$app not created after ${catchup_timeout}s" 1>&2
+        exit 1
+      fi
+      sleep 5
+    done
+    for arg in "\"-night\",\"$night\"" "\"-exit_at\",\"$expected\""; do
+      if ! grep -qF -- "$arg" <<< "$args"; then
+        echo "ERROR: sparkapplication/$app lacks $arg: $args" 1>&2
+        exit 1
+      fi
+    done
+  done
+  # The running night holds its mutex, shared by the nightly run and the
+  # catch-ups: the night must be resolved in its name, not left as an
+  # expression
+  mutex=$(kubectl get workflow -n fink-broker "$workflow" \
+    -o jsonpath='{.status.synchronization.mutex.holding[*].mutex}')
+  if [ "$mutex" != "fink-broker/Mutex/fink-night-$night" ]; then
+    echo "ERROR: workflow/$workflow holds mutex '$mutex'," \
+      "expected fink-broker/Mutex/fink-night-$night" 1>&2
+    exit 1
+  fi
+}
+
+# --catchup-open: catch today's night up, e.g. to restart a failed nightly
+# run. The night is open, so its jobs run live until it closes, the next day:
+# the run is deleted once checked.
 if [ "$mode" = "catchup-open" ]; then
+  jobs="stream2raw raw2science distribution"
+  deadline=$(( SECONDS + catchup_timeout ))
+
   night=$(date -u +%Y%m%d)
-  echo "INFO: Catching today's night $night up, which must be refused"
-  workflow=$("$DIR"/catchup.sh -n "$night" -w -t "$catchup_timeout" 2> /dev/null) && rc=0 || rc=$?
-  if [ "$rc" -eq 0 ]; then
-    echo "ERROR: the catch-up of the open night $night succeeded" 1>&2
-    exit 1
-  fi
-  if [ -z "$workflow" ]; then
-    echo "ERROR: the catch-up of night $night was not even submitted" 1>&2
-    exit 1
-  fi
-  log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
-  if ! grep -q "Night $night is still open until" <<< "$log"; then
-    echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
-    echo "$log" 1>&2
-    exit 1
-  fi
-  apps=$(kubectl get sparkapplications -n fink-broker -o name | grep "/$workflow-" || true)
-  if [ -n "$apps" ]; then
-    echo "ERROR: workflow/$workflow created jobs despite the refusal: $apps" 1>&2
-    exit 1
-  fi
-  echo "INFO: catch-up of the open night $night refused by the guard"
+  close_hour=$(kubectl get workflowtemplate -n fink-broker night \
+    -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[3]}')
+  expected="$(date -u -d "${night:0:4}-${night:4:2}-${night:6:2} + 1 day" +%Y-%m-%d)T$(printf %02d "$close_hour"):00:00Z"
+  echo "INFO: Catching today's night $night up, until $expected"
+  workflow=$("$DIR"/catchup.sh -n "$night")
+  trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
+
+  check_open_run Succeeded "$expected"
+  echo "INFO: catch-up of today's night $night started its jobs, stopping at $expected"
   exit 0
 fi
 
@@ -294,8 +359,6 @@ spec:
     name: $template
 EOF
 )
-  # An open night runs until its deadline: stop the run however this check
-  # ends, its jobs go with it
   trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
 
   # Today's night is the UTC date of the submission, even if this check
@@ -310,72 +373,10 @@ EOF
   # Past its deadline (a CI run in the evening), the guard must refuse the
   # night; before, it must let it through with the deadline
   if [ "$(date -u -d "$created" +%s)" -ge "$(date -u -d "$expected" +%s)" ]; then
-    guard_phase="Failed"
-  else
-    guard_phase="Succeeded"
-  fi
-  # status.nodes is a map, which jsonpath cannot filter: list it instead
-  guard_node() {
-    kubectl get workflow -n fink-broker "$workflow" \
-      -o jsonpath='{range .status.nodes.*}{.displayName}{"\t"}{.phase}{"\t"}{.outputs.result}{"\n"}{end}' |
-      awk -F '\t' -v field="$1" '$1 == "guard" { print $field }'
-  }
-  while true; do
-    phase=$(guard_node 2)
-    case "$phase" in
-      Succeeded|Failed|Error) break ;;
-    esac
-    if [ $SECONDS -ge $deadline ]; then
-      echo "ERROR: guard of workflow/$workflow still ${phase:-pending} after ${catchup_timeout}s" 1>&2
-      exit 1
-    fi
-    sleep 5
-  done
-  if [ "$phase" != "$guard_phase" ]; then
-    echo "ERROR: guard of workflow/$workflow ended $phase, expected $guard_phase" 1>&2
-    kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
-    exit 1
-  fi
-
-  if [ "$guard_phase" = "Failed" ]; then
-    log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
-    if ! grep -q "Nightly run of $night started past its deadline" <<< "$log"; then
-      echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
-      echo "$log" 1>&2
-      exit 1
-    fi
+    check_open_run Failed "$expected" "Nightly run of $night started past its deadline"
     echo "INFO: nightly run of $night refused past its deadline $expected"
   else
-    result=$(guard_node 3)
-    if [ "$result" != "$expected" ]; then
-      echo "ERROR: guard deadline $result, expected $expected" 1>&2
-      exit 1
-    fi
-    for job in $jobs; do
-      app="$workflow-$job"
-      until args=$(kubectl get sparkapplication -n fink-broker "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
-        if [ $SECONDS -ge $deadline ]; then
-          echo "ERROR: sparkapplication/$app not created after ${catchup_timeout}s" 1>&2
-          exit 1
-        fi
-        sleep 5
-      done
-      for arg in "\"-night\",\"$night\"" "\"-exit_at\",\"$expected\""; do
-        if ! grep -qF -- "$arg" <<< "$args"; then
-          echo "ERROR: sparkapplication/$app lacks $arg: $args" 1>&2
-          exit 1
-        fi
-      done
-    done
-    # The running night holds its mutex, shared with the catch-ups: the night
-    # must be resolved in its name, not left as an expression
-    mutex=$(kubectl get workflow -n fink-broker "$workflow" \
-      -o jsonpath='{.status.synchronization.mutex.holding[*].mutex}')
-    if [ "$mutex" != "fink-broker/Mutex/fink-night-$night" ]; then
-      echo "ERROR: workflow/$workflow holds mutex '$mutex'," \
-        "expected fink-broker/Mutex/fink-night-$night" 1>&2
-      exit 1
-    fi
+    check_open_run Succeeded "$expected"
     echo "INFO: nightly run of $night started its jobs, stopping at $expected"
   fi
   exit 0

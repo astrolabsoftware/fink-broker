@@ -57,6 +57,24 @@ def test_today_night_is_open():
     assert not night_is_closed("20261009", now)
 
 
+def test_night_open_until_close_hour():
+    """With a closing hour, yesterday's night stays open until then.
+
+    Late alerts keep arriving the next morning: a job of that night must keep
+    collecting them instead of stopping once caught up and marking it done.
+    """
+    before = datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc)
+    at = datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc)
+    assert not night_is_closed("20261008", before, close_hour=10)
+    assert night_is_closed("20261008", at, close_hour=10)
+
+
+def test_today_night_open_with_close_hour():
+    """Today's night is open whatever the closing hour."""
+    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
+    assert not night_is_closed("20261009", now, close_hour=10)
+
+
 def test_future_night_is_refused():
     """A night after today's UTC date has no alert yet: refused at startup."""
     now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)

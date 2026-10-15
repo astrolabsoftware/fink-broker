@@ -7,11 +7,16 @@
 # Usage: workflow-guard.sh MODE NIGHT DEADLINE_HOURS CLOSE_HOUR EXIT_AT
 #
 # MODE:
-#   catchup  a night submitted by hand (e2e/catchup.sh). Only a closed night is
-#            accepted, i.e. from CLOSE_HOUR UTC on the next day: its late
-#            alerts are in, and the nightly run, which processes today's night,
-#            can no longer write the same checkpoints. Deadline: now +
-#            DEADLINE_HOURS.
+#   catchup  a night submitted by hand (e2e/catchup.sh). A night is open until
+#            CLOSE_HOUR UTC on the next day, once its late alerts are in (the
+#            jobs share this rule, -night_close_hour):
+#            - an open night, today's or yesterday's, e.g. to restart a failed
+#              nightly run: its jobs run live and leave no done marker.
+#              Deadline: when the night closes.
+#            - a closed night: its jobs stop as soon as it is caught up and
+#              mark it done. Deadline: now + DEADLINE_HOURS.
+#            A run of the same night, nightly or catch-up, waits on the
+#            per-night mutex of the WorkflowTemplate.
 #   nightly  the run submitted by the CronWorkflow. Only today's night (UTC) is
 #            accepted, processed live as its alerts arrive. Deadline: EXIT_AT
 #            (HH:MM, UTC) on the day of the night.
@@ -42,14 +47,17 @@ midnight=$(TZ=UTC date -d "${night:0:4}-${night:4:2}-${night:6:2} 00:00:00" +%s)
 
 case "$mode" in
     catchup)
+        if [ "$now" -lt "$midnight" ]; then
+            echo "Night $night has not started yet" >&2
+            exit 1
+        fi
         # Closing time: CLOSE_HOUR UTC on the day after the night
         closes_at=$((midnight + 86400 + close_hour * 3600))
         if [ "$now" -lt "$closes_at" ]; then
-            echo "Night $night is still open until $(iso "$closes_at"):" \
-                "catch it up once closed" >&2
-            exit 1
+            iso "$closes_at"
+        else
+            iso $((now + deadline_hours * 3600))
         fi
-        iso $((now + deadline_hours * 3600))
         ;;
     nightly)
         today=$(date -u -d "@$now" +%Y%m%d)

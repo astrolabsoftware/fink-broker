@@ -55,6 +55,17 @@ def test_night_is_never_deduced(monkeypatch):
     assert exc.value.code == 2
 
 
+def test_night_close_hour(monkeypatch):
+    """-night_close_hour is the hour the night closes, the next day (UTC).
+
+    It defaults to 0, a night closing at midnight UTC, for the callers that do
+    not pass it (production scripts).
+    """
+    assert parse(monkeypatch, "-night", "20240314").night_close_hour == 0
+    args = parse(monkeypatch, "-night", "20240314", "-night_close_hour", "10")
+    assert args.night_close_hour == 10
+
+
 @pytest.mark.parametrize("night", ["", "20241", "202403141", "abcdefgh", "2024-03-14"])
 def test_night_pinned_must_be_eight_digits(monkeypatch, night):
     """A malformed -night is refused instead of reaching the paths.

@@ -24,10 +24,10 @@ nightly:
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
 
-# Hour (UTC), on the day after a night, from which the night can be caught up:
-# its late alerts are in, and the nightly run, which processes today's night,
-# can no longer write the same checkpoints. Only read by the guard of the
-# catch-ups.
+# Hour (UTC), on the day after a night, from which the night is closed, its
+# late alerts in. A job of an open night runs live to its deadline; a job of a
+# closed night stops once caught up and marks it done. Shared by the guard (a
+# catch-up of an open night runs until it closes) and the jobs.
 nightCloseHour: 10
 
 image:
@@ -72,8 +72,8 @@ monitoring:
 # Workflows must be installed in the cluster): by the nightly CronWorkflow, or
 # by hand to catch a night up from the checkpoints of the nightly run:
 #   e2e/catchup.sh -n YYYYMMDD
-# A guard step refuses a night that cannot be run in that mode (a catch-up
-# needs a closed night, see nightCloseHour; a nightly run, today's night), then
+# A guard step refuses a night that cannot be run in that mode (a catch-up, a
+# future night; a nightly run, any night but today's), then
 # the three jobs run with an absolute deadline.
 workflows:
   # Runs the guard: needs bash and date.

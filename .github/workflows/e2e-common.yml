@@ -184,7 +184,7 @@ jobs:
         run: |
           ./e2e/check-results.sh --catchup
       # Today's night is still open: its catch-up must be refused.
-      - name: Check open night catch-up refused
+      - name: Check open night catch-up
         id: check_catchup_open
         run: |
           ./e2e/check-results.sh --catchup-open
