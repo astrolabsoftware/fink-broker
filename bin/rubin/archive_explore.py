@@ -185,3 +185,7 @@ def main():
         args.science_db_name,
         args.science_db_catalogs,
     )
+
+
+if __name__ == "__main__":
+    main()
