@@ -21,9 +21,10 @@ usage () {
   echo "  -h: Display this help"
   echo ""
   echo " Submit a workflow running the three jobs of the night from the"
-  echo " checkpoints of the nightly run, and print its name on stdout. The"
-  echo " workflow refuses a night still open (see nightCloseHour in the chart),"
-  echo " and waits for any other catch-up of the same night to end."
+  echo " checkpoints of the nightly run, and print its name on stdout. An open"
+  echo " night (until nightCloseHour, next day) runs live until it closes; a"
+  echo " closed one stops once caught up. The workflow waits for any other run"
+  echo " of the same night, nightly or catch-up, to end."
 }
 
 while getopts hn:t:w opt; do

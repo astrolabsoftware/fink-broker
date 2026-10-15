@@ -157,7 +157,8 @@ the workflow and handed to the three jobs as `-exit_at`:
 | Run | Deadline |
 |-----|----------|
 | nightly | `nightly.exitAt` on the day of its night, `20:00` UTC by default |
-| catch-up (`catchup.sh`) | start of the workflow + `workflows.deadlineHours` (18 h) |
+| catch-up (`catchup.sh`) of a closed night | start of the workflow + `workflows.deadlineHours` (18 h) |
+| catch-up of an open night | when the night closes, `nightCloseHour` (10:00 UTC) the next day |
 
 A job restarted after a crash keeps the deadline of its workflow, so it aims at
 the same instant instead of granting itself a fresh window. The deadline of a
@@ -187,12 +188,19 @@ where it stopped, so only what is missing is processed and distributed. A night
 already complete exits at once. A failed catch-up is resumed the same way, by
 running the command again.
 
-- **Closed nights only.** A night can be caught up from `nightCloseHour`
-  (10:00 UTC by default) on the next day, once its late alerts are in and the
-  nightly run has moved to the next night. Before that, the workflow fails at its
-  `guard` step, which prints when the night closes.
-- **Deadline.** The jobs stop `workflows.deadlineHours` (18 h) after the
-  workflow started, an instant fixed once so a restarted job keeps it.
+- **Open and closed nights.** A night is open until `nightCloseHour`
+  (10:00 UTC by default) on the next day, once its late alerts are in. The
+  jobs of an **open** night, today's or yesterday's, run live until the night
+  closes and leave no done marker; those of a **closed** night stop as soon as
+  it is caught up and mark it done. A future night is refused.
+- **Restarting a failed nightly run**: delete its workflow first
+  (`kubectl -n fink-broker delete workflow nightly-<id>`), which frees the
+  night and stops its jobs, then `catchup.sh -n <today>`. The jobs resume from
+  the checkpoints and run live until the night closes, the next morning, so
+  alongside the next nightly run.
+- **Deadline.** Fixed once by the guard, so a restarted job keeps it: when the
+  night closes for an open night, `workflows.deadlineHours` (18 h) after the
+  workflow started for a closed one.
 - **One run per night.** A second run of the same night, nightly or catch-up,
   waits for the first to end; different nights run in parallel, each with the
   resources of a nightly run.

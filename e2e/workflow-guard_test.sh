@@ -16,7 +16,8 @@ failures=0
 
 # expect <label> <now, UTC> <mode> <night> <expected rc> <expected stdout>
 #        [<pattern expected in stderr>]
-# Catch-ups: deadline after 18 hours, nights closed at 10:00 UTC the next day.
+# Catch-ups: nights closed at 10:00 UTC the next day; an open night runs until
+# it closes, a closed one for 18 hours.
 # Nightly runs: stop at 20:00 UTC.
 expect() {
     local label="$1" now="$2" mode="$3" night="$4" rc_expected="$5" out_expected="$6"
@@ -38,14 +39,21 @@ expect "closed night: deadline is now + 18 h" \
     2026-10-09T12:00:00Z catchup 20261008 0 "2026-10-10T06:00:00Z"
 expect "night closed from 10:00 UTC the next day" \
     2026-10-09T10:00:00Z catchup 20261008 0 "2026-10-10T04:00:00Z"
-expect "night still open the next morning" 2026-10-09T09:59:00Z catchup 20261008 1 ""
-expect "today's night is open" 2026-10-09T12:00:00Z catchup 20261009 1 ""
-expect "future night" 2026-10-09T12:00:00Z catchup 20261010 1 ""
+expect "yesterday's night, still open: caught up until it closes" \
+    2026-10-09T09:00:00Z catchup 20261008 0 "2026-10-09T10:00:00Z"
+expect "yesterday's night, a minute before it closes" \
+    2026-10-09T09:59:00Z catchup 20261008 0 "2026-10-09T10:00:00Z"
+expect "today's night: caught up live until it closes" \
+    2026-10-09T12:00:00Z catchup 20261009 0 "2026-10-10T10:00:00Z"
+expect "today's night, even past the nightly deadline" \
+    2026-10-09T23:59:00Z catchup 20261009 0 "2026-10-10T10:00:00Z"
+expect "today's night, just after the nightly run starts" \
+    2026-10-09T00:01:00Z catchup 20261009 0 "2026-10-10T10:00:00Z"
+expect "future night" 2026-10-09T12:00:00Z catchup 20261010 1 "" \
+    "Night 20261010 has not started yet"
 expect "malformed night" 2026-10-09T12:00:00Z catchup 2026-10-07 1 ""
 expect "empty night" 2026-10-09T12:00:00Z catchup "" 1 ""
 
-expect "refusal says when the night closes" 2026-10-09T12:00:00Z catchup 20261009 1 "" \
-    "still open until 2026-10-10T10:00:00Z"
 
 expect "nightly: today's night stops at 20:00 UTC" \
     2026-10-09T00:01:00Z nightly 20261009 0 "2026-10-09T20:00:00Z"

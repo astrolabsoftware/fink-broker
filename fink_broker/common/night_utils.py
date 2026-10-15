@@ -19,22 +19,20 @@ nightly run, catch-up or CI. These helpers tell whether it is over, compute
 the deadline of a run, and substitute the night in topics and paths.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fink_broker.common.tester import regular_unit_tests
 
 
-def night_is_closed(night: str, now: datetime) -> bool:
+def night_is_closed(night: str, now: datetime, close_hour: int = 0) -> bool:
     """Tell whether ``night`` is over.
 
-    A night is closed once the UTC date has moved past it: a job processing
-    it can then stop as soon as it has caught up, and leave its _DONE marker.
-    Today's night is open: alerts keep arriving, so a quiet spell is not the
-    end of the night, and the job runs to its deadline and leaves no marker.
-
-    Late alerts may still arrive the next morning: catching a night up too
-    early is prevented by the guard of the catch-up workflow, not here.
+    A night is closed from ``close_hour`` UTC on the next day, once its late
+    alerts are in: a job processing it can then stop as soon as it has caught
+    up, and leave its _DONE marker. Before, the night is open: alerts keep
+    arriving, so a quiet spell is not the end of the night, and the job runs
+    to its deadline and leaves no marker.
 
     Parameters
     ----------
@@ -42,11 +40,14 @@ def night_is_closed(night: str, now: datetime) -> bool:
         Night label in YYYYMMDD format.
     now: datetime
         Reference time (timezone-aware).
+    close_hour: int
+        Hour (UTC), on the day after the night, from which it is closed.
+        Default 0: the night closes at midnight UTC.
 
     Returns
     -------
     closed: bool
-        True if ``night`` is before the UTC date of ``now``.
+        True from ``close_hour`` UTC on the day after ``night``.
 
     Examples
     --------
@@ -55,8 +56,15 @@ def night_is_closed(night: str, now: datetime) -> bool:
     True
     >>> night_is_closed("20261009", datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc))
     False
+    >>> night_is_closed(
+    ...     "20261008", datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc), close_hour=10
+    ... )
+    False
     """
-    return night < now.astimezone(timezone.utc).strftime("%Y%m%d")
+    closes_at = datetime.strptime(night, "%Y%m%d").replace(
+        tzinfo=timezone.utc
+    ) + timedelta(days=1, hours=close_hour)
+    return now >= closes_at
 
 
 def check_night(night: str, now: datetime) -> None:

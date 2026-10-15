@@ -189,11 +189,11 @@ else
 fi
 
 echo "Phase: Open Night Catch-up Check"
-echo "Catch today's night up, which must be refused."
+echo "Catch today's night up, which runs until it closes."
 if $DIR/check-results.sh --catchup-open; then
-    home-ci-reporter step "catchup_open_check" "passed" "Open night catch-up refused" --file "$TEST_REPORT"
+    home-ci-reporter step "catchup_open_check" "passed" "Open night caught up until it closes" --file "$TEST_REPORT"
 else
-    home-ci-reporter step "catchup_open_check" "failed" "Open night catch-up not refused" --file "$TEST_REPORT"
+    home-ci-reporter step "catchup_open_check" "failed" "Open night catch-up check failed" --file "$TEST_REPORT"
     exit 1
 fi
 
