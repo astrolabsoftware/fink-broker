@@ -79,7 +79,7 @@ def main():
     # up; today's night is open and runs to its deadline, with no _DONE marker.
     now = datetime.now(timezone.utc)
     check_night(args.night, now)
-    night_closed = night_is_closed(args.night, now)
+    night_closed = night_is_closed(args.night, now, args.night_close_hour)
 
     logger.debug("Initialise Spark session")
     spark = init_sparksession(

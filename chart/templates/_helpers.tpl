@@ -109,6 +109,9 @@ Argo expression resolved at submission.
 {{- define "fink.nightargs" -}}
 - '-night'
 - '{{ "{{workflow.parameters.night}}" }}'
+{{- /* Same closing rule as the guard: open until then, closed after */}}
+- '-night_close_hour'
+- '{{ .Values.nightCloseHour }}'
 {{- end }}
 
 {{/* Generate common argument for fink-broker command line */}}

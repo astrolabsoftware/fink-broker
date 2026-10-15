@@ -349,6 +349,18 @@ def getargs(parser: argparse.ArgumentParser) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "-night_close_hour",
+        type=int,
+        default=0,
+        help="""
+        Hour (UTC), on the day after the night, from which the night is
+        closed, its late alerts in: a job of a closed night stops once caught
+        up and marks it done, a job of an open night runs to its deadline.
+        Default 0: the night closes at midnight UTC.
+        [NIGHT_CLOSE_HOUR]
+        """,
+    )
+    parser.add_argument(
         "-index_table",
         type=str,
         default="index",
