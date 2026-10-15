@@ -147,7 +147,7 @@ fi
 #
 # kafka/fink-producer-password is the single source of truth: it is what the
 # KafkaUser consumes, so it is what the broker authenticates against.
-# spark/fink-kafka-jaas is derived from it, a client-side rendering of the same
+# fink-broker/fink-kafka-jaas is derived from it, a client-side rendering of the same
 # value. Recovery is therefore asymmetric on purpose -- it reads the source,
 # never the derived copy, which would promote that copy to a second source of
 # truth and let the two drift apart silently.
@@ -161,7 +161,7 @@ fi
 # why the source secret is not something to prune casually.
 provision_jaas_secrets() {
     local kafka_ns="kafka"
-    local spark_ns="spark"
+    local spark_ns="fink-broker"
     local username="fink-producer"
     local password
     local ns
@@ -181,7 +181,7 @@ provision_jaas_secrets() {
         password=$(openssl rand -base64 24)
     fi
 
-    # Both namespaces are owned by Argo CD (Namespace/spark in the app-of-apps,
+    # Both namespaces are owned by Argo CD (Namespace/fink-broker in the app-of-apps,
     # kafka via CreateNamespace=true), which adopts them on the first sync;
     # creating them here only makes the secrets landable beforehand. Create
     # them only when missing: `apply`-ing a bare namespace over one Argo CD

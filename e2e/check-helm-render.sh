@@ -77,7 +77,7 @@ echo "== fink-cd: CI defaults (in-cluster HDFS, kafka, simulator)"
 out=$(apps)
 assert "applications" "$stackable $common kafka fink-alert-simulator" "$(echo "$out" | names Application)"
 assert "Stackable namespace and chart repository" \
-    "Namespace/spark Namespace/spark-operator Namespace/stackable-operators Secret/stackable-oci-repo" \
+    "Namespace/fink-broker Namespace/spark-operator Namespace/stackable-operators Secret/stackable-oci-repo" \
     "$(echo "$out" | prereqs)"
 assert "hdfs.external forwarded" "false" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "in-cluster prefix" "$incluster_prefix" "$(echo "$out" | broker_values | yq -r '.online_data_prefix')"
@@ -99,7 +99,7 @@ done
 echo "== fink-cd: values-cc.yaml (external HDFS)"
 out=$(apps -f "$FINK_CD_DIR/apps/values-cc.yaml")
 assert "applications" "$common kafka" "$(echo "$out" | names Application)"
-assert "no Stackable namespace nor chart repository" "Namespace/spark Namespace/spark-operator" \
+assert "no Stackable namespace nor chart repository" "Namespace/fink-broker Namespace/spark-operator" \
     "$(echo "$out" | prereqs)"
 assert "hdfs.external forwarded" "true" "$(echo "$out" | broker_values | yq -r '.hdfs.external')"
 assert "external prefix" "hdfs://ccmaster1:8020///user/185" \
@@ -136,8 +136,11 @@ assert "applications" "fink-broker spark-operator argo-workflows" "$(echo "$out"
 
 echo "== fink-cd: Argo Workflows, for the night catch-ups"
 out=$(apps)
-assert "controller only, workflow RBAC in the spark namespace" "false spark" \
+assert "controller only, workflow RBAC in the fink-broker namespace" "false fink-broker" \
     "$(echo "$out" | yq -r 'select(.kind == "Application" and .metadata.name == "argo-workflows") | .spec.source.helm.valuesObject | (.server.enabled, .controller.workflowNamespaces[])')"
+assert "jobs, simulator and Spark operator in the fink-broker namespace" "fink-broker fink-broker fink-broker" \
+    "$(echo "$out" | yq -r 'select(.kind == "Application" and (.metadata.name == "fink-broker" or .metadata.name == "fink-alert-simulator")) | .spec.destination.namespace'; \
+       echo "$out" | yq -r 'select(.kind == "Application" and .metadata.name == "spark-operator") | .spec.source.helm.valuesObject.spark.jobNamespaces[]')"
 out=$(apps --set components.argoWorkflows=false)
 assert "applications without Argo Workflows" "$stackable fink-broker spark-operator strimzi kafka fink-alert-simulator" \
     "$(echo "$out" | names Application)"
@@ -158,10 +161,10 @@ apps -f "$FINK_CD_DIR/apps/values-cc.yaml" -f "$FINK_CD_DIR/apps/values-schedule
 out=$(helm template fink-broker "$src_dir/chart" -f "$values_file")
 rm -f "$values_file"
 assert "no ScheduledSparkApplication" "" "$(echo "$out" | names ScheduledSparkApplication)"
-assert "CronWorkflow" "fink-broker-nightly" "$(echo "$out" | names CronWorkflow)"
+assert "CronWorkflow" "nightly" "$(echo "$out" | names CronWorkflow)"
 assert "cron, UTC" "1_0_*_*_* Etc/UTC" \
     "$(echo "$out" | yq -r 'select(.kind == "CronWorkflow") | (.spec.schedules[], .spec.timezone)' | grep -v '^---$' | tr ' ' '_')"
-assert "submits the night WorkflowTemplate" "fink-broker-night" \
+assert "submits the night WorkflowTemplate" "night" \
     "$(echo "$out" | yq -r 'select(.kind == "CronWorkflow") | .spec.workflowSpec.workflowTemplateRef.name')"
 assert "today's night, fixed at submission" \
     "{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}" \
@@ -172,7 +175,7 @@ assert "stops at 20:00 UTC" "20:00" \
 assert "no default night: a catch-up names its night" "null" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
 assert "report once the run has stopped" "30_20_*_*_*" \
-    "$(echo "$out" | yq -r 'select(.kind == "CronJob" and .metadata.name == "fink-broker-report") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
+    "$(echo "$out" | yq -r 'select(.kind == "CronJob" and .metadata.name == "report") | .spec.schedule' | grep -v '^---$' | tr ' ' '_')"
 
 # --- fink-broker chart -----------------------------------------------------
 
@@ -199,13 +202,13 @@ report_namenode() {
 
 echo "== fink-broker: in-cluster HDFS"
 out=$(chart)
-assert "hdfs-bound resources" "Job/hdfs-init CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
+assert "hdfs-bound resources" "Job/hdfs-init CronJob/report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
 assert "report RBAC namespaces" "kafka" "$(report_rbac_namespaces "$out")"
 assert "report namenode from online_data_prefix" "simple-hdfs-namenode-default-0.simple-hdfs-namenode-default.hdfs:8020" "$(report_namenode "$out")"
 
 echo "== fink-broker: external HDFS"
 out=$(chart --set hdfs.external=true --set online_data_prefix=hdfs://nn.example:8020///user/185)
-assert "hdfs-bound resources" "CronJob/fink-broker-report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
+assert "hdfs-bound resources" "CronJob/report ServiceAccount/fink-report Role/fink-report RoleBinding/fink-report" "$(hdfs_bound "$out")"
 assert "report namenode from online_data_prefix" "nn.example:8020" "$(report_namenode "$out")"
 
 echo "== fink-broker: HDFS host aliases and replication"
@@ -249,7 +252,7 @@ assert "SPARK_USER kept" "185 185 185 185 185 185" \
 
 echo "== fink-broker: WorkflowTemplate running a night"
 out=$(chart --set online_data_prefix=hdfs://nn.example:8020///user/185)
-assert "template name" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
+assert "template name" "night" "$(echo "$out" | names WorkflowTemplate)"
 assert "night and mode parameters" "night mode" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[].name')"
 assert "catch-up by default" "catchup" \
@@ -288,6 +291,8 @@ for job in stream2raw raw2science distribution; do
         "$(manifest_arg "$manifest" -online_data_prefix)"
     assert "$job: no closing hour, the guard only lets closed nights through" "" \
         "$(echo "$manifest" | yq -r '.spec.arguments[] | select(. == "-night_close_hour")')"
+    assert "$job: executors named after the run, like its other pods" "{{workflow.name}}-$job" \
+        "$(echo "$manifest" | yq -r '.spec.sparkConf["spark.kubernetes.executor.podNamePrefix"]')"
     assert "$job: no Argo CD annotation" "" \
         "$(echo "$manifest" | yq -r '.metadata.annotations // {} | keys[] | select(test("argocd.argoproj.io"))')"
 done
@@ -296,13 +301,13 @@ echo "== fink-broker: default, nights submitted by hand"
 out=$(chart --set night=20200101)
 assert "no Spark job nor nightly run deployed" "" \
     "$(echo "$out" | yq -r 'select(.kind == "SparkApplication" or .kind == "ScheduledSparkApplication" or .kind == "CronWorkflow") | .metadata.name')"
-assert "WorkflowTemplate" "fink-broker-night" "$(echo "$out" | names WorkflowTemplate)"
+assert "WorkflowTemplate" "night" "$(echo "$out" | names WorkflowTemplate)"
 assert "night parameter defaults to the night value" "20200101" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
 
 echo "== fink-broker: nightly run"
 out=$(chart --set nightly.enabled=true --set nightly.schedule='5 1 * * *' --set nightly.exitAt=19:00)
-assert "CronWorkflow" "fink-broker-nightly" "$(echo "$out" | names CronWorkflow)"
+assert "CronWorkflow" "nightly" "$(echo "$out" | names CronWorkflow)"
 assert "schedule, UTC, one run at a time" "5_1_*_*_* Etc/UTC Forbid" \
     "$(echo "$out" | yq -r 'select(.kind == "CronWorkflow") | (.spec.schedules[], .spec.timezone, .spec.concurrencyPolicy)' | grep -v '^---$' | tr ' ' '_')"
 assert "guard deadline" "19:00" \

@@ -16,7 +16,7 @@ so Argo CD gates each wave on the health of the previous one:
 
 | Wave | Applications | Role |
 |------|--------------|------|
-| -1 | `spark` namespace | Persistent namespace for the Spark jobs |
+| -1 | `fink-broker` namespace | Persistent namespace for the Spark jobs and their workflows |
 | 0 | strimzi, spark-operator, minio-operator, stackable-hadoop-operators | Operators and their CRDs |
 | 1 | kafka, hdfs, minio-tenant | Storage, including the Kafka SASL/JAAS secret |
 | 2 | fink-broker, fink-alert-simulator | Spark jobs (the simulator is disabled on CC) |
@@ -66,7 +66,7 @@ ignition step in [e2e.md](e2e.md).
 
 No SCRAM password lives in git: `e2e/argocd.sh` provisions the two secrets it
 derives — `kafka/fink-producer-password`, read by the `KafkaUser`, and
-`spark/fink-kafka-jaas`, mounted by the distribution `SparkApplication` — before
+`fink-broker/fink-kafka-jaas`, mounted by the distribution `SparkApplication` — before
 creating the app-of-apps. The step is idempotent and runs on every deployment:
 on CC the password is generated on the first run and reused afterwards (CI
 infras get a fixed throwaway one, so both environments exercise the same path).
@@ -138,8 +138,8 @@ Useful variants:
 ./e2e/argocd.sh -h                       # all options
 ```
 
-`-s` deploys the nightly run: a `CronWorkflow`, `fink-broker-nightly`, which
-submits the Argo `WorkflowTemplate` `fink-broker-night` every day on today's
+`-s` deploys the nightly run: a `CronWorkflow`, `nightly`, which
+submits the Argo `WorkflowTemplate` `night` every day on today's
 night (UTC), fixed at submission. The schedule and the deadline come from
 `fink-cd/apps/values.yaml` (`nightly.schedule: 1 0 * * *`,
 `nightly.exitAt: 20:00`). Without `-s`, no night runs by itself: nights are run
@@ -178,10 +178,10 @@ deadline) is caught up without touching the nightly run:
 
 ```bash
 ./e2e/catchup.sh -n 20261008 -w     # prints the workflow name, waits for its end
-kubectl -n spark get workflows
+kubectl -n fink-broker get workflows
 ```
 
-The script submits the Argo `WorkflowTemplate` `fink-broker-night`, which runs
+The script submits the Argo `WorkflowTemplate` `night`, which runs
 the three jobs of the night from the checkpoints of the nightly run: they resume
 where it stopped, so only what is missing is processed and distributed. A night
 already complete exits at once. A failed catch-up is resumed the same way, by
@@ -212,17 +212,23 @@ export ARGOCD_OPTS="--core --namespace argocd"
 argocd app list -l app.kubernetes.io/part-of=fink
 
 # Nights
-kubectl -n spark get cronworkflows                # nightly run (-s)
-kubectl -n spark get workflows                    # nightly runs and catch-ups
-kubectl -n spark get sparkapplications            # jobs of the running nights
-kubectl -n spark logs -l spark-role=driver --tail=100
-kubectl -n spark get cronworkflow fink-broker-nightly \
+kubectl -n fink-broker get cronworkflows                # nightly run (-s)
+kubectl -n fink-broker get workflows                    # nightly runs and catch-ups
+kubectl -n fink-broker get sparkapplications            # jobs of the running nights
+kubectl -n fink-broker logs -l spark-role=driver --tail=100
+kubectl -n fink-broker get cronworkflow nightly \
   -o jsonpath='{.status}'                        # last scheduled run, active ones
 
 # Storage
 kubectl -n kafka get kafka,kafkauser,kafkatopic
 kubectl -n hdfs get hdfsclusters    # in-cluster HDFS only (hdfs.external=false)
 ```
+
+Every object of a run is named after it: a nightly run `nightly-<id>`, a
+catch-up `catchup-<night>-<id>`. Its SparkApplications are `<run>-<job>`, and
+their pods `<run>-<job>-driver`, `<run>-<job>-exec-<n>`, next to the workflow
+step pods `<run>-<job>-<n>`, so `kubectl get pods | grep <run>` lists a whole
+run. The report pods are `report-<n>-<id>`.
 
 `e2e/diag.sh` collects a broader diagnostic dump when something is wrong; see
 also [troubleshoot.md](troubleshoot.md).

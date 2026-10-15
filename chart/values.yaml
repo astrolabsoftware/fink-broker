@@ -68,7 +68,7 @@ monitoring:
 # distributed messages to a night using the run window deduced from
 # nightly.schedule.
 #
-# WorkflowTemplate <fullname>-night, the only way a night is run (Argo
+# WorkflowTemplate night, the only way a night is run (Argo
 # Workflows must be installed in the cluster): by the nightly CronWorkflow, or
 # by hand to catch a night up from the checkpoints of the nightly run:
 #   e2e/catchup.sh -n YYYYMMDD

@@ -3,11 +3,11 @@
 Nightly run: submits the WorkflowTemplate every day on today's night (UTC),
 fixed once at submission, so a restarted job keeps its night.
 */}}
-{{- $fullname := include "fink.fullname" . }}
 apiVersion: argoproj.io/v1alpha1
 kind: CronWorkflow
 metadata:
-  name: {{ $fullname }}-nightly
+  # Prefix of every object of a nightly run: workflow, SparkApplications, pods
+  name: nightly
   labels:
     {{- include "fink.labels" . | nindent 4 }}
 spec:
@@ -20,7 +20,7 @@ spec:
   failedJobsHistoryLimit: {{ .Values.nightly.failedJobsHistoryLimit }}
   workflowSpec:
     workflowTemplateRef:
-      name: {{ $fullname }}-night
+      name: night
     arguments:
       parameters:
         # Creation date of the workflow, in UTC like Kubernetes timestamps
