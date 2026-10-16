@@ -51,7 +51,11 @@ def push_to_hbase_catalog(df, col_id, index_name, science_db_name, science_db_ca
 
     df = add_row_key(df, row_key_name=row_key_name, cols=cols_row_key_name)
     df = df.select(
-        [row_key_name, col_id, F.col("diaSource.midpointMjdTai").astype("int")]
+        [
+            row_key_name,
+            col_id,
+            F.col("diaSource.midpointMjdTai").astype("int").alias("midpointMjdTai"),
+        ]
     )
 
     cf = {i: "r" for i in df.columns}
