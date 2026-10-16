@@ -54,7 +54,7 @@ def push_to_hbase_catalog(df, col_id, index_name, science_db_name, science_db_ca
         [
             row_key_name,
             col_id,
-            F.col("diaSource.midpointMjdTai").astype("int").alias("midpointMjdTai"),
+            "diaSource.midpointMjdTai",
         ]
     )
 
