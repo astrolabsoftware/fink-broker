@@ -32,6 +32,7 @@ def reduce_df_size(df, colname, maxnum=10):
     window_spec = Window.partitionBy(colname).orderBy(F.monotonically_increasing_id())
     df_unique = (
         df.withColumn("id", F.col("diaObject.diaObjectId"))
+        .orderBy("diaSource.midpointMjdTai", ascending=False)
         .drop_duplicates(subset=["id"])
         .drop("id")
     )
@@ -49,7 +50,9 @@ def push_to_hbase_catalog(df, col_id, index_name, science_db_name, science_db_ca
     row_key_name = "_".join(cols_row_key_name)
 
     df = add_row_key(df, row_key_name=row_key_name, cols=cols_row_key_name)
-    df = df.select([row_key_name, col_id])
+    df = df.select(
+        [row_key_name, col_id, F.col("diaSource.midpointMjdTai").astype("int")]
+    )
 
     cf = {i: "r" for i in df.columns}
 
