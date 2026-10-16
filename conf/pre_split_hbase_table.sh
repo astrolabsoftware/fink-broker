@@ -56,88 +56,94 @@ pre_split_alphabetical() {
 
 
 STANDARD_TABLES=(
-	"${TABLE_PREFIX}.diaObject"
-	"${TABLE_PREFIX}.mpc_orbits"
-	"${TABLE_PREFIX}.diaSource_static"
-	"${TABLE_PREFIX}.diaSource_sso"
-	"${TABLE_PREFIX}.cutouts"
-	"${TABLE_PREFIX}.pixel1024"
-	"${TABLE_PREFIX}.tns_resolver"
-        "${TABLE_PREFIX}.sso_resolver"
-	"${TABLE_PREFIX}.statistics"
-        "${TABLE_PREFIX}.fp"
+    "${TABLE_PREFIX}.diaObject"
+    "${TABLE_PREFIX}.mpc_orbits"
+    "${TABLE_PREFIX}.diaSource_static"
+    "${TABLE_PREFIX}.diaSource_sso"
+    "${TABLE_PREFIX}.cutouts"
+    "${TABLE_PREFIX}.pixel1024"
+    "${TABLE_PREFIX}.tns_resolver"
+    "${TABLE_PREFIX}.sso_resolver"
+    "${TABLE_PREFIX}.statistics"
+    "${TABLE_PREFIX}.fp"
+    "${TABLE_PREFIX}.explore"
 )
 
 COLFAMILIES=(
-        "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
-	"{NAME => 'f', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}"
-        "{NAME => 'r', COMPRESSION => 'LZ4'}"
-	"{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+    "{NAME => 'f', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
+    "{NAME => 'r', COMPRESSION => 'LZ4'}"
 )
 
 
 for ((index=0; index<${#STANDARD_TABLES[@]}; index++)); do
-	TABLE_NAME=${STANDARD_TABLES[index]}
-	COLFAMILY=${COLFAMILIES[index]}
-        echo -e "$SINFO Processing table $TABLE_NAME"
-	echo -e "$SINFO Options: ${COLFAMILY}"
-        if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
-                echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
+    TABLE_NAME=${STANDARD_TABLES[index]}
+    COLFAMILY=${COLFAMILIES[index]}
+    echo -e "$SINFO Processing table $TABLE_NAME"
+    echo -e "$SINFO Options: ${COLFAMILY}"
+    if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
+        echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
+    else
+        echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
+
+        if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel1024" ]]; then
+            # pixel1024 has a different splitting
+            output=$(pre_split_nth_digits 100000 19999999 "i+=100000" \'%03d\')
+        elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
+            # diaSource_sso has 100 partitions, based on year [YY]YY
+            output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
+        elif [[ $TABLE_NAME == "${TABLE_PREFIX}.mpc_orbits" ]]; then
+            # diaObject has 100 partitions, based on year [YY]YY
+            output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
+        elif [[ $TABLE_NAME == "${TABLE_PREFIX}.tns_resolver" ]]; then
+            # diaObject has 100 partitions, based on year [YY]YY
+            output=$(pre_split_alphabetical)
+        elif [[ $TABLE_NAME == "${TABLE_PREFIX}.statistics" ]]; then
+            # statistics has 100 partitions, without salt defined yet
+            output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
+        elif [[ $TABLE_NAME == "${TABLE_PREFIX}.explore" ]]; then
+            # explore has 100 partitions, without salt defined yet
+            output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
         else
-                echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
-
-                if [[ $TABLE_NAME == "${TABLE_PREFIX}.pixel1024" ]]; then
-                        # pixel1024 has a different splitting
-                        output=$(pre_split_nth_digits 100000 19999999 "i+=100000" \'%03d\')
-		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.diaSource_sso" ]]; then
-                        # diaSource_sso has 100 partitions, based on year [YY]YY
-                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
-		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.mpc_orbits" ]]; then
-                        # diaObject has 100 partitions, based on year [YY]YY
-                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
-		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.tns_resolver" ]]; then
-                        # diaObject has 100 partitions, based on year [YY]YY
-                        output=$(pre_split_alphabetical)
-		elif [[ $TABLE_NAME == "${TABLE_PREFIX}.statistics" ]]; then
-                        # diaSource_sso has 100 partitions, without salt defined yet
-                        output=$(pre_split_nth_digits 1 99 "i++" \'%02d\')
-                else
-                        # Default splitting
-                        output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
-                fi
-                read -r SPLIT_POINTS NPARTS <<< "$output"
-                echo -e "$SINFO Number of regions: $((NPARTS + 1))"
-                COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
-
-                # Create the table
-                echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+            # Default splitting
+            output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
         fi
+
+        read -r SPLIT_POINTS NPARTS <<< "$output"
+        echo -e "$SINFO Number of regions: $((NPARTS + 1))"
+        COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
+
+        # Create the table
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+    fi
 done
 
 # Tag tables
 mapfile -t key_array < <(curl -s -H "Content-Type: application/json" -X GET  https://api.lsst.fink-portal.org/api/v1/tags | jq -r 'keys | .[]')
 for ((index=0; index<${#key_array[@]}; index++)); do 
-	TABLE_NAME=rubin.tag_${key_array[index]};
-	COLFAMILY="{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
-        echo -e "$SINFO Processing table $TABLE_NAME"
-        echo -e "$SINFO Options: ${COLFAMILY}"
-        if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
-                echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
-        else
-                echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
-		# Default splitting
-		output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
-		read -r SPLIT_POINTS NPARTS <<< "$output"
-                echo -e "$SINFO Number of regions: $((NPARTS + 1))"
-                COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
+    TABLE_NAME=rubin.tag_${key_array[index]};
+    COLFAMILY="{NAME => 'r', COMPRESSION => 'LZ4'}, {NAME => 'f', COMPRESSION => 'LZ4'}"
+    echo -e "$SINFO Processing table $TABLE_NAME"
+    echo -e "$SINFO Options: ${COLFAMILY}"
+    if echo -e "list" | /opt/hbase/bin/hbase shell -n | grep ${TABLE_NAME}; then
+        echo -e "$SSTOP Table $TABLE_NAME already exists -- not creating a new one."
+    else
+        echo -e "$SDONE $TABLE_NAME does not exists -- creating a new one"
+        # Default splitting
+        output=$(pre_split_nth_digits 1 999 "i++" \'%03d\')
+        read -r SPLIT_POINTS NPARTS <<< "$output"
+        echo -e "$SINFO Number of regions: $((NPARTS + 1))"
+        COMMAND="create '${TABLE_NAME}', ${COLFAMILY}, SPLITS=> [$SPLIT_POINTS]"
 
-                # Create the table
-                echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
-        fi
+        # Create the table
+        echo -e $COMMAND | /opt/hbase/bin/hbase shell -n
+    fi
 done
