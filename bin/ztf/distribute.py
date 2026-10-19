@@ -35,6 +35,11 @@ from fink_broker.common.night_utils import get_exit_deadline, seconds_until
 from fink_broker.common.spark_utils import (
     init_sparksession,
     NoDataAvailableError,
+    completion_idle_seconds,
+    done_marker,
+    file_exists,
+    run_until_done,
+    write_done_marker,
     connect_to_raw_database,
     wait_for_filesystem,
     wait_for_kafka,
@@ -95,11 +100,27 @@ def main():
     checkpointpath_kafka = args.online_data_prefix + "/kafka_checkpoint/{}".format(
         args.night
     )
+    checkpointpath_sci_tmp = args.online_data_prefix + "/science_checkpoint/{}".format(
+        args.night
+    )
+
+    # One-off run: raw2science leaves a marker once the night is processed
+    def science_processed():
+        return file_exists(done_marker(checkpointpath_sci_tmp))
+
+    # A one-off run restarted after it completed has nothing left to do
+    if args.stop_when_done and file_exists(done_marker(checkpointpath_kafka)):
+        logger.info("Night %s already distributed, exiting normally...", args.night)
+        return
 
     logger.debug("Connect to the TMP science database")
     try:
         df = connect_to_raw_database(
-            scitmpdatapath, scitmpdatapath, latestfirst=False, deadline=exit_deadline
+            scitmpdatapath,
+            scitmpdatapath,
+            latestfirst=False,
+            deadline=exit_deadline,
+            give_up=science_processed if args.stop_when_done else None,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -107,6 +128,8 @@ def main():
         logger.info(
             "No alert processed for night %s, nothing to do (%s)", args.night, e
         )
+        if args.stop_when_done:
+            write_done_marker(checkpointpath_kafka)
         return
 
     logger.debug("Cast fields to ease the distribution")
@@ -201,6 +224,7 @@ def main():
         logger.warn(msg)
         spark.stop()
 
+    disqueries = []
     for userfilter in userfilters:
         if args.noscience:
             logger.debug(
@@ -214,7 +238,6 @@ def main():
         # The topic name is the filter name
         topicname = args.substream_prefix + userfilter.split(".")[-1] + "_ztf"
 
-        # FIXME: shouldn't we collect in a list the disquery?
         disquery = push_to_kafka(
             df_tmp,
             topicname,
@@ -224,6 +247,7 @@ def main():
             kafka_cfg,
             npart=None,
         )
+        disqueries.append(disquery)
 
     # Special filter to count alerts
     topicname = "fink_ztf_{}".format(args.night)
@@ -235,8 +259,18 @@ def main():
         args.tinterval,
         kafka_cfg,
     )
+    disqueries.append(disquery)
 
-    if exit_deadline is not None:
+    if args.stop_when_done:
+        run_until_done(
+            disqueries,
+            upstream_done=science_processed,
+            idle_seconds=completion_idle_seconds(args.tinterval),
+            ceiling_seconds=args.exit_after,
+            on_done=lambda: write_done_marker(checkpointpath_kafka),
+        )
+        logger.info("Night %s distributed, exiting normally...", args.night)
+    elif exit_deadline is not None:
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)

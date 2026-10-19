@@ -3,11 +3,15 @@
 mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/raw2science.py
 arguments: {{- include "fink.commonargs" . | nindent 2 }}
   {{- include "fink.nightargs" . | nindent 2 }}
-sparkConf: {{- include "fink.s3config" . | nindent 2 }}
+sparkConf: {{- include "fink.sparkconf" . | nindent 2 }}
 driver:
   cores: {{ tpl .Values.raw2science.driver.cores . }}
   coreRequest: "{{ tpl .Values.raw2science.driver.coreRequest . }}"
   env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  {{- with .Values.hostAliases }}
+  hostAliases:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   memory: "{{ tpl .Values.raw2science.driver.memory . }}"
   javaOptions: "-Divy.cache.dir=/tmp -Divy.home=/tmp -Dcom.amazonaws.sdk.disableCertChecking=true"
   labels:
@@ -25,7 +29,14 @@ executor:
   cores: {{ tpl .Values.raw2science.executor.cores . }}
   coreRequest: "{{ tpl .Values.raw2science.executor.coreRequest . }}"
   env: {{- include "fink.hdfsconfig" . | nindent 4 }}
+  {{- with .Values.hostAliases }}
+  hostAliases:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   memory: "{{ tpl .Values.raw2science.executor.memory . }}"
+  {{- with .Values.raw2science.executor.memoryOverhead }}
+  memoryOverhead: "{{ . }}"
+  {{- end }}
   javaOptions: "-Dcom.amazonaws.sdk.disableCertChecking=true"
   instances: {{ tpl .Values.raw2science.executor.instances . }}
   {{- with .Values.raw2science.executor.nodeSelector }}
