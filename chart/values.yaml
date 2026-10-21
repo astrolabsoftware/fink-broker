@@ -87,6 +87,10 @@ report:
   # List every namenode of an HA pair, so the report follows the active one.
   # Empty -> the host:port of online_data_prefix.
   namenode: ""
+  # Base URL of the Fink API the report compares each night with, e.g.
+  # https://api.ztf.fink-portal.org: adds the PROD(raw), PROD(sci) and CHECK
+  # columns. Empty -> no comparison (CI, production).
+  prodApi: ""
   # Fires once the streaming jobs of the nightly run have stopped, at
   # nightly.exitAt.
   schedule: "0 7 * * *"
