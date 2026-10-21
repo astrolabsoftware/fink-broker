@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "fink.fullname" . }}-report
+  name: report
   labels:
     {{- include "fink.labels" . | nindent 4 }}
 spec:
@@ -40,6 +40,12 @@ spec:
                 # Run window used to attribute distributed messages to a night
                 - '--cron'
                 - '{{ include "fink.runTime" . }}'
+                # The nightly run processes today's night
                 - '--night-offset'
-                - '{{ .Values.scheduled.nightOffsetHours }}'
+                - '0'
+                {{- with .Values.report.prodApi }}
+                # Compare each night with the production statistics
+                - '--prod-api'
+                - {{ . | quote }}
+                {{- end }}
 {{- end }}

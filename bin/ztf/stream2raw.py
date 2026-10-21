@@ -31,6 +31,7 @@ from pyspark.sql import functions as F
 
 import fastavro
 import fastavro.schema
+from datetime import datetime, timezone
 import argparse
 import sys
 import time
@@ -38,7 +39,12 @@ import io
 import os
 
 from fink_broker.common.parser import getargs
-from fink_broker.common.night_utils import get_exit_deadline, seconds_until
+from fink_broker.common.night_utils import (
+    check_night,
+    get_exit_deadline,
+    night_is_closed,
+    seconds_until,
+)
 
 from fink_broker.common.spark_utils import from_avro
 from fink_broker.common.spark_utils import init_sparksession, connect_to_kafka
@@ -83,6 +89,12 @@ def main():
         )
         sys.exit(1)
 
+    # A closed night is complete upstream, so the job stops once it has caught
+    # up; today's night is open and runs to its deadline, with no _DONE marker.
+    now = datetime.now(timezone.utc)
+    check_night(args.night, now)
+    night_closed = night_is_closed(args.night, now, args.night_close_hour)
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="stream2raw_{}_{}".format(args.producer, args.night),
@@ -108,8 +120,8 @@ def main():
         args.online_data_prefix, f"raw_checkpoint/{args.night}"
     )
 
-    # A one-off run restarted after it completed has nothing left to do
-    if args.stop_when_done and file_exists(done_marker(checkpointpath_raw)):
+    # A closed night already done by a previous run has nothing left to do
+    if night_closed and file_exists(done_marker(checkpointpath_raw)):
         logger.info("Night %s already collected, exiting normally...", args.night)
         return
 
@@ -213,13 +225,15 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     logger.info("Stream2raw service is running...")
-    if args.stop_when_done:
+    if night_closed:
         # The topic of a past night is closed: done once it is read to its end
         run_until_done(
             [countquery],
             upstream_done=lambda: True,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=args.exit_after,
+            ceiling_seconds=seconds_until(exit_deadline)
+            if exit_deadline is not None
+            else args.exit_after,
             on_done=lambda: write_done_marker(checkpointpath_raw),
         )
         logger.info("Night %s collected, exiting normally...", args.night)

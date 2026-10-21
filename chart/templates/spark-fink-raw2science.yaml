@@ -4,6 +4,8 @@ mainApplicationFile: local:///home/fink/fink-broker/bin/ztf/raw2science.py
 arguments: {{- include "fink.commonargs" . | nindent 2 }}
   {{- include "fink.nightargs" . | nindent 2 }}
 sparkConf: {{- include "fink.sparkconf" . | nindent 2 }}
+  # Executors named after the run, like its driver and step pods
+  spark.kubernetes.executor.podNamePrefix: "{{ "{{workflow.name}}" }}-raw2science"
 driver:
   cores: {{ tpl .Values.raw2science.driver.cores . }}
   coreRequest: "{{ tpl .Values.raw2science.driver.coreRequest . }}"
@@ -59,4 +61,3 @@ monitoring:
     port: 8090
 {{- end }}
 {{- end }}
-{{- include "fink.sparkapp" (dict "ctx" . "name" "raw2science" "spec" "fink.raw2science.spec") }}
