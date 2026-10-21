@@ -43,4 +43,9 @@ spec:
                 # The nightly run processes today's night
                 - '--night-offset'
                 - '0'
+                {{- with .Values.report.prodApi }}
+                # Compare each night with the production statistics
+                - '--prod-api'
+                - {{ . | quote }}
+                {{- end }}
 {{- end }}
