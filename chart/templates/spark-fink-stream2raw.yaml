@@ -13,6 +13,8 @@ arguments: {{- include "fink.commonargs" . | nindent 2 }}
   {{- include "fink.nightargs" . | nindent 2 }}
 sparkVersion: "3.5.9"
 sparkConf: {{- include "fink.sparkconf" . | nindent 2 }}
+  # Executors named after the run, like its driver and step pods
+  spark.kubernetes.executor.podNamePrefix: "{{ "{{workflow.name}}" }}-stream2raw"
 driver:
   cores: {{ tpl .Values.stream2raw.cores . }}
   coreRequest: "{{ tpl .Values.stream2raw.coreRequest . }}"
@@ -49,4 +51,3 @@ monitoring:
     port: 8090
 {{- end }}
 {{- end }}
-{{- include "fink.sparkapp" (dict "ctx" . "name" "stream2raw" "spec" "fink.stream2raw.spec") }}

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-from datetime import datetime, timezone
 
 import pytest
 
@@ -33,29 +32,38 @@ def test_night_pinned(monkeypatch):
     assert args.topic == "ztf_20240314"
 
 
-def test_night_deduced_from_offset(monkeypatch):
-    """-night_offset_hours alone deduces the night from UTC now."""
-    args = parse(monkeypatch, "-night_offset_hours", "0")
-    assert args.night == datetime.now(timezone.utc).strftime("%Y%m%d")
-
-
-def test_night_source_is_required(monkeypatch):
-    """Neither -night nor -night_offset_hours: argparse rejects the command.
+def test_night_is_required(monkeypatch):
+    """No -night: argparse rejects the command.
 
     An omitted night used to default to an empty string, which every job then
-    sliced into broken paths ({prefix}/raw/, year=""). The source of the night
-    must be stated.
+    sliced into broken paths ({prefix}/raw/, year=""). The night must be
+    stated.
     """
     with pytest.raises(SystemExit) as exc:
         parse(monkeypatch)
     assert exc.value.code == 2
 
 
-def test_night_sources_are_exclusive(monkeypatch):
-    """A pinned night and a deduction policy cannot be combined."""
+def test_night_is_never_deduced(monkeypatch):
+    """-night_offset_hours is gone: the night is always given by the workflow.
+
+    The jobs used to deduce their night from UTC now; every night is now run
+    through the WorkflowTemplate, which pins it.
+    """
     with pytest.raises(SystemExit) as exc:
-        parse(monkeypatch, "-night", "20240314", "-night_offset_hours", "24")
+        parse(monkeypatch, "-night_offset_hours", "0")
     assert exc.value.code == 2
+
+
+def test_night_close_hour(monkeypatch):
+    """-night_close_hour is the hour the night closes, the next day (UTC).
+
+    It defaults to 0, a night closing at midnight UTC, for the callers that do
+    not pass it (production scripts).
+    """
+    assert parse(monkeypatch, "-night", "20240314").night_close_hour == 0
+    args = parse(monkeypatch, "-night", "20240314", "-night_close_hour", "10")
+    assert args.night_close_hour == 10
 
 
 @pytest.mark.parametrize("night", ["", "20241", "202403141", "abcdefgh", "2024-03-14"])
@@ -68,21 +76,3 @@ def test_night_pinned_must_be_eight_digits(monkeypatch, night):
     with pytest.raises(SystemExit) as exc:
         parse(monkeypatch, "-night", night)
     assert exc.value.code == 2
-
-
-def test_stop_when_done_needs_a_pinned_night(monkeypatch):
-    """-stop_when_done is refused when the night is deduced.
-
-    On a live night, a quiet spell would look like the end of the night:
-    the job would write its _DONE marker, and every restart would then skip
-    the rest of the night's alerts.
-    """
-    with pytest.raises(SystemExit) as exc:
-        parse(monkeypatch, "-night_offset_hours", "0", "-stop_when_done")
-    assert exc.value.code == 2
-
-
-def test_stop_when_done_with_a_pinned_night(monkeypatch):
-    """A one-off run of a pinned night may stop once it is processed."""
-    args = parse(monkeypatch, "-night", "20240314", "-stop_when_done")
-    assert args.stop_when_done

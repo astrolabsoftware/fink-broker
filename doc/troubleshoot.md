@@ -21,12 +21,13 @@ kubectl run -it --rm s5cmd --image=peakcom/s5cmd --env AWS_ACCESS_KEY_ID=minio -
 /s5cmd --log debug --no-verify-ssl ls "s3://fink-broker-online/*"
 ```
 
-## Restart fink-broker
+## Restart a night
+
+The jobs of a night belong to its workflow, not to Argo CD: a failed night is
+run again by catching it up, once closed (see [deploy-cc.md](deploy-cc.md)).
 
 ```shell
-## Use --all if needed
-kubectl delete -n spark sparkapplication fink-broker-distribution
-argocd app sync fink-broker
+./e2e/catchup.sh -n <night> -w
 ```
 
 ## Debug fink-broker helm chart
@@ -35,7 +36,7 @@ argocd app sync fink-broker
 cd fink-broker
 helm install --debug fink ./chart --dry-run
 # Or
-helm template --debug spark --dry-run=client -n spark ./chart
+helm template --debug fink-broker --dry-run=client -n fink-broker ./chart
 ```
 
 ## ArgoCD
