@@ -27,7 +27,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
 
-def reduce_df_size(df, colname, maxnum=10):
+def reduce_df_size(df, colname, maxnum=100):
     """Reduce the DataFrame to `maxnum` rows per `colname` occurence"""
     window_spec = Window.partitionBy(colname).orderBy(F.monotonically_increasing_id())
     df_unique = (
@@ -80,7 +80,7 @@ def main():
     index_name = ".explore"
 
     # Maximum number of samples
-    maxnum = 10
+    maxnum = 100
 
     # Initialise Spark session
     init_sparksession(name="sso_resolver_{}".format(args.night), shuffle_partitions=2)
