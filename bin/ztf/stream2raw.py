@@ -54,6 +54,7 @@ from fink_broker.common.spark_utils import (
     completion_idle_seconds,
     done_marker,
     file_exists,
+    run_until_deadline,
     run_until_done,
     write_done_marker,
 )
@@ -239,8 +240,7 @@ def main():
         logger.info("Night %s collected, exiting normally...", args.night)
     elif exit_deadline is not None:
         logger.debug("Polling until the exit_at deadline %s", exit_deadline)
-        time.sleep(seconds_until(exit_deadline))
-        countquery.stop()
+        run_until_deadline([countquery], seconds_until(exit_deadline))
         logger.info(
             "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )

@@ -44,6 +44,7 @@ from fink_broker.common.spark_utils import (
     completion_idle_seconds,
     done_marker,
     file_exists,
+    run_until_deadline,
     run_until_done,
     write_done_marker,
     connect_to_raw_database,
@@ -288,8 +289,7 @@ def main():
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
-        time.sleep(seconds_until(exit_deadline))
-        disquery.stop()
+        run_until_deadline(disqueries, seconds_until(exit_deadline))
         logger.info(
             "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )
