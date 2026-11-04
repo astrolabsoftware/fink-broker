@@ -22,6 +22,7 @@ from fink_broker.common.spark_utils import (
     caught_up,
     parse_kafka_servers,
     probe_path,
+    run_until_deadline,
     run_until_done,
 )
 
@@ -373,3 +374,69 @@ def test_ceiling_without_any_row_is_an_empty_night():
     """Nothing ever read (no observation, no topic): the night is done, empty."""
     query = FakeQuery([progress(**{KAFKA: (None, None)})])
     assert run([query], ceiling=600) == [600.0]
+
+
+# --- Daily run: keep the queries up to the exit_at deadline -----------------
+
+
+class DyingQuery(FakeQuery):
+    """A query that terminates with an error at a given instant."""
+
+    def __init__(self, clock, dies_at, error):
+        super().__init__([progress()])
+        self.clock = clock
+        self.dies_at = dies_at
+        self.fatal = error
+
+    def exception(self):
+        return self.fatal if self.clock() >= self.dies_at else None
+
+
+def run_deadline(queries, clock, deadline_seconds=3600):
+    run_until_deadline(
+        queries,
+        deadline_seconds=deadline_seconds,
+        poll_seconds=10,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+
+
+def test_deadline_reached_stops_the_queries():
+    """No error until the deadline: the queries are stopped, the job exits 0."""
+    clock = FakeClock()
+    query = FakeQuery([progress()])
+    run_deadline([query], clock, deadline_seconds=95)
+    assert query.stopped
+    # Stops at the deadline itself, not at the next poll
+    assert clock() == 95.0
+
+
+def test_query_dying_before_the_deadline_fails_the_job():
+    """Seen at CC on 20261027: the job must not sleep on a dead query."""
+    clock = FakeClock()
+    query = DyingQuery(clock, dies_at=120, error=RuntimeError("cdsxmatch"))
+    with pytest.raises(RuntimeError, match="cdsxmatch"):
+        run_deadline([query], clock)
+    assert query.stopped
+    # Noticed within one poll interval
+    assert 120 <= clock() < 130
+
+
+def test_deadline_already_passed_exits_at_once():
+    """A deadline reached at start stops the queries without waiting."""
+    clock = FakeClock()
+    query = FakeQuery([progress()])
+    run_deadline([query], clock, deadline_seconds=0)
+    assert query.stopped
+    assert clock() == 0.0
+
+
+def test_one_dying_query_stops_the_others():
+    """Distribution runs one query per topic: one dead fails them all."""
+    clock = FakeClock()
+    alive = FakeQuery([progress()])
+    dying = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    with pytest.raises(RuntimeError, match="kafka"):
+        run_deadline([alive, dying], clock)
+    assert alive.stopped and dying.stopped

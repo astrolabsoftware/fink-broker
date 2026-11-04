@@ -1,0 +1,80 @@
+{{- /*
+The three jobs of a night, as SparkApplications created by the workflow. The
+nightly run and the catch-ups share the same data and checkpoints, so a
+catch-up resumes where the nightly run stopped.
+*/}}
+{{- $ctx := . }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: night
+spec:
+  entrypoint: night
+  serviceAccountName: fink-workflow
+  arguments:
+    parameters:
+      - name: night
+        {{- /* No default night next to a nightly run: a catch-up has to
+        name its night */}}
+        {{- if not .Values.nightly.enabled }}
+        value: {{ .Values.night | quote }}
+        {{- end }}
+      # catchup (by hand) or nightly (CronWorkflow), see the guard
+      - name: mode
+        value: catchup
+  templates:
+    - name: night
+      # Two runs on the same night would write the same checkpoints. Held at
+      # the template level: there the night parameter is resolved, while a
+      # workflow-level mutex would take the raw value of the nightly run's
+      # night, a creationTimestamp expression
+      synchronization:
+        mutexes:
+          - name: fink-night-{{ "{{workflow.parameters.night}}" }}
+      steps:
+        - - name: guard
+            template: guard
+        {{- /* The guard's output is only visible in these steps, so it is
+        handed over to each job as an input parameter */}}
+        {{- range $i, $job := list "stream2raw" "raw2science" "distribution" }}
+        {{ if eq $i 0 }}- -{{ else }}  -{{ end }} name: {{ $job }}
+            template: {{ $job }}
+            arguments:
+              parameters:
+                - name: deadline
+                  value: {{ "{{steps.guard.outputs.result}}" | quote }}
+        {{- end }}
+    - name: guard
+      container:
+        image: {{ .Values.workflows.guardImage | quote }}
+        # chart/files/workflow-guard.sh, tested by e2e/workflow-guard_test.sh
+        command:
+          - bash
+          - -c
+          - |
+            {{- .Files.Get "files/workflow-guard.sh" | nindent 12 }}
+          - workflow-guard
+        args:
+          - {{ "{{workflow.parameters.mode}}" | quote }}
+          - {{ "{{workflow.parameters.night}}" | quote }}
+          - {{ .Values.workflows.deadlineHours | quote }}
+          - {{ .Values.nightCloseHour | quote }}
+          - {{ .Values.nightly.exitAt | quote }}
+    {{- range $job := list "stream2raw" "raw2science" "distribution" }}
+    - name: {{ $job }}
+      inputs:
+        parameters:
+          - name: deadline
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.applicationState.state == COMPLETED
+        failureCondition: status.applicationState.state in (FAILED,SUBMISSION_FAILED)
+        manifest: |
+          apiVersion: sparkoperator.k8s.io/v1beta2
+          kind: SparkApplication
+          metadata:
+            name: "{{ "{{workflow.name}}" }}-{{ $job }}"
+          spec:
+            {{- include (printf "fink.%s.spec" $job) $ctx | nindent 12 }}
+    {{- end }}

@@ -14,50 +14,13 @@
 # limitations under the License.
 from datetime import datetime, timezone
 
-from fink_broker.common.night_utils import get_night, resolve_night_placeholders
+import pytest
 
-
-def test_explicit_night_wins():
-    """An explicit night is returned unchanged, the policy arg is ignored."""
-    assert get_night("20240101") == "20240101"
-    assert get_night("20240101", offset_hours=36) == "20240101"
-
-
-def test_deduce_current_night():
-    """With no offset, the night is the current UTC date."""
-    ref = datetime(2024, 3, 15, 6, 0, tzinfo=timezone.utc)
-    assert get_night(now=ref) == "20240315"
-
-
-def test_deduce_previous_night():
-    """An offset of 24 hours selects the previous complete night (n-1)."""
-    ref = datetime(2024, 3, 15, 6, 0, tzinfo=timezone.utc)
-    assert get_night(offset_hours=24, now=ref) == "20240314"
-
-
-def test_rollover_before_hour_keeps_previous_day():
-    """A pre-noon run with a noon-UTC rollover resolves to the previous day."""
-    ref = datetime(2024, 3, 15, 6, 0, tzinfo=timezone.utc)
-    assert get_night(offset_hours=12, now=ref) == "20240314"
-
-
-def test_rollover_after_hour_keeps_current_day():
-    """A post-noon run with a noon-UTC rollover resolves to the current day."""
-    ref = datetime(2024, 3, 15, 18, 0, tzinfo=timezone.utc)
-    assert get_night(offset_hours=12, now=ref) == "20240315"
-
-
-def test_offset_crosses_month_boundary():
-    """Shifting back across midnight handles month boundaries."""
-    ref = datetime(2024, 3, 1, 2, 0, tzinfo=timezone.utc)
-    assert get_night(offset_hours=12, now=ref) == "20240229"
-
-
-def test_previous_night_with_noon_rollover():
-    """36 hours = n-1 combined with a noon-UTC rollover."""
-    ref = datetime(2024, 3, 15, 6, 0, tzinfo=timezone.utc)
-    # -36h -> 2024-03-13 18:00
-    assert get_night(offset_hours=36, now=ref) == "20240313"
+from fink_broker.common.night_utils import (
+    check_night,
+    night_is_closed,
+    resolve_night_placeholders,
+)
 
 
 def test_resolve_placeholder_topic():
@@ -80,3 +43,47 @@ def test_resolve_placeholder_noop():
         resolve_night_placeholders("ztf_public_20200101", "20240315")
         == "ztf_public_20200101"
     )
+
+
+def test_past_night_is_closed():
+    """A night before today's UTC date is closed, from the first minute."""
+    now = datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc)
+    assert night_is_closed("20261008", now)
+
+
+def test_today_night_is_open():
+    """Today's UTC night stays open until the UTC midnight."""
+    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
+    assert not night_is_closed("20261009", now)
+
+
+def test_night_open_until_close_hour():
+    """With a closing hour, yesterday's night stays open until then.
+
+    Late alerts keep arriving the next morning: a job of that night must keep
+    collecting them instead of stopping once caught up and marking it done.
+    """
+    before = datetime(2026, 10, 9, 9, 59, tzinfo=timezone.utc)
+    at = datetime(2026, 10, 9, 10, 0, tzinfo=timezone.utc)
+    assert not night_is_closed("20261008", before, close_hour=10)
+    assert night_is_closed("20261008", at, close_hour=10)
+
+
+def test_today_night_open_with_close_hour():
+    """Today's night is open whatever the closing hour."""
+    now = datetime(2026, 10, 9, 23, 59, tzinfo=timezone.utc)
+    assert not night_is_closed("20261009", now, close_hour=10)
+
+
+def test_future_night_is_refused():
+    """A night after today's UTC date has no alert yet: refused at startup."""
+    now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match="Night 20261010 is in the future"):
+        check_night("20261010", now)
+
+
+@pytest.mark.parametrize("night", ["20261008", "20261009"])
+def test_past_or_today_night_is_accepted(night):
+    """A closed night or today's open night can be processed."""
+    now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+    check_night(night, now)
