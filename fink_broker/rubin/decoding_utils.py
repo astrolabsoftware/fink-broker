@@ -126,9 +126,14 @@ def write_alert(
     )
 
     # Save on disk
-    filename_tmp = ".part-{}-{}-{{i}}-{}.parquet.tmp".format(
-        os.getpid(), os.getppid(), uuid
-    )
+    if fs is not None:
+        filename_tmp = ".part-{}-{}-{{i}}-{}.parquet.tmp".format(
+            os.getpid(), os.getppid(), uuid
+        )
+    else:
+        filename_tmp = "part-{}-{}-{{i}}-{}.parquet".format(
+            os.getpid(), os.getppid(), uuid
+        )
     pq.write_to_dataset(
         table,
         where,
@@ -138,14 +143,15 @@ def write_alert(
         filesystem=fs,
     )
 
-    # https://github.com/astrolabsoftware/fink-broker/issues/1262
-    # Expose file once fully written for Spark consumption
-    # In case of writing a single Table {i} will always be 0
-    filename = filename_tmp[1:].replace("{i}", "0")
-    fs.move(
-        os.path.join(where, filename_tmp.replace("{i}", "0")),
-        os.path.join(where, filename),
-    )
+    if fs is not None:
+        # https://github.com/astrolabsoftware/fink-broker/issues/1262
+        # Expose file once fully written for Spark consumption
+        # In case of writing a single Table {i} will always be 0
+        filename = filename_tmp[1:].replace("{i}", "0")
+        fs.move(
+            os.path.join(where, filename_tmp.replace("{i}", "0")),
+            os.path.join(where, filename),
+        )
 
 
 def get_partitions_by_date(consumer, topic, date_ms, timeout=10):
