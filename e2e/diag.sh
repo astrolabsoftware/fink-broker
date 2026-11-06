@@ -22,10 +22,29 @@
 set -uo pipefail
 
 DIAG_DIR="${1:-/tmp/k8s-diag}"
+# Self-hosted runners keep /tmp between jobs: start from an empty directory,
+# or the artifact mixes in files from earlier runs
+rm -rf "$DIAG_DIR"
 mkdir -p "$DIAG_DIR"
 
 echo "=== kubectl get pods -A ==="
 kubectl get pods -A --no-headers | tee "$DIAG_DIR/pods-all.txt"
+
+# A driver that fails is replaced by the spark-operator, which deletes its
+# pod: its exit reason (Error, OOMKilled...) survives only in the
+# SparkApplication status and in the events
+echo "=== SparkApplications ==="
+kubectl get sparkapplications -A -o wide 2>&1 | tee "$DIAG_DIR/sparkapplications.txt"
+kubectl get sparkapplications -A -o yaml > "$DIAG_DIR/sparkapplications.yaml" 2>&1 || true
+kubectl get events -A --sort-by=.lastTimestamp > "$DIAG_DIR/events-all.txt" 2>&1 || true
+
+# Logs of every Spark pod, healthy or not: a job that runs without producing
+# anything is not an abnormal pod
+for pod in $(kubectl get pods -n spark -o name 2>/dev/null); do
+    name="${pod#pod/}"
+    kubectl logs -n spark "$name" --all-containers=true \
+        > "$DIAG_DIR/logs-spark-${name}.txt" 2>&1 || true
+done
 
 # Pods not in a healthy terminal or running state
 abnormal_pods=$(kubectl get pods -A --no-headers | \
