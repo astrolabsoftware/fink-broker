@@ -180,7 +180,7 @@ fi
 # for example in finkctl.yaml
 if [ "$SUFFIX" = "noscience" ];
 then
-  expected_topics="21"
+  expected_topics="22"
 else
   # 3 topics do not send results
   expected_topics="19"

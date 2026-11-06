@@ -317,6 +317,9 @@ if [[ ${INDEX_TABLES} == true ]]; then
       # Done in real-time, but we need to run it again to update paths to the consolidated datalake
       fink start archive_images -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_images_bulk_${SURVEY}_${NIGHT}.log 2>&1
 
+      echo -e "${SSTEP} export labels for exploration"
+      fink start archive_explore -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_explore_${SURVEY}_${NIGHT}.log 2>&1
+
       echo -e " ${SSTEP} Update statistics"
       fink start archive_statistics -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} > ${FINK_HOME}/broker_logs/archive_statistics_${SURVEY}_${NIGHT}.log 2>&1
       # fink start archive_index -s ${SURVEY} -c ${conf} -night ${NIGHT} ${RESOURCES} -index_table forcedSources_diaObjectId_midpointMjdTai > ${FINK_HOME}/broker_logs/index_forcedSources_diaObjectId_midpointMjdTai_${SURVEY}_${NIGHT}.log 2>&1
