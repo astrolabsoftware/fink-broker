@@ -126,14 +126,25 @@ def write_alert(
     )
 
     # Save on disk
-    filename = "part-{}-{}-{{i}}-{}.parquet".format(os.getpid(), os.getppid(), uuid)
+    filename_tmp = ".part-{}-{}-{{i}}-{}.parquet.tmp".format(
+        os.getpid(), os.getppid(), uuid
+    )
     pq.write_to_dataset(
         table,
         where,
         schema=table_schema,
-        basename_template=filename,
+        basename_template=filename_tmp,
         existing_data_behavior="overwrite_or_ignore",
         filesystem=fs,
+    )
+
+    # https://github.com/astrolabsoftware/fink-broker/issues/1262
+    # Expose file once fully written for Spark consumption
+    # In case of writing a single Table {i} will always be 0
+    filename = filename_tmp[1:].replace("{i}", "0")
+    fs.move(
+        os.path.join(where, filename_tmp.replace("{i}", "0")),
+        os.path.join(where, filename),
     )
 
 
