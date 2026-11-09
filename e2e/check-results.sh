@@ -187,6 +187,7 @@ fi
 
 # TODO improve management of expected topics
 # for example in finkctl.yaml
+cds_up=true
 if [ "$SUFFIX" = "noscience" ];
 then
   expected_topics="22"
@@ -196,7 +197,6 @@ else
   # While the CDS xmatch service is down, SIMBAD classes are empty and the
   # filters relying on them produce no alert, so 5 topics are never created.
   # 19 stays accepted in case the CDS comes back during the run.
-  cds_up=true
   if ! cds_reachable; then
     cds_up=false
     expected_topics="19 14"
@@ -261,8 +261,9 @@ do
           kubectl logs "$pod" -n spark --tail -1
       done
       err_msg="ERROR: fink-broker did not produce expected results after ~20 minutes"
-      # The CDS may have gone down after the first probe: say so.
-      if [ "$SUFFIX" = "science" ] && $cds_up && ! cds_reachable; then
+      # The CDS may have gone down after the first probe: say so. CI selects
+      # the science build with an empty suffix, not 'science'.
+      if [ "$SUFFIX" != "noscience" ] && $cds_up && ! cds_reachable; then
         err_msg="$err_msg (CDS xmatch became unreachable during the run:"
         err_msg="$err_msg SIMBAD-based filters may have produced no alerts)"
       fi
