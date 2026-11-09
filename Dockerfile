@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# base_image is a fink-deps image pinned in .ciux (currently v3.0.1-rc6).
-# ciux rebuilds this image only when a file of its sourcePathes changes, and
-# .ciux is not one of them: update this version when bumping the deps images.
 ARG base_image
 FROM ${base_image}
 

@@ -45,7 +45,7 @@ usage () {
 
 SUFFIX="noscience"
 
-ciux_version=v0.0.7-rc5
+ciux_version=v0.0.7-rc6
 
 src_dir=$DIR/..
 cleanup=false
@@ -99,7 +99,7 @@ export SUFFIX
 go install github.com/k8s-school/ciux@"$ciux_version"
 
 echo "Ignite the project using ciux"
-ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+ciux ignite --selector itest "$src_dir" --build "$SUFFIX"
 
 # Initialize YAML report
 home-ci-reporter init "$TEST_REPORT" "fink-broker"
@@ -133,7 +133,7 @@ else
     exit 1
 fi
 
-$(ciux get image --check $src_dir --suffix "$SUFFIX" --env)
+$(ciux get image --check $src_dir --build "$SUFFIX" --env)
 if [ $CIUX_BUILD = true ]; then
   kind load docker-image $CIUX_IMAGE_URL --name "$cluster"
 fi
