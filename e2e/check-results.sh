@@ -27,6 +27,15 @@ monitoring=false
 SUFFIX="noscience"
 mode="basic"
 report_timeout=600
+# Endpoint probed to tell whether the CDS xmatch service, called by the
+# science modules of fink-science, is reachable. Overridable for testing.
+CDS_XMATCH_PROBE_URL="${CDS_XMATCH_PROBE_URL:-http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync/tables?action=getVizieRTableNames&RESPONSEFORMAT=json}"
+
+# Succeed if the CDS xmatch service answers. Redirects are followed, as the
+# Python requests library used by fink-science does.
+cds_reachable () {
+  curl -sfL -o /dev/null --max-time 15 "$CDS_XMATCH_PROBE_URL"
+}
 
 usage () {
   echo "Usage: $0 [-h] [--basic|--report] [-m] [-s <suffix>]"
@@ -184,7 +193,29 @@ then
 else
   # 3 topics do not send results
   expected_topics="19"
+  # While the CDS xmatch service is down, SIMBAD classes are empty and the
+  # filters relying on them produce no alert, so 5 topics are never created.
+  # 19 stays accepted in case the CDS comes back during the run.
+  cds_up=true
+  if ! cds_reachable; then
+    cds_up=false
+    expected_topics="19 14"
+    echo "WARNING: CDS xmatch unreachable ($CDS_XMATCH_PROBE_URL):" \
+      "SIMBAD-based filters produce no alerts, accepting 14 or 19 topics" 1>&2
+  fi
 fi
+
+# Succeed once the number of topics matches one of the expected counts.
+topics_ready () {
+  local n counts
+  counts=$(echo "$expected_topics" | wc -w)
+  for n in $expected_topics; do
+    if finkctl wait topics --expected "$n" --timeout "$((60 / counts))s" -v1 > /dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime
 # display logs of failed pods if any, and of running pods if no topics after 10 attempts (~10 minutes)
@@ -192,7 +223,7 @@ count=0
 max_attempts=20
 selector="spark-app-name"
 err_msg=""
-while ! finkctl wait topics --expected "$expected_topics" --timeout 60s -v1 > /dev/null
+while ! topics_ready
 do
     echo "INFO: Waiting for expected topics: $expected_topics, attempt: $((count+1))/$max_attempts"
     sleep 5
@@ -230,6 +261,11 @@ do
           kubectl logs "$pod" -n spark --tail -1
       done
       err_msg="ERROR: fink-broker did not produce expected results after ~20 minutes"
+      # The CDS may have gone down after the first probe: say so.
+      if [ "$SUFFIX" = "science" ] && $cds_up && ! cds_reachable; then
+        err_msg="$err_msg (CDS xmatch became unreachable during the run:"
+        err_msg="$err_msg SIMBAD-based filters may have produced no alerts)"
+      fi
       # echo "ERROR: enabling interactive access for debugging purpose" 1>&2
       # sleep 7200
       break
