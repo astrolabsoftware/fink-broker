@@ -25,6 +25,7 @@ See http://cdsxmatch.u-strasbg.fr/ for more information on the SIMBAD catalog.
 
 from pyspark.sql import functions as F
 
+from datetime import datetime, timezone
 import argparse
 import sys
 import time
@@ -33,7 +34,11 @@ import os
 from fink_broker import __version__ as fbvsn
 from fink_broker.common.logging_utils import init_logger
 from fink_broker.common.parser import getargs
-from fink_broker.common.night_utils import get_exit_deadline, seconds_until
+from fink_broker.common.night_utils import (
+    check_night,
+    get_exit_deadline,
+    seconds_until,
+)
 from fink_broker.common.spark_utils import init_sparksession
 from fink_broker.common.spark_utils import (
     NoDataAvailableError,
@@ -41,6 +46,7 @@ from fink_broker.common.spark_utils import (
     connect_to_raw_database,
     done_marker,
     file_exists,
+    run_until_deadline,
     run_until_done,
     write_done_marker,
 )
@@ -69,6 +75,13 @@ def main():
         )
         sys.exit(1)
 
+    # A closed night is complete upstream, so the job stops once it has caught
+    # up; an open night runs to its deadline, with no _DONE marker. The state
+    # is decided once by the guard step of the workflow, so a restarted job
+    # keeps it.
+    check_night(args.night, datetime.now(timezone.utc))
+    night_closed = args.night_state == "closed"
+
     logger.debug("Initialise Spark session")
     spark = init_sparksession(
         name="raw2science_{}_{}".format(args.producer, args.night),
@@ -95,12 +108,12 @@ def main():
         args.online_data_prefix, "raw_checkpoint/{}".format(args.night)
     )
 
-    # One-off run: stream2raw leaves a marker once the night is collected
+    # On a closed night, stream2raw leaves a marker once it is collected
     def raw_collected():
         return file_exists(done_marker(checkpointpath_raw))
 
-    # A one-off run restarted after it completed has nothing left to do
-    if args.stop_when_done and file_exists(done_marker(checkpointpath_sci_tmp)):
+    # A closed night already done by a previous run has nothing left to do
+    if night_closed and file_exists(done_marker(checkpointpath_sci_tmp)):
         logger.info("Night %s already processed, exiting normally...", args.night)
         return
 
@@ -111,7 +124,7 @@ def main():
             os.path.join(rawdatapath, "{}".format(args.night)),
             latestfirst=False,
             deadline=exit_deadline,
-            give_up=raw_collected if args.stop_when_done else None,
+            give_up=raw_collected if night_closed else None,
         )
     except NoDataAvailableError as e:
         # The telescope does not observe every night. Exit successfully so the
@@ -119,7 +132,7 @@ def main():
         logger.info(
             "No alert collected for night %s, nothing to do (%s)", args.night, e
         )
-        if args.stop_when_done:
+        if night_closed:
             write_done_marker(checkpointpath_sci_tmp)
         return
 
@@ -175,12 +188,14 @@ def main():
         .start()
     )
 
-    if args.stop_when_done:
+    if night_closed:
         run_until_done(
             [countquery_science],
             upstream_done=raw_collected,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=args.exit_after,
+            ceiling_seconds=seconds_until(exit_deadline)
+            if exit_deadline is not None
+            else args.exit_after,
             on_done=lambda: write_done_marker(checkpointpath_sci_tmp),
         )
         logger.info("Night %s processed", args.night)
@@ -188,8 +203,7 @@ def main():
         # An absolute deadline already accounts for whatever was spent waiting
         # for the upstream data, so nothing is subtracted here.
         logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
-        time.sleep(seconds_until(exit_deadline))
-        countquery_science.stop()
+        run_until_deadline([countquery_science], seconds_until(exit_deadline))
         logger.info(
             "Reached the exit_at deadline %s, exiting normally...", exit_deadline
         )
