@@ -35,7 +35,7 @@ The first script is for live operations:
 - `raw2science`: Wrapped in `science_service.sh`. It loads collected alerts, processes them, and stores them on disks. It starts automatically when `stream2raw` collects alerts for the first time.
 - `distribution`: Wrapped in `distribution_service.sh`. It loads processed alerts, splits into substreams (Kafka topics), and sends substreams to the Kafka cluster which will redirect alerts to users. It starts automatically when `raw2science` collects alerts for the first time.
 
-All jobs stop at 8pm UTC on the night N. In addition there is one other cron job at the end of the night for database management that starts at 8.05pm UTC (just after streaming jobs end).
+All jobs stop at 8pm Paris on the night N. In addition there is one other cron job at the end of the night for database management that starts at 8.05pm Paris (just after streaming jobs end).
 
 ![image](schedule_example.png)
 _Screenshot from the ZTF Grafana dashboard for the nights 20210116 and 20210117._
