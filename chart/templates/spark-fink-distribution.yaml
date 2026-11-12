@@ -11,6 +11,8 @@ arguments: {{- include "fink.commonargs" . | nindent 2 }}
   {{- include "fink.nightargs" . | nindent 2 }}
 sparkVersion: "3.5.9"
 sparkConf: {{- include "fink.sparkconf" . | nindent 2 }}
+  # Executors named after the run, like its driver and step pods
+  spark.kubernetes.executor.podNamePrefix: "{{ "{{workflow.name}}" }}-distribution"
 volumes:
 - name: kafka-secret
   secret:
@@ -54,4 +56,3 @@ monitoring:
     port: 8090
 {{- end }}
 {{- end }}
-{{- include "fink.sparkapp" (dict "ctx" . "name" "distribution" "spec" "fink.distribution.spec") }}

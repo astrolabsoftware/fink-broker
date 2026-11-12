@@ -12,7 +12,6 @@ scheduled="false"
 monitoring="false"
 src_dir=$DIR/..
 storage="hdfs"
-night=""
 revision=""
 local_values=""
 
@@ -28,13 +27,10 @@ Available options:
                 'ci-*' infras enable the e2e alert simulator; others are
                 production-like (e2e disabled). The fink-broker image variant
                 (science/noscience) is derived from the infra name.
-  -s            Scheduled mode: layer values-scheduled.yaml on top, deploying
-                ScheduledSparkApplications that deduce the observing night at
-                runtime. Without -s, one-shot SparkApplications with a pinned
-                night are deployed. Mutually exclusive with -n.
-  -n <night>    One-shot mode only: pin the ZTF night (YYYYMMDD). Defaults to
-                the previous night on production infras. Cannot be combined
-                with -s (scheduled deduces the night at runtime).
+  -s            Nightly run: layer values-scheduled.yaml on top, deploying a
+                CronWorkflow that submits the Argo WorkflowTemplate every day
+                on today's night. Without -s, no night runs by itself: nights
+                are run with e2e/catchup.sh, through the same WorkflowTemplate.
   -r <ref>      Git revision (tag or commit sha) deployed for fink-cd,
                 fink-broker and fink-alert-simulator. Default: the work
                 branches resolved by ciux (the current branch when it exists
@@ -51,20 +47,18 @@ Available options:
   -S <storage>  Storage to use (hdfs or s3). Default: hdfs
 
 Examples:
-  $(basename "$0") -i cc          # CC-IN2P3, one-shot on the previous night
-  $(basename "$0") -i cc -s       # CC-IN2P3, scheduled daily run
+  $(basename "$0") -i cc -s       # CC-IN2P3, nightly run
   $(basename "$0") -i cc -s -r v3.3.0   # ... pinned on a release tag
 EOD
 }
 
 # Get the options
-while getopts hi:l:mn:r:sS: c ; do
+while getopts hi:l:mr:sS: c ; do
     case $c in
         h) usage ; exit 0 ;;
         i) infra="$OPTARG" ;;
         l) local_values="$OPTARG" ;;
         m) monitoring="true" ;;
-        n) night="$OPTARG" ;;
         r) revision="$OPTARG" ;;
         s) scheduled="true" ;;
         S) storage="$OPTARG" ;;
@@ -72,22 +66,6 @@ while getopts hi:l:mn:r:sS: c ; do
     esac
 done
 shift "$((OPTIND-1))"
-
-# Scheduled mode deduces the observing night at runtime, so pinning one with -n
-# is contradictory.
-if [ "$scheduled" == "true" ] && [ -n "$night" ]; then
-    echo "Error: -s (scheduled) and -n <night> are mutually exclusive:"
-    echo "       scheduled mode deduces the observing night at runtime."
-    usage
-    exit 1
-fi
-
-# Validate night value (YYYYMMDD) when provided
-if [ -n "$night" ] && ! [[ "$night" =~ ^[0-9]{8}$ ]]; then
-    echo "Error: night must be in YYYYMMDD format"
-    usage
-    exit 1
-fi
 
 # Derive the fink-broker image variant (science/noscience) from the infra name;
 # used by ciux to select the image below.
@@ -131,12 +109,6 @@ fi
 
 NS=argocd
 
-# 'ci-*' infras run the e2e alert simulator; other (production) infras don't.
-case "$infra" in
-    ci-*) e2e_enabled="true" ;;
-    *)    e2e_enabled="false" ;;
-esac
-
 # SCRAM password for the fink-producer KafkaUser. Throwaway CI clusters keep a
 # fixed default, so a run is reproducible and the distribution topic easy to
 # consume by hand; production infras get a generated one that never leaves the
@@ -167,22 +139,6 @@ if [ -n "$local_values" ]; then
     values_args+=(--values-literal-file "$local_values")
 fi
 
-# Night handling (one-shot only). Scheduled mode passes no night: the job
-# deduces it at runtime. In one-shot mode on a production infra, default to the
-# previous night (the most recent complete ZTF observing night; today's topic
-# is still filling, and ZTF public topics are only retained ~7 days). CI infras
-# keep the night pinned by their values file unless -n overrides it.
-night_args=()
-if [ "$scheduled" == "false" ]; then
-    if [ -z "$night" ] && [ "$e2e_enabled" == "false" ]; then
-        night=$(date -u -d 'yesterday' +%Y%m%d)
-        echo "No night specified, defaulting to previous night: $night"
-    fi
-    if [ -n "$night" ]; then
-        night_args+=(-p "finkBroker.night=$night")
-    fi
-fi
-
 # Provision the Kafka SASL/SCRAM credentials the kafka chart expects: the
 # password secret read by the KafkaUser, and the JAAS config mounted by the
 # distribution SparkApplication. Every infra goes through this single path, so
@@ -191,7 +147,7 @@ fi
 #
 # kafka/fink-producer-password is the single source of truth: it is what the
 # KafkaUser consumes, so it is what the broker authenticates against.
-# spark/fink-kafka-jaas is derived from it, a client-side rendering of the same
+# fink-broker/fink-kafka-jaas is derived from it, a client-side rendering of the same
 # value. Recovery is therefore asymmetric on purpose -- it reads the source,
 # never the derived copy, which would promote that copy to a second source of
 # truth and let the two drift apart silently.
@@ -205,7 +161,7 @@ fi
 # why the source secret is not something to prune casually.
 provision_jaas_secrets() {
     local kafka_ns="kafka"
-    local spark_ns="spark"
+    local spark_ns="fink-broker"
     local username="fink-producer"
     local password
     local ns
@@ -225,7 +181,7 @@ provision_jaas_secrets() {
         password=$(openssl rand -base64 24)
     fi
 
-    # Both namespaces are owned by Argo CD (Namespace/spark in the app-of-apps,
+    # Both namespaces are owned by Argo CD (Namespace/fink-broker in the app-of-apps,
     # kafka via CreateNamespace=true), which adopts them on the first sync;
     # creating them here only makes the secrets landable beforehand. Create
     # them only when missing: `apply`-ing a bare namespace over one Argo CD
@@ -288,7 +244,6 @@ argocd app create fink --dest-server https://kubernetes.default.svc \
     --path apps --revision "$fink_cd_rev" \
     "${values_args[@]}" \
     -p storage="$storage" \
-    ${night_args[@]+"${night_args[@]}"} \
     -p finkBroker.image.repository="$CIUX_IMAGE_REGISTRY" \
     -p finkBroker.image.tag="$CIUX_IMAGE_TAG" \
     -p finkBroker.monitoring.enabled="$monitoring" \
