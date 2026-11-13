@@ -33,7 +33,8 @@ Usage: `basename $0` [options]
 
   Available options:
     -h          this message
-    -s          image suffix, default to 'noscience'. Valid values: 'noscience', 'science'
+    -s          image build, default to 'noscience'. Valid values: 'noscience', 'science'
+                (or empty: science, the build whose image has no suffix)
     -i 		Specify the survey. Default: ztf
 
 Build image containing fink-broker for k8s
@@ -64,10 +65,12 @@ if [ -n "$suffix" ] && [ "$suffix" != "noscience" ] && [ "$suffix" != "science" 
 fi
 
 ignite_msg="Run following command to prepare integration tests:"
-ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --suffix \"$suffix\""
+ignite_msg="${ignite_msg}  ciux ignite --selector ci \"$DIR\" --build \"$suffix\""
 
 # This command avoid retrieving build dependencies if not needed
-$(ciux get image --check $DIR --suffix "$suffix" --env)
+# The build selects the base image, the fink-deps dependency with
+# "baseOf: <build>" in .ciux, and an empty build is "defaultBuild": science
+$(ciux get image --check $DIR --build "$suffix" --env)
 
 if [ $CIUX_BUILD = false ];
 then
@@ -76,28 +79,9 @@ then
     exit 0
 fi
 
-if [[ "$suffix" == "noscience" ]]; then
-    SELECTOR="build=noscience"
-else
-    SELECTOR="build=science"
-fi
-
-ciux ignite --selector "$SELECTOR" $DIR --suffix "$suffix"
-
-CIUXCONFIG=$(ciux get configpath --selector $SELECTOR $DIR)
-echo "Sourcing ciux config from $CIUXCONFIG"
-. $CIUXCONFIG
-
-if [[ "$suffix" == "noscience" ]]; then
-    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_NOSCIENCE_ZTF_IMAGE"
-else
-    base_image="$ASTROLABSOFTWARE_FINK_FINK_DEPS_SCIENCE_ZTF_IMAGE"
-fi
-
 # Build image using pre-built fink-deps images
-docker image build --tag "$CIUX_IMAGE_URL" --build-arg base_image="$base_image" "$DIR"
+docker image build --tag "$CIUX_IMAGE_URL" --build-arg base_image="$CIUX_BASE_IMAGE" "$DIR"
 
 
 echo "Build successful"
 echo $ignite_msg
-

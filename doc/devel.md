@@ -23,7 +23,7 @@ cd fink-broker
 ### Install `ciux`.
 
 ```bash
-CIUX_VERSION=v0.0.7-rc5
+CIUX_VERSION=v0.0.7-rc6
 go install github.com/k8s-school/ciux@"$CIUX_VERSION"
 ```
 

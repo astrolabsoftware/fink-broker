@@ -99,7 +99,7 @@ esac
 # Refresh ciux config if not in github actions
 # Used for interactive development
 if [ "$GITHUB_ACTIONS" == "false" ]; then
-    ciux ignite --selector itest "$src_dir" --suffix "$SUFFIX"
+    ciux ignite --selector itest "$src_dir" --build "$SUFFIX"
 fi
 
 . "$DIR/../.ciux.d/ciux_itest.sh"
