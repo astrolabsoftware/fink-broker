@@ -21,7 +21,7 @@ on:
       slack_webhook_url:
         required: true
 env:
-  CIUX_VERSION: v0.0.7-rc5
+  CIUX_VERSION: v0.0.7-rc6
   # Self-hosted runners keep their workspace across runs, and actions/checkout
   # only cleans the main repository: without this, ciux reuses the dependency
   # clones left by a previous run, pinning them to a stale revision.
@@ -59,7 +59,7 @@ jobs:
         run: |
           mkdir -p artifacts
           # Cannot use CIUXCONFIG because it may not have been created yet
-          $(ciux get image --check $PWD --suffix "${{ env.SUFFIX }}" --env)
+          $(ciux get image --check $PWD --build "${{ env.SUFFIX }}" --env)
           if [ $CIUX_BUILD = true ]; then
             if [[ "${{ inputs.runner }}" == *"self-hosted"* ]]; then
               # For self-hosted: image stays in local Docker registry for reuse
@@ -124,7 +124,7 @@ jobs:
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Ciux project ignition
         run: |
-          ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --suffix "${{ env.SUFFIX }}"
+          ciux ignite --selector itest --branch="$GHA_BRANCH_NAME" $PWD --build "${{ env.SUFFIX }}"
           ink "Ciux configuration file"
           cat .ciux.d/ciux_itest.sh
       - name: Boostrap k8s (kind) cluster
