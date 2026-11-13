@@ -1027,6 +1027,55 @@ def run_until_done(
         sleep(poll_seconds)
 
 
+def run_until_deadline(
+    queries: Sequence,
+    deadline_seconds: float,
+    poll_seconds: float = 10,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Run streaming queries until a deadline, failing as soon as one dies
+
+    A daily run keeps its queries up until the `exit_at` deadline. A query
+    that terminates with an error before then must fail the job, instead of
+    leaving the driver asleep and the job reported as successful.
+
+    Parameters
+    ----------
+    queries: sequence of StreamingQuery
+        Queries of the job, all of which are watched
+    deadline_seconds: float
+        Time left before the deadline. Zero or less: stop at once.
+    poll_seconds: float
+        Interval between two checks
+    clock, sleep: callables
+        Time source and sleep function, replaced in tests
+
+    Raises
+    ------
+    Exception
+        The error of a query that terminated before the deadline
+    """
+
+    def stop_all():
+        for query in queries:
+            query.stop()
+
+    end = clock() + deadline_seconds
+    while True:
+        for query in queries:
+            error = query.exception()
+            if error is not None:
+                stop_all()
+                raise error
+
+        remaining = end - clock()
+        if remaining <= 0:
+            stop_all()
+            return
+        sleep(min(poll_seconds, remaining))
+
+
 def load_parquet_files(path: str) -> DataFrame:
     """Initialise SparkSession, and load parquet files with Spark
 

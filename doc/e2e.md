@@ -51,6 +51,10 @@ ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 
 # Run ArgoCD
 ./e2e/argocd.sh
+
+# Run the night of the CI: no Spark job is deployed in CI, the night is run
+# through the Argo WorkflowTemplate, as any catch-up
+./e2e/catchup.sh
 ```
 
 ### Check Results

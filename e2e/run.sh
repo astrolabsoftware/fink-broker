@@ -147,6 +147,15 @@ else
     exit 1
 fi
 
+echo "Phase: Night Run"
+echo "Run the night through the WorkflowTemplate, as any catch-up."
+if $DIR/catchup.sh; then
+    home-ci-reporter step "night_run" "passed" "Night submitted successfully" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "night_run" "failed" "Night submission failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
 echo "Phase: Test Results Check"
 echo "Check the results of the tests."
 if $DIR/check-results.sh --basic -s "$SUFFIX" $monitoring_opt; then
@@ -168,6 +177,33 @@ if [ "$storage" = "hdfs" ]; then
         home-ci-reporter step "balance_check" "failed" "Balance check failed" --file "$TEST_REPORT"
         exit 1
     fi
+fi
+
+echo "Phase: Catch-up Check"
+echo "Catch the night of the run up, which must find it complete."
+if $DIR/check-results.sh --catchup; then
+    home-ci-reporter step "catchup_check" "passed" "Catch-up check completed successfully" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "catchup_check" "failed" "Catch-up check failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
+echo "Phase: Open Night Catch-up Check"
+echo "Catch today's night up, which runs until it closes."
+if $DIR/check-results.sh --catchup-open; then
+    home-ci-reporter step "catchup_open_check" "passed" "Open night caught up until it closes" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "catchup_open_check" "failed" "Open night catch-up check failed" --file "$TEST_REPORT"
+    exit 1
+fi
+
+echo "Phase: Nightly Run Check"
+echo "Submit a nightly run as the CronWorkflow does, check its night and deadline."
+if $DIR/check-results.sh --nightly; then
+    home-ci-reporter step "nightly_check" "passed" "Nightly run started today's night" --file "$TEST_REPORT"
+else
+    home-ci-reporter step "nightly_check" "failed" "Nightly run check failed" --file "$TEST_REPORT"
+    exit 1
 fi
 
 echo "Phase: Image Push"
