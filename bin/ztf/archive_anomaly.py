@@ -17,6 +17,10 @@
 
 import argparse
 
+from pyspark.sql.window import Window
+import pyspark.sql.functions as F
+
+
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.parser import getargs
 from fink_broker.common.spark_utils import init_sparksession, load_parquet_files
@@ -51,6 +55,10 @@ def main():
     )
     df = load_parquet_files(path)
 
+    window_spec = Window.orderBy(F.col("anomaly_score").desc())
+    df_ranked = df.withColumn("rank", F.rank().over(window_spec))
+
+
     # Send anomalies
     df_proc = df.select(
         "objectId",
@@ -59,6 +67,7 @@ def main():
         "candidate.dec",
         "candidate.rb",
         "anomaly_score",
+        "rank",
         "timestamp",
     )
 
@@ -87,13 +96,19 @@ def main():
     )
 
     for model in ANOMALY_MODELS:
+
+        score_col = f"anomaly_score{model}"
+        window_spec_model = Window.orderBy(F.col(score_col).desc())
+        df_ranked_model = df.withColumn("rank", F.rank().over(window_spec_model))
+
         df_proc = df.select(
             "objectId",
             "candid",
             "candidate.ra",
             "candidate.dec",
             "candidate.rb",
-            f"anomaly_score{model}",
+            score_col,
+            "rank",
             "timestamp",
         )
         anomaly_notification_(
