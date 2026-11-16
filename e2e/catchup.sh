@@ -52,6 +52,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: catchup-$night-
+  labels:
+    night: "$night"
 spec:
   arguments:
     parameters:

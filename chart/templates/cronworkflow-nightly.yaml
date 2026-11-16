@@ -21,6 +21,13 @@ spec:
   workflowSpec:
     workflowTemplateRef:
       name: night
+    # Night of the run, as catchup.sh sets it: kubectl get workflows -L night.
+    # Not from workflow.parameters.night, still a raw template string here,
+    # which makes an invalid label and errors the workflow
+    workflowMetadata:
+      labelsFrom:
+        night:
+          expression: 'sprig.date("20060102", workflow.creationTimestamp)'
     arguments:
       parameters:
         # Creation date of the workflow, in UTC like Kubernetes timestamps

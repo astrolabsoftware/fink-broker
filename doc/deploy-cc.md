@@ -179,7 +179,7 @@ deadline) is caught up without touching the nightly run:
 
 ```bash
 ./e2e/catchup.sh -n 20261008 -w     # prints the workflow name, waits for its end
-kubectl -n fink-broker get workflows
+kubectl -n fink-broker get workflows -L night
 ```
 
 The script submits the Argo `WorkflowTemplate` `night`, which runs
@@ -223,7 +223,7 @@ argocd app list -l app.kubernetes.io/part-of=fink
 
 # Nights
 kubectl -n fink-broker get cronworkflows                # nightly run (-s)
-kubectl -n fink-broker get workflows                    # nightly runs and catch-ups
+kubectl -n fink-broker get workflows -L night           # nightly runs and catch-ups, with their night
 kubectl -n fink-broker get sparkapplications            # jobs of the running nights
 kubectl -n fink-broker logs -l spark-role=driver --tail=100
 kubectl -n fink-broker get cronworkflow nightly \
