@@ -34,7 +34,6 @@ import fastavro.schema
 from datetime import datetime, timezone
 import argparse
 import sys
-import time
 import io
 import os
 
@@ -42,6 +41,7 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.night_utils import (
     check_night,
     get_exit_deadline,
+    run_window_seconds,
     seconds_until,
 )
 
@@ -226,28 +226,22 @@ def main():
 
     # Keep the Streaming running until something or someone ends it!
     logger.info("Stream2raw service is running...")
+    run_window = run_window_seconds(exit_deadline, args.exit_after)
     if night_closed:
         # The topic of a past night is closed: done once it is read to its end
         run_until_done(
             [countquery],
             upstream_done=lambda: True,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=seconds_until(exit_deadline)
-            if exit_deadline is not None
-            else args.exit_after,
+            ceiling_seconds=run_window,
             on_done=lambda: write_done_marker(checkpointpath_raw),
         )
         logger.info("Night %s collected, exiting normally...", args.night)
-    elif exit_deadline is not None:
-        logger.debug("Polling until the exit_at deadline %s", exit_deadline)
-        run_until_deadline([countquery], seconds_until(exit_deadline))
-        logger.info(
-            "Reached the exit_at deadline %s, exiting normally...", exit_deadline
-        )
-    elif args.exit_after is not None:
-        time.sleep(args.exit_after)
-        countquery.stop()
-        logger.info("Exiting the stream2raw service normally...")
+    elif run_window is not None:
+        # Fails the job as soon as the query dies, instead of sleeping on it
+        logger.debug("Polling for %s seconds", run_window)
+        run_until_deadline([countquery], run_window)
+        logger.info("End of the run window, exiting normally...")
     else:
         countquery.awaitTermination()
 

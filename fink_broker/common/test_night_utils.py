@@ -19,6 +19,7 @@ import pytest
 from fink_broker.common.night_utils import (
     check_night,
     resolve_night_placeholders,
+    run_window_seconds,
 )
 
 
@@ -56,3 +57,29 @@ def test_past_or_today_night_is_accepted(night):
     """A closed night or today's open night can be processed."""
     now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
     check_night(night, now)
+
+
+REF = datetime(2024, 1, 1, 18, 0, tzinfo=timezone.utc)
+
+
+def test_run_window_from_the_exit_at_deadline():
+    """An absolute deadline wins: the run lasts until it."""
+    deadline = datetime(2024, 1, 1, 20, 0, tzinfo=timezone.utc)
+    assert run_window_seconds(deadline, 60, now=REF) == 7200.0
+
+
+def test_run_window_from_exit_after():
+    """Without a deadline, the run lasts exit_after seconds (production)."""
+    assert run_window_seconds(None, 64800, now=REF) == 64800
+
+
+def test_run_window_never_negative():
+    """A past deadline or a negative exit_after gives an empty window."""
+    past = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    assert run_window_seconds(past, None, now=REF) == 0.0
+    assert run_window_seconds(None, -5, now=REF) == 0
+
+
+def test_run_window_unbounded():
+    """Neither a deadline nor exit_after: no limit."""
+    assert run_window_seconds(None, None, now=REF) is None

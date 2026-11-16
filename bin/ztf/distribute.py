@@ -29,12 +29,12 @@ from datetime import datetime, timezone
 import argparse
 import logging
 import sys
-import time
 
 from fink_broker.common.parser import getargs
 from fink_broker.common.night_utils import (
     check_night,
     get_exit_deadline,
+    run_window_seconds,
     seconds_until,
 )
 from fink_broker.common.spark_utils import (
@@ -274,32 +274,22 @@ def main():
     )
     disqueries.append(disquery)
 
+    run_window = run_window_seconds(exit_deadline, args.exit_after)
     if night_closed:
         run_until_done(
             disqueries,
             upstream_done=science_processed,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=seconds_until(exit_deadline)
-            if exit_deadline is not None
-            else args.exit_after,
+            ceiling_seconds=run_window,
             on_done=lambda: write_done_marker(checkpointpath_kafka),
         )
         logger.info("Night %s distributed, exiting normally...", args.night)
-    elif exit_deadline is not None:
-        # An absolute deadline already accounts for whatever was spent waiting
-        # for the upstream data, so nothing is subtracted here.
-        logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
-        run_until_deadline(disqueries, seconds_until(exit_deadline))
-        logger.info(
-            "Reached the exit_at deadline %s, exiting normally...", exit_deadline
-        )
-    elif args.exit_after is not None:
-        remaining_time = args.exit_after
-        remaining_time = remaining_time if remaining_time > 0 else 0
-        logger.debug("Keep the Streaming for %s seconds", remaining_time)
-        time.sleep(remaining_time)
-        disquery.stop()
-        logger.info("Exiting the distribute service normally...")
+    elif run_window is not None:
+        # One query per topic: a dead one fails the job at the end, without
+        # stopping the distribution of the other topics
+        logger.debug("Keep the Streaming for %s seconds", run_window)
+        run_until_deadline(disqueries, run_window, keep_others=True)
+        logger.info("End of the run window, exiting normally...")
     else:
         logger.debug("Wait for the end of queries")
         spark.streams.awaitAnyTermination()

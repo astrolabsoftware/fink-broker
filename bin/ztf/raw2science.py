@@ -28,7 +28,6 @@ from pyspark.sql import functions as F
 from datetime import datetime, timezone
 import argparse
 import sys
-import time
 import os
 
 from fink_broker import __version__ as fbvsn
@@ -37,6 +36,7 @@ from fink_broker.common.parser import getargs
 from fink_broker.common.night_utils import (
     check_night,
     get_exit_deadline,
+    run_window_seconds,
     seconds_until,
 )
 from fink_broker.common.spark_utils import init_sparksession
@@ -188,31 +188,21 @@ def main():
         .start()
     )
 
+    run_window = run_window_seconds(exit_deadline, args.exit_after)
     if night_closed:
         run_until_done(
             [countquery_science],
             upstream_done=raw_collected,
             idle_seconds=completion_idle_seconds(args.tinterval),
-            ceiling_seconds=seconds_until(exit_deadline)
-            if exit_deadline is not None
-            else args.exit_after,
+            ceiling_seconds=run_window,
             on_done=lambda: write_done_marker(checkpointpath_sci_tmp),
         )
         logger.info("Night %s processed", args.night)
-    elif exit_deadline is not None:
-        # An absolute deadline already accounts for whatever was spent waiting
-        # for the upstream data, so nothing is subtracted here.
-        logger.debug("Keep the Streaming until the exit_at deadline %s", exit_deadline)
-        run_until_deadline([countquery_science], seconds_until(exit_deadline))
-        logger.info(
-            "Reached the exit_at deadline %s, exiting normally...", exit_deadline
-        )
-    elif args.exit_after is not None:
-        logger.debug("Keep the Streaming running until something or someone ends it!")
-        remaining_time = args.exit_after
-        remaining_time = remaining_time if remaining_time > 0 else 0
-        time.sleep(remaining_time)
-        countquery_science.stop()
+    elif run_window is not None:
+        # Fails the job as soon as the query dies, instead of sleeping on it
+        logger.debug("Keep the Streaming for %s seconds", run_window)
+        run_until_deadline([countquery_science], run_window)
+        logger.info("End of the run window, exiting normally...")
     else:
         logger.debug("Wait for the end of queries")
         spark.streams.awaitAnyTermination()

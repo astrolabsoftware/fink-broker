@@ -203,6 +203,49 @@ def seconds_until(
     return max(0.0, (deadline - now).total_seconds())
 
 
+def run_window_seconds(
+    exit_deadline: Optional[datetime],
+    exit_after: Optional[float],
+    now: Optional[datetime] = None,
+) -> Optional[float]:
+    """Seconds a job keeps its queries running, None for no limit.
+
+    The workflows pass an absolute ``-exit_at`` deadline, the production
+    scheduler a ``-exit_after`` duration: both bound the run the same way.
+
+    Parameters
+    ----------
+    exit_deadline: datetime, optional
+        Absolute deadline (timezone-aware, UTC), wins over ``exit_after``.
+    exit_after: float, optional
+        Duration of the run, in seconds.
+    now: datetime, optional
+        Reference time (timezone-aware, UTC). Defaults to the current UTC time.
+
+    Returns
+    -------
+    seconds: float or None
+        Length of the run, never negative; None when neither is given.
+
+    Examples
+    --------
+    >>> from datetime import datetime, timezone
+    >>> ref = datetime(2024, 1, 1, 18, 0, tzinfo=timezone.utc)
+    >>> deadline = datetime(2024, 1, 1, 20, 0, tzinfo=timezone.utc)
+    >>> run_window_seconds(deadline, 60, now=ref)
+    7200.0
+    >>> run_window_seconds(None, 60, now=ref)
+    60
+    >>> run_window_seconds(None, None, now=ref) is None
+    True
+    """
+    if exit_deadline is not None:
+        return seconds_until(exit_deadline, now=now)
+    if exit_after is not None:
+        return max(0, exit_after)
+    return None
+
+
 def resolve_night_placeholders(
     value: str,
     night: str,

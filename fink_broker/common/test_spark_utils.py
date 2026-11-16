@@ -22,6 +22,7 @@ from fink_broker.common.spark_utils import (
     caught_up,
     parse_kafka_servers,
     probe_path,
+    QueriesFailedError,
     run_until_deadline,
     run_until_done,
 )
@@ -392,10 +393,11 @@ class DyingQuery(FakeQuery):
         return self.fatal if self.clock() >= self.dies_at else None
 
 
-def run_deadline(queries, clock, deadline_seconds=3600):
+def run_deadline(queries, clock, deadline_seconds=3600, keep_others=False):
     run_until_deadline(
         queries,
         deadline_seconds=deadline_seconds,
+        keep_others=keep_others,
         poll_seconds=10,
         clock=clock,
         sleep=clock.sleep,
@@ -433,10 +435,42 @@ def test_deadline_already_passed_exits_at_once():
 
 
 def test_one_dying_query_stops_the_others():
-    """Distribution runs one query per topic: one dead fails them all."""
+    """By default, the first query to die stops all the others at once."""
     clock = FakeClock()
     alive = FakeQuery([progress()])
     dying = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
     with pytest.raises(RuntimeError, match="kafka"):
         run_deadline([alive, dying], clock)
     assert alive.stopped and dying.stopped
+
+
+def test_one_dying_query_keeps_the_others_to_the_deadline():
+    """A broken filter must not stop the other topics: the job fails at the end."""
+    clock = FakeClock()
+    alive = FakeQuery([progress()])
+    dying = DyingQuery(clock, dies_at=50, error=RuntimeError("bad filter"))
+    with pytest.raises(QueriesFailedError, match="bad filter"):
+        run_deadline([alive, dying], clock, keep_others=True)
+    # The live topic was served until the deadline, then everything stopped
+    assert clock() == 3600.0
+    assert alive.stopped and dying.stopped
+
+
+def test_every_query_dead_fails_at_once():
+    """Nothing left to run: no point waiting for the deadline."""
+    clock = FakeClock()
+    first = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    second = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    with pytest.raises(QueriesFailedError, match="2 of 2"):
+        run_deadline([first, second], clock, keep_others=True)
+    assert 50 <= clock() < 60
+    assert first.stopped and second.stopped
+
+
+def test_no_query_dying_with_keep_others_exits_cleanly():
+    """keep_others changes nothing while every query is healthy."""
+    clock = FakeClock()
+    queries = [FakeQuery([progress()]), FakeQuery([progress()])]
+    run_deadline(queries, clock, deadline_seconds=95, keep_others=True)
+    assert clock() == 95.0
+    assert all(query.stopped for query in queries)
