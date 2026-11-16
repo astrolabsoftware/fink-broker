@@ -53,8 +53,10 @@ spec:
         command:
           - bash
           - -c
+          # Indented blank lines would turn the block into an escaped string
+          # in kubectl and Argo CD: trailing blanks are dropped
           - |
-            {{- .Files.Get "files/workflow-guard.sh" | nindent 12 }}
+            {{- regexReplaceAll "(?m)[ \t]+$" (.Files.Get "files/workflow-guard.sh" | nindent 12) "" }}
           - workflow-guard
         args:
           - {{ "{{workflow.parameters.mode}}" | quote }}
@@ -89,5 +91,7 @@ spec:
           metadata:
             name: "{{ "{{workflow.name}}" }}-{{ $job }}"
           spec:
-            {{- include (printf "fink.%s.spec" $job) $ctx | nindent 12 }}
+            {{- /* Without trailing blanks, kubectl and Argo CD show the manifest as a
+            readable block instead of an escaped string */}}
+            {{- regexReplaceAll "(?m)[ \t]+$" (include (printf "fink.%s.spec" $job) $ctx | nindent 12) "" }}
     {{- end }}
