@@ -192,7 +192,7 @@ def main():
         df_index = df.filter(df["roid"] == 3)
 
         # add salt
-        df = salt_from_mpc_designation(df, colname="ssnamenr")
+        df_index = salt_from_mpc_designation(df_index, colname="ssnamenr")
 
         # Redefine row key to include salt
         columns = ["salt"] + columns
