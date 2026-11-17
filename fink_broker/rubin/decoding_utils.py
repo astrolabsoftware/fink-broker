@@ -147,7 +147,7 @@ def write_alert(
         # https://github.com/astrolabsoftware/fink-broker/issues/1262
         # Expose file once fully written for Spark consumption
         # In case of writing a single Table {i} will always be 0
-        filename = filename_tmp[1:].replace("{i}", "0")
+        filename = filename_tmp[1:].replace("{i}", "0").replace(".tmp", "")
         fs.move(
             os.path.join(where, filename_tmp.replace("{i}", "0")),
             os.path.join(where, filename),
