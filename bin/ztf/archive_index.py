@@ -36,6 +36,7 @@ from fink_broker.ztf.hbase_utils import load_ztf_index_cols
 from fink_broker.ztf.hbase_utils import load_ztf_crossmatch_cols
 from fink_broker.ztf.hbase_utils import flatten_dataframe
 
+from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import add_row_key
@@ -185,12 +186,22 @@ def main():
             df_index, cols=common_cols, row_key_name=index_row_key_name
         )
     elif columns[0] == "ssnamenr":
+        sso_cols = load_ztf_index_cols(sso=True)
+
         # Flag only objects with likely counterpart in MPC
         df_index = df.filter(df["roid"] == 3)
+
+        # add salt
+        df = salt_from_mpc_designation(df, colname="candidate.ssnamenr")
+
+        # Redefine row key to include salt
+        columns = ["salt"] + columns
+        index_row_key_name = "_".join(columns)
+
         # Row key
         df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
         df_index = select_relevant_columns(
-            df_index, cols=common_cols, row_key_name=index_row_key_name
+            df_index, cols=sso_cols, row_key_name=index_row_key_name
         )
     elif columns[0] == "tracklet":
         # For data < 2021-08-10, no tracklet means ''
