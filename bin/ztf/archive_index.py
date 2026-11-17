@@ -44,6 +44,31 @@ from fink_filters.ztf.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
 
 
+def check_gap(date):
+    """Check if the date is a night, a month, or a year
+
+    Parameters
+    ----------
+    date: str
+        Date in the form YYYY[MM][DD]
+
+    Returns
+    -------
+    out: str
+        night, month, or year depending on the input
+    """
+    if len(date) == 4:
+        return "year"
+    if len(date) == 6:
+        return "month"
+    if len(date) == 8:
+        return "night"
+
+    raise AssertionError(
+        "date must of of the form YYYY[MM][DD]. You input: {}".format(date)
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     args = getargs(parser)
@@ -65,10 +90,19 @@ def main():
     # debug statements
     inspect_application(logger)
 
+    gap = check_gap(args.night)
+
     # Connect to the aggregated science database
-    path = "{}/science/year={}/month={}/day={}".format(
-        args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
-    )
+    if gap == "night":
+        path = "{}/science/year={}/month={}/day={}".format(
+            args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
+        )
+    elif gap == "month":
+        path = "{}/science/year={}/month={}".format(
+            args.agg_data_prefix, args.night[:4], args.night[4:6]
+        )
+    elif gap == "year":
+        path = "{}/science/year={}".format(args.agg_data_prefix, args.night)
     data = load_parquet_files(path)
 
     # Drop partitioning columns
