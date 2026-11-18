@@ -275,14 +275,23 @@ def test_caught_up_file_source():
 class FakeQuery:
     """A streaming query whose progress follows a script, one entry per poll."""
 
-    def __init__(self, script, error=None):
+    def __init__(self, script, error=None, available=(False,)):
         self.script = list(script)
+        self.available = list(available)
         self.error = error
         self.stopped = False
 
     @property
     def lastProgress(self):  # noqa: N802 -- name of the Spark API it fakes
         return self.script.pop(0) if len(self.script) > 1 else self.script[0]
+
+    @property
+    def status(self):
+        """query.status: isDataAvailable stays True while a batch runs."""
+        available = (
+            self.available.pop(0) if len(self.available) > 1 else self.available[0]
+        )
+        return {"isDataAvailable": available, "isTriggerActive": available}
 
     def exception(self):
         return self.error
@@ -333,6 +342,23 @@ def test_idle_period_restarts_when_rows_come_back():
     """An empty batch followed by new rows is not the end of the night."""
     query = FakeQuery([progress(), progress(), progress(rows=5)] + [progress()])
     assert run([query]) == [90.0]
+
+
+def test_running_batch_is_not_idle():
+    """A batch still running is not the end of the night (night 20261104 at CC).
+
+    The upstream job is done, the last *completed* batch was empty, but a
+    batch started on the last files written upstream: lastProgress keeps
+    showing the empty batch until it completes, only query.status tells it
+    runs. Stopping then aborts it and loses its alerts.
+    """
+    # The batch runs on the first 9 polls (0 to 80 s), completes with rows
+    # (90 s), then the query is idle from 100 s
+    query = FakeQuery(
+        [progress()] * 9 + [progress(rows=5000), progress()],
+        available=[True] * 9 + [False],
+    )
+    assert run([query]) == [160.0]
 
 
 def test_waits_for_the_upstream_job():

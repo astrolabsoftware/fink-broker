@@ -1007,7 +1007,13 @@ def run_until_done(
             p and p.get("numInputRows", 0) > 0 for p in progresses
         )
 
-        if upstream_done() and all(caught_up(p) for p in progresses):
+        # lastProgress only describes the last *completed* batch: a batch
+        # still running on the last upstream files shows in query.status
+        idle = all(
+            caught_up(p) and not query.status["isDataAvailable"]
+            for p, query in zip(progresses, queries)
+        )
+        if upstream_done() and idle:
             idle_since = clock() if idle_since is None else idle_since
             if clock() - idle_since >= idle_seconds:
                 stop_all()
