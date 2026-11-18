@@ -927,6 +927,27 @@ def caught_up(progress: Optional[dict]) -> bool:
     return True
 
 
+def idle(progress: Optional[dict], query) -> bool:
+    """Tell whether a streaming query has nothing left to read and no batch running
+
+    Parameters
+    ----------
+    progress: dict, optional
+        Last progress of the query (`StreamingQuery.lastProgress`)
+    query: StreamingQuery
+        The query itself
+
+    Returns
+    -------
+    bool
+        True if the query is caught up (see `caught_up`) and no batch is
+        running. lastProgress only describes the last *completed* batch: a
+        batch still running on the last upstream files only shows in
+        query.status, whose isDataAvailable Spark keeps true while it runs.
+    """
+    return caught_up(progress) and not query.status["isDataAvailable"]
+
+
 def completion_idle_seconds(tinterval: int) -> int:
     """How long the queries of a one-off run must stay idle to be done
 
@@ -1007,13 +1028,9 @@ def run_until_done(
             p and p.get("numInputRows", 0) > 0 for p in progresses
         )
 
-        # lastProgress only describes the last *completed* batch: a batch
-        # still running on the last upstream files shows in query.status
-        idle = all(
-            caught_up(p) and not query.status["isDataAvailable"]
-            for p, query in zip(progresses, queries)
-        )
-        if upstream_done() and idle:
+        if upstream_done() and all(
+            idle(p, query) for p, query in zip(progresses, queries)
+        ):
             idle_since = clock() if idle_since is None else idle_since
             if clock() - idle_since >= idle_seconds:
                 stop_all()
