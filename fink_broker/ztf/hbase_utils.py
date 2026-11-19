@@ -245,8 +245,14 @@ def load_all_ztf_cols():
     return root_level, candidates, fink_cols, fink_nested_cols
 
 
-def load_ztf_index_cols():
+def load_ztf_index_cols(sso=False):
     """Load columns used for index tables (flattened and casted before).
+
+    Parameters
+    ----------
+    sso: boolean
+        If True, only load a subset of Fink added values.
+        Only used for the SSO table for the moment.
 
     Returns
     -------
@@ -258,6 +264,10 @@ def load_ztf_index_cols():
     >>> out = load_ztf_index_cols()
     >>> print(len(out))
     86
+
+    >>> out = load_ztf_index_cols(sso=True)
+    >>> print(len(out))
+    37
     """
     # From `root` or `candidates.`
     common = [
@@ -299,14 +309,19 @@ def load_ztf_index_cols():
         "ndethist",
     ]
 
-    # Add Fink added values
-    fink_cols, fink_nested_cols = load_fink_cols()
+    if not sso:
+        # Add Fink added values
+        fink_cols, fink_nested_cols = load_fink_cols()
 
-    fink_cols_names = list(fink_cols.keys())
-    common += fink_cols_names
+        fink_cols_names = list(fink_cols.keys())
+        common += fink_cols_names
 
-    fink_nested_cols_names = [i.replace(".", "_") for i in fink_nested_cols.keys()]
-    common += fink_nested_cols_names
+        fink_nested_cols_names = [i.replace(".", "_") for i in fink_nested_cols.keys()]
+        common += fink_nested_cols_names
+    else:
+        # Add only roid and nalerthist
+        fink_cols_names = ["roid", "nalerthist"]
+        common += fink_cols_names
 
     return common
 

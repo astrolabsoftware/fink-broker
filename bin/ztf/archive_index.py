@@ -36,12 +36,38 @@ from fink_broker.ztf.hbase_utils import load_ztf_index_cols
 from fink_broker.ztf.hbase_utils import load_ztf_crossmatch_cols
 from fink_broker.ztf.hbase_utils import flatten_dataframe
 
+from fink_broker.common.hbase_utils import salt_from_mpc_designation
 from fink_broker.common.hbase_utils import select_relevant_columns
 from fink_broker.common.hbase_utils import push_to_hbase
 from fink_broker.common.hbase_utils import add_row_key
 
 from fink_filters.ztf.classification import extract_fink_classification
 from fink_utils.spark.utils import check_status_last_prv_candidates
+
+
+def check_gap(date):
+    """Check if the date is a night, a month, or a year
+
+    Parameters
+    ----------
+    date: str
+        Date in the form YYYY[MM][DD]
+
+    Returns
+    -------
+    out: str
+        night, month, or year depending on the input
+    """
+    if len(date) == 4:
+        return "year"
+    if len(date) == 6:
+        return "month"
+    if len(date) == 8:
+        return "night"
+
+    raise AssertionError(
+        "date must of of the form YYYY[MM][DD]. You input: {}".format(date)
+    )
 
 
 def main():
@@ -65,10 +91,19 @@ def main():
     # debug statements
     inspect_application(logger)
 
+    gap = check_gap(args.night)
+
     # Connect to the aggregated science database
-    path = "{}/science/year={}/month={}/day={}".format(
-        args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
-    )
+    if gap == "night":
+        path = "{}/science/year={}/month={}/day={}".format(
+            args.agg_data_prefix, args.night[:4], args.night[4:6], args.night[6:8]
+        )
+    elif gap == "month":
+        path = "{}/science/year={}/month={}".format(
+            args.agg_data_prefix, args.night[:4], args.night[4:6]
+        )
+    elif gap == "year":
+        path = "{}/science/year={}".format(args.agg_data_prefix, args.night)
     data = load_parquet_files(path)
 
     # Drop partitioning columns
@@ -151,12 +186,22 @@ def main():
             df_index, cols=common_cols, row_key_name=index_row_key_name
         )
     elif columns[0] == "ssnamenr":
+        sso_cols = load_ztf_index_cols(sso=True)
+
         # Flag only objects with likely counterpart in MPC
         df_index = df.filter(df["roid"] == 3)
+
+        # add salt
+        df_index = salt_from_mpc_designation(df_index, colname="ssnamenr")
+
+        # Redefine row key to include salt
+        columns = ["salt"] + columns
+        index_row_key_name = "_".join(columns)
+
         # Row key
         df_index = add_row_key(df_index, row_key_name=index_row_key_name, cols=columns)
         df_index = select_relevant_columns(
-            df_index, cols=common_cols, row_key_name=index_row_key_name
+            df_index, cols=sso_cols, row_key_name=index_row_key_name
         )
     elif columns[0] == "tracklet":
         # For data < 2021-08-10, no tracklet means ''
