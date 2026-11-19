@@ -885,6 +885,10 @@ class CompletionTimeoutError(RuntimeError):
     """A one-off job reached its time ceiling before processing its night"""
 
 
+class QueriesFailedError(RuntimeError):
+    """Some streaming queries of a job terminated with an error"""
+
+
 def _offsets(value) -> Optional[dict]:
     """Offsets of a streaming source progress, which reports JSON strings"""
     if value is None:
@@ -921,6 +925,27 @@ def caught_up(progress: Optional[dict]) -> bool:
         if latest is None or _offsets(source.get("endOffset")) != latest:
             return False
     return True
+
+
+def idle(progress: Optional[dict], query) -> bool:
+    """Tell whether a streaming query has nothing left to read and no batch running
+
+    Parameters
+    ----------
+    progress: dict, optional
+        Last progress of the query (`StreamingQuery.lastProgress`)
+    query: StreamingQuery
+        The query itself
+
+    Returns
+    -------
+    bool
+        True if the query is caught up (see `caught_up`) and no batch is
+        running. lastProgress only describes the last *completed* batch: a
+        batch still running on the last upstream files only shows in
+        query.status, whose isDataAvailable Spark keeps true while it runs.
+    """
+    return caught_up(progress) and not query.status["isDataAvailable"]
 
 
 def completion_idle_seconds(tinterval: int) -> int:
@@ -1003,7 +1028,9 @@ def run_until_done(
             p and p.get("numInputRows", 0) > 0 for p in progresses
         )
 
-        if upstream_done() and all(caught_up(p) for p in progresses):
+        if upstream_done() and all(
+            idle(p, query) for p, query in zip(progresses, queries)
+        ):
             idle_since = clock() if idle_since is None else idle_since
             if clock() - idle_since >= idle_seconds:
                 stop_all()
@@ -1025,6 +1052,88 @@ def run_until_done(
             return
 
         sleep(poll_seconds)
+
+
+def run_until_deadline(
+    queries: Sequence,
+    deadline_seconds: float,
+    keep_others: bool = False,
+    poll_seconds: float = 10,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Run streaming queries until a deadline, failing if one dies
+
+    A daily run keeps its queries up until the `exit_at` deadline. A query
+    that terminates with an error before then must fail the job, instead of
+    leaving the driver asleep and the job reported as successful.
+
+    Parameters
+    ----------
+    queries: sequence of StreamingQuery
+        Queries of the job, all of which are watched
+    deadline_seconds: float
+        Time left before the deadline. Zero or less: stop at once.
+    keep_others: bool
+        False: the first query that dies stops them all and its error is
+        raised at once. True: it is logged at once, the other queries keep
+        running until the deadline, then the job fails. For independent
+        queries, such as one per distributed topic, so that a broken one does
+        not take the others down. Fails at once when none is left.
+    poll_seconds: float
+        Interval between two checks
+    clock, sleep: callables
+        Time source and sleep function, replaced in tests
+
+    Raises
+    ------
+    Exception
+        keep_others False: the error of the query that terminated
+    QueriesFailedError
+        keep_others True: some queries terminated before the deadline
+    """
+
+    def stop_all():
+        for query in queries:
+            query.stop()
+
+    def fail(dead):
+        stop_all()
+        raise QueriesFailedError(
+            "{} of {} queries terminated: {}".format(
+                len(dead), len(queries), "; ".join(map(str, dead.values()))
+            )
+        )
+
+    dead = {}
+    end = clock() + deadline_seconds
+    while True:
+        for index, query in enumerate(queries):
+            if index in dead:
+                continue
+            error = query.exception()
+            if error is None:
+                continue
+            if not keep_others:
+                stop_all()
+                raise error
+            dead[index] = error
+            _LOG.error(
+                "Query %s terminated, the others keep running: %s",
+                getattr(query, "name", None) or index,
+                error,
+            )
+
+        if dead and len(dead) == len(queries):
+            fail(dead)
+
+        remaining = end - clock()
+        if remaining <= 0:
+            if dead:
+                fail(dead)
+            stop_all()
+            return
+        sleep(min(poll_seconds, remaining))
 
 
 def load_parquet_files(path: str) -> DataFrame:

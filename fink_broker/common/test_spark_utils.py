@@ -22,6 +22,8 @@ from fink_broker.common.spark_utils import (
     caught_up,
     parse_kafka_servers,
     probe_path,
+    QueriesFailedError,
+    run_until_deadline,
     run_until_done,
 )
 
@@ -273,14 +275,23 @@ def test_caught_up_file_source():
 class FakeQuery:
     """A streaming query whose progress follows a script, one entry per poll."""
 
-    def __init__(self, script, error=None):
+    def __init__(self, script, error=None, available=(False,)):
         self.script = list(script)
+        self.available = list(available)
         self.error = error
         self.stopped = False
 
     @property
     def lastProgress(self):  # noqa: N802 -- name of the Spark API it fakes
         return self.script.pop(0) if len(self.script) > 1 else self.script[0]
+
+    @property
+    def status(self):
+        """query.status: isDataAvailable stays True while a batch runs."""
+        available = (
+            self.available.pop(0) if len(self.available) > 1 else self.available[0]
+        )
+        return {"isDataAvailable": available, "isTriggerActive": available}
 
     def exception(self):
         return self.error
@@ -333,6 +344,23 @@ def test_idle_period_restarts_when_rows_come_back():
     assert run([query]) == [90.0]
 
 
+def test_running_batch_is_not_idle():
+    """A batch still running is not the end of the night (night 20261104 at CC).
+
+    The upstream job is done, the last *completed* batch was empty, but a
+    batch started on the last files written upstream: lastProgress keeps
+    showing the empty batch until it completes, only query.status tells it
+    runs. Stopping then aborts it and loses its alerts.
+    """
+    # The batch runs on the first 9 polls (0 to 80 s), completes with rows
+    # (90 s), then the query is idle from 100 s
+    query = FakeQuery(
+        [progress()] * 9 + [progress(rows=5000), progress()],
+        available=[True] * 9 + [False],
+    )
+    assert run([query]) == [160.0]
+
+
 def test_waits_for_the_upstream_job():
     """Idle, but the upstream job has not finished: keep going."""
     polls = []
@@ -373,3 +401,102 @@ def test_ceiling_without_any_row_is_an_empty_night():
     """Nothing ever read (no observation, no topic): the night is done, empty."""
     query = FakeQuery([progress(**{KAFKA: (None, None)})])
     assert run([query], ceiling=600) == [600.0]
+
+
+# --- Daily run: keep the queries up to the exit_at deadline -----------------
+
+
+class DyingQuery(FakeQuery):
+    """A query that terminates with an error at a given instant."""
+
+    def __init__(self, clock, dies_at, error):
+        super().__init__([progress()])
+        self.clock = clock
+        self.dies_at = dies_at
+        self.fatal = error
+
+    def exception(self):
+        return self.fatal if self.clock() >= self.dies_at else None
+
+
+def run_deadline(queries, clock, deadline_seconds=3600, keep_others=False):
+    run_until_deadline(
+        queries,
+        deadline_seconds=deadline_seconds,
+        keep_others=keep_others,
+        poll_seconds=10,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+
+
+def test_deadline_reached_stops_the_queries():
+    """No error until the deadline: the queries are stopped, the job exits 0."""
+    clock = FakeClock()
+    query = FakeQuery([progress()])
+    run_deadline([query], clock, deadline_seconds=95)
+    assert query.stopped
+    # Stops at the deadline itself, not at the next poll
+    assert clock() == 95.0
+
+
+def test_query_dying_before_the_deadline_fails_the_job():
+    """Seen at CC on 20261027: the job must not sleep on a dead query."""
+    clock = FakeClock()
+    query = DyingQuery(clock, dies_at=120, error=RuntimeError("cdsxmatch"))
+    with pytest.raises(RuntimeError, match="cdsxmatch"):
+        run_deadline([query], clock)
+    assert query.stopped
+    # Noticed within one poll interval
+    assert 120 <= clock() < 130
+
+
+def test_deadline_already_passed_exits_at_once():
+    """A deadline reached at start stops the queries without waiting."""
+    clock = FakeClock()
+    query = FakeQuery([progress()])
+    run_deadline([query], clock, deadline_seconds=0)
+    assert query.stopped
+    assert clock() == 0.0
+
+
+def test_one_dying_query_stops_the_others():
+    """By default, the first query to die stops all the others at once."""
+    clock = FakeClock()
+    alive = FakeQuery([progress()])
+    dying = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    with pytest.raises(RuntimeError, match="kafka"):
+        run_deadline([alive, dying], clock)
+    assert alive.stopped and dying.stopped
+
+
+def test_one_dying_query_keeps_the_others_to_the_deadline():
+    """A broken filter must not stop the other topics: the job fails at the end."""
+    clock = FakeClock()
+    alive = FakeQuery([progress()])
+    dying = DyingQuery(clock, dies_at=50, error=RuntimeError("bad filter"))
+    with pytest.raises(QueriesFailedError, match="bad filter"):
+        run_deadline([alive, dying], clock, keep_others=True)
+    # The live topic was served until the deadline, then everything stopped
+    assert clock() == 3600.0
+    assert alive.stopped and dying.stopped
+
+
+def test_every_query_dead_fails_at_once():
+    """Nothing left to run: no point waiting for the deadline."""
+    clock = FakeClock()
+    first = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    second = DyingQuery(clock, dies_at=50, error=RuntimeError("kafka"))
+    with pytest.raises(QueriesFailedError, match="2 of 2"):
+        run_deadline([first, second], clock, keep_others=True)
+    assert 50 <= clock() < 60
+    assert first.stopped and second.stopped
+
+
+def test_no_query_dying_with_keep_others_exits_cleanly():
+    """keep_others changes nothing while every query is healthy."""
+    clock = FakeClock()
+    queries = [FakeQuery([progress()]), FakeQuery([progress()])]
+    run_deadline(queries, clock, deadline_seconds=95, keep_others=True)
+    assert clock() == 95.0
+    assert all(query.stopped for query in queries)

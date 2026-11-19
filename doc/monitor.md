@@ -21,11 +21,11 @@ curl http://localhost:3001
 ## Troubleshoot
 
 ```bash
-# Check exporter is enabled:
-kubectl exec -it -n spark fink-broker-stream2raw-driver -- curl http://localhost:8090/metrics
+# Check exporter is enabled (<run>: nightly-<id> or catchup-<night>-<id>):
+kubectl exec -it -n fink-broker <run>-stream2raw-driver -- curl http://localhost:8090/metrics
 
 # Watch JMX exporter configuration
-kubectl exec -it -n spark fink-broker-stream2raw-driver -- cat /etc/metrics/conf/prometheus.yaml
+kubectl exec -it -n fink-broker <run>-stream2raw-driver -- cat /etc/metrics/conf/prometheus.yaml
 
 # Check spark metrics availability in prometheus database:
 kubectl run -i --rm --tty shell --image=curlimages/curl -- sh
