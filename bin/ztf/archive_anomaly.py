@@ -60,7 +60,7 @@ def main():
 
 
     # Send anomalies
-    df_proc = df.select(
+    df_proc = df_ranked.select(
         "objectId",
         "candid",
         "candidate.ra",
@@ -101,7 +101,7 @@ def main():
         window_spec_model = Window.orderBy(F.col(score_col).desc())
         df_ranked_model = df.withColumn("rank", F.rank().over(window_spec_model))
 
-        df_proc = df.select(
+        df_proc = df_ranked_model.select(
             "objectId",
             "candid",
             "candidate.ra",
