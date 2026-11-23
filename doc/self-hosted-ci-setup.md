@@ -1,6 +1,6 @@
 # Set up fink self-hosted CI
 
-Here's a documented procedure for creating a Linux user account on Ubuntu, adding it to the Docker group, cloning a Git repository inside a script (`run_script.sh`), and running that script nightly with a cron job, using a token stored in the user’s home directory.
+Procedure for creating the Linux user account which runs the fink self-hosted CI, on Ubuntu, and adding it to the Docker group.
 
 ## Pre-requisites
 
@@ -8,7 +8,6 @@ Here's a documented procedure for creating a Linux user account on Ubuntu, addin
 - Docker 24.0.2+
 - git 2.17.1+
 - go 1.22.5+
-- A Github token with the "Content" permission on the `fink-broker` Github repository.
 
 ## Steps
 
@@ -22,52 +21,25 @@ sudo adduser fink-ci --disabled-password
 sudo usermod -aG docker fink-ci
 
 sudo su - fink-ci
-
-# Store GitHub token securely
-echo "your_github_token" > /home/fink-ci/.token
-chmod 600 /home/fink-ci/.token
-
-# Retrieve the fink-ci script
-curl https://raw.githubusercontent.com/astrolabsoftware/fink-broker/master/e2e/fink-ci.sh
-
-# Make the script executable
-chmod +x /home/fink-ci/fink-ci.sh
 ```
 
-### Set Up the Cron Job to run nightly
-To ensure the CI script runs nightly, set up a cron job.
-
-1. Open the crontab for the `fink-ci` user:
-
-   ```bash
-   crontab -e
-   ```
-
-2. Add the following line to schedule the `noscience` and `science` scripts to run every night:
-
-   ```bash
-   0 0 * * * /home/fink-ci/fink-ci.sh -c >> /home/fink-ci/cronjob-noscience-$(date +\%Y-\%m-\%d).log 2>&1
-   0 1 * * * /home/fink-ci/fink-ci.sh -c -s >> /home/fink-ci/cronjob-science-$(date +\%Y-\%m-\%d).log 2>&1
-   ```
-
-   This will log the output to `/home/fink-ci/cronjob-<science>-YYY-MM-DD.log`.
-
-
-By following this procedure, the `fink-ci` user will be set up to automatically run fink e2e tests every night and report it to Github Actions.
+The user then hosts the GitHub Actions self-hosted runner (`actions-runner`) which runs
+the self-hosted e2e job of `.github/workflows/e2e-common.yml`.
 
 ## Test a branch
 
-Log into the LPC server. Go root, and then `fink-ci`. Test your branch using:
+Log into the LPC server. Go root, and then `fink-ci`. Test your branch from a checkout of it using:
 
 ```bash
 BRANCH=<git-branch-name-on-fink-broker>
-nohup /home/fink-ci/fink-ci.sh -s -b ${BRANCH} > ${BRANCH}.txt &
+git clone -b ${BRANCH} https://github.com/astrolabsoftware/fink-broker.git
+nohup ./fink-broker/e2e/run.sh -s science > ${BRANCH}.txt &
 ```
 
 then you can follow the log:
 
 ```bash
-tail -f ci_distribute_ram.txt 
+tail -f ${BRANCH}.txt
 ```
 
 and in case you want to inspect pods, go back to your username:

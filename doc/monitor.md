@@ -3,8 +3,9 @@
 ## Quick start
 
 ```bash
-# Run the fink-ci script to install fink-broker from scratch
-fink-ci.sh -m -s -b <branch-name>
+# Install fink-broker from scratch, with the monitoring stack, from a checkout
+# of the branch
+e2e/run.sh -m -s science
 
 # Port forward to grafana
 # login as admin with password prom-operator
