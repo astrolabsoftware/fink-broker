@@ -22,6 +22,8 @@
 
 set -euo pipefail
 
+DIR=$(cd "$(dirname "$0")"; pwd -P)
+
 monitoring=false
 SUFFIX="noscience"
 mode="basic"
@@ -68,65 +70,29 @@ if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" 
     exit 1
 fi
 
-# Assert a balance report accounts for alerts at both ends of the broker.
-# $1: file holding the report.
-#
-# The TOTAL row printed by printReport sums both ends over every night:
-#   TOTAL    IN(kafka)                       DISTRIB
-# It is read rather than a night row: the night the run pinned lives in the
-# fink-cd values, and duplicating it here would rot silently.
-assert_balance () {
-  local file="$1" row consumed distributed
-
-  row=$(grep -E "^[[:space:]]+TOTAL[[:space:]]" "$file" || true)
-  if [ -z "$row" ]; then
-    echo "ERROR: no TOTAL row in the report" 1>&2
-    return 1
-  fi
-
-  consumed=$(echo "$row" | awk '{print $2}')
-  distributed=$(echo "$row" | awk '{print $3}')
-
-  local name value
-  for name in consumed distributed; do
-    eval "value=\$$name"
-    if ! [[ "$value" =~ ^[0-9]+$ ]]; then
-      echo "ERROR: $name is not a count: '$value'" 1>&2
-      echo "       row: $row" 1>&2
-      return 1
-    fi
-    if [ "$value" -le 0 ]; then
-      echo "ERROR: $name is $value, expected alerts to have gone through" 1>&2
-      echo "       row: $row" 1>&2
-      return 1
-    fi
-  done
-
-  echo "INFO: balance is consistent: $consumed alerts consumed, $distributed distributed"
-  return 0
-}
-
 # --report: account for the alerts that went through the broker, from what the
 # report CronJob of the chart printed. finkctl reads HDFS directly, so it must
 # run in the cluster: this exercises its image, its ServiceAccount, the Role
 # letting it exec into the Kafka pods and the arguments Helm renders for it.
 #
-# The parsing and the arithmetic behind `get balance` are covered by unit
-# tests in the finkctl repository. Counts are not asserted against fixed
-# values -- the alert simulator does not produce a deterministic number of
-# alerts. Only that both ends of the broker moved.
+# finkctl decides the balance, next to the code printing the report: after
+# the TOTAL row it prints "BALANCE: ok ..." when both ends of the broker moved,
+# "BALANCE: empty ..." otherwise. Counts are not asserted against fixed values
+# -- the alert simulator does not produce a deterministic number of alerts.
 #
 # CI sets report.schedule to every minute, so a Job appears within the minute.
 # Early Jobs may legitimately find nothing -- the streaming jobs are still
-# warming up -- so a Job whose report does not add up is not a failure on its
-# own: wait for a later one, and fail on the timeout.
+# warming up -- so an empty balance is not a failure on its own: wait for a
+# later Job, and fail on the timeout. Only the latest succeeded Job decides:
+# counts are cumulative, so an "ok" followed by an "empty" is a regression.
 #
-# A failed Job is, though. The CronJob runs with restartPolicy=OnFailure: a run
-# hitting a transient error (a pod not ready yet) restarts its container until
-# it succeeds, and a Job only turns Failed once its backoffLimit is exhausted,
-# i.e. on a persistent error. A report with no night yet is not an error. Checking only for a successful Job
-# would let such a failure hide behind a later run that succeeds, while at CC
-# the report runs once a day and that failure is all there is.
+# A failed Job is a failure, though. The CronJob runs with
+# restartPolicy=OnFailure: a run hitting a transient error (a pod not ready
+# yet) restarts its container until it succeeds, and a Job only turns Failed
+# once its backoffLimit is exhausted, i.e. on a persistent error. A report with
+# no night yet is not an error. Checking only for a successful Job would let
+# such a failure hide behind a later run that succeeds, while at CC the report
+# runs once a day and that failure is all there is.
 if [ "$mode" = "report" ]; then
   cronjob="report"
   deadline=$(( SECONDS + report_timeout ))
@@ -136,6 +102,13 @@ if [ "$mode" = "report" ]; then
     kubectl get jobs -n fink-broker \
       -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.conditions[?(@.type=='Failed')].status}{'\n'}{end}" \
       2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 == "True" { print $1 }'
+  }
+
+  # Print the most recent succeeded Job of the CronJob, by completion time.
+  latest_succeeded_job() {
+    kubectl get jobs -n fink-broker \
+      -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.status.completionTime}{'\t'}{.metadata.name}{'\n'}{end}" \
+      2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($2, cj "-") == 1' | sort | tail -1 | cut -f2
   }
 
   echo "INFO: Waiting for a run of cronjob/$cronjob to account for the alerts"
@@ -151,27 +124,30 @@ if [ "$mode" = "report" ]; then
       exit 1
     fi
 
-    for job in $(kubectl get jobs -n fink-broker \
-        -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.metadata.name}{'\n'}{end}" \
-        2>/dev/null | grep "^${cronjob}-" | sort -r); do
-      out="/tmp/${job}.out"
-      kubectl logs -n fink-broker "job/${job}" > "$out" 2>&1 || continue
-      if assert_balance "$out" > /dev/null 2>&1; then
-        echo "INFO: report produced by job/${job}"
-        cat "$out"
-        assert_balance "$out"
-        # Not a failure, but the sign of a run started too early or of a
-        # flaky dependency: say so, with the logs of the failed attempts.
-        kubectl get pods -n fink-broker -l job-name \
-          -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
-          2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
-          | while IFS=$'\t' read -r pod restarts; do
-              echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
-              kubectl logs -n fink-broker "$pod" --previous --tail 20 || true
-            done
-        exit 0
-      fi
-    done
+    job=$(latest_succeeded_job)
+    if [ -n "$job" ] && log=$(kubectl logs -n fink-broker "job/${job}" 2>&1); then
+      verdict=$(grep '^BALANCE: ' <<< "$log" || true)
+      case "$verdict" in
+        "BALANCE: ok "*)
+          echo "INFO: report produced by job/${job}"
+          echo "$log"
+          # Not a failure, but the sign of a run started too early or of a
+          # flaky dependency: say so, with the logs of the failed attempts.
+          kubectl get pods -n fink-broker -l job-name \
+            -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
+            2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
+            | while IFS=$'\t' read -r pod restarts; do
+                echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
+                kubectl logs -n fink-broker "$pod" --previous --tail 20 || true
+              done
+          exit 0 ;;
+        "BALANCE: empty "*) ;;
+        *)
+          echo "ERROR: job/${job} printed no BALANCE verdict, is its finkctl image too old?" 1>&2
+          echo "$log" 1>&2
+          exit 1 ;;
+      esac
+    fi
     sleep 10
   done
 
@@ -184,36 +160,30 @@ if [ "$mode" = "report" ]; then
   exit 1
 fi
 
-# TODO improve management of expected topics
-# for example in finkctl.yaml
+# The topics to wait for, by name. CI selects the science build with an empty
+# suffix, not 'science'.
 cds_up=true
-if [ "$SUFFIX" = "noscience" ];
-then
-  expected_topics="22"
+without=()
+if [ "$SUFFIX" = "noscience" ]; then
+  expected_file="$DIR/expected-topics-noscience.yaml"
 else
-  # 3 topics do not send results
-  expected_topics="19"
+  expected_file="$DIR/expected-topics-science.yaml"
   # While the CDS xmatch service is down, SIMBAD classes are empty and the
-  # filters relying on them produce no alert, so 5 topics are never created.
-  # 19 stays accepted in case the CDS comes back during the run.
+  # filters relying on them produce no alert: their topics, the "cds" group,
+  # are not required.
   if ! cds_reachable; then
     cds_up=false
-    expected_topics="19 14"
+    without=(--without cds)
     echo "WARNING: CDS xmatch unreachable ($CDS_XMATCH_PROBE_URL):" \
-      "SIMBAD-based filters produce no alerts, accepting 14 or 19 topics" 1>&2
+      "SIMBAD-based filters produce no alerts, not waiting for their topics" 1>&2
   fi
 fi
 
-# Succeed once the number of topics matches one of the expected counts.
+# Succeed once every expected topic exists. On timeout, finkctl names the
+# missing topics.
 topics_ready () {
-  local n counts
-  counts=$(echo "$expected_topics" | wc -w)
-  for n in $expected_topics; do
-    if finkctl wait topics --expected "$n" --timeout "$((60 / counts))s" -v1 > /dev/null; then
-      return 0
-    fi
-  done
-  return 1
+  finkctl wait topics --expected-file "$expected_file" "${without[@]}" \
+    --timeout 60s -v1
 }
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime
@@ -224,7 +194,7 @@ selector="spark-app-name"
 err_msg=""
 while ! topics_ready
 do
-    echo "INFO: Waiting for expected topics: $expected_topics, attempt: $((count+1))/$max_attempts"
+    echo "INFO: Waiting for the topics of $(basename "$expected_file"), attempt: $((count+1))/$max_attempts"
     sleep 5
     echo "INFO: List pods in fink-broker namespace:"
     kubectl get pods -n fink-broker
