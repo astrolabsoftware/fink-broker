@@ -217,37 +217,41 @@ if [ "$mode" = "catchup-open" ]; then
   exit 0
 fi
 
-# --nightly: submit the workflow the nightly CronWorkflow submits (same
-# template, mode and night expression; the CronWorkflow itself is not deployed
-# in CI), check its night and deadline, then delete it: an open night runs
-# until its deadline.
+# --nightly: submit a run from the nightly CronWorkflow deployed in CI (it
+# never fires by itself), as its schedule would: its workflowSpec as is, so a
+# change to the CronWorkflow is tested. Check its night label, night and
+# deadline, then delete it: an open night runs until its deadline.
 if [ "$mode" = "nightly" ]; then
   jobs="stream2raw raw2science distribution"
   deadline=$(( SECONDS + catchup_timeout ))
   template="night"
 
-  workflow=$(kubectl create -n fink-broker -o jsonpath='{.metadata.name}' -f - <<EOF
-apiVersion: argoproj.io/v1alpha1
-kind: Workflow
-metadata:
-  generateName: nightly-check-
-spec:
-  arguments:
-    parameters:
-      - name: night
-        value: "{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}"
-      - name: mode
-        value: nightly
-  workflowTemplateRef:
-    name: $template
-EOF
-)
+  workflow=$(kubectl get cronworkflow -n fink-broker nightly -o json |
+    jq '{apiVersion: "argoproj.io/v1alpha1", kind: "Workflow",
+      metadata: {generateName: "nightly-"}, spec: .spec.workflowSpec}' |
+    kubectl create -n fink-broker -o jsonpath='{.metadata.name}' -f -)
   trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
 
   # Today's night is the UTC date of the submission, even if this check
   # crosses midnight
   created=$(kubectl get workflow -n fink-broker "$workflow" -o jsonpath='{.metadata.creationTimestamp}')
   night=$(date -u -d "$created" +%Y%m%d)
+
+  # The night label, set by the CronWorkflow workflowMetadata, lists the runs
+  # of a night: kubectl get workflows -L night. Set by the controller once it
+  # picks the workflow up.
+  until label=$(kubectl get workflow -n fink-broker "$workflow" -o jsonpath='{.metadata.labels.night}') &&
+      [ -n "$label" ]; do
+    if [ $SECONDS -ge $deadline ]; then
+      echo "ERROR: workflow/$workflow has no night label after ${catchup_timeout}s" 1>&2
+      exit 1
+    fi
+    sleep 5
+  done
+  if [ "$label" != "$night" ]; then
+    echo "ERROR: workflow/$workflow has night label '$label', expected $night" 1>&2
+    exit 1
+  fi
   exit_at=$(kubectl get workflowtemplate -n fink-broker "$template" \
     -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[4]}')
   expected="${night:0:4}-${night:4:2}-${night:6:2}T${exit_at}:00Z"
