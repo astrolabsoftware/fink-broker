@@ -53,8 +53,9 @@ ciux ignite --selector itest $PWD --suffix "$SUFFIX"
 ./e2e/argocd.sh
 
 # Run the night of the CI: no Spark job is deployed in CI, the night is run
-# through the Argo WorkflowTemplate, as any catch-up
-./e2e/catchup.sh
+# through the Argo WorkflowTemplate, as any catch-up, on the night of the
+# topic written by the simulator
+./e2e/catchup.sh -n "$(finkctl get sim-night --timeout 5m)"
 ```
 
 ### Check Results

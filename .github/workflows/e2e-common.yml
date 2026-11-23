@@ -164,11 +164,13 @@ jobs:
           # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
           ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
       # No nightly run is deployed in CI: the night is run through the
-      # WorkflowTemplate, as any catch-up.
+      # WorkflowTemplate, as any catch-up. The night is the one of the topic
+      # written by the simulator, its only source.
       - name: Run the night
         id: run_night
         run: |
-          ./e2e/catchup.sh
+          night=$(finkctl get sim-night --timeout 5m)
+          ./e2e/catchup.sh -n "$night"
       - name: Check results
         id: check_results
         run: |

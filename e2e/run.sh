@@ -127,7 +127,9 @@ fi
 
 echo "Phase: Night Run"
 echo "Run the night through the WorkflowTemplate, as any catch-up."
-if ! $DIR/catchup.sh; then
+echo "Its night is the one of the topic written by the simulator."
+night=$(finkctl get sim-night --timeout 5m)
+if ! $DIR/catchup.sh -n "$night"; then
     echo "ERROR: Night submission failed" 1>&2
     exit 1
 fi

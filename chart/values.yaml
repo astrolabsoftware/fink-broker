@@ -1,10 +1,6 @@
 # Default values for chart.
 # These values are used for fink-broker e2e tests
 
-# Default night of the WorkflowTemplate, run by e2e/catchup.sh without -n (CI).
-# Not set with nightly.enabled, so that a catch-up has to name its night.
-night: "20240101"
-
 # Nightly run: a CronWorkflow submitting the WorkflowTemplate every day, on
 # today's night (UTC), processed live as its alerts arrive. Disabled -> no
 # Spark job runs by itself: each night is submitted by hand (e2e/catchup.sh,
@@ -122,7 +118,7 @@ stream2raw:
     starting_offset: earliest
     # {night} is a runtime placeholder resolved by the job from its -night
     # (resolve_night_placeholders), not by Helm: one chart serves every night.
-    topic: "ztf_public_{night}"
+    topic: "sim_ztf_public_{night}"
 
 #
 # Parameters used to run the raw2science task

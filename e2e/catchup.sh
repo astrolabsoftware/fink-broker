@@ -13,9 +13,8 @@ wait=false
 timeout=900
 
 usage () {
-  echo "Usage: $0 [-n <night>] [-w] [-t <timeout>] [-h]"
-  echo "  -n: Night to catch up, YYYYMMDD (UTC). Default: the default night of"
-  echo "      the WorkflowTemplate, set without a nightly run only (CI)"
+  echo "Usage: $0 -n <night> [-w] [-t <timeout>] [-h]"
+  echo "  -n: Night to catch up, YYYYMMDD (UTC). Mandatory"
   echo "  -w: Wait for the workflow to end, exit non-zero if it did not succeed"
   echo "  -t: Seconds to wait with -w. Default: $timeout"
   echo "  -h: Display this help"
@@ -38,13 +37,9 @@ while getopts hn:t:w opt; do
 done
 
 if [ -z "$night" ]; then
-  night=$(kubectl get workflowtemplate -n "$namespace" "$template" \
-    -o jsonpath='{.spec.arguments.parameters[?(@.name=="night")].value}')
-  if [ -z "$night" ]; then
-    echo "ERROR: no night given, and $template has no default night" 1>&2
-    usage 1>&2
-    exit 1
-  fi
+  echo "ERROR: no night given (-n YYYYMMDD)" 1>&2
+  usage 1>&2
+  exit 1
 fi
 
 workflow=$(kubectl create -n "$namespace" -o jsonpath='{.metadata.name}' -f - <<EOF
