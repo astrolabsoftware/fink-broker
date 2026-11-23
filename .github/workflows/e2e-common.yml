@@ -188,16 +188,16 @@ jobs:
       - name: Check catch-up
         id: check_catchup
         run: |
-          ./e2e/check-results.sh --catchup
+          ./e2e/workflow.sh --catchup
       # Today's night is still open: its catch-up must be refused.
       - name: Check open night catch-up
         id: check_catchup_open
         run: |
-          ./e2e/check-results.sh --catchup-open
+          ./e2e/workflow.sh --catchup-open
       - name: Check nightly run
         id: check_nightly
         run: |
-          ./e2e/check-results.sh --nightly
+          ./e2e/workflow.sh --nightly
       - name: Collect diagnostics
         if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure' || steps.check_nightly.outcome == 'failure')
         run: |

@@ -154,21 +154,21 @@ fi
 
 echo "Phase: Catch-up Check"
 echo "Catch the night of the run up, which must find it complete."
-if ! $DIR/check-results.sh --catchup; then
+if ! $DIR/workflow.sh --catchup; then
     echo "ERROR: Catch-up check failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Open Night Catch-up Check"
 echo "Catch today's night up, which runs until it closes."
-if ! $DIR/check-results.sh --catchup-open; then
+if ! $DIR/workflow.sh --catchup-open; then
     echo "ERROR: Open night catch-up check failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Nightly Run Check"
 echo "Submit a nightly run as the CronWorkflow does, check its night and deadline."
-if ! $DIR/check-results.sh --nightly; then
+if ! $DIR/workflow.sh --nightly; then
     echo "ERROR: Nightly run check failed" 1>&2
     exit 1
 fi
