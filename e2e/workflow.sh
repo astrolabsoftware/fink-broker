@@ -28,9 +28,11 @@ mode=""
 catchup_timeout=300
 
 usage () {
-  echo "Usage: $0 [-h] --catchup|--catchup-open|--nightly"
-  echo "  --catchup:  Check that catching up the night of the run does nothing more"
-  echo "  --catchup-open: Check that catching up today's night runs until it closes"
+  echo "Usage: $0 [-h] --catchup-done|--catchup-open|--nightly"
+  echo "  --catchup-done: Check that catching up the night of the CI, already done,"
+  echo "              does nothing more. Must run before --catchup-open and --nightly"
+  echo "  --catchup-open: Check that catching up today's night starts it, open until"
+  echo "              it closes (the run is then deleted)"
   echo "  --nightly:  Check that a nightly run, as submitted by the CronWorkflow,"
   echo "              starts today's night with its deadline"
   echo "  -h: Display this help"
@@ -39,7 +41,7 @@ usage () {
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --catchup) mode="catchup" ; shift ;;
+    --catchup-done) mode="catchup-done" ; shift ;;
     --catchup-open) mode="catchup-open" ; shift ;;
     --nightly) mode="nightly" ; shift ;;
     -h) usage ; exit 0 ;;
@@ -52,23 +54,34 @@ if [ -z "$mode" ]; then
   usage
 fi
 
-# --catchup: once the workflow which ran the night of the CI is over, catch
-# that night up again. The night is then complete, so each job of the second
-# workflow must find its _DONE marker and exit at once: nothing is processed
-# nor distributed twice.
+# --catchup-done: once the workflow which ran the night of the CI is over,
+# catch that night up again. The night is then complete, so each job of the
+# second workflow must find its _DONE marker and exit at once: nothing is
+# processed nor distributed twice.
+#
+# The workflow of the CI night is the only Workflow of the namespace: only "Run
+# the night" submits one before this check, the checks submitting others
+# (--catchup-open, --nightly) run after it, and the CI cluster is fresh.
+# Anything else (e.g. a reused local cluster) fails with the list, no guess.
 #
 # Waiting for the first workflow is not needed for correctness, the per-night
 # mutex would hold the second one, but it bounds the time each may take.
-if [ "$mode" = "catchup" ]; then
+if [ "$mode" = "catchup-done" ]; then
   jobs="stream2raw raw2science distribution"
   deadline=$(( SECONDS + catchup_timeout ))
 
-  first=$(kubectl get workflows -n fink-broker --sort-by=.metadata.creationTimestamp \
-    -o jsonpath='{.items[0].metadata.name}')
-  if [ -z "$first" ]; then
-    echo "ERROR: no workflow ran the night of the CI" 1>&2
+  workflows=$(kubectl get workflows -n fink-broker \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.night}{"\t"}{.status.phase}{"\n"}{end}')
+  count=$(grep -c . <<< "$workflows" || true)
+  if [ "$count" -ne 1 ]; then
+    echo "ERROR: expected exactly one Workflow (the CI night), found $count:" 1>&2
+    if [ -n "$workflows" ]; then
+      printf 'NAME\tNIGHT\tPHASE\n%s\n' "$workflows" | column -t -s $'\t' 1>&2
+    fi
+    echo "       --catchup-done must run before --catchup-open and --nightly" 1>&2
     exit 1
   fi
+  first=$(cut -f1 <<< "$workflows")
   night=$(kubectl get workflow -n fink-broker "$first" \
     -o jsonpath='{.spec.arguments.parameters[?(@.name=="night")].value}')
 

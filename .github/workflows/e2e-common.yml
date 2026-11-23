@@ -188,8 +188,9 @@ jobs:
       - name: Check catch-up
         id: check_catchup
         run: |
-          ./e2e/workflow.sh --catchup
-      # Today's night is still open: its catch-up must be refused.
+          ./e2e/workflow.sh --catchup-done
+      # Today's night is still open: its catch-up starts it, open until it
+      # closes, and is deleted once checked.
       - name: Check open night catch-up
         id: check_catchup_open
         run: |

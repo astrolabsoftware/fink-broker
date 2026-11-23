@@ -154,7 +154,7 @@ fi
 
 echo "Phase: Catch-up Check"
 echo "Catch the night of the run up, which must find it complete."
-if ! $DIR/workflow.sh --catchup; then
+if ! $DIR/workflow.sh --catchup-done; then
     echo "ERROR: Catch-up check failed" 1>&2
     exit 1
 fi

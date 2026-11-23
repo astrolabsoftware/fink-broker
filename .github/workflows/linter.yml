@@ -44,3 +44,5 @@ jobs:
       run: e2e/check-helm-render.sh
     - name: Check the guard of the night catch-up
       run: e2e/workflow-guard_test.sh
+    - name: Check how the catch-up of the CI night finds its workflow
+      run: e2e/workflow_test.sh
