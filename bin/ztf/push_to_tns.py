@@ -82,7 +82,9 @@ def main():
         .toPandas()
     )
 
-    pdf_unique = pdf.groupby("objectId")[pdf.columns].min()
+    pdf["jd"] = pdf["candidate"].apply(lambda x: x["jd"])
+    idx = pdf.groupby("objectId")["jd"].idxmin()
+    pdf_unique = pdf.loc[idx].reset_index(drop=True)
     print("{} new alerts".format(len(pdf)))
     print("{} new sources".format(len(pdf_unique)))
     pdf = pdf_unique
