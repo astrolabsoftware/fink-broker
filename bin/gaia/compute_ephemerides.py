@@ -92,9 +92,7 @@ def main():
     args = parser.parse_args(None)
 
     # Initialise Spark session
-    spark = init_sparksession(
-        name="gaia_ephemerides", shuffle_partitions=100
-    )
+    spark = init_sparksession(name="gaia_ephemerides", shuffle_partitions=100)
     ncores = int(spark.sparkContext.getConf().get("spark.cores.max"))
 
     # 4 times more partitions than cores
