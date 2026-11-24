@@ -36,6 +36,12 @@ id=$(echo "$response" | jq -r '.data[0].id')
 
 id=$(printf '%s' "$id" | jq -sRr @uri)
 
+if [[ ${OBSERVER} == "gaia" ]]; then
+  NAMING="--spacecraft $OBSERVER"
+else
+  NAMING="-i $OBSERVER"
+fi
+
 # For the epehe
 $EPHEMCC4/ephemcc4.4 \
     -u $USERCONF \
@@ -44,7 +50,7 @@ $EPHEMCC4/ephemcc4.4 \
     -tp $RPLANE \
     -tc $TCOOR \
     -c 3 \
-    -i $OBSERVER \
+    ${NAMING} \
     -e $TSCALE \
     --jd \
     -bl $RAMPATH/dates_$UIDD.txt \
