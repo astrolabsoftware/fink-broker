@@ -138,8 +138,6 @@ def main():
     # Run SN classification using AL model
     rfscore_args = ["cjd", "cfid", "cmagpsf_ext", "csigmapsf_ext"]
     rfscore_args += [F.col("cdsxmatch"), F.col("candidate.ndethist")]
-    rfscore_args += [F.lit(1), F.lit(3), F.lit("diff")]
-    rfscore_args += [F.lit(model)]
     df = df.withColumn("al_snia_vs_nonia", rfscore_sigmoid_full(*rfscore_args))
 
     # Distance to the middle of the distribution of scores
