@@ -16,7 +16,6 @@
 """Run the AL loop, and push data to Slack."""
 
 import argparse
-import os
 
 import numpy as np
 
@@ -36,7 +35,6 @@ from fink_filters.ztf.filter_anomaly_notification.filter_utils import (
     get_data_permalink_slack,
 )
 
-from fink_science import __file__
 from fink_science.ztf.random_forest_snia.processor import rfscore_sigmoid_full
 
 
@@ -132,8 +130,8 @@ def main():
     df = df.withColumn("classification", extract_fink_classification(*cols))
 
     # model path
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    model = curdir + "/data/models/for_al_loop/model_20241122_wlimits.pkl"
+    # curdir = os.path.dirname(os.path.abspath(__file__))
+    # model = curdir + "/data/models/for_al_loop/model_20241122_wlimits.pkl"
 
     # Run SN classification using AL model
     rfscore_args = ["cjd", "cfid", "cmagpsf_ext", "csigmapsf_ext"]
