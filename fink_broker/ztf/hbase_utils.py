@@ -267,7 +267,7 @@ def load_ztf_index_cols(sso=False):
 
     >>> out = load_ztf_index_cols(sso=True)
     >>> print(len(out))
-    37
+    38
     """
     # From `root` or `candidates.`
     common = [
