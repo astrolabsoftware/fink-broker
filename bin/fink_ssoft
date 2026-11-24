@@ -265,6 +265,8 @@ if [[ ${RECONSTRUCT_DATA} == true ]]; then
     EXTRA_ARGS="-mode all"
   elif [[ ${SURVEY} == "atlas" ]]; then
     EXTRA_ARGS="-path atlas-sscat.v3.0_x_ztf.202512_${OBSCODE}.parquet -observer ${OBSCODE}"
+  elif [[ ${SURVEY} == "gaia" ]]; then
+    EXTRA_ARGS="-path gaia_dr3_no_ephems.parquet"
   fi
   echo -e "${SINFO} Reconstructing the aggregated data and ephemerides..."
   spark-submit --master ${SPARK_MASTER} \
