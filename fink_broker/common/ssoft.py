@@ -23,7 +23,8 @@ import datetime
 from fink_broker.common.logging_utils import get_fink_logger, inspect_application
 from fink_broker.common.spark_utils import init_sparksession
 
-from fink_science.rubin.ssoft.processor import build_the_ssoft
+from fink_science.ztf.ssoft.processor import build_the_ssoft as build_the_ssoft_ztf
+from fink_science.rubin.ssoft.processor import build_the_ssoft as build_the_ssoft_rubin
 from fink_utils.sso.utils import retrieve_last_date_of_previous_month
 from fink_utils.sso.ssoft import join_aggregated_sso_data
 from fink_utils.hdfs.utils import path_exist
@@ -119,7 +120,12 @@ def generate_ssoft(sso_file: str):
     else:
         frac = None
 
-    pdf = build_the_ssoft(
+    if "ztf" in sso_file:
+        func = build_the_ssoft_ztf
+    elif "rubin" in sso_file:
+        func = build_the_ssoft_rubin
+
+    pdf = func(
         aggregated_filename=sso_file,
         nparts=nparts,
         nmin=args.nmin,
@@ -284,6 +290,7 @@ def compute_ephemerides(survey: str, sso_file: str):
         df_prev = spark.read.format("parquet").load(
             sso_file.format(lm.year, "{:02d}".format(lm.month))
         )
+        df_prev = df_prev.drop("version")
 
         # make checks for new data
         is_ephem, is_data = make_checks(
