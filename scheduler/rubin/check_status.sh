@@ -77,6 +77,11 @@ for file in $FILES; do
         MESSAGE+="[Rubin] HDFS FAILURE: $(basename $file) $newline"
     fi
 
+    isDiskProblem=$(grep -n "No space left on device" "$file")
+    if [[ $isDiskProblem != "" ]]; then
+        MESSAGE+="LOCALHOME IS FULL: $(basename $file) $newline"
+    fi
+
     isHbaseProblem=$(grep -n "RetriesExhaustedWithDetailsException" "$file")
     if [[ $isHbaseProblem != "" ]]; then
         MESSAGE+="[Rubin] HBase FAILURE: $(basename $file) $newline"
