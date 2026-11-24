@@ -36,7 +36,7 @@ usage () {
   echo "  --nightly:  Check that a nightly run, as submitted by the CronWorkflow,"
   echo "              starts today's night with its deadline"
   echo "  -h: Display this help"
-  exit 1
+  exit "${1:-1}"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -44,7 +44,7 @@ while [ "$#" -gt 0 ]; do
     --catchup-done) mode="catchup-done" ; shift ;;
     --catchup-open) mode="catchup-open" ; shift ;;
     --nightly) mode="nightly" ; shift ;;
-    -h) usage ; exit 0 ;;
+    -h) usage 0 ;;
     *) echo "Unknown option: $1" 1>&2 ; usage ; exit 1 ;;
   esac
 done

@@ -49,7 +49,7 @@ usage () {
   echo " Two levels of checking, run as separate CI steps so a failure names"
   echo " itself: --basic asserts the broker produced its topics, --report"
   echo " asserts the alerts can be accounted for from end to end."
-  exit 1
+  exit "${1:-1}"
 }
 
 while [ "$#" -gt 0 ]; do
@@ -58,7 +58,7 @@ while [ "$#" -gt 0 ]; do
     --report) mode="report" ; shift ;;
     -m) monitoring=true ; shift ;;
     -s) SUFFIX="$2" ; shift 2 ;;
-    -h) usage ; exit 0 ;;
+    -h) usage 0 ;;
     *) echo "Unknown option: $1" 1>&2 ; usage ; exit 1 ;;
   esac
 done
