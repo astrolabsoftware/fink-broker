@@ -55,7 +55,7 @@ def main():
     )
     df = load_parquet_files(path)
 
-    window_spec = Window.orderBy(F.col("anomaly_score").desc())
+    window_spec = Window.orderBy(F.col("anomaly_score").asc())
     df_ranked = df.withColumn("rank", F.rank().over(window_spec))
 
 
@@ -98,7 +98,7 @@ def main():
     for model in ANOMALY_MODELS:
 
         score_col = f"anomaly_score{model}"
-        window_spec_model = Window.orderBy(F.col(score_col).desc())
+        window_spec_model = Window.orderBy(F.col(score_col).asc())
         df_ranked_model = df.withColumn("rank", F.rank().over(window_spec_model))
 
         df_proc = df_ranked_model.select(
