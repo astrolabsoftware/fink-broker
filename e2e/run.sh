@@ -108,7 +108,7 @@ if [ $monitoring = true ]
 then
   monitoring_opt="-m"
 fi
-if ! $DIR/prereq-install.sh -k "v0.20.0" $monitoring_opt; then
+if ! $DIR/prereq-install.sh -k "v0.31.0" $monitoring_opt; then
     echo "ERROR: Prerequisites installation failed" 1>&2
     exit 1
 fi

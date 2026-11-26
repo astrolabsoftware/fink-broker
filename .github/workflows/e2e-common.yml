@@ -12,7 +12,7 @@ on:
         description: 'Kind version to use'
         required: false
         type: string
-        default: "v0.20.0"
+        default: "v0.31.0"
     secrets:
       registry_username:
         required: true
@@ -135,7 +135,6 @@ jobs:
           cat .ciux.d/ciux_itest.sh
       - name: Boostrap k8s (kind) cluster
         run: |
-          # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
 
       - name: Download image
