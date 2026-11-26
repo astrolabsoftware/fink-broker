@@ -23,11 +23,11 @@
 set -euo pipefail
 
 DIR=$(cd "$(dirname "$0")"; pwd -P)
+
 monitoring=false
 SUFFIX="noscience"
 mode="basic"
 report_timeout=600
-catchup_timeout=300
 # Endpoint probed to tell whether the CDS xmatch service, called by the
 # science modules of fink-science, is reachable. Overridable for testing.
 CDS_XMATCH_PROBE_URL="${CDS_XMATCH_PROBE_URL:-http://cdsxmatch.u-strasbg.fr/xmatch/api/v1/sync/tables?action=getVizieRTableNames&RESPONSEFORMAT=json}"
@@ -39,13 +39,9 @@ cds_reachable () {
 }
 
 usage () {
-  echo "Usage: $0 [-h] [--basic|--report|--catchup|--catchup-open|--nightly] [-m] [-s <suffix>]"
+  echo "Usage: $0 [-h] [--basic|--report] [-m] [-s <suffix>]"
   echo "  --basic:    Check that the expected topics are created (default)"
   echo "  --report:   Check the balance printed by the report CronJob"
-  echo "  --catchup:  Check that catching up the night of the run does nothing more"
-  echo "  --catchup-open: Check that catching up today's night runs until it closes"
-  echo "  --nightly:  Check that a nightly run, as submitted by the CronWorkflow,"
-  echo "              starts today's night with its deadline"
   echo "  -m: Check monitoring is enabled (--basic only)"
   echo "  -s: Specify suffix ('noscience' or 'science'). Default: noscience"
   echo "  -h: Display this help"
@@ -53,19 +49,16 @@ usage () {
   echo " Two levels of checking, run as separate CI steps so a failure names"
   echo " itself: --basic asserts the broker produced its topics, --report"
   echo " asserts the alerts can be accounted for from end to end."
-  exit 1
+  exit "${1:-1}"
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --basic) mode="basic" ; shift ;;
     --report) mode="report" ; shift ;;
-    --catchup) mode="catchup" ; shift ;;
-    --catchup-open) mode="catchup-open" ; shift ;;
-    --nightly) mode="nightly" ; shift ;;
     -m) monitoring=true ; shift ;;
     -s) SUFFIX="$2" ; shift 2 ;;
-    -h) usage ; exit 0 ;;
+    -h) usage 0 ;;
     *) echo "Unknown option: $1" 1>&2 ; usage ; exit 1 ;;
   esac
 done
@@ -77,65 +70,29 @@ if [ -n "$SUFFIX" ] && [ "$SUFFIX" != "noscience" ] && [ "$SUFFIX" != "science" 
     exit 1
 fi
 
-# Assert a balance report accounts for alerts at both ends of the broker.
-# $1: file holding the report.
-#
-# The TOTAL row printed by printReport sums both ends over every night:
-#   TOTAL    IN(kafka)                       DISTRIB
-# It is read rather than a night row: the night the run pinned lives in the
-# fink-cd values, and duplicating it here would rot silently.
-assert_balance () {
-  local file="$1" row consumed distributed
-
-  row=$(grep -E "^[[:space:]]+TOTAL[[:space:]]" "$file" || true)
-  if [ -z "$row" ]; then
-    echo "ERROR: no TOTAL row in the report" 1>&2
-    return 1
-  fi
-
-  consumed=$(echo "$row" | awk '{print $2}')
-  distributed=$(echo "$row" | awk '{print $3}')
-
-  local name value
-  for name in consumed distributed; do
-    eval "value=\$$name"
-    if ! [[ "$value" =~ ^[0-9]+$ ]]; then
-      echo "ERROR: $name is not a count: '$value'" 1>&2
-      echo "       row: $row" 1>&2
-      return 1
-    fi
-    if [ "$value" -le 0 ]; then
-      echo "ERROR: $name is $value, expected alerts to have gone through" 1>&2
-      echo "       row: $row" 1>&2
-      return 1
-    fi
-  done
-
-  echo "INFO: balance is consistent: $consumed alerts consumed, $distributed distributed"
-  return 0
-}
-
 # --report: account for the alerts that went through the broker, from what the
 # report CronJob of the chart printed. finkctl reads HDFS directly, so it must
 # run in the cluster: this exercises its image, its ServiceAccount, the Role
 # letting it exec into the Kafka pods and the arguments Helm renders for it.
 #
-# The parsing and the arithmetic behind `get balance` are covered by unit
-# tests in the finkctl repository. Counts are not asserted against fixed
-# values -- the alert simulator does not produce a deterministic number of
-# alerts. Only that both ends of the broker moved.
+# finkctl decides the balance, next to the code printing the report: after
+# the TOTAL row it prints "BALANCE: ok ..." when both ends of the broker moved,
+# "BALANCE: empty ..." otherwise. Counts are not asserted against fixed values
+# -- the alert simulator does not produce a deterministic number of alerts.
 #
 # CI sets report.schedule to every minute, so a Job appears within the minute.
 # Early Jobs may legitimately find nothing -- the streaming jobs are still
-# warming up -- so a Job whose report does not add up is not a failure on its
-# own: wait for a later one, and fail on the timeout.
+# warming up -- so an empty balance is not a failure on its own: wait for a
+# later Job, and fail on the timeout. Only the latest succeeded Job decides:
+# counts are cumulative, so an "ok" followed by an "empty" is a regression.
 #
-# A failed Job is, though. The CronJob runs with restartPolicy=OnFailure: a run
-# hitting a transient error (a pod not ready yet) restarts its container until
-# it succeeds, and a Job only turns Failed once its backoffLimit is exhausted,
-# i.e. on a persistent error. A report with no night yet is not an error. Checking only for a successful Job
-# would let such a failure hide behind a later run that succeeds, while at CC
-# the report runs once a day and that failure is all there is.
+# A failed Job is a failure, though. The CronJob runs with
+# restartPolicy=OnFailure: a run hitting a transient error (a pod not ready
+# yet) restarts its container until it succeeds, and a Job only turns Failed
+# once its backoffLimit is exhausted, i.e. on a persistent error. A report with
+# no night yet is not an error. Checking only for a successful Job would let
+# such a failure hide behind a later run that succeeds, while at CC the report
+# runs once a day and that failure is all there is.
 if [ "$mode" = "report" ]; then
   cronjob="report"
   deadline=$(( SECONDS + report_timeout ))
@@ -145,6 +102,13 @@ if [ "$mode" = "report" ]; then
     kubectl get jobs -n fink-broker \
       -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.conditions[?(@.type=='Failed')].status}{'\n'}{end}" \
       2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 == "True" { print $1 }'
+  }
+
+  # Print the most recent succeeded Job of the CronJob, by completion time.
+  latest_succeeded_job() {
+    kubectl get jobs -n fink-broker \
+      -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.status.completionTime}{'\t'}{.metadata.name}{'\n'}{end}" \
+      2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($2, cj "-") == 1' | sort | tail -1 | cut -f2
   }
 
   echo "INFO: Waiting for a run of cronjob/$cronjob to account for the alerts"
@@ -160,27 +124,30 @@ if [ "$mode" = "report" ]; then
       exit 1
     fi
 
-    for job in $(kubectl get jobs -n fink-broker \
-        -o jsonpath="{range .items[?(@.status.succeeded==1)]}{.metadata.name}{'\n'}{end}" \
-        2>/dev/null | grep "^${cronjob}-" | sort -r); do
-      out="/tmp/${job}.out"
-      kubectl logs -n fink-broker "job/${job}" > "$out" 2>&1 || continue
-      if assert_balance "$out" > /dev/null 2>&1; then
-        echo "INFO: report produced by job/${job}"
-        cat "$out"
-        assert_balance "$out"
-        # Not a failure, but the sign of a run started too early or of a
-        # flaky dependency: say so, with the logs of the failed attempts.
-        kubectl get pods -n fink-broker -l job-name \
-          -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
-          2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
-          | while IFS=$'\t' read -r pod restarts; do
-              echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
-              kubectl logs -n fink-broker "$pod" --previous --tail 20 || true
-            done
-        exit 0
-      fi
-    done
+    job=$(latest_succeeded_job)
+    if [ -n "$job" ] && log=$(kubectl logs -n fink-broker "job/${job}" 2>&1); then
+      verdict=$(grep '^BALANCE: ' <<< "$log" || true)
+      case "$verdict" in
+        "BALANCE: ok "*)
+          echo "INFO: report produced by job/${job}"
+          echo "$log"
+          # Not a failure, but the sign of a run started too early or of a
+          # flaky dependency: say so, with the logs of the failed attempts.
+          kubectl get pods -n fink-broker -l job-name \
+            -o jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.containerStatuses[0].restartCount}{'\n'}{end}" \
+            2>/dev/null | awk -F '\t' -v cj="$cronjob" 'index($1, cj "-") == 1 && $2 > 0' \
+            | while IFS=$'\t' read -r pod restarts; do
+                echo "WARNING: pod/$pod restarted $restarts time(s), last failed attempt:"
+                kubectl logs -n fink-broker "$pod" --previous --tail 20 || true
+              done
+          exit 0 ;;
+        "BALANCE: empty "*) ;;
+        *)
+          echo "ERROR: job/${job} printed no BALANCE verdict, is its finkctl image too old?" 1>&2
+          echo "$log" 1>&2
+          exit 1 ;;
+      esac
+    fi
     sleep 10
   done
 
@@ -193,236 +160,30 @@ if [ "$mode" = "report" ]; then
   exit 1
 fi
 
-# --catchup: once the workflow which ran the night of the CI is over, catch
-# that night up again. The night is then complete, so each job of the second
-# workflow must find its _DONE marker and exit at once: nothing is processed
-# nor distributed twice.
-#
-# Waiting for the first workflow is not needed for correctness, the per-night
-# mutex would hold the second one, but it bounds the time each may take.
-if [ "$mode" = "catchup" ]; then
-  jobs="stream2raw raw2science distribution"
-  deadline=$(( SECONDS + catchup_timeout ))
-
-  first=$(kubectl get workflows -n fink-broker --sort-by=.metadata.creationTimestamp \
-    -o jsonpath='{.items[0].metadata.name}')
-  if [ -z "$first" ]; then
-    echo "ERROR: no workflow ran the night of the CI" 1>&2
-    exit 1
-  fi
-  night=$(kubectl get workflow -n fink-broker "$first" \
-    -o jsonpath='{.spec.arguments.parameters[?(@.name=="night")].value}')
-
-  echo "INFO: Waiting for workflow/$first, running night $night, to succeed"
-  while true; do
-    phase=$(kubectl get workflow -n fink-broker "$first" -o jsonpath='{.status.phase}')
-    case "$phase" in
-      Succeeded) break ;;
-      Failed|Error)
-        echo "ERROR: workflow/$first ended $phase" 1>&2
-        kubectl get workflow -n fink-broker "$first" -o jsonpath='{.status.message}' 1>&2 || true
-        exit 1 ;;
-    esac
-    if [ $SECONDS -ge $deadline ]; then
-      echo "ERROR: workflow/$first still ${phase:-pending} after ${catchup_timeout}s" 1>&2
-      kubectl get workflows,sparkapplications -n fink-broker 1>&2 || true
-      exit 1
-    fi
-    sleep 10
-  done
-
-  echo "INFO: Catching night $night up"
-  workflow=$("$DIR"/catchup.sh -n "$night" -w -t "$catchup_timeout")
-
-  for job in $jobs; do
-    # Read the whole log first: grep -q stops at the first match, and the
-    # SIGPIPE it would send to kubectl fails the pipeline under pipefail.
-    log=$(kubectl logs -n fink-broker "$workflow-$job-driver")
-    if ! grep -q "Night $night already .*, exiting normally" <<< "$log"; then
-      echo "ERROR: $job processed night $night again instead of exiting at once" 1>&2
-      kubectl logs -n fink-broker "$workflow-$job-driver" --tail 50 1>&2 || true
-      exit 1
-    fi
-  done
-  echo "INFO: catch-up of night $night found it complete and did nothing more"
-  exit 0
-fi
-
-# Check a run of today's open night, just submitted as $workflow for $night:
-# its guard must end <guard phase>. When it lets the night through, the jobs
-# start with -night and the <expected deadline>, and the run holds the mutex
-# of the night; when it refuses it, its log must hold <refusal>.
-# Usage: check_open_run <guard phase> <expected deadline> [<refusal>]
-check_open_run() {
-  local guard_phase="$1" expected="$2" refusal="${3:-}"
-  local phase result job app args arg mutex log
-
-  # status.nodes is a map, which jsonpath cannot filter: list it instead
-  guard_node() {
-    kubectl get workflow -n fink-broker "$workflow" \
-      -o jsonpath='{range .status.nodes.*}{.displayName}{"\t"}{.phase}{"\t"}{.outputs.parameters[?(@.name=="state")].value} {.outputs.parameters[?(@.name=="deadline")].value}{"\n"}{end}' |
-      awk -F '\t' -v field="$1" '$1 == "guard" { print $field }'
-  }
-  while true; do
-    phase=$(guard_node 2)
-    case "$phase" in
-      Succeeded|Failed|Error) break ;;
-    esac
-    if [ $SECONDS -ge $deadline ]; then
-      echo "ERROR: guard of workflow/$workflow still ${phase:-pending} after ${catchup_timeout}s" 1>&2
-      exit 1
-    fi
-    sleep 5
-  done
-  if [ "$phase" != "$guard_phase" ]; then
-    echo "ERROR: guard of workflow/$workflow ended $phase, expected $guard_phase" 1>&2
-    kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail 20 1>&2 || true
-    exit 1
-  fi
-
-  if [ "$guard_phase" = "Failed" ]; then
-    log=$(kubectl logs -n fink-broker -l "workflows.argoproj.io/workflow=$workflow" -c main --tail -1)
-    if ! grep -q "$refusal" <<< "$log"; then
-      echo "ERROR: workflow/$workflow failed, but not on the guard's refusal:" 1>&2
-      echo "$log" 1>&2
-      exit 1
-    fi
-    return
-  fi
-
-  # Output parameters of the guard, as "<state> <deadline>"
-  result=$(guard_node 3)
-  if [ "$result" != "open $expected" ]; then
-    echo "ERROR: guard decided '$result', expected 'open $expected'" 1>&2
-    exit 1
-  fi
-  for job in $jobs; do
-    app="$workflow-$job"
-    until args=$(kubectl get sparkapplication -n fink-broker "$app" -o jsonpath='{.spec.arguments}' 2> /dev/null); do
-      if [ $SECONDS -ge $deadline ]; then
-        echo "ERROR: sparkapplication/$app not created after ${catchup_timeout}s" 1>&2
-        exit 1
-      fi
-      sleep 5
-    done
-    for arg in "\"-night\",\"$night\"" "\"-exit_at\",\"$expected\"" \
-      "\"-night_state\",\"open\""; do
-      if ! grep -qF -- "$arg" <<< "$args"; then
-        echo "ERROR: sparkapplication/$app lacks $arg: $args" 1>&2
-        exit 1
-      fi
-    done
-  done
-  # The running night holds its mutex, shared by the nightly run and the
-  # catch-ups: the night must be resolved in its name, not left as an
-  # expression
-  mutex=$(kubectl get workflow -n fink-broker "$workflow" \
-    -o jsonpath='{.status.synchronization.mutex.holding[*].mutex}')
-  if [ "$mutex" != "fink-broker/Mutex/fink-night-$night" ]; then
-    echo "ERROR: workflow/$workflow holds mutex '$mutex'," \
-      "expected fink-broker/Mutex/fink-night-$night" 1>&2
-    exit 1
-  fi
-}
-
-# --catchup-open: catch today's night up, e.g. to restart a failed nightly
-# run. The night is open, so its jobs run live until it closes, the next day:
-# the run is deleted once checked.
-if [ "$mode" = "catchup-open" ]; then
-  jobs="stream2raw raw2science distribution"
-  deadline=$(( SECONDS + catchup_timeout ))
-
-  night=$(date -u +%Y%m%d)
-  close_hour=$(kubectl get workflowtemplate -n fink-broker night \
-    -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[3]}')
-  expected="$(date -u -d "${night:0:4}-${night:4:2}-${night:6:2} + 1 day" +%Y-%m-%d)T$(printf %02d "$close_hour"):00:00Z"
-  echo "INFO: Catching today's night $night up, until $expected"
-  workflow=$("$DIR"/catchup.sh -n "$night")
-  trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
-
-  check_open_run Succeeded "$expected"
-  echo "INFO: catch-up of today's night $night started its jobs, stopping at $expected"
-  exit 0
-fi
-
-# --nightly: submit the workflow the nightly CronWorkflow submits (same
-# template, mode and night expression; the CronWorkflow itself is not deployed
-# in CI), check its night and deadline, then delete it: an open night runs
-# until its deadline.
-if [ "$mode" = "nightly" ]; then
-  jobs="stream2raw raw2science distribution"
-  deadline=$(( SECONDS + catchup_timeout ))
-  template="night"
-
-  workflow=$(kubectl create -n fink-broker -o jsonpath='{.metadata.name}' -f - <<EOF
-apiVersion: argoproj.io/v1alpha1
-kind: Workflow
-metadata:
-  generateName: nightly-check-
-spec:
-  arguments:
-    parameters:
-      - name: night
-        value: "{{workflow.creationTimestamp.Y}}{{workflow.creationTimestamp.m}}{{workflow.creationTimestamp.d}}"
-      - name: mode
-        value: nightly
-  workflowTemplateRef:
-    name: $template
-EOF
-)
-  trap 'kubectl delete workflow -n fink-broker "$workflow" --wait > /dev/null 2>&1 || true' EXIT
-
-  # Today's night is the UTC date of the submission, even if this check
-  # crosses midnight
-  created=$(kubectl get workflow -n fink-broker "$workflow" -o jsonpath='{.metadata.creationTimestamp}')
-  night=$(date -u -d "$created" +%Y%m%d)
-  exit_at=$(kubectl get workflowtemplate -n fink-broker "$template" \
-    -o jsonpath='{.spec.templates[?(@.name=="guard")].container.args[4]}')
-  expected="${night:0:4}-${night:4:2}-${night:6:2}T${exit_at}:00Z"
-  echo "INFO: workflow/$workflow runs night $night, expected deadline $expected"
-
-  # Past its deadline (a CI run in the evening), the guard must refuse the
-  # night; before, it must let it through with the deadline
-  if [ "$(date -u -d "$created" +%s)" -ge "$(date -u -d "$expected" +%s)" ]; then
-    check_open_run Failed "$expected" "Nightly run of $night started past its deadline"
-    echo "INFO: nightly run of $night refused past its deadline $expected"
-  else
-    check_open_run Succeeded "$expected"
-    echo "INFO: nightly run of $night started its jobs, stopping at $expected"
-  fi
-  exit 0
-fi
-
-# TODO improve management of expected topics
-# for example in finkctl.yaml
+# The topics to wait for, by name. CI selects the science build with an empty
+# suffix, not 'science'.
 cds_up=true
-if [ "$SUFFIX" = "noscience" ];
-then
-  expected_topics="22"
+without=()
+if [ "$SUFFIX" = "noscience" ]; then
+  expected_file="$DIR/expected-topics-noscience.yaml"
 else
-  # 3 topics do not send results
-  expected_topics="19"
+  expected_file="$DIR/expected-topics-science.yaml"
   # While the CDS xmatch service is down, SIMBAD classes are empty and the
-  # filters relying on them produce no alert, so 5 topics are never created.
-  # 19 stays accepted in case the CDS comes back during the run.
+  # filters relying on them produce no alert: their topics, the "cds" group,
+  # are not required.
   if ! cds_reachable; then
     cds_up=false
-    expected_topics="19 14"
+    without=(--without cds)
     echo "WARNING: CDS xmatch unreachable ($CDS_XMATCH_PROBE_URL):" \
-      "SIMBAD-based filters produce no alerts, accepting 14 or 19 topics" 1>&2
+      "SIMBAD-based filters produce no alerts, not waiting for their topics" 1>&2
   fi
 fi
 
-# Succeed once the number of topics matches one of the expected counts.
+# Succeed once every expected topic exists. On timeout, finkctl names the
+# missing topics.
 topics_ready () {
-  local n counts
-  counts=$(echo "$expected_topics" | wc -w)
-  for n in $expected_topics; do
-    if finkctl wait topics --expected "$n" --timeout "$((60 / counts))s" -v1 > /dev/null; then
-      return 0
-    fi
-  done
-  return 1
+  finkctl wait topics --expected-file "$expected_file" "${without[@]}" \
+    --timeout 60s -v1
 }
 
 # Wait for topics to be created, and check if fink-broker has not crashed in the meantime
@@ -433,7 +194,7 @@ selector="spark-app-name"
 err_msg=""
 while ! topics_ready
 do
-    echo "INFO: Waiting for expected topics: $expected_topics, attempt: $((count+1))/$max_attempts"
+    echo "INFO: Waiting for the topics of $(basename "$expected_file"), attempt: $((count+1))/$max_attempts"
     sleep 5
     echo "INFO: List pods in fink-broker namespace:"
     kubectl get pods -n fink-broker

@@ -1,0 +1,27 @@
+# Topics fink-broker must create in the e2e run without the science
+# modules, checked by name with 'finkctl wait topics --expected-file'.
+topics:
+  - fink_blazar_ztf
+  - fink_early_kn_candidates_ztf
+  - fink_early_sn_candidates_ztf
+  - fink_fast_riser_candidates_ztf
+  - fink_first_pass_candidates_ztf
+  - fink_inter_night_hostless_ztf
+  - fink_intra_night_hostless_ztf
+  - fink_kn_candidates_ztf
+  - fink_magnetic_cvs_ztf
+  - fink_microlensing_candidates_ztf
+  - fink_new_hostless_ztf
+  - fink_rate_based_kn_candidates_ztf
+  - fink_simbad_grav_candidates_ztf
+  - fink_sn_candidates_ztf
+  - fink_sso_fink_candidates_ztf
+  - fink_sso_ztf_candidates_ztf
+  - fink_tns_match_ztf
+  - fink_unknowns_ztf
+  - fink_vra_ztf
+  - fink_yso_candidates_ztf
+  - fink_yso_spicy_candidates_ztf
+  # Named after the night of the alert simulator (sim_ztf_public_20200101):
+  # update it with the simulator night.
+  - fink_ztf_20200101

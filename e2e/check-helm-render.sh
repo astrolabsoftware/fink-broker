@@ -88,11 +88,22 @@ assert "report reads both HA namenodes" \
 echo "== fink-cd: CI values, the night run through Argo Workflows"
 for variant in noscience science; do
     out=$(apps -f "$FINK_CD_DIR/apps/values-ci-$variant.yaml")
-    assert "$variant: no nightly run, nights submitted by hand" "false" \
+    # The CronWorkflow is deployed, so that workflow.sh --nightly submits from
+    # the real object, but it never fires (February 31st)
+    assert "$variant: nightly CronWorkflow deployed" "true" \
         "$(echo "$out" | broker_values | yq -r '.nightly.enabled')"
-    assert "$variant: default night of the WorkflowTemplate" "20200101" \
+    assert "$variant: nightly run never fires by itself" "1_0_31_2_*" \
+        "$(echo "$out" | broker_values | yq -r '.nightly.schedule' | tr ' ' '_')"
+    values_file=$(mktemp)
+    echo "$out" | broker_values > "$values_file"
+    rendered=$(helm template fink-broker "$src_dir/chart" -f "$values_file")
+    rm -f "$values_file"
+    assert "$variant: CronWorkflow" "nightly" "$(echo "$rendered" | names CronWorkflow)"
+    assert "$variant: report run window starts at 00:01" "00:01" \
+        "$(echo "$rendered" | yq -r 'select(.kind == "CronJob" and .metadata.name == "report") | .spec.jobTemplate.spec.template.spec.containers[0].args as $a | $a | to_entries[] | select(.value == "--cron") | $a[.key + 1]')"
+    assert "$variant: no night in the values, detected from the simulator topic" "null" \
         "$(echo "$out" | broker_values | yq -r '.night')"
-    assert "$variant: topic resolved by the job from its night" "ztf_public_{night}" \
+    assert "$variant: topic resolved by the job from its night" "sim_ztf_public_{night}" \
         "$(echo "$out" | broker_values | yq -r '.stream2raw.kafka.topic')"
 done
 
@@ -302,11 +313,11 @@ for job in stream2raw raw2science distribution; do
 done
 
 echo "== fink-broker: default, nights submitted by hand"
-out=$(chart --set night=20200101)
+out=$(chart)
 assert "no Spark job nor nightly run deployed" "" \
     "$(echo "$out" | yq -r 'select(.kind == "SparkApplication" or .kind == "ScheduledSparkApplication" or .kind == "CronWorkflow") | .metadata.name')"
 assert "WorkflowTemplate" "night" "$(echo "$out" | names WorkflowTemplate)"
-assert "night parameter defaults to the night value" "20200101" \
+assert "no default night: a catch-up names its night" "null" \
     "$(echo "$out" | yq -r 'select(.kind == "WorkflowTemplate") | .spec.arguments.parameters[] | select(.name == "night") | .value')"
 
 echo "== fink-broker: nightly run"

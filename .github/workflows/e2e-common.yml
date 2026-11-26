@@ -12,7 +12,7 @@ on:
         description: 'Kind version to use'
         required: false
         type: string
-        default: "v0.20.0"
+        default: "v0.31.0"
     secrets:
       registry_username:
         required: true
@@ -135,7 +135,6 @@ jobs:
           cat .ciux.d/ciux_itest.sh
       - name: Boostrap k8s (kind) cluster
         run: |
-          # v0.20.0 does not work on self-hosted runners
           ./e2e/prereq-install.sh -k "${{ inputs.kind_version }}" ${{ env.MONITORING_OPT}}
 
       - name: Download image
@@ -163,12 +162,14 @@ jobs:
           # The ciux image suffix is empty for the science variant, but the infra
           # name (and its values-ci-<infra>.yaml) uses the explicit 'science' label.
           ./e2e/argocd.sh -i "ci-${SUFFIX:-science}" -S "${{ matrix.storage }}" ${{ env.MONITORING_OPT}}
-      # No nightly run is deployed in CI: the night is run through the
-      # WorkflowTemplate, as any catch-up.
+      # The nightly CronWorkflow deployed in CI never fires (February 31st):
+      # the night is run through the WorkflowTemplate, as any catch-up. The
+      # night is the one of the topic written by the simulator, its only source.
       - name: Run the night
         id: run_night
         run: |
-          ./e2e/catchup.sh
+          night=$(finkctl get sim-night --timeout 5m)
+          ./e2e/catchup.sh -n "$night"
       - name: Check results
         id: check_results
         run: |
@@ -188,16 +189,17 @@ jobs:
       - name: Check catch-up
         id: check_catchup
         run: |
-          ./e2e/check-results.sh --catchup
-      # Today's night is still open: its catch-up must be refused.
+          ./e2e/workflow.sh --catchup-done
+      # Today's night is still open: its catch-up starts it, open until it
+      # closes, and is deleted once checked.
       - name: Check open night catch-up
         id: check_catchup_open
         run: |
-          ./e2e/check-results.sh --catchup-open
+          ./e2e/workflow.sh --catchup-open
       - name: Check nightly run
         id: check_nightly
         run: |
-          ./e2e/check-results.sh --nightly
+          ./e2e/workflow.sh --nightly
       - name: Collect diagnostics
         if: always() && (steps.run_argocd.outcome == 'failure' || steps.run_night.outcome == 'failure' || steps.check_results.outcome == 'failure' || steps.check_report.outcome == 'failure' || steps.check_catchup.outcome == 'failure' || steps.check_catchup_open.outcome == 'failure' || steps.check_nightly.outcome == 'failure')
         run: |

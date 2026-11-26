@@ -13,12 +13,9 @@ spec:
   serviceAccountName: fink-workflow
   arguments:
     parameters:
+      # No default: a catch-up names its night (e2e/catchup.sh -n), the CI
+      # one is detected from the simulator topic (finkctl get sim-night)
       - name: night
-        {{- /* No default night next to a nightly run: a catch-up has to
-        name its night */}}
-        {{- if not .Values.nightly.enabled }}
-        value: {{ .Values.night | quote }}
-        {{- end }}
       # catchup (by hand) or nightly (CronWorkflow), see the guard
       - name: mode
         value: catchup

@@ -13,22 +13,8 @@ START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 export ARGOCD_CONFIG_PATH=/var/lib/fink-ci/argocd.config
 
-# Test report file (YAML format for better GHA integration)
-HOME_CI_RESULT_FILE="${HOME_CI_RESULT_FILE:-}"
-if [ -z "$HOME_CI_RESULT_FILE" ]; then
-    TEST_REPORT="$DIR/../e2e-report.yaml"
-    echo "WARNING: HOME_CI_RESULT_FILE is not set, using temporary file $TEST_REPORT"
-else
-    TEST_REPORT="$HOME_CI_RESULT_FILE"
-fi
-
-# Create log directory if it doesn't exist
-mkdir -p "$(dirname "$TEST_REPORT")"
-
-
 echo "=== Fink-Broker E2E Test Suite ==="
 echo "Start time: $START_TIME"
-echo "Test report: $TEST_REPORT"
 echo "=================================="
 
 usage () {
@@ -101,16 +87,12 @@ go install github.com/k8s-school/ciux@"$ciux_version"
 echo "Ignite the project using ciux"
 ciux ignite --selector itest "$src_dir" --build "$SUFFIX"
 
-# Initialize YAML report
-home-ci-reporter init "$TEST_REPORT" "fink-broker"
-
 # Build step
 echo "Phase: Build"
 if $src_dir/build.sh -s "$SUFFIX" -i $input_survey; then
-    home-ci-reporter step "build" "passed" "Build completed successfully" --file "$TEST_REPORT"
     build=true
 else
-    home-ci-reporter step "build" "failed" "Build failed" --file "$TEST_REPORT"
+    echo "ERROR: Build failed" 1>&2
     exit 1
 fi
 
@@ -126,10 +108,8 @@ if [ $monitoring = true ]
 then
   monitoring_opt="-m"
 fi
-if $DIR/prereq-install.sh -k "v0.20.0" $monitoring_opt; then
-    home-ci-reporter step "prereq_install" "passed" "Prerequisites installed successfully" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "prereq_install" "failed" "Prerequisites installation failed" --file "$TEST_REPORT"
+if ! $DIR/prereq-install.sh -k "v0.31.0" $monitoring_opt; then
+    echo "ERROR: Prerequisites installation failed" 1>&2
     exit 1
 fi
 
@@ -140,29 +120,26 @@ fi
 
 echo "Phase: ArgoCD Deployment"
 echo "Run ArgoCD to install the whole fink e2e tests stack"
-if $DIR/argocd.sh -i "ci-$SUFFIX" -S "$storage" $monitoring_opt; then
-    home-ci-reporter step "argocd_deploy" "passed" "ArgoCD deployment completed successfully" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "argocd_deploy" "failed" "ArgoCD deployment failed" --file "$TEST_REPORT"
+if ! $DIR/argocd.sh -i "ci-$SUFFIX" -S "$storage" $monitoring_opt; then
+    echo "ERROR: ArgoCD deployment failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Night Run"
 echo "Run the night through the WorkflowTemplate, as any catch-up."
-if $DIR/catchup.sh; then
-    home-ci-reporter step "night_run" "passed" "Night submitted successfully" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "night_run" "failed" "Night submission failed" --file "$TEST_REPORT"
+echo "Its night is the one of the topic written by the simulator."
+night=$(finkctl get sim-night --timeout 5m)
+if ! $DIR/catchup.sh -n "$night"; then
+    echo "ERROR: Night submission failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Test Results Check"
 echo "Check the results of the tests."
 if $DIR/check-results.sh --basic -s "$SUFFIX" $monitoring_opt; then
-    home-ci-reporter step "test_check" "passed" "Test results check completed successfully" --file "$TEST_REPORT"
     e2e=true
 else
-    home-ci-reporter step "test_check" "failed" "Test results check failed" --file "$TEST_REPORT"
+    echo "ERROR: Test results check failed" 1>&2
     exit 1
 fi
 
@@ -171,53 +148,41 @@ fi
 if [ "$storage" = "hdfs" ]; then
     echo "Phase: Balance Check"
     echo "Account for the alerts which went through the broker."
-    if $DIR/check-results.sh --report; then
-        home-ci-reporter step "balance_check" "passed" "Balance check completed successfully" --file "$TEST_REPORT"
-    else
-        home-ci-reporter step "balance_check" "failed" "Balance check failed" --file "$TEST_REPORT"
+    if ! $DIR/check-results.sh --report; then
+        echo "ERROR: Balance check failed" 1>&2
         exit 1
     fi
 fi
 
 echo "Phase: Catch-up Check"
 echo "Catch the night of the run up, which must find it complete."
-if $DIR/check-results.sh --catchup; then
-    home-ci-reporter step "catchup_check" "passed" "Catch-up check completed successfully" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "catchup_check" "failed" "Catch-up check failed" --file "$TEST_REPORT"
+if ! $DIR/workflow.sh --catchup-done; then
+    echo "ERROR: Catch-up check failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Open Night Catch-up Check"
 echo "Catch today's night up, which runs until it closes."
-if $DIR/check-results.sh --catchup-open; then
-    home-ci-reporter step "catchup_open_check" "passed" "Open night caught up until it closes" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "catchup_open_check" "failed" "Open night catch-up check failed" --file "$TEST_REPORT"
+if ! $DIR/workflow.sh --catchup-open; then
+    echo "ERROR: Open night catch-up check failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Nightly Run Check"
 echo "Submit a nightly run as the CronWorkflow does, check its night and deadline."
-if $DIR/check-results.sh --nightly; then
-    home-ci-reporter step "nightly_check" "passed" "Nightly run started today's night" --file "$TEST_REPORT"
-else
-    home-ci-reporter step "nightly_check" "failed" "Nightly run check failed" --file "$TEST_REPORT"
+if ! $DIR/workflow.sh --nightly; then
+    echo "ERROR: Nightly run check failed" 1>&2
     exit 1
 fi
 
 echo "Phase: Image Push"
 echo "Push the image to Container Registry"
 if $src_dir/push-image.sh; then
-    home-ci-reporter step "image_push" "passed" "Image pushed to registry successfully" --file "$TEST_REPORT"
     push=true
 else
-    home-ci-reporter step "image_push" "failed" "Image push failed" --file "$TEST_REPORT"
+    echo "ERROR: Image push failed" 1>&2
     exit 1
 fi
-
-# Finalize the report
-home-ci-reporter finalize --file "$TEST_REPORT"
 
 # Get final stats for display
 END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -226,6 +191,5 @@ TOTAL_DURATION=$(( $(date -d "$END_TIME" +%s) - $(date -d "$START_TIME" +%s) ))
 echo "=================================="
 echo "🎉 FINK E2E TESTS COMPLETED!"
 echo "Duration: ${TOTAL_DURATION}s"
-echo "Test report: $TEST_REPORT"
 echo "=================================="
 
