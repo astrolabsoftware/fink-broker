@@ -62,6 +62,11 @@ for file in $FILES; do
         MESSAGE+="SPARK FAILURE: $(basename $file) $newline"
     fi
 
+    isPythonBuildProblem=$(grep -n "error: \[Errno 2\] No such file or directory" "$file")
+    if [[ $isPythonBuildProblem != "" ]]; then
+        MESSAGE+="[Rubin] PYTHON BUILD FAILURE: $(basename $file) $newline"
+    fi
+
     isJsonProblem=$(grep -n JSONDecodeError "$file")
     if [[ $isJsonProblem != "" ]]; then
         MESSAGE+="JSON FAILURE: $(basename $file) $newline"
